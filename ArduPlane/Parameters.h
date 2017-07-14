@@ -170,7 +170,7 @@ public:
         k_param_telem_delay,
         k_param_serial0_baud_old,   // deprecated
         k_param_gcs2,               // stream rates for uartD
-        k_param_serial2_baud_old,   // deprecated
+        k_param_param_helper,    //  HAL parameters
         k_param_serial2_protocol,   // deprecated
 
         // 120: Fly-by-wire control

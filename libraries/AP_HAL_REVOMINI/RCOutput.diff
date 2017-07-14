@@ -1,0 +1,109 @@
+--- RCOutput.cpp.ok	2017-06-18 11:11:17.315822155 +0500
++++ RCOutput.cpp	2017-06-16 12:03:20.170929460 +0500
+@@ -11,6 +11,9 @@
+ using namespace REVOMINI;
+ 
+ 
++#define  DEBUG_PWM 1
++
++
+ #define REVOMINI_OUT_CHANNELS 6 // motor's channels enabled by default
+ 
+ // #if FRAME_CONFIG == QUAD_FRAME // this is only QUAD layouts
+@@ -110,6 +113,7 @@
+ bool     REVOMINIRCOutput::_once_mode = false;
+ 
+ uint16_t REVOMINIRCOutput::_period[REVOMINI_MAX_OUTPUT_CHANNELS] IN_CCM;
++uint16_t REVOMINIRCOutput::_freq[REVOMINI_MAX_OUTPUT_CHANNELS] IN_CCM;
+ uint8_t  REVOMINIRCOutput::_initialized[REVOMINI_MAX_OUTPUT_CHANNELS] IN_CCM;
+ uint16_t REVOMINIRCOutput::_enabled_channels=0;
+ bool     REVOMINIRCOutput::_sbus_enabled=0;
+@@ -165,6 +169,7 @@
+ void REVOMINIRCOutput::InitPWM()
+ {
+     for(uint8_t i = 0; i < REVOMINI_MAX_OUTPUT_CHANNELS && i < REVOMINI_OUT_CHANNELS; i++) {
++        _freq[i] = 50;
+         uint8_t pin = output_channels[i];
+         REVOMINIGPIO::_pinMode(pin, PWM);
+         _initialized[i] = true;
+@@ -206,10 +211,11 @@
+ //             _mode=BOARD_PWM_ONESHOT125;
+             break;
+         
++/*        
+         case MODE_PWM_ONESHOT125: 
+             _mode=BOARD_PWM_ONESHOT125; 
+             break;
+-    
++*/    
+         case MODE_PWM_BRUSHED16KHZ:
+             _mode=BOARD_PWM_BRUSHED16KHZ;
+             break;
+@@ -245,7 +251,7 @@
+     case BOARD_PWM_NORMAL:
+     default:
+ // output uses timers 2 & 3 so let init them for PWM mode
+-        period    = ((PWM_TIMER_KHZ*1000UL) / 50); // 50Hz by default
++        period    = ((PWM_TIMER_KHZ*1000UL) / 50); // 50Hz by default - will be corrected late per-channel in init_channel()
+         freq      = PWM_TIMER_KHZ;        // 2MHz 0.5us ticks - for 50..490Hz PWM
+         break;
+ 
+@@ -322,9 +328,12 @@
+ 
+             if(!(_enabled_channels & mask) ) return;      // not enabled
+ 
+-            if(_once_mode && freq_hz>50) continue; // no frequency in OneShoot modes
++// for true one-shot        if(_once_mode && freq_hz>50) continue; // no frequency in OneShoot modes
++            _freq[i] = freq_hz;
+ 
+-            const timer_dev *dev = PIN_MAP[output_channels[i]].timer_device;
++            if(_once_mode && freq_hz>50) freq_hz /=2; // divide frequency by 2 in OneShoot modes
++            const uint8_t pin = output_channels[i];
++            const timer_dev *dev = PIN_MAP[pin].timer_device;
+             timer_set_reload(dev,  _timer_period(freq_hz)); 
+         }
+         mask <<= 1;
+@@ -334,10 +343,6 @@
+ void REVOMINIRCOutput::init_channel(uint8_t ch){
+     if(ch>=REVOMINI_MAX_OUTPUT_CHANNELS) return;
+ 
+-//    if (!(_enabled_channels & _BV(ch))) return;      // not enabled
+-
+-//    if(!is_servo_enabled(ch)) return; // disabled servo
+-
+     uint8_t pin = output_channels[ch];
+     if (pin >= BOARD_NR_GPIO_PINS) return;
+ 
+@@ -348,6 +353,9 @@
+ 
+     timer_set_mode(   dev, p.timer_channel, TIMER_PWM);
+ //    pwmOCConfig(      dev, p.timer_channel, 0);
++    uint16_t freq = _freq[ch];
++    if(_once_mode && freq>50) freq/=2;
++    timer_set_reload(dev,  _timer_period(freq));
+     timer_set_compare(dev, p.timer_channel, 0); // to prevent outputs in case of timer overflow
+ //    timer_cc_enable(  dev, p.timer_channel);
+ }
+@@ -508,6 +516,12 @@
+ {
+     _corked = false;
+     
++#ifdef DEBUG_PWM
++    uint8_t spin = output_channels[5]; // motor 6 as strobe
++    REVOMINIGPIO::_pinMode(spin, OUTPUT);
++    REVOMINIGPIO::_write(spin, 1);
++#endif
++    
+     for (uint16_t ch = 0; ch < _used_channels; ch++) {
+         set_pwm(ch, _period[ch]);
+     }
+@@ -530,5 +544,9 @@
+             timer_set_compare(dev, p.timer_channel, 0); // to prevent outputs  in case of timer overflow
+         }
+     }
++    
++#ifdef DEBUG_PWM
++    REVOMINIGPIO::_write(spin, 0);
++#endif
+ }
+ 

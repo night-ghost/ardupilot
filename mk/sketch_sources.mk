@@ -69,6 +69,11 @@ LIBTOKENS += \
 	AP_HAL_QURT
 endif
 
+ifeq ($(HAL_BOARD),HAL_BOARD_REVOMINI)
+LIBTOKENS += \
+	AP_HAL_REVOMINI
+endif
+
 #
 # Find sketchbook libraries referenced by the sketch.
 #

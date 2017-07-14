@@ -1,7 +1,10 @@
 #pragma once
 
 #include <stdarg.h>
+#include <stdlib.h>
+#include <strings.h>
 #include "AP_HAL_Namespace.h"
+#include "AP_HAL_Boards.h"
 
 class AP_HAL::Util {
 public:

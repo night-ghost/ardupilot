@@ -891,6 +891,10 @@ const AP_Param::Info Copter::var_info[] = {
     // @User: Standard
     GSCALAR(terrain_follow, "TERRAIN_FOLLOW", 0),
 
+    // @Group: HAL_
+    // @Path: ../libraries/AP_Param_Helper/AP_Param_Helper.cpp
+    GOBJECT(param_helper, "HAL_", AP_Param_Helper),
+
     // @Group:
     // @Path: Parameters.cpp
     GOBJECT(g2, "",  ParametersG2),

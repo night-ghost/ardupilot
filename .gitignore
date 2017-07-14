@@ -1,3 +1,4 @@
+PACK.sh
 /.lock-waf*
 /.waf*
 /Tools/autotest/aircraft/Rascal/reset.xml
@@ -15,6 +16,7 @@
 *.bin
 *.d
 *.dfu
+*.tgz
 *.dll
 *.elf
 *.exe
@@ -29,7 +31,6 @@
 *.tlog.raw
 *.vbrain
 *.vrx
-*.zip
 *~
 .*.swo
 .*.swp

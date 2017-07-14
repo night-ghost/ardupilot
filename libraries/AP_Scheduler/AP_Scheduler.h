@@ -22,6 +22,7 @@
 
 #include <AP_Param/AP_Param.h>
 #include <AP_HAL/Util.h>
+#include <strings.h>
 
 #define AP_SCHEDULER_NAME_INITIALIZER(_name) .name = #_name,
 

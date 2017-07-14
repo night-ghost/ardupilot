@@ -1,3 +1,5 @@
+#pragma GCC optimize("O2")
+
 #include <AP_HAL/AP_HAL.h>
 #if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
 #include <AP_HAL_Linux/I2CDevice.h>
@@ -709,8 +711,17 @@ void Compass::_detect_backends(void)
     ADD_BACKEND(AP_Compass_AK8963::probe_mpu9250(*this, 0),
                  AP_Compass_AK8963::name, false);
 #elif HAL_COMPASS_DEFAULT == HAL_COMPASS_HMC5843
-    ADD_BACKEND(AP_Compass_HMC5843::probe(*this, hal.i2c_mgr->get_device(HAL_COMPASS_HMC5843_I2C_BUS, HAL_COMPASS_HMC5843_I2C_ADDR)),
+
+ #ifndef HAL_COMPASS_HMC5843_ROTATION
+  #define HAL_COMPASS_HMC5843_ROTATION ROTATION_NONE
+ #endif
+    ADD_BACKEND(AP_Compass_HMC5843::probe(*this, hal.i2c_mgr->get_device(HAL_COMPASS_HMC5843_I2C_BUS,     HAL_COMPASS_HMC5843_I2C_ADDR),false, HAL_COMPASS_HMC5843_ROTATION),
                  AP_Compass_HMC5843::name, false);
+ #ifdef HAL_COMPASS_HMC5843_I2C_EXT_BUS
+    ADD_BACKEND(AP_Compass_HMC5843::probe(*this, hal.i2c_mgr->get_device(HAL_COMPASS_HMC5843_I2C_EXT_BUS, HAL_COMPASS_HMC5843_I2C_ADDR),true),
+                 AP_Compass_HMC5843::name, true);
+ #endif
+
 #elif HAL_COMPASS_DEFAULT == HAL_COMPASS_HMC5843_MPU6000
     ADD_BACKEND(AP_Compass_HMC5843::probe_mpu6000(*this),
                  AP_Compass_HMC5843::name, false);

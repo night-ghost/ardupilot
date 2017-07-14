@@ -22,7 +22,9 @@
 #include "AP_RangeFinder_BBB_PRU.h"
 #include "AP_RangeFinder_LightWareI2C.h"
 #include "AP_RangeFinder_LightWareSerial.h"
+#if CONFIG_HAL_BOARD != HAL_BOARD_REVOMINI
 #include "AP_RangeFinder_Bebop.h"
+#endif
 #include "AP_RangeFinder_MAVLink.h"
 #include "AP_RangeFinder_LeddarOne.h"
 #include "AP_RangeFinder_uLanding.h"

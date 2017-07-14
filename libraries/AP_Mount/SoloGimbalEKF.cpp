@@ -1,6 +1,6 @@
 #include <AP_HAL/AP_HAL.h>
 
-#if HAL_CPU_CLASS >= HAL_CPU_CLASS_150
+#if HAL_CPU_CLASS >= HAL_CPU_CLASS_150 && SOLO_GIMBAL_ENABLED
 
 // uncomment this to force the optimisation of this code, note that
 // this makes debugging harder

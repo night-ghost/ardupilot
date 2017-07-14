@@ -1,0 +1,96 @@
+* near a half of code is fully rewritten
+* added check for all input parameters - no more HardFaults if setted wrong pin number
+* external I2C bus moved out from FlexiPort by Soft_I2C driver so we always has at least 3 UARTs
+* added 1 full-functional UART (only for quads) and 1 RX-only UART for DSM satellite receiver on OpLink connector
+* Unlike many other boards, fully implemented registerPeriodicCallback & Co calls
+* implemented register_io_process via simple cooperative multitasking
+* added buzzer support
+* stack now in CCM memory
+* PPM and PWM inputs works via Timer's driver handlers
+* added DSM and SBUS parsing on PPM input
+* high-frequency (8kHz) advanced scheduler, common for all needs, capable to use semaphores with (optional) performance statistics
+* all hardware description tables are now 'const' and locates in flash
+* more reliable reset for I2C bus on hangups
+* all drivers support set_retries()
+* all delays - even microseconds - are very presize by using hardware clock counter (DWT_CYCCNT) in free-running mode
+* separated USB and UART drivers
+* new SoftwareSerial driver based on ST appnote
+* now it uses MPU6000 DRDY output
+* removed all compiler's warnings
+* ported and slightly altered bootloader to support flashing and start firmware automatically at addresses 8010000 and 8020000 
+  (2 low 16k flash pages are used to emulate EEPROM)
+* EEPROM emulation altered to ensure the reliability of data storage at power failures
+* optimized EEPROM usage by changing from 1-byte to 2-byte writes
+* all internal calls use static private methods
+* removed unused files from "wirish" folder
+* micros() call uses 32-bit hardware timer instead of systick_micros()
+* added parameters support for HAL
+* OneShot supported
+* added translation layer between system PWM modes and borad PWM modes
+* added descriptors for all internal hardware
+* added support to reboot to DFU mode (via "reboot to PX4 bootloader" in MP)
+* after any Fault or Panic() automatically reboots to DFU mode
+* diversity on RC_Input
+* reverted idiotic mainline change in Periodic interface
+* all used drivers altered to use "reschedule me" HAL feature
+* added usage for Compass' DataReady pin
+* unified exception handling 
+* added ability to bind Spectrum satellite without managed 3.3 DC-DC (requires short power off)
+* added support for Arduino32 reset sequence - negative DTR edge on 1200 baud or '1eaf' packet with high DTR
+* fixed hang on dataflash malfunction
+* fixed USB characters loss *without* hangup if disconnected
+* added failsafe on receiver's hangup - if no channel changes in 60 seconds
+* added HAL parameters support
+* changed to simplify support of slightly different boards - eg. AirbotF4
+* full support for AirbotF4 (separate binaries)
+* added support for servos on Input port unused pins
+* Added handling of FLASH_SR error bits, including automatic clearing of write protection
+* added Arduino-like support of relay on arbitrary pin
+* simplified UART driver, buffering now used even in non-blocking mode
+* EEPROM emulation locks flash after each write
+* EEPROM error handling
+* fixed Ardupilot's stealing of Servos even they marked as "Unused"
+* added compilation date & time to log output
+* added SBUS input via USART1 as on Airbot boards
+* added per-board read_me.md files
+* fixed Dataflash logs bug from mainstream - now logs are persists between reboots!
+* DMA mode for lagre SPI transfers
+* USB virtual com-port can be connected to any UART - eg. for OSD or 3DR modems setup
+* any UART can be connected to ESC for 4-way interface
+* support for logs on SD card for AirbotV2 board
+* fixed 2nd Dataflash logs bug from mainstream - now logs are persists between reboots even on boards having chips with 64k sector
+* I2C wait time limited to 0.3s - no more forever hangs by external compass errors
+* FlexiPort can be switced between UART and I2C by parameters
+* The RCoutput module has been completely rewritten.
+* For the PWM outputs, the error in setting the timer frequency has been compensated.
+* Fixed bug with OneShot
+* added parameter to set PWM mode
+* added used memory reporting
+* added I2C error reporting
+* realized low-power idle state with WFE, TIMER6 used to generate events each 1uS
+* added HAL_RC_INPUT parameter to allow to force RC input module
+* added used stack reporting
+* added generation of .DFU file
+* time-consuming operations moved out from interrupt level to IO_Completion level with lowest possible priority
+* added support for Clock Security System - if HSE fails in air system will use HSI instead
+* added boardEmergencyHandler which will be called on any Fault or Panic() before halt - eg. to release parachute
+* motor layout switched to per-board basis
+* console assignment switched to per-board basis
+* compass processing (4027uS) and baro processing(1271uS) can be moved out from interrupt level to IO_Completion level, because its
+ execution time spoils loop time (500Hz = 2000uS for all)
+* HAL switched to new DMA api with completion interrupts
+* AirbotV2 is fully supported with SD card and OSD (OSD not tested, just compiles)
+* added support for reading from SD card via USB - HAL parameter allows to be USB MassStorege
+* fixed BUG in scheduler which periodically causes HardFault
+* added check for stack overflow for low priority tasks
+
+* ...
+* a lot of minor enhancements
+
+
+--------
+расклад времени
+25.7 опрос датчиков, из них 7.7% ожидание
+остается 74.3%, из них 65% ожидание
+собственно на расчет с частотой 400 раз в секунду уходит около 10% всего времени
+

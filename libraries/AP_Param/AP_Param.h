@@ -24,8 +24,9 @@
 #include <stdint.h>
 #include <cmath>
 
-#include <AP_HAL/AP_HAL.h>
-#include <StorageManager/StorageManager.h>
+//#include <AP_HAL/AP_HAL.h>
+#include <AP_HAL/AP_HAL_Namespace.h>
+//#include <StorageManager/StorageManager.h>
 
 #include "float.h"
 
@@ -115,6 +116,7 @@ enum ap_var_type {
     AP_PARAM_GROUP
 };
 
+class StorageAccess; // forward
 
 /// Base class for variables.
 ///

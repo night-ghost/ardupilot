@@ -3,8 +3,14 @@
 #include "DataFlash_Backend.h"
 
 #include "DataFlash_File.h"
+#include "DataFlash_Block.h"
+#include "DataFlash_File_sd.h"
 #include "DataFlash_MAVLink.h"
 #include <GCS_MAVLink/GCS.h>
+#if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
+#include "DataFlash_Revo.h"
+#endif
+
 
 DataFlash_Class *DataFlash_Class::_instance;
 
@@ -72,8 +78,30 @@ void DataFlash_Class::Init(const struct LogStructure *structures, uint8_t num_ty
             backends[_next_backend] = new DataFlash_File(*this,
                                                          message_writer,
                                                          HAL_BOARD_LOG_DIRECTORY);
+#elif CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI && (defined(BOARD_SDCARD_NAME) || defined(BOARD_DATAFLASH_FATFS))
+            backends[_next_backend] = new DataFlash_File(*this,
+                                                         message_writer,
+                                                         HAL_BOARD_LOG_DIRECTORY);
 #endif
         }
+        if (backends[_next_backend] == nullptr) {
+            hal.console->printf("Unable to open DataFlash_File");
+        } else {
+            _next_backend++;
+        }
+    }
+#elif CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI // restore dataflash logs
+
+    if (_params.backend_types == DATAFLASH_BACKEND_FILE ||
+        _params.backend_types == DATAFLASH_BACKEND_BOTH) {
+
+        DFMessageWriter_DFLogStart *message_writer =
+            new DFMessageWriter_DFLogStart(_firmware_string);
+        if (message_writer != nullptr)  {
+
+            backends[_next_backend] = new DataFlash_Revo(*this, message_writer);
+        }
+
         if (backends[_next_backend] == nullptr) {
             hal.console->printf("Unable to open DataFlash_File");
         } else {
@@ -296,6 +324,35 @@ void DataFlash_Class::backend_starting_new_log(const DataFlash_Backend *backend)
     }
 }
 
+=======
+}
+
+void DataFlash_Class::Log_Write_MessageF(const char *fmt, ...)
+{
+    char msg[64] {};
+
+    va_list ap;
+    va_start(ap, fmt);
+    hal.util->vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+
+    Log_Write_Message(msg);
+}
+
+void DataFlash_Class::backend_starting_new_log(const DataFlash_Backend *backend)
+{
+    for (uint8_t i=0; i<_next_backend; i++) {
+        if (backends[i] == backend) { // pointer comparison!
+            // reset sent masks
+            for (struct log_write_fmt *f = log_write_fmts; f; f=f->next) {
+                f->sent_mask &= ~(1<<i);
+            }
+            break;
+        }
+    }
+}
+
+>>>>>>> 42181ee7c826301a4d25b15188a3b255bfd6896b
 // start any backend which hasn't started; this is only called from
 // the vehicle code
 void DataFlash_Class::StartUnstartedLogging(void)

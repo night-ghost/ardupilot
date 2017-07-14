@@ -17,12 +17,16 @@
   support for external modules
  */
 
+#include <AP_Module/AP_Module.h>
+
+#if AP_MODULE_SUPPORTED
+
 #include <stdio.h>
 #include <dirent.h>
 #if defined(HAVE_LIBDL)
 #include <dlfcn.h>
 #endif
-#include <AP_Module/AP_Module.h>
+#endif
 #include <AP_Module/AP_Module_Structures.h>
 
 struct AP_Module::hook_list *AP_Module::hooks[NUM_HOOKS];
@@ -40,7 +44,8 @@ const char *AP_Module::hook_names[AP_Module::NUM_HOOKS] = {
  */
 void AP_Module::module_scan(const char *path)
 {
-#if defined(HAVE_LIBDL)
+#if AP_MODULE_SUPPORTED
+//#if defined(HAVE_LIBDL)
     void *m = dlopen(path, RTLD_NOW);
     if (m == nullptr) {
         printf("dlopen(%s) -> %s\n", path, dlerror());
@@ -75,6 +80,7 @@ void AP_Module::module_scan(const char *path)
 */
 void AP_Module::init(const char *module_path)
 {
+#if AP_MODULE_SUPPORTED
     // scan through module directory looking for *.so
     DIR *d;
     struct dirent *de;
@@ -95,6 +101,7 @@ void AP_Module::init(const char *module_path)
         free(path);
     }
     closedir(d);
+#endif
 }
 
 

@@ -159,7 +159,7 @@ void SRV_Channels::enable_aux_servos()
     for (uint8_t i = 0; i < NUM_SERVO_CHANNELS; i++) {
         SRV_Channel::Aux_servo_function_t function = (SRV_Channel::Aux_servo_function_t)channels[i].function.get();
         // see if it is a valid function
-        if (function < SRV_Channel::k_nr_aux_servo_functions) {
+        if (function < SRV_Channel::k_nr_aux_servo_functions && function!=SRV_Channel::k_none) {
             hal.rcout->enable_ch(channels[i].ch_num);
         }
     }

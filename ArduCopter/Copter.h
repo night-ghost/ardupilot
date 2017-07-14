@@ -125,6 +125,13 @@
 #include "afs_copter.h"
 #endif
 
+#include <AP_Param_Helper/AP_Param_Helper.h>
+
+#if USE_WAYBACK == ENABLED
+#include <AP_WayBack/AP_WayBack.h>
+#endif
+
+
 // Local modules
 #include "Parameters.h"
 #include "avoidance_adsb.h"
@@ -133,6 +140,8 @@
 #include <SITL/SITL.h>
 #endif
 
+
+extern const AP_HAL::HAL& hal;
 
 class Copter : public AP_HAL::HAL::Callbacks {
 public:
@@ -612,6 +621,12 @@ private:
 #if VISUAL_ODOMETRY_ENABLED == ENABLED
     // last visual odometry update time
     uint32_t visual_odom_last_update_ms;
+#endif
+
+    AP_Param_Helper param_helper;
+
+#if USE_WAYBACK == ENABLED
+    AP_WayBack way_back;
 #endif
 
     // Top-level logic

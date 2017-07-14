@@ -65,3 +65,5 @@ LIBRARIES += AP_Gripper
 LIBRARIES += AP_Beacon
 LIBRARIES += AP_Arming
 LIBRARIES += AP_VisualOdom
+LIBRARIES += AP_Param_Helper
+LIBRARIES += AP_WayBack

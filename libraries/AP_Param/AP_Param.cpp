@@ -21,13 +21,15 @@
 
 /// @file   AP_Param.cpp
 /// @brief  The AP variable store.
+
+#include <AP_HAL/AP_HAL.h>
+
 #include "AP_Param.h"
 
 #include <cmath>
 #include <string.h>
 
 #include <AP_Common/AP_Common.h>
-#include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
 #include <GCS_MAVLink/GCS.h>
 #include <StorageManager/StorageManager.h>

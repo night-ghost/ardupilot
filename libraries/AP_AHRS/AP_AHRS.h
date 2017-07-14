@@ -29,6 +29,7 @@
 #include <AP_InertialSensor/AP_InertialSensor.h>
 #include <AP_Baro/AP_Baro.h>
 #include <AP_Param/AP_Param.h>
+//#include <AP_OpticalFlow/AP_OpticalFlow.h>
 
 class OpticalFlow;
 #define AP_AHRS_TRIM_LIMIT 10.0f        // maximum trim angle in degrees

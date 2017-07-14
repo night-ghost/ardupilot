@@ -28,6 +28,13 @@
 
 #include "AP_InertialSensor.h"
 
+#if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
+#include <AP_HAL_REVOMINI/AP_HAL_REVOMINI.h>
+#include <AP_HAL_REVOMINI/GPIO.h>
+#include <AP_HAL_REVOMINI/Scheduler.h>
+using namespace REVOMINI;
+#endif
+
 class AuxiliaryBus;
 class DataFlash_Class;
 

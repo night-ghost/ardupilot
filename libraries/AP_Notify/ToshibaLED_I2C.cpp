@@ -28,7 +28,7 @@ extern const AP_HAL::HAL& hal;
 
 #define TOSHIBA_LED_I2C_ADDR 0x55    // default I2C bus address
 #define TOSHIBA_LED_I2C_BUS_INTERNAL    0
-#define TOSHIBA_LED_I2C_BUS_EXTERNAL    1
+#define TOSHIBA_LED_I2C_BUS_EXTERNAL    1 //-- pins that I2C uses can be used tor another needs so bus_reset will hang forever
 
 #define TOSHIBA_LED_PWM0    0x01    // pwm0 register
 #define TOSHIBA_LED_PWM1    0x02    // pwm1 register
@@ -37,6 +37,7 @@ extern const AP_HAL::HAL& hal;
 
 bool ToshibaLED_I2C::hw_init()
 {
+#ifdef TOSHIBA_LED_I2C_BUS_EXTERNAL
     // first look for led on external bus
     _dev = std::move(hal.i2c_mgr->get_device(TOSHIBA_LED_I2C_BUS_EXTERNAL, TOSHIBA_LED_I2C_ADDR));
     if (!_dev || !_dev->get_semaphore()->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
@@ -50,14 +51,22 @@ bool ToshibaLED_I2C::hw_init()
     if (!ret) {
         // give back external bus semaphore
         _dev->get_semaphore()->give();
+#else
+    bool ret=false;
+    {
+#endif
+
+#ifdef TOSHIBA_LED_I2C_BUS_INTERNAL
         // get internal I2C bus driver
         _dev = std::move(hal.i2c_mgr->get_device(TOSHIBA_LED_I2C_BUS_INTERNAL, TOSHIBA_LED_I2C_ADDR));
         if (!_dev || !_dev->get_semaphore()->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
             return false;
         }
         ret = _dev->write_register(TOSHIBA_LED_ENABLE, 0x03);
+#endif
     }
 
+    if(ret) {
     // update the red, green and blue values to zero
     uint8_t val[4] = { TOSHIBA_LED_PWM0, _led_off, _led_off, _led_off };
     ret &= _dev->transfer(val, sizeof(val), nullptr, 0);
@@ -66,6 +75,11 @@ bool ToshibaLED_I2C::hw_init()
     _dev->get_semaphore()->give();
 
     _dev->register_periodic_callback(20000, FUNCTOR_BIND_MEMBER(&ToshibaLED_I2C::_timer, void));
+    } else {         // give back external bus semaphore
+        if(_dev) _dev->get_semaphore()->give();
+
+        _dev = NULL; // no needs for driver
+    }
     
     return ret;
 }
