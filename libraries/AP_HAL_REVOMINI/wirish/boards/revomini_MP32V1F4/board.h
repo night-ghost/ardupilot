@@ -145,6 +145,20 @@ void boardInit(void);
 #define BOARD_DATAFLASH_NAME            "dataflash"
 #define BOARD_DATAFLASH_PAGES           0x1f00
 
+#if 1// use it as FAT and share it via USB
+#define BOARD_DATAFLASH_FATFS
+#define BOARD_DATAFLASH_SIZE (16)// in megabytes
+#define BOARD_DATAFLASH_ERASE_SIZE (65536)// in bytes
+#define USB_MASSSTORAGE
+#define HAL_BOARD_LOG_DIRECTORY "0:/APM/LOGS"
+#define HAL_BOARD_TERRAIN_DIRECTORY "0:/APM/TERRAIN"
+//#define HAL_PARAM_DEFAULTS_PATH "0:/APM/defaults.parm"
+#else
+// old dataflash logs
+#endif
+
+
+
 # define BOARD_PUSHBUTTON_PIN           254
 # define BOARD_USB_MUX_PIN              -1
 # define BOARD_BATTERY_VOLT_PIN         8   // Battery voltage on A0 (PC2) D8
@@ -259,6 +273,7 @@ void boardInit(void);
     AP_GROUPINFO("FLEXI_I2C",    6, AP_Param_Helper, _flexi_i2c, 0), \
     AP_GROUPINFO("PWM_TYPE",     7, AP_Param_Helper, _pwm_type, 0), \
     AP_GROUPINFO("DBG_WAYBACK",  8, AP_Param_Helper, _dbg_wayback, 0), \
+    AP_GROUPINFO("USB_STORAGE",  9, AP_Param_Helper, _usb_storage, 0), \
     AP_GROUPINFO("RC_INPUT",     9, AP_Param_Helper, _rc_input, 0)
     
 
@@ -272,6 +287,7 @@ void boardInit(void);
     AP_Int8 _flexi_i2c; \
     AP_Int8 _pwm_type; \
     AP_Int8 _dbg_wayback; \
+    AP_Int8 _usb_storage; \
     AP_Int8 _rc_input;
     
 #define ERROR_USART _USART1 // main port - telemetry, all panic messages goes there

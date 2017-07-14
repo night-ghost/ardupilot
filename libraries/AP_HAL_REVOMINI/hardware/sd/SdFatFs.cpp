@@ -36,7 +36,7 @@ uint8_t SdFatFs::init(void) {
     
 #if defined(BOARD_DATAFLASH_FATFS) // in DataFlash
 
-    if(f_mkfs((TCHAR const*)_SDPath, 1 /* unpartitioned */, 8) == FR_OK &&
+    if(f_mkfs((TCHAR const*)_SDPath, 1 /* unpartitioned */, BOARD_DATAFLASH_ERASE_SIZE/FAT_SECTOR_SIZE /* cluster in sectors */) == FR_OK &&
        f_mount(&_SDFatFs, (TCHAR const*)_SDPath, 1) == FR_OK) {
     	/* FatFs Initialization done */
         return 1;

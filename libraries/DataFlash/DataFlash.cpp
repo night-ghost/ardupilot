@@ -324,35 +324,6 @@ void DataFlash_Class::backend_starting_new_log(const DataFlash_Backend *backend)
     }
 }
 
-=======
-}
-
-void DataFlash_Class::Log_Write_MessageF(const char *fmt, ...)
-{
-    char msg[64] {};
-
-    va_list ap;
-    va_start(ap, fmt);
-    hal.util->vsnprintf(msg, sizeof(msg), fmt, ap);
-    va_end(ap);
-
-    Log_Write_Message(msg);
-}
-
-void DataFlash_Class::backend_starting_new_log(const DataFlash_Backend *backend)
-{
-    for (uint8_t i=0; i<_next_backend; i++) {
-        if (backends[i] == backend) { // pointer comparison!
-            // reset sent masks
-            for (struct log_write_fmt *f = log_write_fmts; f; f=f->next) {
-                f->sent_mask &= ~(1<<i);
-            }
-            break;
-        }
-    }
-}
-
->>>>>>> 42181ee7c826301a4d25b15188a3b255bfd6896b
 // start any backend which hasn't started; this is only called from
 // the vehicle code
 void DataFlash_Class::StartUnstartedLogging(void)
