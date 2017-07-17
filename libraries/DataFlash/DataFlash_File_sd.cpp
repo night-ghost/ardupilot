@@ -159,7 +159,6 @@ bool DataFlash_File::CardInserted(void) const
     return _initialised && !_open_error && !HAL_REVOMINI::state.sd_busy;
 }
 
-
 // returns the available space in _log_directory as a percentage
 // returns -1.0f on error
 float DataFlash_File::avail_space_percent()
@@ -301,53 +300,6 @@ void DataFlash_File::Prep_MinSpace()
         if (log_to_remove > MAX_LOG_FILES) {
             log_to_remove = 1;
         }
-    } while (log_to_remove != first_log_to_remove);
-}
-
-void DataFlash_File::Prep_NumLogs(){
-    uint16_t count = 0;
-    const uint16_t first_log_to_remove = find_oldest_log(&count);
-    if (first_log_to_remove == 0) {
-        // no files to remove
-        return;
-    }
-
-    _cached_oldest_log = 0;
-
-    uint16_t log_to_remove = first_log_to_remove;
-
-    count=0;
-    do {
-
-        char *filename_to_remove = _log_file_name(log_to_remove);
-        if (filename_to_remove == nullptr) {
-            // internal_error();
-            break;
-        }
-        if (file_exists(filename_to_remove)) {
-            hal.console->printf("Removing (%s) for log count requirements (%d > %d)\n",
-                                filename_to_remove, count, MAX_LOG_FILES);
-            if (!SD.remove(filename_to_remove)) {
-                hal.console->printf("Failed to remove %s: %s\n", filename_to_remove, strerror(errno));
-                free(filename_to_remove);
-                if (errno == ENOENT) {
-                    // corruption - should always have a continuous
-                    // sequence of files...  however, there may be still
-                    // files out there, so keep going.
-                } else {
-                    // internal_error();
-                    break;
-                }
-            } else {
-                free(filename_to_remove);
-                count--;
-            }
-        }
-        log_to_remove++;
-        if (log_to_remove > MAX_LOG_FILES) {
-            log_to_remove = 1;
-        }
-        if(count < MAX_LOG_FILES) break;
     } while (log_to_remove != first_log_to_remove);
 }
 

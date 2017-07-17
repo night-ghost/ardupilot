@@ -1,5 +1,6 @@
 #include "stm32f4xx.h"
 #include <reent.h>
+#include <stdbool.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -14,9 +15,12 @@ int _kill(int pid, int sig);
 void _exit(int status);
 int _getpid(void);
 
-static inline char* get_stack_top(void)
+static inline caddr_t get_stack_top(void)
 {
-        return (char*) __get_MSP();
+//     return (char*) __get_MSP(); -- let use current stack
+    uint32_t sp;
+    asm volatile ("mov %0, sp\n\t"  : "=rm" (sp) );
+    return (caddr_t)sp;
 }
 
 caddr_t _sbrk(int nbytes);

@@ -46,6 +46,8 @@ extern "C" {
 
     extern voidFuncPtr boardEmergencyHandler; // will be called on any fault or panic() before halt
     void PendSV_Handler();
+
+    extern caddr_t stack_bottom; // for SBRK check
 }
 
 #define RAMEND ((size_t)&_estack)

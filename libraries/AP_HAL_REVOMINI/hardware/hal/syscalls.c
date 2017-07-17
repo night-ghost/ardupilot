@@ -32,8 +32,9 @@
 
 #include <syscalls.h>
 
-/* _end is set in the linker command file */
+/* _end and _eccm is set in the linker command file */
 extern caddr_t _end;
+extern caddr_t _eccm;
 
 
 int _kill(int pid, int sig)
@@ -63,7 +64,10 @@ int _getpid(void)
  
 void *__brkval=0;
 
-caddr_t _sbrk(int nbytes) {
+caddr_t stack_bottom=0;
+bool sbrk_need_dma=false;
+
+static caddr_t _sbrk_ram(int nbytes) {
     static caddr_t heap_ptr = NULL;
     caddr_t        base;
 
@@ -71,10 +75,10 @@ caddr_t _sbrk(int nbytes) {
         heap_ptr = (caddr_t)&_end;
     }
 
-    uint32_t top = (unsigned int)get_stack_top();
+    uint32_t top = (uint32_t)get_stack_top();
 
-    if ( top > (unsigned int)heap_ptr // there is place in stack
-        || top < 0x20000000 ) //       or stack not in RAM TODO: check for RAM size from linker script
+    if ( top - 256 > (unsigned int)heap_ptr+nbytes // there is place in stack
+        || top < 0x20000000 ) //      or stack not in RAM TODO: check for RAM size from linker script
     {
         base = heap_ptr;
         heap_ptr += nbytes;
@@ -84,6 +88,42 @@ caddr_t _sbrk(int nbytes) {
         return ((caddr_t)-1);
     }
 }
+
+static caddr_t _sbrk_ccm(int nbytes) {
+    static caddr_t heap_ptr = NULL;
+    caddr_t        base;
+
+    if (heap_ptr == NULL) {
+        heap_ptr = (caddr_t)&_eccm;
+    }
+
+    uint32_t top = (uint32_t)get_stack_top() - 256; // reserve some memory
+
+    if(stack_bottom) top = stack_bottom;
+
+    if ( top > (unsigned int)heap_ptr+nbytes) // there is place in stack
+    {
+        base = heap_ptr;
+        heap_ptr += nbytes;
+        return (base);
+    } else {
+        return ((caddr_t)-1);
+    }
+}
+
+
+caddr_t _sbrk(int nbytes) {
+#if 0
+    if(!sbrk_need_dma) {
+    
+        uint32_t base = _sbrk_ccm(nbytes);
+        if( base != ((caddr_t)-1) ) return base;
+    }
+#endif
+    return _sbrk_ram(nbytes);
+    
+}
+
 
 int _open(const char *path, int flags, ...) {
     return 1;

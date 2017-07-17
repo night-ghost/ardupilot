@@ -3,7 +3,6 @@
 #include "DataFlash_Backend.h"
 
 #include "DataFlash_File.h"
-#include "DataFlash_Block.h"
 #include "DataFlash_File_sd.h"
 #include "DataFlash_MAVLink.h"
 #include <GCS_MAVLink/GCS.h>

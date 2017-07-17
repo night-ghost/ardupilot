@@ -802,6 +802,9 @@ void * REVOMINIScheduler::init_task(uint64_t handler, const uint8_t* stack)
     task.stack = stack;
     //task.handle = handler
 
+    stack_bottom = (caddr_t)stack; // remember for memory allocator
+
+
     // Create context for new task, caller will return
     if (setjmp(task.context)) {
         // we comes via longjmp - the task itself
@@ -870,6 +873,7 @@ void * REVOMINIScheduler::start_task(AP_HAL::MemberProc proc,  size_t stackSize)
         size_t frame = RAMEND - (size_t) &frame;
         volatile uint8_t stack[s_top - frame]; // should be volatile else it will be optimized out
         if (s_main.stack == NULL) s_main.stack = (const uint8_t*)stack; // remember on first call stack of main task
+
 
         // Check that the task can be allocated
         if (s_top + stackSize > STACK_MAX) return NULL;

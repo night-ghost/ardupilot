@@ -581,7 +581,7 @@ static void gen_numname (BYTE* dst, const BYTE* src, const WCHAR* lfn, UINT seq)
 /* Copy memory to memory */
 static inline
 void mem_cpy (void* dst, const void* src, UINT cnt) {
-    memmove(dst,src,cnt);
+    memcpy(dst,src,cnt);
 /*
 	BYTE *d = (BYTE*)dst;
 	const BYTE *s = (const BYTE*)src;
@@ -1094,14 +1094,14 @@ DWORD create_chain (	/* 0:No free cluster, 1:Internal error, 0xFFFFFFFF:Disk err
 
 	ncl = scl;				/* Start cluster */
 	for (;;) {
-		ncl++;							/* Next cluster */
+		ncl++;					/* Next cluster */
 		if (ncl >= fs->n_fatent) {		/* Check wrap around */
 			ncl = 2;
 			if (ncl > scl) return 0;	/* No free cluster */
 		}
 		cs = get_fat(fs, ncl);			/* Get the cluster status */
-		if (cs == 0) break;				/* Found a free cluster */
-		if (cs == 0xFFFFFFFF || cs == 1)/* An error occurred */
+		if (cs == 0) break;			/* Found a free cluster */
+		if (cs == 0xFFFFFFFF || cs == 1)        /* An error occurred */
 			return cs;
 		if (ncl == scl) return 0;		/* No free cluster */
 	}
@@ -2283,7 +2283,7 @@ BYTE check_fs (	/* 0:FAT boor sector, 1:Valid boor sector but not FAT, 2:Not a b
 /* Find logical drive and check if the volume is mounted                 */
 /*-----------------------------------------------------------------------*/
 
-static
+//static
 FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 	FATFS** rfs,		/* Pointer to pointer to the found file system object */
 	const TCHAR** path,	/* Pointer to pointer to the path name (drive number) */
@@ -2390,14 +2390,14 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 	if (nclst >= MIN_FAT32) fmt = FS_FAT32;
 
 	/* Boundaries and Limits */
-	fs->n_fatent = nclst + 2;							/* Number of FAT entries */
-	fs->volbase = bsect;								/* Volume start sector */
-	fs->fatbase = bsect + nrsv; 						/* FAT start sector */
-	fs->database = bsect + sysect;						/* Data start sector */
+	fs->n_fatent = nclst + 2;					/* Number of FAT entries */
+	fs->volbase = bsect;						/* Volume start sector */
+	fs->fatbase = bsect + nrsv; 					/* FAT start sector */
+	fs->database = bsect + sysect;					/* Data start sector */
 	if (fmt == FS_FAT32) {
 		if (fs->n_rootdir) return FR_NO_FILESYSTEM;		/* (BPB_RootEntCnt must be 0) */
 		fs->dirbase = LD_DWORD(fs->win.d8 + BPB_RootClus);	/* Root directory start cluster */
-		szbfat = fs->n_fatent * 4;						/* (Needed FAT size) */
+		szbfat = fs->n_fatent * 4;					/* (Needed FAT size) */
 	} else {
 		if (!fs->n_rootdir)	return FR_NO_FILESYSTEM;	/* (BPB_RootEntCnt must not be 0) */
 		fs->dirbase = fs->fatbase + fasize;				/* Root directory start sector */
@@ -2596,9 +2596,9 @@ FRESULT f_open (
 				dir[DIR_Attr] = 0;				/* Reset attribute */
 				ST_DWORD(dir + DIR_FileSize, 0);/* size = 0 */
 				cl = ld_clust(dj.fs, dir);		/* Get start cluster */
-				st_clust(dir, 0);				/* cluster = 0 */
+				st_clust(dir, 0);			/* cluster = 0 */
 				dj.fs->wflag = 1;
-				if (cl) {						/* Remove the cluster chain if exist */
+				if (cl) {				/* Remove the cluster chain if exist */
 					dw = dj.fs->winsect;
 					res = remove_chain(dj.fs, cl);
 					if (res == FR_OK) {

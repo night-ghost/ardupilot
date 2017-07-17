@@ -33,6 +33,20 @@ void MassStorage::setup() const {
     usb_setParams(&usb_attr);
 
 
+
+    SdFatFs *fs = SD.getVolume();
+    uint32_t bpc = fs->blocksPerCluster();
+
+#ifdef BOARD_DATAFLASH_ERASE_SIZE // FAT in dataflash
+
+    MAL_massBlockSize[0] = bpc * 512; // full cluster to exclude RMW operations let host buffers
+    MAL_massBlockCount[0] = fs->clusterCount();   // in clusters
+
+#else // FAT on SD card
+
+    MAL_massBlockSize[0] = 512; 
+    MAL_massBlockCount[0] = bpc * fs->clusterCount();   // in blocks
+    
     static const char nproc[]="0:/proc";
     // open the /PROC directory    
     File proc = SD.open(nproc);
@@ -45,22 +59,16 @@ void MassStorage::setup() const {
         if(SD.mkdir(nproc)) 
             f_ok=true;                
     }
-
-    SdFatFs *fs = SD.getVolume();
-    uint32_t bpc = fs->blocksPerCluster();
-
-    MAL_massBlockCount[0] = bpc * fs->clusterCount();       
-    MAL_massBlockSize[0] = 512;
-            
     if(f_ok){
         File rebootFile = SD.open("0:/proc/reboot", O_WRITE | O_CREAT | O_TRUNC);
         // create /PROC/REBOOT file and write a '0' to it.
         if (rebootFile) {
             rebootFile.write('0');
-            rebootFile.close();
             rebootFileBlock = rebootFile.firstCluster() * bpc;
+            rebootFile.close();
         }
     }
+#endif        
             
     SD.sync(); // consistent state
 

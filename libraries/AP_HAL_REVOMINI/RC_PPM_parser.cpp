@@ -30,8 +30,6 @@ void PPM_parser::init(uint8_t ch){
 
     last_pulse = {0,0};
 
-//    REVOMINIScheduler::_register_timer_process(FUNCTOR_BIND_MEMBER(&PPM_parser::parse_pulses, void), 1000);
-    
     _ioc = REVOMINIScheduler::register_io_completion(FUNCTOR_BIND_MEMBER(&PPM_parser::parse_pulses, void));
     
     Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&PPM_parser::start_ioc, void) };

@@ -7,6 +7,7 @@
 
 extern uint32_t us_ticks;
 
+
 #define DEMCR_TRCENA    0x01000000
 
 /* Core Debug registers */

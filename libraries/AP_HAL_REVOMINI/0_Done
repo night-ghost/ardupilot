@@ -83,6 +83,10 @@
 * added support for reading from SD card via USB - HAL parameter allows to be USB MassStorege
 * fixed BUG in scheduler which periodically causes HardFault
 * added check for stack overflow for low priority tasks
+* all boards formats internal flash chip as FAT and allows access via USB
+* added spi flash autodetection
+* added support for TRIM command on FAT-formatted Dataflash
+
 
 * ...
 * a lot of minor enhancements

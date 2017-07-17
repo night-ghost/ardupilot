@@ -143,15 +143,14 @@ void boardInit(void);
 #define BOARD_STORAGE_SIZE              8192 // 4096 // EEPROM size
 
 #define BOARD_DATAFLASH_NAME            "dataflash"
-#define BOARD_DATAFLASH_PAGES           0x1f00
+#define BOARD_DATAFLASH_PAGES           0x2000
 
 #if 1// use it as FAT and share it via USB
 #define BOARD_DATAFLASH_FATFS
-#define BOARD_DATAFLASH_SIZE (16)// in megabytes
 #define BOARD_DATAFLASH_ERASE_SIZE (65536)// in bytes
 #define USB_MASSSTORAGE
-#define HAL_BOARD_LOG_DIRECTORY "0:/APM/LOGS"
-#define HAL_BOARD_TERRAIN_DIRECTORY "0:/APM/TERRAIN"
+#define HAL_BOARD_LOG_DIRECTORY "0:/LOGS"
+#define HAL_BOARD_TERRAIN_DIRECTORY "0:/TERRAIN"
 //#define HAL_PARAM_DEFAULTS_PATH "0:/APM/defaults.parm"
 #else
 // old dataflash logs

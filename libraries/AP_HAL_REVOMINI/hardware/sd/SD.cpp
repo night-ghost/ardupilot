@@ -192,6 +192,7 @@ uint32_t SDClass::getfree(const char *filepath, uint32_t * fssize){
 
 }
 
+
 //f_stat (        const TCHAR* path,      /* Pointer to the file path */         FILINFO* fno )
 uint8_t SDClass::stat(const char *filepath, FILINFO* fno){
     FRESULT res = f_stat(filepath, fno);

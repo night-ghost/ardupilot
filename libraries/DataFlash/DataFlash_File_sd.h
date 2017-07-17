@@ -129,7 +129,6 @@ private:
         return ret;
     };
 
-    void Prep_NumLogs();
     float avail_space_percent();
 
     AP_HAL::Semaphore *semaphore;

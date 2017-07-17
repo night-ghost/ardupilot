@@ -100,13 +100,24 @@ void boardInit(void);
 #define BOARD_STORAGE_SIZE            8192 //4096 // EEPROM size
 
 #define BOARD_DATAFLASH_NAME "dataflash"
-#define BOARD_DATAFLASH_PAGES 0x1f00
+#define BOARD_DATAFLASH_PAGES 0x2000 // in 256-bytes pages
+
+#if 1// if board's dataflash supports 4k erases then we can use it as FAT and share it via USB
+#define BOARD_DATAFLASH_FATFS
+#define BOARD_DATAFLASH_ERASE_SIZE (4096)// in bytes
+#define USB_MASSSTORAGE
+#define HAL_BOARD_LOG_DIRECTORY "0:/LOGS"
+#define HAL_BOARD_TERRAIN_DIRECTORY "0:/TERRAIN"
+//#define HAL_PARAM_DEFAULTS_PATH "0:/APM/defaults.parm"
+#else
+// old dataflash logs
+#endif
 
 #define BOARD_OSD_NAME "osd"
 #define BOARD_OSD_CS_PIN   103
 #define BOARD_OSD_VSYNC_PIN   9 // PC3, Frequency input
 
-#define BOARD_OWN_NAME "AirbotV2"
+#define BOARD_OWN_NAME "MiniF4_OSD"
 
 # define BOARD_PUSHBUTTON_PIN   254
 # define BOARD_USB_MUX_PIN      -1

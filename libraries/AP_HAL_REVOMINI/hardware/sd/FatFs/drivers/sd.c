@@ -1,6 +1,8 @@
 #include "sd.h"
 #include "../diskio.h"
+#include "../ff.h"
 #include <stdlib.h>
+#include <stdint.h>
 
 
 #define CS_HIGH()	spi_chipSelectHigh()
@@ -1014,6 +1016,45 @@ void erase_chip(){
 }
 #endif
 
+BYTE sd_getSectorCount(DWORD *ptr){
+
+    uint8_t capacity = df_device & 0xFF;
+    uint8_t memtype =  (df_device>>8) & 0xFF;
+    uint32_t size=0;
+    
+    switch(df_manufacturer){
+    case 0xEF: //  Winbond Serial Flash 
+        if (memtype == 0x40) {
+            size = (1 << ((capacity & 0x0f) + 4)) * 16 ;
+            printf("Winbond SPI Flash found sectors=%ld\n", size);
+        }
+        break;
+    case 0xbf: // SST
+        if (memtype == 0x25) {
+            size = (1 << ((capacity & 0x07) + 8)) * 16;
+            printf("Microchip SST25VFxxxB SPI Flash found sectors=%ld\n",size);
+        }
+        break;
+    case 0x9D: // ISSI
+        if (memtype == 0x40 || memtype == 0x30) {
+            size      = (1 << ((capacity & 0x0f) + 4)) * 16;
+            printf("ISSI SPI Flash found sectors=%ld\n",size);
+        }
+        break;
+
+    default:
+        printf("unknown Flash! mfg=%x model=%x size=%x\n",df_manufacturer, memtype, capacity);
+        break;
+    }
+
+    if(!size) size = BOARD_DATAFLASH_PAGES / (FAT_SECTOR_SIZE/DF_PAGE_SIZE);   // in 512b blocks
+    
+    *ptr = size;
+        
+    return RES_OK;
+
+}
+
 /*--------------------------------------------------------------------------
 
    Public Functions
@@ -1027,26 +1068,19 @@ void erase_chip(){
 
 DSTATUS sd_initialize () {
 
-    // for winbond
-    // spiflash_sectors      = 1 << ((capacity & 0x0f) + 4);
     ReadManufacturerID();
 
-// for winbond
-//    spiflash_sectors      = 1 << ((capacity & 0x0f) + 4);
-
     sd_getSectorCount(&sd_max_sectors);
+
+#if BOARD_DATAFLASH_ERASE_SIZE > 16384
+    sd_max_sectors-=1; // reserve for RMW ops
+#endif
+
 
     Stat=0;
     return Stat;
 }
 
-BYTE sd_getSectorCount(DWORD *ptr){
-
-    *ptr = BOARD_DATAFLASH_SIZE*2 * 1024;  // in 512b blocks
-        
-    return RES_OK;
-
-}
 
 /*-----------------------------------------------------------------------*/
 /* Get disk status                                                       */
@@ -1093,6 +1127,43 @@ DRESULT sd_read (
 /* Write sector(s)                                                       */
 /*-----------------------------------------------------------------------*/
 
+
+bool sd_move_block(uint32_t sec_from, uint32_t sec_to, const uint8_t *buff, uint32_t sec, uint16_t count);
+
+/*
+    в системе нет памяти, а выполнять Read-Modify-Write для флешки как-то надо. придется использовать свободный блок 
+    флеши для буфферизации. Ресурс это конечно уменьшит, зато быстрее перепаяют на нормальную :) 
+    по-уму надо читать FAT и выбирать случайный свободный кластер, но использование для этого функций самой FatFs 
+    приводит к смещению окна в неожиданное время, например когда запись вызывается для сброса измененных структур FAT
+    
+*/
+bool sd_move_block(uint32_t sec_from, uint32_t sec_to, const uint8_t *buff, uint32_t sec, uint16_t count){
+
+    if(!erase_page(sec_to)) return RES_ERROR;
+
+    uint8_t *sbuffer = malloc(DF_PAGE_SIZE); // read just the needed sector, not in stack for not in CCM
+    if(!sbuffer) return false;
+
+    uint16_t cnt;
+    
+    for(cnt=BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE; cnt>0; cnt--){
+        if(buff && sec_from >= sec && sec_from < (sec + count) ) { // if replacement data fit to sector
+            memcpy(sbuffer, buff, DF_PAGE_SIZE);       // will use it
+            buff+=DF_PAGE_SIZE;
+        } else {                                // read from source
+            if(!read_page(sbuffer, sec_from)) break;
+        }
+        if(!write_page(sbuffer, sec_to)) break;
+        sec_from++;
+        sec_to++;    
+    }
+    
+    free(sbuffer);
+    
+    return cnt==0;
+}
+
+
 DRESULT sd_write (
 	const BYTE *buff,	/* Ponter to the data to write */
 	DWORD sector,		/* Start sector number (LBA) */
@@ -1103,9 +1174,9 @@ DRESULT sd_write (
 	if (Stat & STA_NOINIT) return RES_NOTRDY;	/* Check drive status */
 //	if(sector > sd_max_sectors) return RES_PARERR;		        /* Check parameter */
 
-        uint16_t pos = sector % BOARD_DATAFLASH_ERASE_SIZE/FAT_SECTOR_SIZE;
-    
-        if( pos == 0 && count >= BOARD_DATAFLASH_ERASE_SIZE/FAT_SECTOR_SIZE){ // begin of 4k sector - write full cluster
+
+        uint16_t pos = sector % BOARD_DATAFLASH_ERASE_SIZE/FAT_SECTOR_SIZE; // number of sector in erase block
+        if( pos == 0 && count >= BOARD_DATAFLASH_ERASE_SIZE/FAT_SECTOR_SIZE){ // begin of erase block - write full cluster
             count  *= FAT_SECTOR_SIZE/DF_PAGE_SIZE; // 256bytes page from 512byte sector
             sector *= FAT_SECTOR_SIZE/DF_PAGE_SIZE;
             if(!erase_page(sector)) return RES_ERROR;
@@ -1116,45 +1187,104 @@ DRESULT sd_write (
 	    } while(--count);
 	    
         } else { // read-modify-write
-            uint8_t *cluster = malloc(BOARD_DATAFLASH_ERASE_SIZE);
-            if(!cluster) return RES_ERROR;
-            
-            uint8_t *ptr = cluster;
-            // from beginning of erase block
-            uint32_t r_sector = (sector * FAT_SECTOR_SIZE/DF_PAGE_SIZE) & ~(BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE - 1);
-            uint32_t w_sector = r_sector;
-            uint16_t r_count = BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE;      // read full page
-	    do {
-	        if(!read_page(ptr, r_sector)) break;
-	        ptr   += DF_PAGE_SIZE;
-	        r_sector += 1;
-            } while(--r_count);
-            
-            if(r_count) return RES_ERROR;
-            
+            uint8_t *ptr;
             bool need_erase = false; // check for free space for write
-            for(ptr = cluster+FAT_SECTOR_SIZE*pos;ptr < cluster+BOARD_DATAFLASH_ERASE_SIZE;ptr++){
-                if(*ptr != 0xFF){
-                    need_erase=true;
-                    break;
-                }
-            }
-            if(need_erase){// write do dirty block
-                // Yes I know that we could to go out from the buffer end - but this used only for FAT_FS which writes FAT per one sector
-                memmove(cluster+FAT_SECTOR_SIZE*pos, (BYTE *)buff, FAT_SECTOR_SIZE*count); // insert sectors to write to right place
-        
-                // erase page
-                if(!erase_page(w_sector)) return RES_ERROR;
             
-                ptr = cluster;
-                uint16_t w_count = BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE;
-    	        do {
-    	            if(!write_page(ptr, w_sector)) return RES_ERROR;
+            {
+                uint8_t *sbuffer = malloc(FAT_SECTOR_SIZE); // read just the needed sector
+                if(!sbuffer) return RES_ERROR; // no memory at all
+                
+                ptr = sbuffer;
+
+                uint32_t r_sector = sector * FAT_SECTOR_SIZE/DF_PAGE_SIZE;
+                uint16_t r_count  =          FAT_SECTOR_SIZE/DF_PAGE_SIZE;      // read full FAT sector
+
+	        do {
+	            if(!read_page(ptr, r_sector)) break;
 	            ptr   += DF_PAGE_SIZE;
-    	            w_sector += 1;
-    	        } while(--w_count);
+	            r_sector += 1;
+                } while(--r_count);
+                
+                
+                const uint8_t *pp;
+                for(ptr = sbuffer, pp=buff; ptr < sbuffer+FAT_SECTOR_SIZE;ptr++){
+                    if(~*ptr & *pp){ // у нас не должно быть нулей там где нужна 1
+                        need_erase=true;
+                        break;
+                    }
+                }
+                free(sbuffer);// don't need more
+            }
             
-                count = w_count;
+            if(need_erase){// write do dirty block
+
+                uint8_t *cluster = malloc(BOARD_DATAFLASH_ERASE_SIZE);
+                if(!cluster) { // we can try to allocate up to 64K so absense of memory should not be error!
+                    //return RES_ERROR;
+                    
+                    // we can use any free sector of flash as buffer, too                    
+                    uint32_t fr_sec = sd_max_sectors; // the last one
+
+                    // read data from beginning of erase block up to part that will be rewritten
+                    uint32_t r_sector = (sector * FAT_SECTOR_SIZE/DF_PAGE_SIZE) & ~(BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE - 1);
+
+                    // move data to sectors of free block
+                    if(!sd_move_block(r_sector, fr_sec, NULL, 0, 0)) return RES_ERROR; 
+                    // move back with inserting of data to write
+                    if(!sd_move_block(fr_sec, r_sector, buff, sector * FAT_SECTOR_SIZE/DF_PAGE_SIZE, count * FAT_SECTOR_SIZE/DF_PAGE_SIZE)) return RES_ERROR; // move back
+                    count=0; // all OK
+
+                    
+                } else { // we have enough memory for cluster buffer
+            
+                    ptr = cluster;
+
+                    // read data from beginning of erase block up to part that will be rewritten
+                    uint32_t r_sector = (sector * FAT_SECTOR_SIZE/DF_PAGE_SIZE) & ~(BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE - 1);
+                    uint32_t w_sector = r_sector;
+                    uint16_t r_count = BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE;      // read full page
+        	    do {
+	                if(r_sector >= sector * FAT_SECTOR_SIZE/DF_PAGE_SIZE) break;
+	                if(!read_page(ptr, r_sector)) break;
+	                ptr   += DF_PAGE_SIZE;
+	                r_sector += 1;
+                    } while(--r_count);
+
+                    // Yes I know that we could to go out from the buffer end - but this used only for FAT_FS which writes FAT per one sector
+//                  memcpy(cluster+FAT_SECTOR_SIZE*pos, (BYTE *)buff, FAT_SECTOR_SIZE*count); // insert sectors to write to right place
+                    memcpy(ptr, (BYTE *)buff, FAT_SECTOR_SIZE*count); // insert sectors to write to right place
+
+                    // skip part that will be rewritten
+                    r_count  -= FAT_SECTOR_SIZE/DF_PAGE_SIZE * count;
+                    r_sector += FAT_SECTOR_SIZE/DF_PAGE_SIZE * count;
+                    ptr      += FAT_SECTOR_SIZE * count;
+
+                    // read the tail
+        	    while(r_count) {
+	                if(!read_page(ptr, r_sector)) break;
+	                ptr   += DF_PAGE_SIZE;
+	                r_sector += 1;
+	                --r_count;
+                    };
+                    
+                    if(r_count) return RES_ERROR;    
+        
+                    // erase page
+                    if(!erase_page(w_sector)) return RES_ERROR;
+            
+                    ptr = cluster;
+                    uint16_t w_count = BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE;
+    	            do {
+    	                if(!write_page(ptr, w_sector)) break;
+	                ptr   += DF_PAGE_SIZE;
+    	                w_sector += 1;
+        	    } while(--w_count);
+            
+                    count = w_count;
+                    
+                    free(cluster);
+                }
+                
             } else { // block is ready to write - just write needed part
                 count  *= FAT_SECTOR_SIZE/DF_PAGE_SIZE; // 256bytes page from 512byte sector
                 sector *= FAT_SECTOR_SIZE/DF_PAGE_SIZE;
@@ -1164,8 +1294,9 @@ DRESULT sd_write (
     	            sector += 1;
     	        } while(--count);                
             }
-            free(cluster);
+            
         }
+
 
 	return count ? RES_ERROR : RES_OK;	/* Return result */
 }
@@ -1212,26 +1343,44 @@ DRESULT sd_ioctl (
 	    res = RES_OK;
 	    break;
 
-	case GET_SECTOR_COUNT :	/* Get drive capacity in unit of sector (DWORD) */
-	
-	    res=sd_getSectorCount((DWORD*)buff);
-	
-	    break;
-
-	case GET_BLOCK_SIZE :	/* Get erase block size in unit of sector (DWORD) */
-	    *(DWORD*)buff = FAT_SECTOR_SIZE/DF_PAGE_SIZE;
+	case GET_SECTOR_COUNT :	/* Get drive capacity in unit of sector (uint32_t ) */    
+            *(uint32_t *)buff = sd_max_sectors;
 	    res = RES_OK;	        
 	    break;
 
-	case CTRL_TRIM :	                                /* Erase a block of sectors (used when _USE_ERASE == 1) */
-	    res = RES_OK;
-            break;
+#ifdef BOARD_DATAFLASH_ERASE_SIZE
+	case GET_BLOCK_SIZE :	/* Get erase block size in unit of sector (uint32_t ) */
+	    *(uint32_t *)buff = BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE;
+	    res = RES_OK;	        
+	    break;
 
-         case MMC_GET_CSD: /* Receive CSD as a data block (16 bytes) */
-         case MMC_GET_CID: /* Receive CID as a data block (16 bytes) */
-         case MMC_GET_OCR: /* Receive OCR as an R3 resp (4 bytes) */
-         case MMC_GET_SDSTAT: /* Receive SD status as a data block (64 bytes) */
-             break;
+	case CTRL_TRIM : {	                                /* Erase a block of sectors (used when _USE_TRIM == 1) */
+
+	    uint32_t  start_sector = ((uint32_t  *)buff)[0];
+	    uint32_t  end_sector   = ((uint32_t  *)buff)[1];
+	    uint32_t  block, last_block=-1;
+
+	    for(uint32_t  sector=start_sector; sector <= end_sector;sector++){
+                uint32_t  df_sect = sector * FAT_SECTOR_SIZE/DF_PAGE_SIZE; // sector in DataFlash
+                block = df_sect / BOARD_DATAFLASH_ERASE_SIZE;    // number of EraseBlock
+                if(last_block!=block){
+                    last_block=block;
+                    if(!erase_page(df_sect)) return RES_ERROR;                    
+                }
+            }
+	    res = RES_OK;
+	    
+            } break;
+#else
+	case GET_BLOCK_SIZE :	/* Get erase block size in unit of sector (uint32_t ) */
+	    *(uint32_t *)buff = 8; // 4K cluster for SD card
+	    res = RES_OK;	        
+	    break;
+
+	case CTRL_TRIM :	                              /* Erase a block of sectors (used when _USE_TRIM == 1) */
+	    res = RES_OK; // no TRIM for SD
+            break;
+#endif
 
 	default:
 		res = RES_PARERR;
