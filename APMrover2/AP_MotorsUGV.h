@@ -18,6 +18,13 @@ public:
         PWM_TYPE_BRUSHEDBIPOLAR = 4,
      };
 
+    enum motor_test_order {
+        MOTOR_TEST_THROTTLE = 1,
+        MOTOR_TEST_STEERING = 2,
+        MOTOR_TEST_THROTTLE_LEFT = 3,
+        MOTOR_TEST_THROTTLE_RIGHT = 4,
+    };
+
     // initialise motors
     void init();
 
@@ -43,6 +50,13 @@ public:
     // set when to use slew rate limiter
     void slew_limit_throttle(bool value) { _use_slew_rate = value; }
 
+    // test steering or throttle output as a percentage of the total (range -100 to +100)
+    // used in response to DO_MOTOR_TEST mavlink command
+    bool output_test_pct(motor_test_order motor_seq, float pct);
+
+    // test steering or throttle output using a pwm value
+    bool output_test_pwm(motor_test_order motor_seq, float pwm);
+
     // var_info for holding Parameter information
     static const struct AP_Param::GroupInfo var_info[];
 
@@ -56,6 +70,9 @@ protected:
 
     // output to skid steering channels
     void output_skid_steering(bool armed, float steering, float throttle);
+
+    // output throttle (-100 ~ +100) to a throttle channel.  Sets relays if required
+    void output_throttle(SRV_Channel::Aux_servo_function_t function, float throttle);
 
     // slew limit throttle for one iteration
     void slew_limit_throttle(float dt);

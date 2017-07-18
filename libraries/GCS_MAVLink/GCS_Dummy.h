@@ -14,8 +14,10 @@ class GCS_MAVLINK_Dummy : public GCS_MAVLINK
 
 protected:
 
+    Compass *get_compass() const override { return nullptr; };
     AP_Mission *get_mission() override { return nullptr; }
     AP_Rally *get_rally() const override { return nullptr; };
+    AP_ServoRelayEvents *get_servorelayevents() const override { return nullptr; }
 
     uint8_t sysid_my_gcs() const override { return 1; }
 

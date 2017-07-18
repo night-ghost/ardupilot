@@ -1088,10 +1088,6 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
             }
             break;
 
-        case MAV_CMD_START_RX_PAIR:
-            result = handle_rc_bind(packet);
-            break;
-
         case MAV_CMD_NAV_LOITER_UNLIM:
             plane.set_mode(LOITER, MODE_REASON_GCS_COMMAND);
             result = MAV_RESULT_ACCEPTED;
@@ -1260,23 +1256,6 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
             plane.in_calibration = false;
             break;
 
-        case MAV_CMD_PREFLIGHT_SET_SENSOR_OFFSETS:
-            {
-                uint8_t compassNumber = -1;
-                if (is_equal(packet.param1, 2.0f)) {
-                    compassNumber = 0;
-                } else if (is_equal(packet.param1, 5.0f)) {
-                    compassNumber = 1;
-                } else if (is_equal(packet.param1, 6.0f)) {
-                    compassNumber = 2;
-                }
-                if (compassNumber != (uint8_t) -1) {
-                    plane.compass.set_and_save_offsets(compassNumber, packet.param2, packet.param3, packet.param4);
-                    result = MAV_RESULT_ACCEPTED;
-                }
-                break;
-            }
-
         case MAV_CMD_COMPONENT_ARM_DISARM:
             if (is_equal(packet.param1,1.0f)) {
                 // run pre_arm_checks and arm_checks and display failures
@@ -1327,30 +1306,6 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 
             default:
                 result = MAV_RESULT_UNSUPPORTED;
-            }
-            break;
-
-        case MAV_CMD_DO_SET_SERVO:
-            if (plane.ServoRelayEvents.do_set_servo(packet.param1, packet.param2)) {
-                result = MAV_RESULT_ACCEPTED;
-            }
-            break;
-
-        case MAV_CMD_DO_REPEAT_SERVO:
-            if (plane.ServoRelayEvents.do_repeat_servo(packet.param1, packet.param2, packet.param3, packet.param4*1000)) {
-                result = MAV_RESULT_ACCEPTED;
-            }
-            break;
-
-        case MAV_CMD_DO_SET_RELAY:
-            if (plane.ServoRelayEvents.do_set_relay(packet.param1, packet.param2)) {
-                result = MAV_RESULT_ACCEPTED;
-            }
-            break;
-
-        case MAV_CMD_DO_REPEAT_RELAY:
-            if (plane.ServoRelayEvents.do_repeat_relay(packet.param1, packet.param2, packet.param3*1000)) {
-                result = MAV_RESULT_ACCEPTED;
             }
             break;
 
@@ -1468,12 +1423,6 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
             plane.autotune_enable(!is_zero(packet.param1));
             break;
 
-        case MAV_CMD_DO_START_MAG_CAL:
-        case MAV_CMD_DO_ACCEPT_MAG_CAL:
-        case MAV_CMD_DO_CANCEL_MAG_CAL:
-            result = plane.compass.handle_mag_cal_command(packet);
-            break;
-
 #if PARACHUTE == ENABLED
         case MAV_CMD_DO_PARACHUTE:
             // configure or release parachute
@@ -1540,6 +1489,7 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
             break;
             
         default:
+            result = handle_command_long_message(packet);
             break;
         }
 
@@ -2046,6 +1996,11 @@ bool GCS_MAVLINK_Plane::accept_packet(const mavlink_status_t &status, mavlink_me
     return (msg.sysid == plane.g.sysid_my_gcs);
 }
 
+Compass *GCS_MAVLINK_Plane::get_compass() const
+{
+    return &plane.compass;
+}
+
 AP_Mission *GCS_MAVLINK_Plane::get_mission()
 {
     return &plane.mission;
@@ -2058,6 +2013,11 @@ void GCS_MAVLINK_Plane::handle_mission_set_current(AP_Mission &mission, mavlink_
     if (plane.control_mode == AUTO && plane.mission.state() == AP_Mission::MISSION_STOPPED) {
         plane.mission.resume();
     }
+}
+
+AP_ServoRelayEvents *GCS_MAVLINK_Plane::get_servorelayevents() const
+{
+    return &plane.ServoRelayEvents;
 }
 
 AP_Rally *GCS_MAVLINK_Plane::get_rally() const

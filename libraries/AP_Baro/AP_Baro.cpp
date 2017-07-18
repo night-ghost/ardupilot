@@ -66,10 +66,9 @@ const AP_Param::GroupInfo AP_Baro::var_info[] = {
 
     // @Param: TEMP
     // @DisplayName: ground temperature
-    // @Description: calibrated ground temperature in degrees Celsius
+    // @Description: User provided ambient ground temperature in degrees Celsius. This is used to improve the calculation of the altitude the vehicle is at. This parameter is not persistent and will be reset to 0 every time the vehicle is rebooted. A value of 0 means use the internal measurement ambient temperature.
     // @Units: degC
     // @Increment: 1
-    // @ReadOnly: True
     // @Volatile: True
     // @User: Advanced
     AP_GROUPINFO("TEMP", 3, AP_Baro, _user_ground_temperature, 0),
@@ -520,7 +519,7 @@ void AP_Baro::update(void)
         if (sensors[i].healthy) {
             // update altitude calculation
             float ground_pressure = sensors[i].ground_pressure;
-            if (is_zero(ground_pressure) || isnan(ground_pressure) || isinf(ground_pressure)) {
+            if (!is_positive(ground_pressure) || isnan(ground_pressure) || isinf(ground_pressure)) {
                 sensors[i].ground_pressure = sensors[i].pressure;
             }
             float altitude = sensors[i].altitude;

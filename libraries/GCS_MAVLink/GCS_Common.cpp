@@ -1646,7 +1646,7 @@ uint8_t GCS_MAVLINK::handle_preflight_reboot(const mavlink_command_long_t &packe
 /*
   handle a R/C bind request (for spektrum)
  */
-uint8_t GCS_MAVLINK::handle_rc_bind(const mavlink_command_long_t &packet)
+MAV_RESULT GCS_MAVLINK::handle_rc_bind(const mavlink_command_long_t &packet)
 {
     // initiate bind procedure. We accept the DSM type from either
     // param1 or param2 due to a past mixup with what parameter is the
@@ -1736,6 +1736,8 @@ void GCS_MAVLINK::handle_common_message(mavlink_message_t *msg)
         break;
 
 
+    case MAVLINK_MSG_ID_MISSION_WRITE_PARTIAL_LIST:
+        /* fall through */
     case MAVLINK_MSG_ID_MISSION_REQUEST_LIST:
         /* fall through */
     case MAVLINK_MSG_ID_MISSION_COUNT:
@@ -1831,6 +1833,77 @@ void GCS_MAVLINK::handle_common_mission_message(mavlink_message_t *msg)
         /* not used */
         break;
     }
+}
+
+MAV_RESULT GCS_MAVLINK::handle_command_preflight_set_sensor_offsets(const mavlink_command_long_t &packet)
+{
+    Compass *compass = get_compass();
+    if (compass == nullptr) {
+        return MAV_RESULT_UNSUPPORTED;
+    }
+
+    uint8_t compassNumber = -1;
+    if (is_equal(packet.param1, 2.0f)) {
+        compassNumber = 0;
+    } else if (is_equal(packet.param1, 5.0f)) {
+        compassNumber = 1;
+    } else if (is_equal(packet.param1, 6.0f)) {
+        compassNumber = 2;
+    }
+    if (compassNumber == (uint8_t) -1) {
+        return MAV_RESULT_FAILED;
+    }
+    compass->set_and_save_offsets(compassNumber, packet.param2, packet.param3, packet.param4);
+    return MAV_RESULT_ACCEPTED;
+}
+
+MAV_RESULT GCS_MAVLINK::handle_command_mag_cal(const mavlink_command_long_t &packet)
+{
+    Compass *compass = get_compass();
+    if (compass == nullptr) {
+        return MAV_RESULT_UNSUPPORTED;
+    }
+    return compass->handle_mag_cal_command(packet);
+}
+
+MAV_RESULT GCS_MAVLINK::handle_command_long_message(mavlink_command_long_t &packet)
+{
+    MAV_RESULT result = MAV_RESULT_FAILED;
+
+    switch (packet.command) {
+
+    case MAV_CMD_DO_START_MAG_CAL:
+    case MAV_CMD_DO_ACCEPT_MAG_CAL:
+    case MAV_CMD_DO_CANCEL_MAG_CAL: {
+        result = handle_command_mag_cal(packet);
+        break;
+    }
+
+    case MAV_CMD_START_RX_PAIR:
+        result = handle_rc_bind(packet);
+        break;
+
+    case MAV_CMD_PREFLIGHT_SET_SENSOR_OFFSETS: {
+        result = handle_command_preflight_set_sensor_offsets(packet);
+        break;
+    }
+
+    case MAV_CMD_DO_SET_SERVO:
+        /* fall through */
+    case MAV_CMD_DO_REPEAT_SERVO:
+        /* fall through */
+    case MAV_CMD_DO_SET_RELAY:
+        /* fall through */
+    case MAV_CMD_DO_REPEAT_RELAY:
+        /* fall through */
+        result = handle_servorelay_message(packet);
+        break;
+
+    default:
+        result = MAV_RESULT_UNSUPPORTED;
+    }
+
+    return result;
 }
 
 GCS &gcs()

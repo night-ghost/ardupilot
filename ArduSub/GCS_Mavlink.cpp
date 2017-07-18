@@ -1230,22 +1230,6 @@ void GCS_MAVLINK_Sub::handleMessage(mavlink_message_t* msg)
             }
             break;
 
-        case MAV_CMD_PREFLIGHT_SET_SENSOR_OFFSETS: {
-            uint8_t compassNumber = -1;
-            if (is_equal(packet.param1, 2.0f)) {
-                compassNumber = 0;
-            } else if (is_equal(packet.param1, 5.0f)) {
-                compassNumber = 1;
-            } else if (is_equal(packet.param1, 6.0f)) {
-                compassNumber = 2;
-            }
-            if (compassNumber != (uint8_t) -1) {
-                sub.compass.set_and_save_offsets(compassNumber, packet.param2, packet.param3, packet.param4);
-                result = MAV_RESULT_ACCEPTED;
-            }
-            break;
-        }
-
         case MAV_CMD_COMPONENT_ARM_DISARM:
             if (is_equal(packet.param1,1.0f)) {
                 // attempt to arm and return success or failure
@@ -1265,30 +1249,6 @@ void GCS_MAVLINK_Sub::handleMessage(mavlink_message_t* msg)
         case MAV_CMD_GET_HOME_POSITION:
             if (sub.ap.home_state != HOME_UNSET) {
                 send_home(sub.ahrs.get_home());
-                result = MAV_RESULT_ACCEPTED;
-            }
-            break;
-
-        case MAV_CMD_DO_SET_SERVO:
-            if (sub.ServoRelayEvents.do_set_servo(packet.param1, packet.param2)) {
-                result = MAV_RESULT_ACCEPTED;
-            }
-            break;
-
-        case MAV_CMD_DO_REPEAT_SERVO:
-            if (sub.ServoRelayEvents.do_repeat_servo(packet.param1, packet.param2, packet.param3, packet.param4*1000)) {
-                result = MAV_RESULT_ACCEPTED;
-            }
-            break;
-
-        case MAV_CMD_DO_SET_RELAY:
-            if (sub.ServoRelayEvents.do_set_relay(packet.param1, packet.param2)) {
-                result = MAV_RESULT_ACCEPTED;
-            }
-            break;
-
-        case MAV_CMD_DO_REPEAT_RELAY:
-            if (sub.ServoRelayEvents.do_repeat_relay(packet.param1, packet.param2, packet.param3*1000)) {
                 result = MAV_RESULT_ACCEPTED;
             }
             break;
@@ -1371,13 +1331,6 @@ void GCS_MAVLINK_Sub::handleMessage(mavlink_message_t* msg)
             break;
         }
 
-        case MAV_CMD_DO_START_MAG_CAL:
-        case MAV_CMD_DO_ACCEPT_MAG_CAL:
-        case MAV_CMD_DO_CANCEL_MAG_CAL:
-            result = sub.compass.handle_mag_cal_command(packet);
-
-            break;
-
         case MAV_CMD_DO_SEND_BANNER: {
             result = MAV_RESULT_ACCEPTED;
 
@@ -1397,7 +1350,7 @@ void GCS_MAVLINK_Sub::handleMessage(mavlink_message_t* msg)
         }
 
         default:
-            result = MAV_RESULT_UNSUPPORTED;
+            result = handle_command_long_message(packet);
             break;
         }
 
@@ -1748,9 +1701,19 @@ void Sub::gcs_check_input(void)
     gcs().update();
 }
 
+Compass *GCS_MAVLINK_Sub::get_compass() const
+{
+    return &sub.compass;
+}
+
 AP_Mission *GCS_MAVLINK_Sub::get_mission()
 {
     return &sub.mission;
+}
+
+AP_ServoRelayEvents *GCS_MAVLINK_Sub::get_servorelayevents() const
+{
+    return &sub.ServoRelayEvents;
 }
 
 AP_Rally *GCS_MAVLINK_Sub::get_rally() const
