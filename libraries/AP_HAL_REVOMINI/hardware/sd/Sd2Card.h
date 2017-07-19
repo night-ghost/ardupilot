@@ -72,11 +72,41 @@ public:
     static uint8_t type(void) { return sd_get_type(); }
 
     static uint16_t errorCode() { return sd_status(); }
-    static uint8_t writeBlock(uint32_t block, uint8_t *buff) { return sd_write(buff, block, 1); }
-    static uint8_t readBlock(uint32_t block, uint8_t *buff){   return sd_read( buff, block, 1); }
+    static uint8_t writeBlock(uint32_t block, uint8_t *buff) { return sd_write(buff, block, 1)==RES_OK; }
+    static uint8_t readBlock(uint32_t block, uint8_t *buff){   return sd_read( buff, block, 1)==RES_OK; }
 
-    static uint8_t writeBlock(uint32_t block, uint8_t *buff, uint16_t len) { return sd_write(buff, block, len); }
-    static uint8_t readBlock(uint32_t block, uint8_t *buff, uint16_t len){   return sd_read( buff, block, len); }
+    static uint8_t writeBlock(uint32_t block, uint8_t *buff, uint16_t len) { return sd_write(buff, block, len)==RES_OK; }
+    static uint8_t readBlock(uint32_t block, uint8_t *buff, uint16_t len){   return sd_read( buff, block, len)==RES_OK; }
+    
+    static uint8_t ioctl(uint32_t cmd, uint32_t *buff){   return sd_ioctl(cmd, buff) == RES_OK; }
+
+    static uint32_t sectorCount() { // full number of sectors
+        uint32_t sz;
+        if(sd_ioctl(GET_SECTOR_COUNT, &sz) == RES_OK)
+            return sz;
+        return 0;
+
+    }
+
+    static uint32_t blockSize() { // sectors in erase block
+        uint32_t sz;
+        if(sd_ioctl(GET_BLOCK_SIZE, &sz) == RES_OK)
+            return sz; 
+#ifdef BOARD_DATAFLASH_ERASE_SIZE
+        return BOARD_DATAFLASH_ERASE_SIZE/512;
+#else
+        return 8;
+#endif
+
+    }
+
+    static uint32_t sectorSize() { // sector size in bytes
+        uint32_t sz;
+        if(sd_ioctl(GET_SECTOR_SIZE, &sz) == RES_OK)
+            return sz;
+            
+        return 512;
+    }
 
 private:
     void _timer(void) { sd_timerproc(); }

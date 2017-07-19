@@ -76,7 +76,7 @@ SdFatFs SDClass::_fatFs;
 uint8_t SDClass::begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi)
 {
     if (_card.init(std::move(spi))) {
-	return _fatFs.init();
+	return _fatFs.init(&_card);
     } 
     return FALSE;
 }

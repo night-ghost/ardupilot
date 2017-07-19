@@ -640,9 +640,7 @@ DRESULT sd_ioctl (
 		break;
 
 	case GET_SECTOR_COUNT :	/* Get drive capacity in unit of sector (DWORD) */
-	
 	        res=sd_getSectorCount((DWORD*)buff);
-	
 		break;
 
 	case GET_BLOCK_SIZE :	/* Get erase block size in unit of sector (DWORD) */
@@ -789,14 +787,20 @@ void sd_timerproc (void)
 #define JEDEC_STATUS_SEC             0x40
 #define JEDEC_STATUS_SRP0            0x80
 
-#define expect_memorytype            0x20
-#define expect_capacity              0x15
+//#define expect_memorytype            0x20
+//#define expect_capacity              0x15
 
+#define MAX_ERASE_SIZE 16384
 
 static bool flash_died=false;
 static uint8_t df_manufacturer;
 static uint16_t df_device;
-
+static uint32_t erase_size = BOARD_DATAFLASH_ERASE_SIZE;
+#if BOARD_DATAFLASH_ERASE_SIZE  >= 65536
+static uint8_t erase_cmd=JEDEC_PAGE_ERASE;
+#else
+static uint8_t erase_cmd=JEDEC_SECTOR_ERASE;
+#endif
 
 uint8_t sd_get_type() {
     return 0;
@@ -945,6 +949,8 @@ static void Flash_Jedec_WriteEnable(void){
     cs_release();
 }
 
+static uint8_t sector_buf[DF_PAGE_SIZE]; // we ALWAYS can use DMA!
+
 static bool read_page( BYTE *buf, DWORD pageNum){
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
@@ -961,14 +967,27 @@ static bool read_page( BYTE *buf, DWORD pageNum){
     
     write_spi_multi(cmd, sizeof(cmd));
 
-    read_spi_multi(buf, DF_PAGE_SIZE);
+    read_spi_multi(sector_buf, DF_PAGE_SIZE);
 
     cs_release();
+
+    for(uint16_t i=0; i<DF_PAGE_SIZE;i++){
+        buf[i] = ~sector_buf[i];       // let filesystem will be inverted, this allows extend files without having to Read-Modify-Write on FAT
+                                    // original: 0xFF is clear and 0 can be programmed any time
+                                    // inverted: 0 is clear and 1 can be programmed any time
+                                    // to mark cluster as used it should be set 1 in the FAT. Also new entries in dirs can be created without RMW
+    }
+
     return 1;
 }
 
+
 static bool write_page(const BYTE *buf, DWORD pageNum){
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
+
+    for(uint16_t i=0; i<DF_PAGE_SIZE;i++){
+        sector_buf[i] = ~buf[i];       // let filesystem will be inverted, this allows extend files without having to Read-Modify-Write on FAT
+    }
 
     Flash_Jedec_WriteEnable();
 
@@ -982,7 +1001,7 @@ static bool write_page(const BYTE *buf, DWORD pageNum){
 
     write_spi_multi(cmd, sizeof(cmd));
 
-    write_spi_multi(buf, DF_PAGE_SIZE);
+    write_spi_multi(sector_buf, DF_PAGE_SIZE);
     cs_release();
     return 1;
 }
@@ -995,7 +1014,7 @@ static bool erase_page(uint16_t pageNum)
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
     uint8_t cmd[4];
-    cmd[0] = JEDEC_SECTOR_ERASE;
+    cmd[0] = erase_cmd;
     cmd[1] = (PageAdr >> 16) & 0xff;
     cmd[2] = (PageAdr >>  8) & 0xff;
     cmd[3] = (PageAdr >>  0) & 0xff;
@@ -1022,10 +1041,18 @@ BYTE sd_getSectorCount(DWORD *ptr){
     uint8_t memtype =  (df_device>>8) & 0xFF;
     uint32_t size=0;
     
+
+    
     switch(df_manufacturer){
     case 0xEF: //  Winbond Serial Flash 
         if (memtype == 0x40) {
             size = (1 << ((capacity & 0x0f) + 4)) * 16 ;
+/*
+ const uint8_t _capID[11]      = {0x10,  0x11,   0x12,   0x13,   0x14, 0x15, 0x16, 0x17, 0x18,  0x19,  0x43};
+  const uint32_t _memSize[11]  = {64L*K, 128L*K, 256L*K, 512L*K, 1L*M, 2L*M, 4L*M, 8L*M, 16L*M, 32L*M, 8L*M};
+*/
+            erase_size=4096;
+            erase_cmd=JEDEC_SECTOR_ERASE;
             printf("Winbond SPI Flash found sectors=%ld\n", size);
         }
         break;
@@ -1044,12 +1071,17 @@ BYTE sd_getSectorCount(DWORD *ptr){
 
     default:
         printf("unknown Flash! mfg=%x model=%x size=%x\n",df_manufacturer, memtype, capacity);
+        
         break;
     }
 
-    if(!size) size = BOARD_DATAFLASH_PAGES / (FAT_SECTOR_SIZE/DF_PAGE_SIZE);   // in 512b blocks
-    
-    *ptr = size;
+    if(size) {
+        size = BOARD_DATAFLASH_PAGES;
+    } else
+
+    if(erase_size > MAX_ERASE_SIZE)   size -= (erase_size/DF_PAGE_SIZE); // reserve for RMW ops
+        
+    *ptr = size / (FAT_SECTOR_SIZE/DF_PAGE_SIZE);    // in 512b blocks
         
     return RES_OK;
 
@@ -1067,15 +1099,16 @@ BYTE sd_getSectorCount(DWORD *ptr){
 /*-----------------------------------------------------------------------*/
 
 DSTATUS sd_initialize () {
+    static bool initialized=0;
+
+    if(initialized) return Stat;
 
     ReadManufacturerID();
 
     sd_getSectorCount(&sd_max_sectors);
 
-#if BOARD_DATAFLASH_ERASE_SIZE > 16384
-    sd_max_sectors-=1; // reserve for RMW ops
-#endif
-
+    
+    initialized=1;
 
     Stat=0;
     return Stat;
@@ -1105,8 +1138,7 @@ DRESULT sd_read (
         
 	if (!count) return RES_PARERR;		        /* Check parameter */
 	if (Stat & STA_NOINIT) return RES_NOTRDY;	/* Check if drive is ready */
-	
-//	if(sector > sd_max_sectors) return RES_PARERR;		        /* Check parameter */
+	if(sector > sd_max_sectors) return RES_PARERR;		        /* Check parameter */
 
         count  *= FAT_SECTOR_SIZE/DF_PAGE_SIZE; // 256bytes page from 512byte sector
         sector *= FAT_SECTOR_SIZE/DF_PAGE_SIZE;
@@ -1146,7 +1178,7 @@ bool sd_move_block(uint32_t sec_from, uint32_t sec_to, const uint8_t *buff, uint
 
     uint16_t cnt;
     
-    for(cnt=BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE; cnt>0; cnt--){
+    for(cnt=erase_size/DF_PAGE_SIZE; cnt>0; cnt--){
         if(buff && sec_from >= sec && sec_from < (sec + count) ) { // if replacement data fit to sector
             memcpy(sbuffer, buff, DF_PAGE_SIZE);       // will use it
             buff+=DF_PAGE_SIZE;
@@ -1172,11 +1204,11 @@ DRESULT sd_write (
 {
 	if (!count) return RES_PARERR;		/* Check parameter */
 	if (Stat & STA_NOINIT) return RES_NOTRDY;	/* Check drive status */
-//	if(sector > sd_max_sectors) return RES_PARERR;		        /* Check parameter */
+	if(sector > sd_max_sectors) return RES_PARERR;		        /* Check parameter */
 
 
-        uint16_t pos = sector % BOARD_DATAFLASH_ERASE_SIZE/FAT_SECTOR_SIZE; // number of sector in erase block
-        if( pos == 0 && count >= BOARD_DATAFLASH_ERASE_SIZE/FAT_SECTOR_SIZE){ // begin of erase block - write full cluster
+        uint16_t pos = sector % erase_size/FAT_SECTOR_SIZE; // number of sector in erase block
+        if( pos == 0 && count >= erase_size/FAT_SECTOR_SIZE){ // begin of erase block - write full cluster
             count  *= FAT_SECTOR_SIZE/DF_PAGE_SIZE; // 256bytes page from 512byte sector
             sector *= FAT_SECTOR_SIZE/DF_PAGE_SIZE;
             if(!erase_page(sector)) return RES_ERROR;
@@ -1191,13 +1223,16 @@ DRESULT sd_write (
             bool need_erase = false; // check for free space for write
             
             {
-                uint8_t *sbuffer = malloc(FAT_SECTOR_SIZE); // read just the needed sector
+                uint8_t *sbuffer = malloc(FAT_SECTOR_SIZE*count); // read just the needed sectors
                 if(!sbuffer) return RES_ERROR; // no memory at all
                 
                 ptr = sbuffer;
 
-                uint32_t r_sector = sector * FAT_SECTOR_SIZE/DF_PAGE_SIZE;
-                uint16_t r_count  =          FAT_SECTOR_SIZE/DF_PAGE_SIZE;      // read full FAT sector
+                uint32_t r_sector = sector;
+                uint16_t r_count  = count;
+
+                r_sector *= FAT_SECTOR_SIZE/DF_PAGE_SIZE;
+                r_count  *= FAT_SECTOR_SIZE/DF_PAGE_SIZE;      // read data will be rewritten
 
 	        do {
 	            if(!read_page(ptr, r_sector)) break;
@@ -1207,8 +1242,12 @@ DRESULT sd_write (
                 
                 
                 const uint8_t *pp;
-                for(ptr = sbuffer, pp=buff; ptr < sbuffer+FAT_SECTOR_SIZE;ptr++){
-                    if(~*ptr & *pp){ // у нас не должно быть нулей там где нужна 1
+                for(ptr = sbuffer, pp=buff; ptr < sbuffer+FAT_SECTOR_SIZE*count;ptr++,pp++){
+//                    if(~*ptr & *pp){ // у нас не должно быть нулей там где нужна 1
+                // filesystem is inverted, so - у нас не должно быть 1 там где нужен 0
+                // пример: чистая FF - инверсия 00, можно писАть любой байт
+                //         считали F0 - инверсия 0F - можно писАть *0
+                    if(*ptr & *pp){ 
                         need_erase=true;
                         break;
                     }
@@ -1218,20 +1257,20 @@ DRESULT sd_write (
             
             if(need_erase){// write do dirty block
 
-                uint8_t *cluster = malloc(BOARD_DATAFLASH_ERASE_SIZE);
+                uint8_t *cluster = malloc(erase_size);
                 if(!cluster) { // we can try to allocate up to 64K so absense of memory should not be error!
-                    //return RES_ERROR;
+                    if(erase_size <= MAX_ERASE_SIZE) return RES_ERROR; // we have no reserved page
                     
                     // we can use any free sector of flash as buffer, too                    
-                    uint32_t fr_sec = sd_max_sectors; // the last one
+                    uint32_t fr_sec = sd_max_sectors * (FAT_SECTOR_SIZE/DF_PAGE_SIZE); // the last page
 
                     // read data from beginning of erase block up to part that will be rewritten
-                    uint32_t r_sector = (sector * FAT_SECTOR_SIZE/DF_PAGE_SIZE) & ~(BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE - 1);
+                    uint32_t r_sector = (sector * (FAT_SECTOR_SIZE/DF_PAGE_SIZE)) & ~(erase_size/DF_PAGE_SIZE - 1);
 
                     // move data to sectors of free block
                     if(!sd_move_block(r_sector, fr_sec, NULL, 0, 0)) return RES_ERROR; 
                     // move back with inserting of data to write
-                    if(!sd_move_block(fr_sec, r_sector, buff, sector * FAT_SECTOR_SIZE/DF_PAGE_SIZE, count * FAT_SECTOR_SIZE/DF_PAGE_SIZE)) return RES_ERROR; // move back
+                    if(!sd_move_block(fr_sec, r_sector, buff, sector * (FAT_SECTOR_SIZE/DF_PAGE_SIZE), count * (FAT_SECTOR_SIZE/DF_PAGE_SIZE))) return RES_ERROR; // move back
                     count=0; // all OK
 
                     
@@ -1240,11 +1279,11 @@ DRESULT sd_write (
                     ptr = cluster;
 
                     // read data from beginning of erase block up to part that will be rewritten
-                    uint32_t r_sector = (sector * FAT_SECTOR_SIZE/DF_PAGE_SIZE) & ~(BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE - 1);
+                    uint32_t r_sector = (sector * (FAT_SECTOR_SIZE/DF_PAGE_SIZE)) & ~(erase_size/DF_PAGE_SIZE - 1);
                     uint32_t w_sector = r_sector;
-                    uint16_t r_count = BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE;      // read full page
+                    uint16_t r_count = erase_size/DF_PAGE_SIZE;      // read full page
         	    do {
-	                if(r_sector >= sector * FAT_SECTOR_SIZE/DF_PAGE_SIZE) break;
+	                if(r_sector >= sector * (FAT_SECTOR_SIZE/DF_PAGE_SIZE)) break;
 	                if(!read_page(ptr, r_sector)) break;
 	                ptr   += DF_PAGE_SIZE;
 	                r_sector += 1;
@@ -1255,9 +1294,9 @@ DRESULT sd_write (
                     memcpy(ptr, (BYTE *)buff, FAT_SECTOR_SIZE*count); // insert sectors to write to right place
 
                     // skip part that will be rewritten
-                    r_count  -= FAT_SECTOR_SIZE/DF_PAGE_SIZE * count;
-                    r_sector += FAT_SECTOR_SIZE/DF_PAGE_SIZE * count;
-                    ptr      += FAT_SECTOR_SIZE * count;
+                    r_count  -= (FAT_SECTOR_SIZE/DF_PAGE_SIZE) * count;
+                    r_sector += (FAT_SECTOR_SIZE/DF_PAGE_SIZE) * count;
+                    ptr      +=  FAT_SECTOR_SIZE * count;
 
                     // read the tail
         	    while(r_count) {
@@ -1273,7 +1312,7 @@ DRESULT sd_write (
                     if(!erase_page(w_sector)) return RES_ERROR;
             
                     ptr = cluster;
-                    uint16_t w_count = BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE;
+                    uint16_t w_count = erase_size/DF_PAGE_SIZE;
     	            do {
     	                if(!write_page(ptr, w_sector)) break;
 	                ptr   += DF_PAGE_SIZE;
@@ -1294,7 +1333,6 @@ DRESULT sd_write (
     	            sector += 1;
     	        } while(--count);                
             }
-            
         }
 
 
@@ -1348,21 +1386,26 @@ DRESULT sd_ioctl (
 	    res = RES_OK;	        
 	    break;
 
-#ifdef BOARD_DATAFLASH_ERASE_SIZE
-	case GET_BLOCK_SIZE :	/* Get erase block size in unit of sector (uint32_t ) */
-	    *(uint32_t *)buff = BOARD_DATAFLASH_ERASE_SIZE/DF_PAGE_SIZE;
+	case GET_BLOCK_SIZE :	/* Get erase block size in unit of FAT sector (uint32_t ) */
+	    *(uint32_t *)buff = erase_size/FAT_SECTOR_SIZE;
+	    res = RES_OK;	        
+	    break;
+
+        case GET_SECTOR_SIZE:
+	    *(uint32_t *)buff = FAT_SECTOR_SIZE; // always
 	    res = RES_OK;	        
 	    break;
 
 	case CTRL_TRIM : {	                                /* Erase a block of sectors (used when _USE_TRIM == 1) */
-
 	    uint32_t  start_sector = ((uint32_t  *)buff)[0];
 	    uint32_t  end_sector   = ((uint32_t  *)buff)[1];
 	    uint32_t  block, last_block=-1;
+	    
+	    if(start_sector>=sd_max_sectors || end_sector>=sd_max_sectors) return RES_PARERR;
 
 	    for(uint32_t  sector=start_sector; sector <= end_sector;sector++){
-                uint32_t  df_sect = sector * FAT_SECTOR_SIZE/DF_PAGE_SIZE; // sector in DataFlash
-                block = df_sect / BOARD_DATAFLASH_ERASE_SIZE;    // number of EraseBlock
+                uint32_t  df_sect = sector * (FAT_SECTOR_SIZE/DF_PAGE_SIZE);    // sector in DataFlash
+                block = df_sect / (erase_size/DF_PAGE_SIZE);    // number of EraseBlock
                 if(last_block!=block){
                     last_block=block;
                     if(!erase_page(df_sect)) return RES_ERROR;                    
@@ -1371,16 +1414,6 @@ DRESULT sd_ioctl (
 	    res = RES_OK;
 	    
             } break;
-#else
-	case GET_BLOCK_SIZE :	/* Get erase block size in unit of sector (uint32_t ) */
-	    *(uint32_t *)buff = 8; // 4K cluster for SD card
-	    res = RES_OK;	        
-	    break;
-
-	case CTRL_TRIM :	                              /* Erase a block of sectors (used when _USE_TRIM == 1) */
-	    res = RES_OK; // no TRIM for SD
-            break;
-#endif
 
 	default:
 		res = RES_PARERR;

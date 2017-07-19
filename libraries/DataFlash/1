@@ -1,0 +1,56 @@
+void DataFlash_Revo::LogReadProcess(uint16_t log_num,
+                                     uint16_t start_page, uint16_t end_page, 
+                                     uint8_t num_types,
+                                     const struct LogStructure *structure,
+                                     void (*print_mode)(AP_HAL::BetterStream *port, uint8_t mode),
+                                     AP_HAL::BetterStream *port)
+{
+    uint8_t log_step = 0;
+    uint16_t page = start_page;
+    bool first_entry = true;
+
+    if (df_BufferIdx != 0) {
+        FinishWrite();
+        hal.scheduler->delay(100);
+    }
+
+    StartRead(start_page);
+
+	while (true) {
+		uint8_t data;
+        ReadBlock(&data, 1);
+
+		// This is a state machine to read the packets
+		switch(log_step) {
+			case 0:
+				if (data == HEAD_BYTE1) {
+					log_step++;
+                }
+				break;
+
+			case 1:
+				if (data == HEAD_BYTE2) {
+					log_step++;
+                } else {
+					log_step = 0;
+				}
+				break;
+
+			case 2:
+				log_step = 0;
+                if (first_entry && data != LOG_FORMAT_MSG) {
+                    _print_log_formats(num_types, structure, port);
+                }
+                first_entry = false;
+                _print_log_entry(data, num_types, structure, print_mode, port);
+                break;
+		}
+        uint16_t new_page = GetPage();
+        if (new_page != page) {
+            if (new_page == end_page+1 || new_page == start_page) {
+                return;
+            }
+            page = new_page;
+        }
+	}
+}

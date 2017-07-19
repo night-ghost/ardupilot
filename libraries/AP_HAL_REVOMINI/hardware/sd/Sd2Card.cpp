@@ -235,13 +235,13 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
     REVOMINIGPIO::_write(DF_RESET,1);
 
     if (!_spi) {
-        printf("DataFlash SPIDeviceDriver not found");
+        printf("DataFlash SPIDeviceDriver not found\n");
         return false;
     }
 
     _spi_sem = _spi->get_semaphore();
     if (!_spi_sem) {
-        printf("DataFlash SPIDeviceDriver semaphore is null");
+        printf("DataFlash SPIDeviceDriver semaphore is null\n");
         return false;
     }
 

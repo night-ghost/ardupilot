@@ -145,7 +145,7 @@ void boardInit(void);
 #define BOARD_DATAFLASH_NAME            "dataflash"
 #define BOARD_DATAFLASH_PAGES           0x2000
 
-#if 1// use it as FAT and share it via USB
+#if 0// use it as FAT and share it via USB
 #define BOARD_DATAFLASH_FATFS
 #define BOARD_DATAFLASH_ERASE_SIZE (65536)// in bytes
 #define USB_MASSSTORAGE

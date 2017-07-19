@@ -24,9 +24,13 @@
 
 #include "Sd2Card.h"
 
+#if defined(BOARD_SDCARD_CS_PIN) || defined(BOARD_DATAFLASH_FATFS)
+
 /* FatFs includes component */
 #include "FatFs/drivers/sd.h"
 #include "FatFs/ff.h"
+
+extern int printf(const char *msg, ...);
 
 // To match Arduino definition
 #define   FILE_WRITE  FA_WRITE
@@ -63,22 +67,29 @@ class SdFatFs {
 
   SdFatFs(){}
   
-  uint8_t init(void);
+  uint8_t init(Sd2Card *card);
 
   /** Return the FatFs type: 12, 16, 32 (0: unknown)*/
   uint8_t fatType(void);
 
   // inline functions that return volume info
   /** \return The volume's cluster size in blocks. */
-  uint8_t blocksPerCluster(void) const {return _SDFatFs.csize;}
+  uint8_t blocksPerCluster(void) const {return _SDFatFs.csize ? _SDFatFs.csize : blockSize();}
   /** \return The total number of clusters in the volume. */
-  uint32_t clusterCount(void) const {return (_SDFatFs.n_fatent -2);}
-
-  char* getRoot(void) { return _SDPath;};
+  inline uint32_t clusterCount(void) const {return _SDFatFs.n_fatent? _SDFatFs.n_fatent -2:0;}
+  
+  // returns raw volume size
+  inline uint32_t sectorCount(void) const { return _card->sectorCount(); }
+  inline uint32_t sectorSize(void) const { return _card->sectorSize(); }
+  inline uint32_t blockSize(void) const { return _card->blockSize(); }
+  
+  inline char* getRoot(void) { return _SDPath; };
 
 private:
 	FATFS _SDFatFs;  /* File system object for SD disk logical drive */
 	char _SDPath[4]; /* SD disk logical drive path */
+	Sd2Card *_card;
 };
+#endif
 #endif  // sdFatFs_h
 

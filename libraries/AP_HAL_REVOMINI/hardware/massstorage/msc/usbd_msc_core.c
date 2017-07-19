@@ -173,7 +173,7 @@ const __ALIGN_BEGIN uint8_t USBD_MSC_CfgDesc[USB_MSC_CONFIG_DESC_SIZ] __ALIGN_EN
   0x02,   /* bNumEndpoints*/
   0x08,   /* bInterfaceClass: MSC Class */
   0x06,   /* bInterfaceSubClass : SCSI transparent*/
-  0x50,   /* nInterfaceProtocol */
+  0x50,   /* nInterfaceProtocol : bulk only */
   0x05,          /* iInterface: */
   /********************  Mass Storage Endpoints ********************/
   0x07,   /*Endpoint descriptor length = 7*/

@@ -20,9 +20,16 @@
  * <http://www.gnu.org/licenses/>.
  */
 
+
+
 #include "SdFatFs.h"
 
-uint8_t SdFatFs::init(void) {
+#if defined(BOARD_SDCARD_CS_PIN) || defined(BOARD_DATAFLASH_FATFS)
+
+uint8_t SdFatFs::init(Sd2Card *card) {
+
+    _card=card;
+
     _SDPath[0] = '0';
     _SDPath[1] = ':';
     _SDPath[2] = '/';
@@ -36,13 +43,17 @@ uint8_t SdFatFs::init(void) {
     
 #if defined(BOARD_DATAFLASH_FATFS) // in DataFlash
 
+//    printf("Formatting DataFlash to FAT..."); - no printf without HAL
     if(f_mkfs((TCHAR const*)_SDPath, 1 /* unpartitioned */, BOARD_DATAFLASH_ERASE_SIZE/FAT_SECTOR_SIZE /* cluster in sectors */) == FR_OK &&
        f_mount(&_SDFatFs, (TCHAR const*)_SDPath, 1) == FR_OK) {
+
+//        printf(" OK!\n");
     	/* FatFs Initialization done */
         return 1;
 
     }
 
+//    printf(" Error!\n");
 #endif
     return 0;
 }
@@ -61,4 +72,6 @@ uint8_t SdFatFs::fatType(void)
 		return 0;
 	}
 }
+
+#endif
 

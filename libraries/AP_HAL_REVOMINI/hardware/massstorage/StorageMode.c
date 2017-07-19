@@ -1,5 +1,8 @@
 #include "StorageMode.h"
 
+// defines of disk status
+#include "../sd/FatFs/diskio.h"
+
 
 extern USB_OTG_CORE_HANDLE           USB_OTG_dev;
 
@@ -32,12 +35,13 @@ int8_t STORAGE_GetCapacity(uint8_t lun, uint32_t *block_num, uint32_t *block_siz
 
 int8_t STORAGE_IsReady(uint8_t lun)
 {
-    return usb_mass_mal_get_status(lun); 
+    return usb_mass_mal_get_status(lun) & (STA_NODISK | STA_NOINIT); 
 }
 
 int8_t STORAGE_IsWriteProtected(uint8_t lun)
 {
-	return 1;
+    return usb_mass_mal_get_status(lun) & STA_PROTECT; 
+
 }
 
 int8_t STORAGE_Read(
@@ -46,7 +50,6 @@ int8_t STORAGE_Read(
 	uint32_t blk_addr,  // address of 1st block to be read
 	uint16_t blk_len)   // nmber of blocks to be read
 {
-	//emfat_read(&emfat, buf, blk_addr, blk_len);
         return usb_mass_mal_read_memory(lun, blk_addr, buf, blk_len);
 }
 
@@ -55,11 +58,10 @@ int8_t STORAGE_Write(uint8_t lun,
 	uint32_t blk_addr,
 	uint16_t blk_len)
 {
-//	emfat_write(&emfat, buf, blk_addr, blk_len);
 	return usb_mass_mal_write_memory(lun, blk_addr, buf, blk_len);
 }
 
-int8_t STORAGE_GetMaxLun(void)
+inline int8_t STORAGE_GetMaxLun(void)
 {
   return (STORAGE_LUN_NBR - 1);
 }

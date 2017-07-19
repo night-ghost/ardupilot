@@ -132,8 +132,8 @@ public:
 
   friend class File;
 
-//    static inline Sd2Card getCard() { return &_card; }
-    static inline SdFatFs * getVolume() { return &_fatFs; }
+    static inline Sd2Card *getCard() { return &_card; }
+    static inline SdFatFs *getVolume() { return &_fatFs; }
 //    static inline blocksPerCluster() { return _fatFs.blocksPerCluster(); }
 
 private:
