@@ -46,6 +46,6 @@ typedef struct ioMem_s {
 } ioMem_t;
 
 
-static inline  uint32_t micros() {  return timer_get_count32(TIMER5); }
-
+static inline  void delay_us(uint16_t t) {  hal_delay_microseconds(t); }
+static inline  uint32_t micros() {  return hal_micros(); }
 static inline  uint32_t millis() {  return systick_uptime(); }

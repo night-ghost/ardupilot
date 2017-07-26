@@ -74,9 +74,10 @@ void yield(uint32_t us){
 
 } // namespace AP_HAL
 
-int printf(const char *msg, ...)
-{
-    /* Suspend timer processes. We still want the timer event to go off to run the _failsafe code, however. */
+
+
+/*
+int printf(const char *msg, ...){
     va_list ap;
 
     va_start(ap, msg);
@@ -84,5 +85,39 @@ int printf(const char *msg, ...)
     va_end(ap);
     return 1;
 }
+*/
 
+// export console IO to low-level functions
+// so any printf will go to console, not to /dev/null
+extern "C" {
+    unsigned char getch(void);
+    
+    int _read(int fd, char *buf, size_t cnt);
+
+    void putch(unsigned char c);
+}
+
+
+unsigned char getch(void) {
+    if(hal.console->available())
+        return hal.console->read();
+    return 0;
+}
+    
+int _read(int fd, char *buf, size_t cnt) {
+    uint16_t rcv=0;
+    
+    while(cnt--){
+        if(hal.console->available()){
+            *buf++ = hal.console->read();
+            rcv++;
+        } else break;
+    }
+
+    return rcv;
+}
+
+void putch(unsigned char c) {
+    hal.console->write(c);
+}
 

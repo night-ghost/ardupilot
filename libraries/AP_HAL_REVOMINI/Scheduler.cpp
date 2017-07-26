@@ -220,14 +220,12 @@ void REVOMINIScheduler::_delay_microseconds(uint16_t us)
     uint32_t rtime = stopwatch_getticks(); // start ticks
     uint32_t dt    = us_ticks * us;  // delay time in ticks
 
-    uint32_t ny = 10 * us_ticks; // 10 uS in ticks
+    uint32_t ny = 3 * us_ticks; // no-yield time 3 uS in ticks
     uint32_t tw;
 
     while ((tw = stopwatch_getticks() - rtime) < dt) { // tw - time waiting, in ticks
-        if((dt - tw) > ny ) { // No Yeld time - 10uS to end of wait 
+        if((dt - tw) > ny ) { // No Yeld time - 3uS to end of wait 
             yield((dt - tw) / us_ticks); // in micros
-//        } else {
-//            __WFE();        
         }
     }    
 
@@ -1105,7 +1103,7 @@ union Revo_handler { // кровь кишки ассемблер :) преобр
 
 
 void revo_call_handler(uint64_t hh, uint32_t arg){
-    register Revo_handler h = { .h = hh };
+    Revo_handler h = { .h = hh };
 
     if(ADDRESS_IN_FLASH(h.w[0])){
 //        (h.vp)(arg);
@@ -1115,3 +1113,8 @@ void revo_call_handler(uint64_t hh, uint32_t arg){
         (h.mp)();
     }
 }
+
+void hal_yield(uint16_t ttw){ REVOMINIScheduler::yield(ttw); }
+void hal_delay(uint16_t t){   REVOMINIScheduler::_delay(t); }
+void hal_delay_microseconds(uint16_t t){ REVOMINIScheduler::_delay_microseconds(t);}
+uint32_t hal_micros() { return REVOMINIScheduler::_micros(); }

@@ -23,10 +23,10 @@ extern const AP_HAL::HAL& hal;
 
 
 static void delay_10us(){
-    REVOMINIScheduler::_delay_microseconds(10);
+    hal_delay_microseconds(10);
 }
 
-void Soft_I2C::_delay(void) {   REVOMINIScheduler::_delay_microseconds(_dly_time); } // delay at each line change so speed is near 250kHz
+void Soft_I2C::_delay(void) {   hal_delay_microseconds(_dly_time); } // delay at each line change so speed is near 250kHz
 
 bool Soft_I2C::_Start(void)
 {
@@ -136,7 +136,7 @@ Soft_I2C::Soft_I2C( const gpio_dev *scl_dev, uint8_t scl_bit, const gpio_dev *sd
     scl_port = scl_dev->GPIOx;
     scl_pin  = 1<<scl_bit;
     
-    _dly_time=1; 
+    _dly_time=1;  // 1uS per edge = 250kHz
 }
 
 Soft_I2C::Soft_I2C() 
@@ -288,7 +288,7 @@ bool Soft_I2C::wait_scl(){
 
     while (stopwatch_getticks()  < dt) {
         if (SCL_read)  return true; // line released
-        REVOMINIScheduler::yield(1000); // пока ожидаем - пусть другие работают
+        REVOMINIScheduler::yield(10); // пока ожидаем - пусть другие работают
     }
     
     return false;
@@ -304,7 +304,7 @@ bool Soft_I2C::bus_reset(void) {
 again:
     /* Wait for any clock stretching to finish */
     while (!SCL_read) {// device can output 1 so check clock first
-        REVOMINIScheduler::yield(100); // пока ожидаем - пусть другие работают
+        REVOMINIScheduler::yield(10); // пока ожидаем - пусть другие работают
         
         if(systick_uptime()-t > MAX_I2C_TIME) goto error;
     }

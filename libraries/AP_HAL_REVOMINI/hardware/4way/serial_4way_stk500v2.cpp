@@ -66,7 +66,7 @@ static uint8_t ckSumOut;
 static void StkSendByte(uint8_t dat)
 {
     ckSumOut ^= dat;
-    for (uint8_t i = 0; i < 8; i++)    {
+    for (uint8_t i = 0; i < 8; i++)    { // TODO каналы моторов на таймере так что время нужно формировать через PWM
         if (dat & 0x01) {
             // 1-bits are encoded as 64.0us high, 72.8us low (135.8us total).
             ESC_SET_HI;

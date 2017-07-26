@@ -54,7 +54,7 @@ __IO uint8_t   sEEDataNum;
 */
 
 static void delay_10us(){
-    stopwatch_delay_us(10);
+    hal_delay_microseconds(10);
 }
 
 /**
@@ -551,6 +551,7 @@ again:
     /* Wait for any clock stretching to finish */
     while (!gpio_read_bit(dev->gpio_port, dev->scl_pin)) {// device can output 1 so check clock first
         if(systick_uptime()-t > MAX_I2C_TIME) return false;
+        hal_yield(10);
     }
     delay_10us();	// 50kHz
 
@@ -558,6 +559,7 @@ again:
         /* Wait for any clock stretching to finish */
         while (!gpio_read_bit(dev->gpio_port, dev->scl_pin)){
             if(systick_uptime()-t > MAX_I2C_TIME) return false;
+            hal_yield(10);
         }
         delay_10us();	// 50kHz
 
@@ -585,7 +587,7 @@ again:
     while ((stopwatch_getticks() - rtime) < dt) {
         if (!gpio_read_bit(dev->gpio_port, dev->scl_pin))  goto again; // any SCL activity after STOP
     }
-    
+
     return true;
 }
 

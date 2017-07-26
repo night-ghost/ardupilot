@@ -82,7 +82,7 @@ void DataFlash_File::Init()
 
         if (!SD.mkdir(_log_directory)) {
             
-            hal.console->printf("Failed to create log directory %s\n", _log_directory);
+            hal.console->printf("Failed to create log directory %s: %s\n", _log_directory, SD.strError(SD.lastError));
             _log_directory="0:";
         }
     }
@@ -285,7 +285,7 @@ void DataFlash_File::Prep_MinSpace()
             hal.console->printf("Removing (%s) for minimum-space requirements (%.2f%% < %.0f%%)\n",
                                 filename_to_remove, (double)avail, (double)min_avail_space_percent);
             if (!SD.remove(filename_to_remove)) {
-                hal.console->printf("Failed to remove %s\n", filename_to_remove);
+                hal.console->printf("Failed to remove %s: %s\n", filename_to_remove, SD.strError(SD.lastError));
                 free(filename_to_remove);
             } else {
                 free(filename_to_remove);
@@ -589,7 +589,7 @@ int16_t DataFlash_File::get_log_data(const uint16_t list_entry, const uint16_t p
         if (!(_read_fd)) {
             _open_error = true;
 
-            hal.console->printf("Log read open fail for %s\n", fname);
+            hal.console->printf("Log read open fail for %s: %s\n", fname, SD.strError(SD.lastError));
             free(fname);
             return -1;            
         }
@@ -698,7 +698,7 @@ uint16_t DataFlash_File::start_new_log(void)
     if (!(_write_fd)) {
         _initialised = false;
         _open_error = true;
-        hal.console->printf("Log open fail for %s\n",        fname);
+        hal.console->printf("Log open fail for %s: %s\n",fname, SD.strError(SD.lastError));
         free(fname);
         return 0xFFFF;
     }
@@ -811,19 +811,17 @@ void DataFlash_File::LogReadProcess(const uint16_t list_entry,
 
 /*
   this is a lot less verbose than the block interface. Dumping 2Gbyte
-  of logs a page at a time isn't so useful. Just pull the SD card out
+  of logs a page at a time isn't so useful. Just pull the SD card out or mount FC as massStorage
   and look at it on your PC
  */
 void DataFlash_File::DumpPageInfo(AP_HAL::BetterStream *port)
 {
-    port->printf("DataFlash: num_logs=%u\n", 
-                   (unsigned)get_num_logs());    
+    port->printf("DataFlash: num_logs=%u\n", (unsigned)get_num_logs());    
 }
 
 void DataFlash_File::ShowDeviceInfo(AP_HAL::BetterStream *port)
 {
-    port->printf("DataFlash logs stored in %s\n", 
-                   _log_directory);
+    port->printf("DataFlash logs stored in %s\n", _log_directory);
 }
 
 

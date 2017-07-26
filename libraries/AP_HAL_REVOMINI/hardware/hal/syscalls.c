@@ -36,18 +36,18 @@
 extern caddr_t _end;
 extern caddr_t _eccm;
 
+#pragma GCC diagnostic ignored "-Wunused-variable"
 
 int _kill(int pid, int sig)
 {
-	pid = pid; sig = sig; /* avoid warnings */
 	errno = EINVAL;
 	return -1;
 }
 
 void _exit(int status)
 {
-	status = status; /* avoid warnings */
-	while(1) {;}
+//	while(1) {;}
+    __error(13, status, 0);
 }
 
 int _getpid(void)
@@ -150,10 +150,11 @@ int _lseek(int fd, off_t pos, int whence) {
     return -1;
 }
 
+/* in system.c
+
 unsigned char getch(void) {
     return 0;
 }
-
 
 int _read(int fd, char *buf, size_t cnt) {
     *buf = getch();
@@ -163,6 +164,8 @@ int _read(int fd, char *buf, size_t cnt) {
 
 void putch(unsigned char c) {
 }
+*/
+
 
 void cgets(char *s, int bufsize) {
     char *p;

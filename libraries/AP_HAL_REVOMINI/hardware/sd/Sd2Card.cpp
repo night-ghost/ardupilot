@@ -62,7 +62,7 @@ void spi_spiTransfer(const uint8_t *send, uint32_t send_len,  uint8_t *recv, uin
 
 
 void spi_yield(){
-    REVOMINIScheduler::yield(); // пока ожидаем - пусть другие работают
+    hal_yield(0); // пока ожидаем - пусть другие работают
 }
 
 

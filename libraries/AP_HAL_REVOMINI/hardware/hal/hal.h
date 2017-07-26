@@ -28,6 +28,10 @@
 extern void clock_gettime(uint32_t a1, void *a2);
 
 extern void revo_call_handler(Handler h, uint32_t arg);
+extern void hal_yield(uint16_t ttw);
+extern void hal_delay(uint16_t t);
+extern void hal_delay_microseconds(uint16_t t);
+extern uint32_t hal_micros();
 
 #ifdef __cplusplus
   }

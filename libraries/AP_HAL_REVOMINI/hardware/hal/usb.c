@@ -761,7 +761,8 @@ void usb_cdcacm_set_hooks(unsigned hook_flags, void (*hook)(unsigned, void*)) {
 
 // following functions can't be inline!
 void USB_OTG_BSP_uDelay (const uint32_t usec) {   
-    stopwatch_delay_us(usec); 
+    //stopwatch_delay_us(usec); 
+    hal_delay_microseconds(usec);
 }
 
 int usb_write(const uint8_t *buf, unsigned int nbytes) {

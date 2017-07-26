@@ -81,7 +81,7 @@ typedef int16_t byte_16;
 extern void max7456_off();
 extern void max7456_on();
 
-static inline void delayMicroseconds(uint16_t us) { REVOMINIScheduler::_delay_microseconds(us); }
-static inline void delay(uint16_t ms) { REVOMINIScheduler::_delay(ms); }
+static inline void delayMicroseconds(uint16_t us) { hal_delay_microseconds(us); }
+static inline void delay(uint16_t ms) { hal_delay(ms); }
 
 #endif

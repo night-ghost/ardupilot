@@ -67,7 +67,7 @@ SDClass SD;
 Sd2Card SDClass::_card;
 SdFatFs SDClass::_fatFs;
 
-FRESULT SDClass::errno = FR_OK;
+FRESULT SDClass::lastError = FR_OK;
 
 /**
   * @brief  Link SD, register the file system object to the FatFs mode and configure
@@ -78,7 +78,7 @@ FRESULT SDClass::errno = FR_OK;
 uint8_t SDClass::begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi)
 {
     if (_card.init(std::move(spi))) {        
-	return (errno=_fatFs.init(&_card)) == FR_OK;
+	return (lastError=_fatFs.init(&_card)) == FR_OK;
     } 
     return FALSE;
 }
@@ -93,10 +93,10 @@ uint8_t SDClass::exists(const char *filepath)
 {
     FILINFO fno;
 
-    errno=f_stat(filepath, &fno);
+    lastError=f_stat(filepath, &fno);
 //    fno->fattrib & AM_DIR
 
-    return errno == FR_OK;
+    return lastError == FR_OK;
 }
 
 /**
@@ -106,8 +106,8 @@ uint8_t SDClass::exists(const char *filepath)
   */
 uint8_t SDClass::mkdir(const char *filepath)
 {
-    errno = f_mkdir(filepath);
-    return errno == FR_OK;
+    lastError = f_mkdir(filepath);
+    return lastError == FR_OK;
 }
 
 /**
@@ -117,8 +117,8 @@ uint8_t SDClass::mkdir(const char *filepath)
   */
 uint8_t SDClass::rmdir(const char *filepath)
 {
-    errno = f_unlink(filepath);
-    return errno == FR_OK;
+    lastError = f_unlink(filepath);
+    return lastError == FR_OK;
 }
 
 /**
@@ -132,20 +132,20 @@ File SDClass::open(const char *filepath)
 
     FILINFO fno;
 
-    errno=f_stat(filepath, &fno);
+    lastError=f_stat(filepath, &fno);
 
-    if(errno!=FR_OK){ // no file
+    if(lastError!=FR_OK){ // no file
         return file;
     }
 
     if(fno.fattrib & AM_DIR) {
-	errno = f_opendir(&file._dir, filepath);
-        if( errno != FR_OK) {
+	lastError = f_opendir(&file._dir, filepath);
+        if( lastError != FR_OK) {
             file.close();
 	}
     } else {
-        errno = f_open(&file._fil, filepath, FA_READ);
-        if( errno == FR_OK) {
+        lastError = f_open(&file._fil, filepath, FA_READ);
+        if( lastError == FR_OK) {
             File::addOpenFile(&file._fil);
         } else {
             file.close();
@@ -166,24 +166,24 @@ File SDClass::open(const char *filepath, uint8_t mode)
 
     FILINFO fno;
 
-    errno=f_stat(filepath, &fno);
+    lastError=f_stat(filepath, &fno);
 
     if(fno.fattrib & AM_DIR) {
         if(!(mode & FILE_WRITE)){
-            errno = f_opendir(&file._dir, filepath);
+            lastError = f_opendir(&file._dir, filepath);
         } else {
-            errno = FR_IS_DIR;
+            lastError = FR_IS_DIR;
         }
-        if( errno != FR_OK) file.close();
+        if( lastError != FR_OK) file.close();
     } else {
     
-        if((mode & FILE_WRITE) && errno==FR_OK) { // режимы открытия файла отличаются. если существует файл
+        if((mode & FILE_WRITE) && lastError==FR_OK) { // режимы открытия файла отличаются. если существует файл
             mode &= ~FA_CREATE_NEW;    //  то убираем флаг создания - а то ошибка будет "файл существует"            
         }
 
-        errno = f_open(&file._fil, filepath, mode);
+        lastError = f_open(&file._fil, filepath, mode);
 
-        if( errno == FR_OK){
+        if( lastError == FR_OK){
             if(mode & O_APPEND){
                 f_lseek(&file._fil, f_size(&file._fil));            
             }
@@ -202,16 +202,16 @@ File SDClass::open(const char *filepath, uint8_t mode)
   */
 uint8_t SDClass::remove(const char *filepath)
 {
-    errno = f_unlink(filepath);
-    return errno == FR_OK;
+    lastError = f_unlink(filepath);
+    return lastError == FR_OK;
 }
 
 File SDClass::openRoot(void)
 {
     File file = File(_fatFs.getRoot());
 
-    errno = f_opendir(&file._dir, _fatFs.getRoot());
-    if(errno != FR_OK) {
+    lastError = f_opendir(&file._dir, _fatFs.getRoot());
+    if(lastError != FR_OK) {
 	file._dir.fs = 0;
     }
     return file;
@@ -225,8 +225,8 @@ uint32_t SDClass::getfree(const char *filepath, uint32_t * fssize){
 
 
     /* Get volume information and free clusters of drive */
-    errno = f_getfree(filepath, &fre_clust, &fs);
-    if (errno != FR_OK) return -1;
+    lastError = f_getfree(filepath, &fre_clust, &fs);
+    if (lastError != FR_OK) return -1;
 
     /* Get total sectors and free sectors */
     if(fssize) *fssize = (fs->n_fatent - 2) * fs->csize; // tot_sect
@@ -239,8 +239,8 @@ uint32_t SDClass::getfree(const char *filepath, uint32_t * fssize){
 
 //f_stat (        const TCHAR* path,      /* Pointer to the file path */         FILINFO* fno )
 uint8_t SDClass::stat(const char *filepath, FILINFO* fno){
-    errno = f_stat(filepath, fno);
-    if(errno != FR_OK) return -1;
+    lastError = f_stat(filepath, fno);
+    if(lastError != FR_OK) return -1;
     return 0;
 }
 

@@ -23,6 +23,7 @@
 #define SdFatFs_h
 
 #include "Sd2Card.h"
+#include "stdio.h"
 
 #if defined(BOARD_SDCARD_CS_PIN) || defined(BOARD_DATAFLASH_FATFS)
 
@@ -30,7 +31,6 @@
 #include "FatFs/drivers/sd.h"
 #include "FatFs/ff.h"
 
-extern "C" int printf(const char *msg, ...);
 
 // To match Arduino definition
 #define   FILE_WRITE  FA_WRITE
@@ -84,6 +84,8 @@ class SdFatFs {
   inline uint32_t blockSize(void) const { return _card->blockSize(); }
   
   inline char* getRoot(void) { return _SDPath; };
+
+  static const char *strError(FRESULT err);
 
 private:
 	FATFS _SDFatFs;  /* File system object for SD disk logical drive */

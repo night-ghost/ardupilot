@@ -15,7 +15,6 @@
 #ifndef __SD_H__
 #define __SD_H__
 
-#define __ERRNO_H__
 
 #include <stdio.h>
 #include <util.h>
@@ -146,7 +145,9 @@ public:
     static inline Sd2Card *getCard() { return &_card; }
     static inline SdFatFs *getVolume() { return &_fatFs; }
 
-    static FRESULT errno;
+    static FRESULT lastError;
+
+    static const char * strError(FRESULT err){ return SdFatFs::strError(err); }
     
 private:
     static Sd2Card _card;

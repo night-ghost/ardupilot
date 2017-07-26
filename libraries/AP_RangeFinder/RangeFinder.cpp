@@ -634,11 +634,16 @@ void RangeFinder::detect_instance(uint8_t instance)
         }
         break;
     case RangeFinder_TYPE_VL53L0X:
+#ifdef BOARD_I2C_BUS_EXT
+            _add_backend(AP_RangeFinder_VL53L0X::detect(*this, instance, state[instance],
+                                                        hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, 0x29)));
+#else
         if (!_add_backend(AP_RangeFinder_VL53L0X::detect(*this, instance, state[instance],
                                                          hal.i2c_mgr->get_device(1, 0x29)))) {
             _add_backend(AP_RangeFinder_VL53L0X::detect(*this, instance, state[instance],
                                                         hal.i2c_mgr->get_device(0, 0x29)));
         }
+#endif
         break;
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4  || CONFIG_HAL_BOARD == HAL_BOARD_VRBRAIN
     case RangeFinder_TYPE_PX4_PWM:

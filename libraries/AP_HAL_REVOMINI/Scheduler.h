@@ -49,7 +49,14 @@ extern "C" {
     void PendSV_Handler();
 
     extern caddr_t stack_bottom; // for SBRK check
+    
+// publish to low-level functions
+    void hal_yield(uint16_t ttw);
+    void hal_delay(uint16_t t);
+    void hal_delay_microseconds(uint16_t t);
+    uint32_t hal_micros();
 }
+
 
 #define RAMEND ((size_t)&_estack)
 

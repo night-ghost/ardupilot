@@ -12,7 +12,7 @@
   extern "C" {
 #endif
  
-
+#if 0
 
 /**
  * @brief Delay the given number of microseconds.
@@ -31,6 +31,7 @@ static inline void delay_us(uint32_t us) {
                  : [us] "r" (us)
                  : "r0");
 }
+#endif
 
 static inline void delay_ns100(uint32_t us) {
     us *= STM32_DELAY_US_MULT;
