@@ -1,5 +1,7 @@
 /// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 
+#pragma GCC optimize ("O2")
+
 #include <AP_HAL_REVOMINI/AP_HAL_REVOMINI.h>
 #include "Semaphores.h"
 #include "Scheduler.h"

@@ -2,8 +2,7 @@
 #include <hal.h>
 #include <timer.h>
 #include "usart.h"
-#include <wirish.h>
-
+#include <string.h>
 
 volatile uint64_t systick_uptime_millis IN_CCM;
 voidFuncPtr boardEmergencyHandler IN_CCM;
@@ -73,10 +72,7 @@ void __attribute__((noreturn)) error_throb(uint32_t num){
     uint16_t i       = 0;
     uint8_t n;
 
-    const int HAL_GPIO_C_LED_PIN=105;
-    const int HAL_GPIO_A_LED_PIN=36;
-    
-    uint8_t pin= (num==0)? HAL_GPIO_A_LED_PIN : HAL_GPIO_C_LED_PIN;
+    const uint8_t pin= BOARD_GPIO_C_LED_PIN;
 
     const stm32_pin_info *pp = &PIN_MAP[pin];
 

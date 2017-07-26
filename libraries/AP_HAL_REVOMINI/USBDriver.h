@@ -24,24 +24,24 @@ public:
     USBDriver(bool usb);
 
   /* REVOMINI implementations of UARTDriver virtual methods */
-  void begin(uint32_t b);
-  void begin(uint32_t b, uint16_t rxS, uint16_t txS) {    begin(b); }
+    void begin(uint32_t b);
+    void begin(uint32_t b, uint16_t rxS, uint16_t txS) {    begin(b); }
 
-  inline void end()   {  /* if(_usb_present)*/ usb_close(); } 
-  inline bool is_initialized(){ return _initialized; }
-  inline void set_blocking_writes(bool blocking) { _blocking=blocking; }
-  inline bool tx_pending() {   return false; }
+    inline void end()   {  /* if(_usb_present)*/ usb_close(); } 
+    inline bool is_initialized(){ return _initialized; }
+    inline void set_blocking_writes(bool blocking) { _blocking=blocking; }
+    inline bool tx_pending() {   return false; }
 
     void flush() { return; };
 
-  /* REVOMINI implementations of Stream virtual methods */
-  uint32_t available() override;
-  inline uint32_t txspace() override  {   return 255; }
-  int16_t read() override;
+  /* implementations of Stream virtual methods */
+    uint32_t available() override;
+    inline uint32_t txspace() override  {   return 255; }
+    int16_t read() override;
 
-  /* Empty implementations of Print virtual methods */
-  size_t write(uint8_t c);
-  size_t write(const uint8_t *buffer, size_t size);
+  /* implementations of Print virtual methods */
+    size_t write(uint8_t c);
+    size_t write(const uint8_t *buffer, size_t size);
 
 private:
     uint8_t _usb_present;

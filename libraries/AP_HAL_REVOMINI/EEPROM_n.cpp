@@ -2,7 +2,6 @@
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI && 0
 
-#include "wirish.h"
 #include <string.h>
 #include "stm32f4xx.h"
 #include "EEPROM.h"

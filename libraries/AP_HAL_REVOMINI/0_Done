@@ -76,8 +76,6 @@
 * added boardEmergencyHandler which will be called on any Fault or Panic() before halt - eg. to release parachute
 * motor layout switched to per-board basis
 * console assignment switched to per-board basis
-* compass processing (4027uS) and baro processing(1271uS) can be moved out from interrupt level to IO_Completion level, because its
- execution time spoils loop time (500Hz = 2000uS for all)
 * HAL switched to new DMA api with completion interrupts
 * AirbotV2 is fully supported with SD card and OSD (OSD not tested, just compiles)
 * added support for reading from SD card via USB - HAL parameter allows to be USB MassStorege
@@ -86,7 +84,11 @@
 * all boards formats internal flash chip as FAT and allows access via USB
 * added spi flash autodetection
 * added support for TRIM command on FAT-formatted Dataflash
-
+* fixed bug in hardware I2C driver which spoils writes to I2C2
+* fixed bug in log write with different meanings of flags in FatFs and Posix
+* rewritten SD library to support 'errno' and early distinguish between file and dir
+* compass processing (4027uS) and baro processing(1271uS)  moved out from interrupt level to low-priority io level, because its
+ execution time spoils loop time (500Hz = 2000uS for all)
 
 * ...
 * a lot of minor enhancements

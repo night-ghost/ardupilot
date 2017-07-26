@@ -15,6 +15,8 @@
 #ifndef __SD_H__
 #define __SD_H__
 
+#define __ERRNO_H__
+
 #include <stdio.h>
 #include <util.h>
 #include <AP_HAL/AP_HAL.h>
@@ -37,11 +39,22 @@
 #define FA_OPEN_ALWAYS          0x10
 */
 #define O_RDONLY FA_READ
-#define O_WRITE FA_WRITE
-#define O_CREAT FA_CREATE_NEW
-#define O_TRUNC FA_CREATE_ALWAYS
+#define O_WRITE  FA_WRITE
+#define O_RDWR   FA_WRITE
+#define O_CREAT  FA_CREATE_NEW    // создать новый, если существует то ошибка
+#define O_TRUNC  FA_CREATE_ALWAYS // переписать старый
+#define O_APPEND 0x20
+#define O_CLOEXEC 0x40
 
+#undef EEXIST
+#undef EACCES
+#undef EISDIR
+#undef ENOENT
 
+#define EEXIST FR_EXIST
+#define EACCES FR_DENIED
+#define EISDIR FR_IS_DIR
+#define ENOENT FR_NO_FILE
 
 // flags for ls()
 /** ls() flag to print modify date */
@@ -55,28 +68,28 @@ typedef void (*cb_putc)(char c);
 
 class File {
 public:
-  File(void);
-  File(const char* name);
-  size_t write(uint8_t);
-  size_t write(const uint8_t *buf, size_t size);
-  size_t write(const char *buf, size_t size);
+    File(void);
+    File(const char* name);
+    size_t write(uint8_t);
+    size_t write(const uint8_t *buf, size_t size);
+    size_t write(const char *buf, size_t size);
 
-  int read();
-  int peek();
-  int available();
-  void flush();
-  int read(void* buf, size_t len);
-  uint8_t seek(uint32_t pos);
-  uint32_t position();
-  uint32_t size();
-  void close();
-  operator bool() const;
+    int read();
+    int peek();
+    int available();
+    void flush();
+    int read(void* buf, size_t len);
+    uint8_t seek(uint32_t pos);
+    uint32_t position();
+    uint32_t size();
+    void close();
+    operator bool() const; // is open?
 
-  char* name(void);
-  char* fullname(void) {return _name;};
-  uint8_t isDirectory();
-  File openNextFile(uint8_t mode = FILE_READ);
-  void rewindDirectory(void);
+    char* name(void);
+    char* fullname(void) {return _name;};
+    uint8_t isDirectory();
+    File openNextFile(uint8_t mode = FILE_READ);
+    void rewindDirectory(void);
 
     size_t print(const char* data);
     size_t println();
@@ -92,7 +105,7 @@ public:
 
     void inline sync() {  f_sync(&_fil); };
 
-    inline uint32_t firstCluster(){ return _fil.sclust ; }
+    inline uint32_t firstCluster(){ return _fil.sclust; }
 
 // should be private?
     char *_name = NULL; //file or dir name
@@ -113,32 +126,31 @@ class SDClass {
 public:
 
   /* Initialize the SD peripheral */
-  static uint8_t begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi);
-  static File open(const char *filepath, uint8_t mode);
-  static File open(const char *filepath);
-  static uint8_t exists(const char *filepath);
-  static uint8_t mkdir(const char *filepath);
-  static uint8_t remove(const char *filepath);
-  static uint8_t rmdir(const char *filepath);
+    static uint8_t begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi);
+    static File open(const char *filepath, uint8_t mode);
+    static File open(const char *filepath);
+    static uint8_t exists(const char *filepath);
+    static uint8_t mkdir(const char *filepath);
+    static uint8_t remove(const char *filepath);
+    static uint8_t rmdir(const char *filepath);
 
-  static uint32_t getfree(const char *filepath, uint32_t * fssize); 
+    static uint32_t getfree(const char *filepath, uint32_t * fssize); 
+    static uint8_t stat(const char *filepath, FILINFO* fno);
 
-//f_stat (        const TCHAR* path,      /* Pointer to the file path */         FILINFO* fno )
-  static uint8_t stat(const char *filepath, FILINFO* fno);
+    File openRoot(void);
 
-  File openRoot(void);
+    void inline sync() {  File::syncAll(); };
 
-  void inline sync() {  File::syncAll(); };
-
-  friend class File;
+    friend class File;
 
     static inline Sd2Card *getCard() { return &_card; }
     static inline SdFatFs *getVolume() { return &_fatFs; }
-//    static inline blocksPerCluster() { return _fatFs.blocksPerCluster(); }
 
+    static FRESULT errno;
+    
 private:
-  static Sd2Card _card;
-  static SdFatFs _fatFs;
+    static Sd2Card _card;
+    static SdFatFs _fatFs;
 
 };
 

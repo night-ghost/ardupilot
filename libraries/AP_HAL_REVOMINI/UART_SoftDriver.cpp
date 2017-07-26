@@ -288,7 +288,7 @@ void SerialDriver::rxNextBit(TIM_TypeDef *tim) { // ISR
 
         if(!rxSkip) return; // not the middle of bit
         
-        byte d = REVOMINIGPIO::_read(RX_PIN);
+        uint8_t d = REVOMINIGPIO::_read(RX_PIN);
         
         if (rxBitCount == 9) {   // check start bit again
             if ( d == _inverse?HIGH:LOW) { // start OK

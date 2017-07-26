@@ -20,9 +20,9 @@
 #include <AP_Common/AP_Common.h>
 #include <assert.h>
 #include <AP_Math/AP_Math.h>
+#include <time.h>
+#include <time.h>
 #include <stdio.h>
-#include <time.h>
-#include <time.h>
 #include <GCS_MAVLink/GCS.h>
 extern const AP_HAL::HAL& hal;
 
@@ -285,16 +285,8 @@ void DataFlash_File::Prep_MinSpace()
             hal.console->printf("Removing (%s) for minimum-space requirements (%.2f%% < %.0f%%)\n",
                                 filename_to_remove, (double)avail, (double)min_avail_space_percent);
             if (!SD.remove(filename_to_remove)) {
-                hal.console->printf("Failed to remove %s: %s\n", filename_to_remove, strerror(errno));
+                hal.console->printf("Failed to remove %s\n", filename_to_remove);
                 free(filename_to_remove);
-                if (errno == ENOENT) {
-                    // corruption - should always have a continuous
-                    // sequence of files...  however, there may be still
-                    // files out there, so keep going.
-                } else {
-                    // internal_error();
-                    break;
-                }
             } else {
                 free(filename_to_remove);
             }
@@ -596,11 +588,8 @@ int16_t DataFlash_File::get_log_data(const uint16_t list_entry, const uint16_t p
         _read_fd = SD.open(fname, O_RDONLY);
         if (!(_read_fd)) {
             _open_error = true;
-            int saved_errno = errno;
-            ::printf("Log read open fail for %s - %s\n",
-                     fname, strerror(saved_errno));
-            hal.console->printf("Log read open fail for %s - %s\n",
-                                fname, strerror(saved_errno));
+
+            hal.console->printf("Log read open fail for %s\n", fname);
             free(fname);
             return -1;            
         }
@@ -709,10 +698,7 @@ uint16_t DataFlash_File::start_new_log(void)
     if (!(_write_fd)) {
         _initialised = false;
         _open_error = true;
-        int saved_errno = errno;
-//        ::printf("Log open fail for %s - %s\n",     fname, strerror(saved_errno));
-        hal.console->printf("Log open fail for %s - %s\n",
-                            fname, strerror(saved_errno));
+        hal.console->printf("Log open fail for %s\n",        fname);
         free(fname);
         return 0xFFFF;
     }
@@ -726,7 +712,7 @@ uint16_t DataFlash_File::start_new_log(void)
 
     File fd = SD.open(fname, O_WRITE|O_CREAT);
     free(fname);
-    if (fd == -1) {
+    if (!fd) {
         return 0xFFFF;
     }
 

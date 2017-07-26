@@ -600,7 +600,7 @@ void mem_cpy (void* dst, const void* src, UINT cnt) {
 
 /* Fill memory */
 static inline
-void mem_set (void* dst, uint8_t val, UINT cnt) {
+void mem_set (void* dst, BYTE val, UINT cnt) {
     memset(dst,val,cnt);
 /*	BYTE *d = (BYTE*)dst;
 
@@ -3466,7 +3466,7 @@ FRESULT f_stat (
 	if (res == FR_OK) {
 		INIT_BUF(dj);
 		res = follow_path(&dj, path);	/* Follow the file path */
-		if (res == FR_OK) {				/* Follow completed */
+		if (res == FR_OK) {		/* Follow completed */
 			if (dj.dir) {		/* Found an object */
 				if (fno) get_fileinfo(&dj, fno);
 			} else {			/* It is root directory */

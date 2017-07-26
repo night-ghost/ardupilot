@@ -50,7 +50,7 @@ typedef struct PULSE {
     bool state;
 } Pulse;
 
-#define PULSES_QUEUE_SIZE (25*12*2*2) // 2 full frames by 25 bytes each
+#define PULSES_QUEUE_SIZE (25*12*2*2) // 2 full frames by 25 bytes (12 bits, 2 measures per bit) each
 
 #include "ring_buffer_pulse.h"
 
@@ -74,8 +74,6 @@ static inline uint16_t pwmRead(uint8_t channel, uint32_t *time){
     if(time) *time=Inputs[channel].last_pulse;
     return Inputs[channel].capture;
 }
-
-
 #endif
 
 struct PPM_State  {
@@ -87,7 +85,7 @@ struct PPM_State  {
     Pulse pulse_mem[PULSES_QUEUE_SIZE]; // memory
 };
 
-extern struct PPM_State PPM_Inputs[] IN_CCM;
+extern struct PPM_State PPM_Inputs[];
 
 
 struct TIM_Channel {

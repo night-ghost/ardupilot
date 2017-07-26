@@ -41,7 +41,7 @@ void panic(const char *errormsg, ...)
 
 uint32_t millis()
 {
-    // Use function provided by libmaple.
+    REVOMINIScheduler::yield(50);
     return REVOMINIScheduler::_millis();
 }
 

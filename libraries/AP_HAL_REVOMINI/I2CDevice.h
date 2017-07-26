@@ -75,7 +75,7 @@ public:
     /* See AP_HAL::Device::register_periodic_callback() */
     inline AP_HAL::Device::PeriodicHandle register_periodic_callback(
         uint32_t period_usec, Device::PeriodicCb proc) override
-    {
+    {   
         return REVOMINIScheduler::register_timer_task(period_usec, proc, &_semaphores[_bus] );
     }
 
@@ -94,9 +94,6 @@ public:
     
     inline bool unregister_callback(PeriodicHandle h) override  { return REVOMINIScheduler::unregister_timer_task(h); }
 
-    /* See AP_HAL::Device::get_fd() */
-    inline int get_fd() { return 0; }
-    
     inline uint32_t get_error_count() {return _lockup_count; }
     inline uint8_t get_bus() {return _bus; }
     inline uint8_t get_addr() {return _address; }

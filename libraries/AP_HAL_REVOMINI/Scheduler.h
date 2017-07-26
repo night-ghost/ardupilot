@@ -29,9 +29,10 @@
 
 
 
-#define MAIN_STACK_SIZE  16384    // measured use of stack is only 1K - but all changes when using FatFs
-#define DEFAULT_STACK_SIZE  8192 // Default tasks stack size and stack max - for 6 tasks
-#define STACK_MAX  65535
+#define MAIN_STACK_SIZE  8192U    // measured use of stack is only 1K - but it grows up to 4K when using FatFs
+#define DEFAULT_STACK_SIZE  8192U // Default tasks stack size and stack max
+#define SLOW_TASK_STACK 2048U // small stack for sensors
+#define STACK_MAX  65536U
 
 
 extern "C" {
@@ -99,15 +100,17 @@ public:
     struct task_t {
         task_t* next;           //!< Next task
         task_t* prev;           //!< Previous task
-//        uint64_t handle;        //!< loop() in Revo_handler - to allow to change task, call via revo_call_handler
+        Handler handle;         //!< loop() in Revo_handler - to allow to change task, call via revo_call_handler
         jmp_buf context;        //!< Task context
         const uint8_t* stack;   //!< Task stack
         uint16_t id;            // id of task
-        bool active;            // flag
         uint32_t ttw;           // time to work
         uint32_t t_yield;       // time of yield
         uint32_t start;         // microseconds of timeslice start
         uint32_t max_delay;     // maximal execution time of task - used in scheduler
+        uint32_t in_isr;        // time in ISR when task runs
+        uint32_t period;        // if set then task starts on time basis only
+        REVOMINI::Semaphore *sem;
 #ifdef MTASK_PROF
         uint32_t ticks; // ticks of CPU to calculate context switch time
         uint64_t time;  // full time
@@ -134,7 +137,7 @@ public:
     void     delay_microseconds(uint16_t us) { _delay_microseconds(us); }
     void     delay_microseconds_boost(uint16_t us) override { _delay_microseconds_boost(us); }
     
-    inline   uint32_t millis() {    return _millis(); }
+    inline   uint32_t millis() { yield(50);   return _millis(); }
     inline   uint32_t micros() {    return _micros(); }
     
     void     register_timer_process(AP_HAL::MemberProc proc) { _register_timer_process(proc, 1000); }
@@ -222,8 +225,20 @@ public:
    * @param[in] stackSize in bytes.
    * @return bool.
    */
-  static void * start_task(voidFuncPtr taskLoop, size_t stackSize = DEFAULT_STACK_SIZE);
-  static void * start_task(AP_HAL::MemberProc proc,  size_t stackSize = DEFAULT_STACK_SIZE);
+  static void * _start_task(Handler h,  size_t stackSize);
+
+  static inline void * start_task(voidFuncPtr taskLoop, size_t stackSize = DEFAULT_STACK_SIZE){
+        Revo_handler r = { .vp=taskLoop };
+        return _start_task(r.h, stackSize);
+  }
+  static inline void * start_task(AP_HAL::MemberProc proc,  size_t stackSize = DEFAULT_STACK_SIZE){
+        Revo_handler r = { .mp=proc };
+        return _start_task(r.h, stackSize);
+  }
+  
+  static void set_task_period(void *h, uint32_t period);
+  static void set_task_semaphore(void *h, REVOMINI::Semaphore *sem);
+  
   static void stop_task(void * h);
   static task_t* get_empty_task();
 
@@ -252,7 +267,7 @@ public:
 
     #define MAX_IO_COMPLETION 8
     
-    typedef void (* ioc_proc)();
+    typedef voidFuncPtr ioc_proc;
 
     static uint8_t register_io_completion(uint64_t handle);
 
@@ -265,10 +280,13 @@ public:
         return register_io_completion(r.h);
     }
 
-    static inline void do_io_completion(uint8_t id, REVOMINI::Semaphore *sem=NULL){ // schedule selected IO completion
+    static inline void set_io_completion_sem(uint8_t id, REVOMINI::Semaphore *sem) {
         IO_Completion &ioc = io_completion[id-1];
-        ioc.request = true;
         ioc.sem = sem;
+    }
+
+    static inline void do_io_completion(uint8_t id){ // schedule selected IO completion
+        io_completion[id-1].request = true;
 
         SCB->ICSR = SCB_ICSR_PENDSVSET_Msk; // PENDSVSET
     }
@@ -295,19 +313,18 @@ protected:
    * @param[in] stack top reference.
    */
     static void *init_task(uint64_t h, const uint8_t* stack);
-    
-    static uint32_t fill_task(task_t &tp);
-  
 
-  /** Running task. */
-  static task_t* s_running;
+    static uint32_t fill_task(task_t &tp);
+
+    /** Running task. */
+    static task_t* s_running;
   
-  /** Task stack allocation top. */
-  static size_t s_top;
+    /** Task stack allocation top. */
+    static size_t s_top;
   
-  static uint16_t task_n; // counter
+    static uint16_t task_n; // counter
   
-  static void check_stack(uint32_t sp);
+    static void check_stack(uint32_t sp);
  
 #define await(cond) while(!(cond)) yield()
   
@@ -336,11 +353,8 @@ private:
 
     static volatile bool _timer_suspended;
     static volatile bool _timer_event_missed;
-//    static AP_HAL::MemberProc _timer_proc[REVOMINI_SCHEDULER_MAX_TIMER_PROCS];
-//    static uint8_t _num_timer_procs;
     static uint32_t _scheduler_last_call;
 
-//    static AP_HAL::MemberProc _io_process[REVOMINI_SCHEDULER_MAX_IO_PROCS];
     static uint8_t _num_io_proc;
 
     static revo_timer _timers[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS];

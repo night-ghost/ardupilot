@@ -57,8 +57,9 @@ int16_t USBDriver::read() {
     return 0;
 }
 
-/* REVOMINI implementations of Print virtual methods */
 size_t USBDriver::write(uint8_t c) {
+
+/*
     size_t n=1;
 
     if(_usb_present && is_usb_opened()){
@@ -73,6 +74,9 @@ size_t USBDriver::write(uint8_t c) {
         return n;
     } 
     return 1;
+*/
+
+    return write(&c,1);
 }
 
 

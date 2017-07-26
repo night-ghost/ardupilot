@@ -2,10 +2,10 @@
 #ifndef __AP_HAL_REVOMINI_GPIO_H__
 #define __AP_HAL_REVOMINI_GPIO_H__
 
-#include <wirish.h>
 #include <AP_HAL/AP_HAL.h>
 #include "AP_HAL_REVOMINI_Namespace.h"
 #include "handler.h"
+#include <boards.h>
 // #include "Scheduler.h" cross-deps
 #include <exti.h>
 

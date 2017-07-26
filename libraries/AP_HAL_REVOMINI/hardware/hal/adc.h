@@ -8,6 +8,7 @@
 #define _ADC_H_
 
 #include "stm32.h"
+#include "hal_types.h"
 
 /** ADC device type. */
 typedef struct adc_dev {

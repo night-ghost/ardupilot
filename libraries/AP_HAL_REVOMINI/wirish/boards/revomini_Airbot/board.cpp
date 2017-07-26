@@ -1,14 +1,7 @@
 #ifndef BOARD_STM32V1F4
 #define BOARD_STM32V1F4
 
-#include "board.h"
-#include "hal_types.h"
-#include "wirish_types.h"
-#include "gpio_hal.h"
-#include "adc.h"
-#include "timer.h"
-#include "wirish_types.h"
-#include "pwm_in.h"
+#include <boards.h>
 
 
 extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] = {
@@ -126,7 +119,7 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] = {
     {&gpioe,   NULL, NULL,  2, 0, ADCx}, /* D102/PE2 */
     {&gpioa,   NULL, NULL, 15, 0, ADCx}, /* D103/PA15 CS_RFM22B */
     {&gpiob,   NULL, NULL,  3, 0, ADCx}, /* D104/PB3  CS_FLASH */
-    {&gpiob,   NULL, NULL,  4, 0, ADCx}, /* D105/PB4  LED_RED */
+    {&gpiob,   NULL, NULL,  4, 0, ADCx}, /* D105/PB4  LED_RED / Buzzer */
     {&gpioa,   NULL, NULL, 13, 0, ADCx}, /* D106/PA13 LED_MOTOR - SWDIO */
     {&gpioa,   NULL, NULL, 14, 0, ADCx}, /* D107/PA14 */
     {&gpioa,   NULL, NULL, 11, 0, ADCx}, /* D108/PA11  - USB D- */

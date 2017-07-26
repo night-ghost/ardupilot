@@ -14,7 +14,7 @@ public:
     bool run_debug_shell(AP_HAL::BetterStream *stream) { return false; }
     
     uint64_t get_system_clock_ms() const {
-        return AP_HAL::millis();
+        return AP_HAL::millis(); // + gps_shift;
     }
 
     uint32_t available_memory(void) override

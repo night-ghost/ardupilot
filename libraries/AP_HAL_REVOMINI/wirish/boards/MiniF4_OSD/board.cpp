@@ -1,14 +1,7 @@
 #ifndef BOARD_STM32V1F4
 #define BOARD_STM32V1F4
 
-#include "board.h"
-#include "hal_types.h"
-#include "wirish_types.h"
-#include "gpio_hal.h"
-#include "adc.h"
-#include "timer.h"
-#include "wirish_types.h"
-#include "pwm_in.h"
+#include <boards.h>
 
 
 extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {

@@ -30,7 +30,7 @@
 #include "FatFs/drivers/sd.h"
 #include "FatFs/ff.h"
 
-extern int printf(const char *msg, ...);
+extern "C" int printf(const char *msg, ...);
 
 // To match Arduino definition
 #define   FILE_WRITE  FA_WRITE
@@ -67,7 +67,7 @@ class SdFatFs {
 
   SdFatFs(){}
   
-  uint8_t init(Sd2Card *card);
+  FRESULT init(Sd2Card *card);
 
   /** Return the FatFs type: 12, 16, 32 (0: unknown)*/
   uint8_t fatType(void);

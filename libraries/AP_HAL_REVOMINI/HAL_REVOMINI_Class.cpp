@@ -227,7 +227,7 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
 static AP_HAL::UARTDriver* uart;
 
 static void getSerialLine(char *cp ){      // получение строки
-    byte cnt=0; // строка не длиннее 256 байт
+    uint8_t cnt=0; // строка не длиннее 256 байт
 
     while(true){
         if(!uart->available()){
@@ -287,14 +287,8 @@ void HAL_REVOMINI::lateInit() {
             hal_param_helper->_usb_storage=0;
             hal_param_helper->_usb_storage.save();
 
-#if 0
-            uartA->end();
-            state.sd_busy=true;
-            massstorage.setup();            
-#else
             board_set_rtc_register(MASS_STORAGE_SIGNATURE, RTC_MASS_STORAGE_REG);
             REVOMINIScheduler::_reboot(false);
-#endif
         }
     }
 #endif

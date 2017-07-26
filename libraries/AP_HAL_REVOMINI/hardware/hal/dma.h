@@ -167,8 +167,6 @@ typedef enum Dma_stream {
  * Devices
  */
 
-//typedef void (*Handler)(dma_stream stream);
-
 
 /** Encapsulates state related to a DMA channel interrupt. */
 

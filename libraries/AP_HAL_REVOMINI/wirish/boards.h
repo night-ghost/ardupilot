@@ -43,9 +43,13 @@
 #ifndef _BOARDS_H_
 #define _BOARDS_H_
 
-#include "hal.h"
-#include "hal_types.h"
-#include "wirish_types.h"
+#include <hal.h>
+#include <hal_types.h>
+#include <exti.h>
+#include <gpio_hal.h>
+#include <timer.h>
+#include <adc.h>
+#include <pwm_in.h>
 
 /* Set of all possible pin names; not all boards have all these (note
  * that we use the Dx convention since all of the Maple's pins are
@@ -69,6 +73,22 @@ enum {
  * @brief Maps each Maple pin to a corresponding stm32_pin_info.
  * @see stm32_pin_info
  */
+
+
+/**
+ * @brief Stores STM32-specific information related to a given Maple pin.
+ * @see PIN_MAP
+ */
+
+typedef struct stm32_pin_info {
+    const gpio_dev  * const gpio_device;      /**< Maple pin's GPIO device */
+    const timer_dev * const timer_device;    /**< Pin's timer device, if any. */
+    const adc_dev   * const adc_device;       /**< ADC device, if any. */
+    uint8_t gpio_bit;             /**< Pin's GPIO port bit. */
+    uint8_t timer_channel;        /**< Timer channel, or 0 if none. */
+    uint8_t adc_channel;          /**< Pin ADC channel, or ADCx if none. */
+} stm32_pin_info;
+
 extern const stm32_pin_info PIN_MAP[];
 
 /**
@@ -174,7 +194,9 @@ extern void clock_gettime(uint32_t mode, void *ptr);
 
 #define MASS_STORAGE_SIGNATURE  0x5106a8ed
 
-#define RTC_SIGNATURE_REG       0 // register 0 of backup ram
+
+// Backup SRAM registers usage
+#define RTC_SIGNATURE_REG       0 
 #define RTC_DSM_BIND_REG        1   
 #define RTC_MASS_STORAGE_REG    2
 

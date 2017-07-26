@@ -31,7 +31,6 @@
 #ifndef _UTIL_H_
 #define _UTIL_H_
 
-#include "hal_types.h"
 
 /*
  * Bit manipulation

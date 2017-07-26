@@ -26,9 +26,8 @@ void boardInit(void);
 
 #define BOARD_BUTTON_PIN        254 // no button
 
-#define BOARD_RFM22B_CS_PIN     103 // PA15 CS_RFM22B
-#define BOARD_RFM22B_INT_PIN    26  // PD2
-
+//#define BOARD_RFM22B_CS_PIN     103 // PA15 CS_RFM22B
+//#define BOARD_RFM22B_INT_PIN    26  // PD2  INT_RFM22
 //#define BOARD_BUZZER_PIN        5 // PB15, PWM2 - used as PPM2
                                 
 #define BOARD_NR_USARTS         5
@@ -45,8 +44,8 @@ void boardInit(void);
 #define BOARD_USART5_RX_PIN     26  // PD2  EXTI_RFM22B / UART5_RX
 //#define BOARD_BUTTON_PIN        103 // PA15 CS_RFM22B
 
-#define BOARD_SPEKTRUM_RX_PIN   BOARD_RFM22B_INT_PIN // PD2
-#define BOARD_SPEKTRUM_PWR_PIN  BOARD_RFM22B_CS_PIN // PA15
+#define BOARD_SPEKTRUM_RX_PIN   26  // PD2  INT_RFM22
+#define BOARD_SPEKTRUM_PWR_PIN  103 // PA15 CS_RFM22B
 #define BOARD_SPEKTRUM_PWR_ON   1
 #define BOARD_SPEKTRUM_PWR_OFF  0
 
@@ -167,14 +166,9 @@ void boardInit(void);
 #define BOARD_USB_DMINUS                108
 
 //#define BOARD_NRF_NAME "nrf24"
-//#define BOARD_NRF_CS_PIN BOARD_RFM22B_CS_PIN
+//#define BOARD_NRF_CS_PIN 103 // PA15 CS_RFM22B
 
 // motor layouts
-#define REVO_MOTORS_ARDUCOPTER          0
-#define REVO_MOTORS_OPENPILOT           1
-#define REVO_MOTORS_CLEANFLIGHT         2
-
-
 #define SERVO_PIN_1 46 // PB0 
 #define SERVO_PIN_2 45 // PB1
 #define SERVO_PIN_3 50 // PA3
@@ -211,7 +205,7 @@ void boardInit(void);
     // @Description: Selects how motors are numbered
     // @Values: 0:ArduCopter, 1: Ardupilot with pins 2&3 for servos 2:OpenPilot,3:CleanFlight
     // @User: Advanced
-    AP_GROUPINFO("_MOTOR_LAYOUT", 0,  HAL_REVOMINI, _motor_layout, REVO_MOTORS_ARDUCOPTER),
+    AP_GROUPINFO("_MOTOR_LAYOUT", 0,  HAL_REVOMINI, _motor_layout, 0),
 
     // @Param: USE_SOFTSERIAL
     // @DisplayName: Use SoftwareSerial driver
@@ -264,7 +258,7 @@ void boardInit(void);
 
 */
 #define BOARD_HAL_VARINFO \
-    AP_GROUPINFO("MOTOR_LAYOUT", 1, AP_Param_Helper, _motor_layout, REVO_MOTORS_ARDUCOPTER), \
+    AP_GROUPINFO("MOTOR_LAYOUT", 1, AP_Param_Helper, _motor_layout, 0), \
     AP_GROUPINFO("SERVO_MASK",   2, AP_Param_Helper, _servo_mask, 0), \
     AP_GROUPINFO("SOFTSERIAL",   3, AP_Param_Helper, _use_softserial, 0), \
     AP_GROUPINFO("CONNECT_COM",  4, AP_Param_Helper, _connect_com, 0), \

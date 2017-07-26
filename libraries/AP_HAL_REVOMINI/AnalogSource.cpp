@@ -201,7 +201,7 @@ void REVOMINIAnalogSource::new_sample(uint16_t sample) {
 //#define MAX_SUM_COUNT 16 // a legacy of the painfull 8-bit past
 #define MAX_SUM_COUNT 64
 
-    if (_sum_count >= (MAX_SUM_COUNT-1)) { // REVOMINI has a 12 bit ADC, so can only sum 16 in a uint16_t - and a 16*65536 in uint32_t
+    if (_sum_count >= MAX_SUM_COUNT) { // REVOMINI has a 12 bit ADC, so can only sum 16 in a uint16_t - and a 16*65536 in uint32_t
         _sum >>= 1;
         _sum_count = (MAX_SUM_COUNT/2);
     } else {

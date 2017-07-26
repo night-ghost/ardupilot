@@ -13,6 +13,7 @@ typedef uint8_t byte;
 #define PROGMEM
 
 typedef uint8_t byte;
+typedef uint8_t boolean;
 
 typedef char prog_char;
 

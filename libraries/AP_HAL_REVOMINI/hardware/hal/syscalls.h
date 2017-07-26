@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <hal_types.h>
 
 #ifdef __cplusplus
  extern "C" {

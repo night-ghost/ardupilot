@@ -1,6 +1,7 @@
 #ifndef _SPI_H_
 #define _SPI_H_
 
+
 #include <gpio_hal.h>
 #include <stm32f4xx.h>
 
@@ -183,13 +184,13 @@ void spi_tx_buf(spi_dev *dev, uint8_t *txbuf, uint32_t txcount);
 
 void spi_foreach(void (*fn)(const spi_dev*));
 
-uint32_t spi_tx(const spi_dev *dev, const void *buf, uint32_t len);
+uint32_t spi_tx(const spi_dev *dev, const void *buf, uint16_t len);
 
 int spimaster_transfer(const spi_dev *dev,
                        const uint8_t *txbuf,
-                       uint32_t txcount,
+                       uint16_t txcount,
                        uint8_t *rxbuf,
-                       uint32_t rxcount);
+                       uint16_t rxcount);
                        
                        
 
@@ -217,15 +218,15 @@ static inline uint8_t spi_is_rx_nonempty(const spi_dev *dev) {
 	return (dev->SPIx->SR & SPI_I2S_FLAG_RXNE);
 }
 
-static inline uint16_t spi_rx_reg(const spi_dev *dev) {
-    return (uint16_t)dev->SPIx->DR;
+static inline uint8_t spi_rx_reg(const spi_dev *dev) {
+    return (uint8_t)dev->SPIx->DR;
 }
 
 static inline uint8_t spi_is_tx_empty(const spi_dev *dev) {
 	return (dev->SPIx->SR & SPI_I2S_FLAG_TXE);
 }
 
-static inline void spi_tx_reg(const spi_dev *dev, uint16_t val) {
+static inline void spi_tx_reg(const spi_dev *dev, uint8_t val) {
     dev->SPIx->DR = val;
 }
 

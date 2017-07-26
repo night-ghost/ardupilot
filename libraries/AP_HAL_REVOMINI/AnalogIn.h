@@ -109,11 +109,11 @@ public:
     REVOMINIAnalogIn();
     void init();
     AP_HAL::AnalogSource* channel(int16_t n);
-    float inline board_voltage(void) { 
+    inline float board_voltage(void) { 
         return ( 1.2 * 4096  / _vcc.read_average()) * 5.0/3.3; /*_board_voltage;*/ 
     }
-    float servorail_voltage(void) { return 0; }
-    uint16_t power_status_flags(void) { return 0; }
+    inline float servorail_voltage(void) { return 0; }
+    inline uint16_t power_status_flags(void) { return 0; }
 
 protected: 
     REVOMINIAnalogSource* _create_channel(uint8_t num);

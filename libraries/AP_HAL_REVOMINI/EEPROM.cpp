@@ -2,7 +2,8 @@
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
 
-#include "wirish.h"
+#pragma GCC optimize ("O2")
+
 #include <string.h>
 #include "stm32f4xx.h"
 #include "EEPROM.h"
@@ -10,7 +11,6 @@
 extern const AP_HAL::HAL& hal;
 
 
-//static EEPROMClass::func_t EEPROMClass::erase_handler;
 
 /*
     address not uses 2 high bits so we will use them as flags of right written slot - if address has high bit then it written wrong

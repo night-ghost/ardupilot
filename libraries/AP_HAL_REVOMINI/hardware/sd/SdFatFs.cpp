@@ -26,7 +26,7 @@
 
 #if defined(BOARD_SDCARD_CS_PIN) || defined(BOARD_DATAFLASH_FATFS)
 
-uint8_t SdFatFs::init(Sd2Card *card) {
+FRESULT SdFatFs::init(Sd2Card *card) {
 
     _card=card;
 
@@ -35,27 +35,34 @@ uint8_t SdFatFs::init(Sd2Card *card) {
     _SDPath[2] = '/';
     _SDPath[3] = 0;
 
+    FRESULT res = f_mount(&_SDFatFs, (TCHAR const*)_SDPath, 1);
+    
     /*##-2- Register the file system object to the FatFs module ##############*/
-    if(f_mount(&_SDFatFs, (TCHAR const*)_SDPath, 1) == FR_OK) {
+    if(res == FR_OK) {
 	/* FatFs Initialization done */
-	return 1;
+	return res;
     }
     
 #if defined(BOARD_DATAFLASH_FATFS) // in DataFlash
 
 //    printf("Formatting DataFlash to FAT..."); - no printf without HAL
-    if(f_mkfs((TCHAR const*)_SDPath, 1 /* unpartitioned */, BOARD_DATAFLASH_ERASE_SIZE/FAT_SECTOR_SIZE /* cluster in sectors */) == FR_OK &&
-       f_mount(&_SDFatFs, (TCHAR const*)_SDPath, 1) == FR_OK) {
+
+    res = f_mkfs((TCHAR const*)_SDPath, 1 /* unpartitioned */, BOARD_DATAFLASH_ERASE_SIZE/FAT_SECTOR_SIZE /* cluster in sectors */);
+
+    if( res == FR_OK){
+        res = f_mount(&_SDFatFs, (TCHAR const*)_SDPath, 1);
+        if(res == FR_OK) {
 
 //        printf(" OK!\n");
     	/* FatFs Initialization done */
-        return 1;
+            return res;
+        }
 
     }
 
 //    printf(" Error!\n");
 #endif
-    return 0;
+    return res;
 }
 
 uint8_t SdFatFs::fatType(void)

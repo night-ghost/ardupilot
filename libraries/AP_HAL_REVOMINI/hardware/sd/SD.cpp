@@ -67,6 +67,8 @@ SDClass SD;
 Sd2Card SDClass::_card;
 SdFatFs SDClass::_fatFs;
 
+FRESULT SDClass::errno = FR_OK;
+
 /**
   * @brief  Link SD, register the file system object to the FatFs mode and configure
   *         relatives SD IOs 
@@ -75,8 +77,8 @@ SdFatFs SDClass::_fatFs;
   */
 uint8_t SDClass::begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi)
 {
-    if (_card.init(std::move(spi))) {
-	return _fatFs.init(&_card);
+    if (_card.init(std::move(spi))) {        
+	return (errno=_fatFs.init(&_card)) == FR_OK;
     } 
     return FALSE;
 }
@@ -91,7 +93,10 @@ uint8_t SDClass::exists(const char *filepath)
 {
     FILINFO fno;
 
-    return f_stat(filepath, &fno) == FR_OK;
+    errno=f_stat(filepath, &fno);
+//    fno->fattrib & AM_DIR
+
+    return errno == FR_OK;
 }
 
 /**
@@ -101,7 +106,8 @@ uint8_t SDClass::exists(const char *filepath)
   */
 uint8_t SDClass::mkdir(const char *filepath)
 {
-   return f_mkdir(filepath) == FR_OK;
+    errno = f_mkdir(filepath);
+    return errno == FR_OK;
 }
 
 /**
@@ -111,7 +117,8 @@ uint8_t SDClass::mkdir(const char *filepath)
   */
 uint8_t SDClass::rmdir(const char *filepath)
 {
-    return f_unlink(filepath) == FR_OK;
+    errno = f_unlink(filepath);
+    return errno == FR_OK;
 }
 
 /**
@@ -123,10 +130,26 @@ File SDClass::open(const char *filepath)
 {
     File file = File(filepath);
 
-    if(f_open(&file._fil, filepath, FA_READ) != FR_OK) {
-	f_opendir(&file._dir, filepath);
+    FILINFO fno;
+
+    errno=f_stat(filepath, &fno);
+
+    if(errno!=FR_OK){ // no file
+        return file;
+    }
+
+    if(fno.fattrib & AM_DIR) {
+	errno = f_opendir(&file._dir, filepath);
+        if( errno != FR_OK) {
+            file.close();
+	}
     } else {
-        File::addOpenFile(&file._fil);
+        errno = f_open(&file._fil, filepath, FA_READ);
+        if( errno == FR_OK) {
+            File::addOpenFile(&file._fil);
+        } else {
+            file.close();
+	}
     }
     return file;
 }
@@ -141,14 +164,33 @@ File SDClass::open(const char *filepath, uint8_t mode)
 {
     File file = File(filepath);
 
-    if((mode == FILE_WRITE) && (SD.exists(filepath) != TRUE))  {
-        mode = mode | FA_CREATE_ALWAYS;
-    }
+    FILINFO fno;
 
-    if(f_open(&file._fil, filepath, mode) != FR_OK){
-	f_opendir(&file._dir, filepath);
+    errno=f_stat(filepath, &fno);
+
+    if(fno.fattrib & AM_DIR) {
+        if(!(mode & FILE_WRITE)){
+            errno = f_opendir(&file._dir, filepath);
+        } else {
+            errno = FR_IS_DIR;
+        }
+        if( errno != FR_OK) file.close();
     } else {
-        File::addOpenFile(&file._fil);
+    
+        if((mode & FILE_WRITE) && errno==FR_OK) { // режимы открытия файла отличаются. если существует файл
+            mode &= ~FA_CREATE_NEW;    //  то убираем флаг создания - а то ошибка будет "файл существует"            
+        }
+
+        errno = f_open(&file._fil, filepath, mode);
+
+        if( errno == FR_OK){
+            if(mode & O_APPEND){
+                f_lseek(&file._fil, f_size(&file._fil));            
+            }
+            File::addOpenFile(&file._fil);
+        } else {
+            file.close();
+        }
     }
     return file;
 }
@@ -160,14 +202,16 @@ File SDClass::open(const char *filepath, uint8_t mode)
   */
 uint8_t SDClass::remove(const char *filepath)
 {
-    return f_unlink(filepath) == FR_OK;
+    errno = f_unlink(filepath);
+    return errno == FR_OK;
 }
 
 File SDClass::openRoot(void)
 {
     File file = File(_fatFs.getRoot());
 
-    if(f_opendir(&file._dir, _fatFs.getRoot()) != FR_OK) {
+    errno = f_opendir(&file._dir, _fatFs.getRoot());
+    if(errno != FR_OK) {
 	file._dir.fs = 0;
     }
     return file;
@@ -181,8 +225,8 @@ uint32_t SDClass::getfree(const char *filepath, uint32_t * fssize){
 
 
     /* Get volume information and free clusters of drive */
-    FRESULT res = f_getfree(filepath, &fre_clust, &fs);
-    if (res) return -1;
+    errno = f_getfree(filepath, &fre_clust, &fs);
+    if (errno != FR_OK) return -1;
 
     /* Get total sectors and free sectors */
     if(fssize) *fssize = (fs->n_fatent - 2) * fs->csize; // tot_sect
@@ -195,8 +239,8 @@ uint32_t SDClass::getfree(const char *filepath, uint32_t * fssize){
 
 //f_stat (        const TCHAR* path,      /* Pointer to the file path */         FILINFO* fno )
 uint8_t SDClass::stat(const char *filepath, FILINFO* fno){
-    FRESULT res = f_stat(filepath, fno);
-    if(res != FR_OK) return -1;
+    errno = f_stat(filepath, fno);
+    if(errno != FR_OK) return -1;
     return 0;
 }
 
@@ -243,15 +287,12 @@ void File::ls(cb_putc cb, uint8_t flags, uint8_t indent) {
   fno.lfsize = sizeof(lfn);
 #endif
 
-  while(1)
-  {
+  while(1) {
     res = f_readdir(&_dir, &fno);
-    if(res != FR_OK || fno.fname[0] == 0)
-    {
+    if(res != FR_OK || fno.fname[0] == 0) {
       break;
     }
-    if(fno.fname[0] == '.')
-    {
+    if(fno.fname[0] == '.') {
       continue;
     }
 #if _USE_LFN
@@ -491,7 +532,7 @@ uint32_t File::size()
 }
 
 File::operator bool() const {
-  return  (_name == NULL)? FALSE : TRUE;
+  return  (_name == NULL)? FALSE : TRUE; // TODO
 }
 /**
   * @brief  Write data to the file

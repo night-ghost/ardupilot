@@ -1,7 +1,6 @@
 #ifndef _USART_H
 #define _USART_H
 
-#include <stm32f4xx.h>
 #include <hal_types.h>
 #include "ring_buffer.h"
 

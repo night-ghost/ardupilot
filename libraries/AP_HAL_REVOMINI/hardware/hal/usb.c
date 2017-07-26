@@ -73,7 +73,7 @@ extern U32 APP_Rx_ptr_in;    /* Increment this pointer or roll it back to
 static U16 VCP_Init     (void);
 static U16 VCP_DeInit   (void);
 static U16 VCP_Ctrl     (uint32_t Cmd, uint8_t* Buf, uint32_t Len);
-static U16 VCP_DataTx   (uint8_t* Buf, uint32_t Len);
+static U16 VCP_DataTx   (const uint8_t* Buf, uint32_t Len);
 static U16 VCP_DataRx   (uint8_t* Buf, uint32_t Len);
 
 const CDC_IF_Prop_TypeDef VCP_fops = 
@@ -571,7 +571,7 @@ unsigned VCP_SpaceAvail(void)
         return sz;
 }
 
-U16 VCP_DataTx(U8 *buffer, U32 nbytes)
+U16 VCP_DataTx(const U8 *buffer, U32 nbytes)
 {
 
         unsigned sz = VCP_PutContig(buffer, nbytes);
@@ -764,7 +764,7 @@ void USB_OTG_BSP_uDelay (const uint32_t usec) {
     stopwatch_delay_us(usec); 
 }
 
-int usb_write(uint8_t *buf, unsigned int nbytes) {
+int usb_write(const uint8_t *buf, unsigned int nbytes) {
     return VCP_DataTx(buf, nbytes); 
 }
 

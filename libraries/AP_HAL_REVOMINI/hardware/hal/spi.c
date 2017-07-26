@@ -200,9 +200,9 @@ inline void spi_slave_enable(const spi_dev *dev,
 // Transmit command and/or receive result in bidirectional master mode
 int spimaster_transfer(const spi_dev *dev,
                        const uint8_t *txbuf,
-                       uint32_t txcount,
+                       uint16_t txcount,
                        uint8_t *rxbuf,
-                       uint32_t rxcount)
+                       uint16_t rxcount)
 {
 	// Validate parameters
 	if ((txbuf == NULL) && (txcount != 0)){
@@ -223,7 +223,7 @@ int spimaster_transfer(const spi_dev *dev,
 
     uint16_t tmp;
 
-    uint8_t txc_in=txcount;
+    uint16_t txc_in=txcount;
 
 	// Transfer command data out
 
@@ -257,15 +257,15 @@ int spimaster_transfer(const spi_dev *dev,
 
 
 
-uint32_t spi_tx(const spi_dev *dev, const void *buf, uint32_t len) {
-    uint32_t txed = 0;
-    uint8_t byte_frame = spi_dff(dev) == SPI_DataSize_8b;
+uint32_t spi_tx(const spi_dev *dev, const void *buf, uint16_t len) {
+    uint16_t txed = 0;
+//    uint8_t byte_frame = (spi_dff(dev) == SPI_DataSize_8b);
     while ( (txed < len) && spi_is_tx_empty(dev) ) {
-        if (byte_frame) {
+//        if (byte_frame) {
             dev->SPIx->DR = ((const uint8_t*)buf)[txed++];
-        } else {
-            dev->SPIx->DR = ((const uint16_t*)buf)[txed++];
-        }
+//        } else {
+//            dev->SPIx->DR = ((const uint16_t*)buf)[txed++];
+//        }
     }
     return txed;
 }

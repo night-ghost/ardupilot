@@ -1,7 +1,7 @@
 #ifndef USB_STM32_H
 #define USB_STM32_H
 
-#include <stm32f4xx.h>
+#include <hal_types.h>
 #include <gpio_hal.h>
 #include <usart.h>
 
@@ -111,7 +111,7 @@ extern uint8_t is_usb_connected(usb_attr_t *attr);
 uint8_t is_usb_opened();
 void reset_usb_opened();
 
-int usb_write(uint8_t *buf, unsigned int nbytes);
+int usb_write(const uint8_t *buf, unsigned int nbytes);
 int usb_read(void  * buf, unsigned int nbytes);
 uint32_t usb_data_available(void);
 

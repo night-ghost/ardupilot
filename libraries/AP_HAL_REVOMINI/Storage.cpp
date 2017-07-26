@@ -29,6 +29,8 @@
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
 
+#pragma GCC optimize ("O2")
+
 #include <string.h>
 #include "Storage.h"
 #include "EEPROM.h"
@@ -96,10 +98,7 @@ uint8_t REVOMINIStorage::read_byte(uint16_t loc){
 
     // 'bytes' are packed 2 per word
     // Read existing dataword and change upper or lower byte
-    //uint16_t data = eeprom.read(eeprom_offset);
-    
-    
-        //(uint16_t address, uint16_t *data)
+
     uint16_t data;
     error_parse( eeprom.read(loc >> 1, &data) );
 
@@ -111,9 +110,9 @@ uint8_t REVOMINIStorage::read_byte(uint16_t loc){
 
 uint16_t REVOMINIStorage::read_word(uint16_t loc){
     uint16_t value;
-    if(loc & 1) {
+    if(loc & 1) { // from odd address
         read_block(&value, loc, sizeof(value));
-    } else {
+    } else { // from even address - as word
         error_parse( eeprom.read(loc >> 1, &value));
     }
     return value;

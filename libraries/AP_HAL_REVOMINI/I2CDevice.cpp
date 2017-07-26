@@ -78,7 +78,7 @@ void REVOI2CDevice::init(){
     switch(_bus) {
     case 0:         // this is always internal bus
 	    _offs =0;
-#if defined(BOARD_I2C_BUS_SLOW) && BOARD_I2C_BUS_SLOW==1
+#if defined(BOARD_I2C_BUS_SLOW) && BOARD_I2C_BUS_SLOW==0
             _slow=true;
 #endif
 

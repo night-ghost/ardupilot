@@ -73,9 +73,6 @@ struct PWM_State Inputs[PWM_CHANNELS] IN_CCM;
 struct PPM_State PPM_Inputs[PPM_CHANNELS] IN_CCM;
 static uint16_t num_ppm_channels = 1;
 
-//#pragma GCC push_options
-//#pragma GCC optimize ("O0")
-
 
 static void pwmIRQHandler(TIM_TypeDef *tim){
     uint8_t i;
@@ -100,7 +97,6 @@ struct PPM_State  {
 */
 	    if (channel->tim == tim && (TIM_GetITStatus(tim, channel->tim_cc) == SET)) {
 
-	    //    val = TIM_GetCapture1(channel->tim); // captured value
                 switch (channel->tim_channel)   {
 	        case TIM_Channel_1:
 	            val = TIM_GetCapture1(channel->tim);
@@ -119,7 +115,6 @@ struct PPM_State  {
 
 	        input->last_pulse = systick_uptime();
         
-                uint16_t time;
 
                 TIM_ICInitTypeDef TIM_ICInitStructure;
 
@@ -127,6 +122,8 @@ struct PPM_State  {
                 TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
                 TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
 	        TIM_ICInitStructure.TIM_ICFilter = 0x0;
+
+                uint16_t time;
 
                 if (val > input->last_val)  {
                     time = val - input->last_val;
@@ -228,8 +225,6 @@ static inline void pwmInitializeInput(uint8_t ppmsum){
     TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
     TIM_ICInitTypeDef TIM_ICInitStructure;
 
-//    NVIC_InitTypeDef NVIC_InitStructure;
-
 
 #ifdef PWM_SUPPORTED
     if (ppmsum == 0) { // PWM mode
@@ -265,9 +260,9 @@ static inline void pwmInitializeInput(uint8_t ppmsum){
 	    if(last_tim != channel->tim) {
                 TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
 	        if (channel->tim == TIM1 || channel->tim == TIM8 || channel->tim == TIM9 || channel->tim == TIM10 || channel->tim == TIM11) {
-		    TIM_TimeBaseStructure.TIM_Prescaler = 83; //200KHz
+		    TIM_TimeBaseStructure.TIM_Prescaler = 83; //2MHz
                 } else {
-	            TIM_TimeBaseStructure.TIM_Prescaler = 41; //200KHz		
+	            TIM_TimeBaseStructure.TIM_Prescaler = 41; //2MHz
 	        }
 
 	        TIM_TimeBaseStructure.TIM_Period = 0xFFFF;

@@ -35,7 +35,7 @@
 #ifndef _TIMERS_H_
 #define _TIMERS_H_
 
-#include "hal.h"
+#include "hal_types.h"
 #include "bitband.h"
 
 #define BOARD_PWM_MODE TIM_OCMode_PWM1

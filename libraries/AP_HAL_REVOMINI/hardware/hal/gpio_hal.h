@@ -1,10 +1,8 @@
 #ifndef _GPIO_H
 #define _GPIO_H
 
-#include <stm32f4xx.h>
-#include <hal.h>
-#include "hal.h"
-
+#include "hal_types.h"
+#include "exti.h"
 
 
 /**
@@ -45,51 +43,6 @@ typedef enum afio_debug_cfg {
     AFIO_DEBUG_NONE					/**< No debug; all JTAG and SW pins are free for use as GPIOs. */
 } afio_debug_cfg;
 
-
-/** External interrupt trigger mode */
-typedef enum exti_trigger_mode {
-    EXTI_RISING,         /**< Trigger on the rising edge */
-    EXTI_FALLING,        /**< Trigger on the falling edge */
-    EXTI_RISING_FALLING  /**< Trigger on both the rising and falling edges */
-} exti_trigger_mode;
-
-/**
- * @brief External interrupt line port selector.
- *
- * Used to determine which GPIO port to map an external interrupt line
- * onto. */
-/* (See AFIO sections, below) */
-typedef enum afio_exti_port {
-    AFIO_EXTI_PA,               /**< Use port A (PAx) pin. */
-    AFIO_EXTI_PB,               /**< Use port B (PBx) pin. */
-    AFIO_EXTI_PC,               /**< Use port C (PCx) pin. */
-    AFIO_EXTI_PD,               /**< Use port D (PDx) pin. */
-    AFIO_EXTI_PE,               /**< Use port E (PEx) pin. */
-    AFIO_EXTI_PF,               /**< Use port E (PEx) pin. */
-    AFIO_EXTI_PG,               /**< Use port E (PEx) pin. */    
-} afio_exti_port;
-
-/**
- * External interrupt line numbers.
- */
-typedef enum afio_exti_num {
-    AFIO_EXTI_0,                /**< External interrupt line 0. */
-    AFIO_EXTI_1,                /**< External interrupt line 1. */
-    AFIO_EXTI_2,                /**< External interrupt line 2. */
-    AFIO_EXTI_3,                /**< External interrupt line 3. */
-    AFIO_EXTI_4,                /**< External interrupt line 4. */
-    AFIO_EXTI_5,                /**< External interrupt line 5. */
-    AFIO_EXTI_6,                /**< External interrupt line 6. */
-    AFIO_EXTI_7,                /**< External interrupt line 7. */
-    AFIO_EXTI_8,                /**< External interrupt line 8. */
-    AFIO_EXTI_9,                /**< External interrupt line 9. */
-    AFIO_EXTI_10,               /**< External interrupt line 10. */
-    AFIO_EXTI_11,               /**< External interrupt line 11. */
-    AFIO_EXTI_12,               /**< External interrupt line 12. */
-    AFIO_EXTI_13,               /**< External interrupt line 13. */
-    AFIO_EXTI_14,               /**< External interrupt line 14. */
-    AFIO_EXTI_15,               /**< External interrupt line 15. */
-} afio_exti_num;
 
 /** GPIO device type */
 typedef struct gpio_dev {

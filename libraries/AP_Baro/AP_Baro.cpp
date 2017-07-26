@@ -184,7 +184,8 @@ void AP_Baro::calibrate(bool save)
         uint32_t tstart = AP_HAL::millis();
         do {
             update();
-            if (AP_HAL::millis() - tstart > 500) {
+            if (AP_HAL::millis() - tstart > 900) {
+
                 AP_HAL::panic("PANIC: AP_Baro::read unsuccessful "
                         "for more than 500ms in AP_Baro::calibrate [3]\r\n");
             }

@@ -13,7 +13,7 @@ using namespace REVOMINI;
 
 // only one!
 //#define  DEBUG_PWM 5 // motor 6
-#define DEBUG_INT 5
+//#define DEBUG_INT 5
 
 
 #define REVOMINI_OUT_CHANNELS 6 // motor's channels enabled by default
@@ -476,7 +476,7 @@ uint16_t REVOMINIRCOutput::read(uint8_t ch)
 
 void REVOMINIRCOutput::read(uint16_t* period_us, uint8_t len)
 {
-// here we don't need to limit channel - all unsupported will be read as RC_INPUT_MIN_PULSEWIDTH
+// here we don't need to limit channel count - all unsupported will be read as RC_INPUT_MIN_PULSEWIDTH
     for (int i = 0; i < len; i++) {
         period_us[i] = read(i);
     }
@@ -513,7 +513,6 @@ void REVOMINIRCOutput::enable_ch(uint8_t ch)
         const timer_dev *dev = PIN_MAP[pin].timer_device;
     
         uint32_t period    = ((PWM_TIMER_KHZ*1000UL) / 50); // 50Hz by default
-                     // dev    period   freq, kHz
         configTimeBase(dev, period,  PWM_TIMER_KHZ);       // 2MHz 0.5us ticks - for 50..490Hz PWM
         timer_resume(dev);
 

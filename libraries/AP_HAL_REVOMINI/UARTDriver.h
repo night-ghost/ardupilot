@@ -15,12 +15,12 @@ class REVOMINI::REVOMINIUARTDriver : public AP_HAL::UARTDriver  {
 public:
     REVOMINIUARTDriver(const struct usart_dev *usart);
 
-    /* REVOMINI implementations of UARTDriver virtual methods */
+    /* implementations of UARTDriver virtual methods */
     void begin(uint32_t b);
-    void inline begin(uint32_t b, uint16_t rxS, uint16_t txS) {   begin(b); }
-    void inline end() {  usart_disable(_usart_device); _initialized=false; }
+    inline void begin(uint32_t b, uint16_t rxS, uint16_t txS) {   begin(b); }
+    inline void end() {  usart_disable(_usart_device); _initialized=false; }
     void flush();
-    bool inline is_initialized(){ return _initialized; }
+    inline bool is_initialized(){ return _initialized; }
   
     inline void set_blocking_writes(bool blocking) {  _blocking = blocking; }
 
@@ -35,7 +35,7 @@ public:
     size_t write(uint8_t c);
     size_t write(const uint8_t *buffer, size_t size);
 
-    void disable(){ _usart_device = NULL; } // pins used for another needs
+    inline void disable(){ _usart_device = NULL; } // pins used for another needs
 
 private:
     const struct usart_dev *_usart_device;

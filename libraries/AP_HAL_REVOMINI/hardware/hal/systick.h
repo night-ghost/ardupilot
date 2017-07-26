@@ -2,8 +2,8 @@
 #define _SYSTICK_H
 
 #include <stm32f4xx.h>
+#include <hal_types.h>
 #include <hal.h>
-
 
 
 #ifdef __cplusplus

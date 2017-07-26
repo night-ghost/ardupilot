@@ -2,7 +2,7 @@ I tried to maintain compatibility with the OpenPilot documentation. The main dif
 be Serial and external I2C port is on pins 7&8 of Input port. But this can be changed by HAL_FLEXI_I2C parameter
 
 
-Main Port - telemetry, Serial1. As a variant it can be used as SBUS input with hardware inverter (requires recompilation)
+Main Port - telemetry, Serial1. As a variant it can be used as SBUS input with hardware inverter (Parameter HAL_UART1_SBUS)
 FlexiPort - OSD, Serial2
 
 

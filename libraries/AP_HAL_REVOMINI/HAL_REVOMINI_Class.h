@@ -11,7 +11,6 @@
 
 #include <AP_Param/AP_Param.h>
 
-#include <wirish.h>
 #include <hal.h>
 #include "USBDriver.h"
 #include <pwm_in.h>

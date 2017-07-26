@@ -231,7 +231,7 @@ uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uin
 	/* Test on EV8 and clear it */
 	timeout = I2C_LONG_TIMEOUT;
 //	while (!I2C_CheckEvent(dev->I2Cx, I2C_EVENT_MASTER_BYTE_TRANSMITTED )) {
-	while(I2C_GetFlagStatus(sEE_I2C1, I2C_FLAG_BTF ) == RESET) { // wait for end of transmission
+	while(I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_BTF ) == RESET) { // wait for end of transmission
 	    if ((timeout--) == 0)
 		return state;
         }
@@ -256,7 +256,7 @@ uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uin
             if(--(*len) == 0) { // last is sent, no more bytes
             
 	        timeout = I2C_LONG_TIMEOUT;
-	        while(I2C_GetFlagStatus(sEE_I2C1, I2C_FLAG_BTF ) == RESET) { // wait for end of transmission
+	        while(I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_BTF ) == RESET) { // wait for end of transmission
 	            if ((timeout--) == 0)
 		        return state;
                 }
@@ -510,17 +510,6 @@ For 2-byte reception:
 
         } while((*rxlen));
 
-/* 
-        // Wait to make sure that STOP control bit has been cleared 
-        timeout = I2C_FLAG_TIMEOUT;
-        while (dev->I2Cx->CR1 & I2C_CR1_STOP ){
-            if ((timeout--) == 0)
-                return state; 
-        }
-
-	// Re-Enable Acknowledgement to be ready for another reception
-	I2C_AcknowledgeConfig(dev->I2Cx, ENABLE);
-*/
     }
     return I2C_OK;
 }

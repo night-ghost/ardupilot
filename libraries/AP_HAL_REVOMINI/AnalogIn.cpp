@@ -90,7 +90,6 @@ void REVOMINIAnalogIn::_timer_event(void)
 
     if (_num_channels == 0)      return;        /* No channels are registered - nothing to be done. */
 
-
     const adc_dev *dev = _channels[_active_channel]->_find_device();
 
     if (_channels[_active_channel]->_pin == ANALOG_INPUT_NONE || !_channels[_active_channel]->initialized()) {

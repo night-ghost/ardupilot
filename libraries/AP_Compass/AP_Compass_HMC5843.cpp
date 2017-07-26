@@ -22,7 +22,7 @@
  *
  */
  
-#pragma GCC optimize("O2")
+#pragma GCC optimize("O3")
  
 #include <AP_HAL/AP_HAL.h>
 
@@ -240,7 +240,6 @@ errout:
  */
 void AP_Compass_HMC5843::_timer()
 {
-    uint32_t tnow = AP_HAL::micros();    
 
 #if defined(HMC5883_DRDY_PIN)
     if(_drdy_pin->read() == 0) {
@@ -252,9 +251,10 @@ void AP_Compass_HMC5843::_timer()
         return; 
     }
 
+    uint32_t tnow = AP_HAL::micros();    
     bool result = _read_sample();
 
-    if(!_setup_sampling_mode() )
+//    if(!_setup_sampling_mode() )
     _take_sample();
     
     if (!result) {
@@ -297,7 +297,7 @@ void AP_Compass_HMC5843::_timer()
             _accum_count = 7;
         }
 
-        _sem->give();
+    _sem->give();
 }
 
 /*

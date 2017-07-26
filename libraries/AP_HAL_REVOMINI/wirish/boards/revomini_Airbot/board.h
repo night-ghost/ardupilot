@@ -1,6 +1,10 @@
 #ifndef _BOARD_STM32V1F4_H_
 #define _BOARD_STM32V1F4_H_
 
+/*
+    this file included to *ANY* compilation so shouldn't include anything else
+*/
+
 
 void boardInit(void);
 
@@ -23,11 +27,7 @@ void boardInit(void);
 
 #define BOARD_BUTTON_PIN     254
 
-#define BOARD_RFM22B_CS_PIN     103 // PA15 CS_RFM22B
-#define BOARD_RFM22B_INT_PIN    26  // PD2
-
 //#define BOARD_BUZZER_PIN        5 // PB15, PWM2 - used as PPM2
-
 
 #define BOARD_NR_USARTS         5
 #define BOARD_USART1_TX_PIN     23 
@@ -42,11 +42,6 @@ void boardInit(void);
 
 //#define BOARD_USART5_RX_PIN     26  // PD2  EXTI_RFM22B / UART5_RX
 //#define BOARD_BUTTON_PIN        103 // PA15 CS_RFM22B
-
-//#define BOARD_SPEKTRUM_RX_PIN   BOARD_RFM22B_INT_PIN // PD2
-//#define BOARD_SPEKTRUM_PWR_PIN  BOARD_RFM22B_CS_PIN // PA15
-//#define BOARD_SPEKTRUM_PWR_ON   1
-//#define BOARD_SPEKTRUM_PWR_OFF  0
 
 #define BOARD_DSM_USART (_USART1)
    
@@ -149,10 +144,6 @@ void boardInit(void);
 
 #define BOARD_USB_DMINUS 108
 
-// motor layouts
-#define REVO_MOTORS_ARDUCOPTER 0
-#define REVO_MOTORS_OPENPILOT 1
-#define REVO_MOTORS_CLEANFLIGHT 2
 
 // use soft I2C driver instead hardware
 #define BOARD_SOFT_I2C
@@ -161,7 +152,7 @@ void boardInit(void);
 
 #define BOARD_SBUS_UART1 1 // can use UART1 as hardware inverted input
 
-
+// motor layouts
 #define SERVO_PIN_1 46 // PB0 
 #define SERVO_PIN_2 45 // PB1
 #define SERVO_PIN_3 50 // PA3
@@ -190,7 +181,7 @@ void boardInit(void);
     // @Description: Selects how motors are numbered
     // @Values: 0:ArduCopter, 1: Ardupilot with pins 2&3 for servos 2:OpenPilot,3:CleanFlight
     // @User: Advanced
-    AP_GROUPINFO("_MOTOR_LAYOUT", 0,  HAL_REVOMINI, _motor_layout, REVO_MOTORS_ARDUCOPTER),
+    AP_GROUPINFO("_MOTOR_LAYOUT", 0,  HAL_REVOMINI, _motor_layout, 0),
 
     // @Param: USE_SOFTSERIAL
     // @DisplayName: Use SoftwareSerial driver
@@ -253,7 +244,7 @@ void boardInit(void);
 #ifdef USB_MASSSTORAGE
 
 #define BOARD_HAL_VARINFO \
-    AP_GROUPINFO("MOTOR_LAYOUT", 1, AP_Param_Helper, _motor_layout, REVO_MOTORS_ARDUCOPTER), \
+    AP_GROUPINFO("MOTOR_LAYOUT", 1, AP_Param_Helper, _motor_layout, 0), \
     AP_GROUPINFO("SOFTSERIAL",   2, AP_Param_Helper, _use_softserial, 0), \
     AP_GROUPINFO("UART1_SBUS",   3, AP_Param_Helper, _uart1_sbus, 0), \
     AP_GROUPINFO("SERVO_MASK",   4, AP_Param_Helper, _servo_mask, 0), \
@@ -267,7 +258,7 @@ void boardInit(void);
 #else
 
 #define BOARD_HAL_VARINFO \
-    AP_GROUPINFO("MOTOR_LAYOUT", 1, AP_Param_Helper, _motor_layout, REVO_MOTORS_ARDUCOPTER), \
+    AP_GROUPINFO("MOTOR_LAYOUT", 1, AP_Param_Helper, _motor_layout, 0), \
     AP_GROUPINFO("SOFTSERIAL",   2, AP_Param_Helper, _use_softserial, 0), \
     AP_GROUPINFO("UART1_SBUS",   3, AP_Param_Helper, _uart1_sbus, 0), \
     AP_GROUPINFO("SERVO_MASK",   4, AP_Param_Helper, _servo_mask, 0), \

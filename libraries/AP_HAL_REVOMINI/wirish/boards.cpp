@@ -32,11 +32,11 @@ based on:
  */
 
 #include "boards.h"
-#include "systick.h"
-#include "gpio_hal.h"
-#include "exti.h"
-#include "timer.h"
-#include "adc.h"
+//#include "systick.h"
+//#include "gpio_hal.h"
+//#include "exti.h"
+//#include "timer.h"
+//#include "adc.h"
 #include <usb.h>
 
 static void setupFlash(void);
@@ -96,7 +96,7 @@ inline static void setupCCM(){
 //    volatile unsigned *src = &_siccm; // CCM initializers in flash
     volatile unsigned *dest = &_sccm; // start of CCM
 
-#if 0
+#if 0 // no support for initialized data in CCM
 
     while (dest < &_eccm) {
         *dest = *src;
@@ -174,13 +174,12 @@ void INLINE init(void) {
     SystemCoreClockUpdate();
 
     enableFPU();
-    exti_init();
     setupNVIC();
     systick_init(SYSTICK_RELOAD_VAL);
 
-    stopwatch_init(); // will use stopwatch_delay_us
+    stopwatch_init(); // will use stopwatch_delay_us() and stopwatch_get_ticks()
 
-    boardInit();
+    boardInit(); // board-specific part of init
 /*
      only CPU init here, all another moved to modules .init() functions
 */

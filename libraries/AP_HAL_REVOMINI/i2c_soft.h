@@ -39,7 +39,7 @@ public:
 
     bool bus_reset(void);
     
-    void set_low_speed(bool s) { _dly_time = s?5:1; } 
+    void set_low_speed(bool s) { _dly_time = s?3:1; } // 1uS -> 250kHz
 
 private:
     const gpio_dev *_scl_dev;

@@ -1,7 +1,7 @@
 #ifndef _I2C_H
 #define _I2C_H
 
-#include <stm32f4xx.h>
+#include <hal_types.h>
 #include <hal.h>
 
 #define I2C_100KHz_SPEED                        100000
@@ -16,9 +16,6 @@
  #define I2C_SPEED              100000
 #endif /* I2C_SPEED */
 
-//#define I2C_SLAVE_ADDRESS7      0xA0
-//#define sEE_PAGESIZE            32
-
 
 /* Maximum Timeout values for flags and events waiting loops. These timeouts are
    not based on accurate values, they just guarantee that the application will
@@ -32,8 +29,8 @@
 #define I2C_LONG_TIMEOUT         ((uint32_t)(50 * I2C_FLAG_TIMEOUT))
 
 
-#define sEE_I2C2                          I2C2
-#define sEE_I2C1                          I2C1
+//#define sEE_I2C2                          I2C2
+//#define sEE_I2C1                          I2C1
 
 
 /* Time constant for the delay caclulation allowing to have a millisecond

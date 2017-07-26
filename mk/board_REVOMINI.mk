@@ -97,12 +97,11 @@ WARNFLAGS      +=   -Wno-error=unused-label
 #OPTFLAGS        = -O0
 #OPTFLAGS        = -Og
 OPTFLAGS        = -Os
-OPTFLAGS       += -fsingle-precision-constant -g3 -fno-strict-aliasing -fno-strength-reduce -fomit-frame-pointer -fearly-inlining -fpredictive-commoning
-OPTFLAGS       += -fno-builtin-printf -fno-aggressive-loop-optimizations 
-OPTFLAGS       += -fassociative-math -freciprocal-math -fno-signed-zeros -fno-trapping-math 
-OPTFLAGS       += -finline-functions-called-once -fearly-inlining
-OPTFLAGS       += -finline-small-functions
-OPTFLAGS       += -fmerge-all-constants
+OPTFLAGS       += -fsingle-precision-constant -g3 -fno-strict-aliasing -fno-strength-reduce -fomit-frame-pointer -fearly-inlining 
+OPTFLAGS       += -fno-builtin-printf -fno-aggressive-loop-optimizations -fpredictive-commoning
+OPTFLAGS       += -fassociative-math -freciprocal-math -fno-signed-zeros -fno-trapping-math -ffast-math 
+OPTFLAGS       += -finline-functions-called-once -fearly-inlining -finline-small-functions
+OPTFLAGS       += -fmerge-all-constants -fsingle-precision-constant
 
 WARNFLAGSCXX    =   -Wno-reorder
 DEPFLAGS        =   -MD -MT $@
@@ -186,7 +185,6 @@ LDFLAGS         += -Wl,--relax
 
 
 TGT_BIN := 
-
 
 
 
@@ -348,7 +346,7 @@ $(BUILD_PATH)/main.o: $(WIRISH_PATH)/main.cxx
 $(BUILD_PATH)/$(BOARD).bin: $(SKETCHELF)
 	$(SILENT_OBJCOPY) $(OBJCOPY) -v -Obinary $(SKETCHELF) --gap-fill 0xFF $@ 1>/dev/null
 	$(OBJCOPY) -v -Oihex $(SKETCHELF) $(BUILD_PATH)/$(BOARD).hex 1>/dev/null
-	$(SILENT_DISAS) $(DISAS) -d $(SKETCHELF) > $(BUILD_PATH)/$(BOARD).disas
+	$(SILENT_DISAS) $(DISAS) -S $(SKETCHELF) > $(BUILD_PATH)/$(BOARD).disas
 	@echo " "
 	$(TOOLS_PATH)/dfu-convert --ihex $(BUILD_PATH)/$(BOARD).hex $(BUILD_PATH)/$(BOARD).dfu 
 	$(v)cp $(BUILD_PATH)/$(BOARD).hex .

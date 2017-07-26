@@ -1,15 +1,7 @@
 #ifndef __EEPROM_H
 #define __EEPROM_H
 
-#include "wirish.h"
 #include "stm32f4xx_flash.h"
-
-//#define EEPROM_PAGE_SIZE (uint16_t)0x4000 /* Page size = 16kbyte*/
-//#define EEPROM_START_ADDRESS 	((uint32_t)(0x8008000))
-
-/* Pages 0 and 1 base and end addresses */
-//#define EEPROM_PAGE0_BASE		((uint32_t)(EEPROM_START_ADDRESS))
-//#define EEPROM_PAGE1_BASE		((uint32_t)(EEPROM_START_ADDRESS + EEPROM_PAGE_SIZE))
 
 /* Page status definitions */
 #define EEPROM_ERASED			((uint16_t)0xFFFF)	/* PAGE is empty */
