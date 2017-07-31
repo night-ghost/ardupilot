@@ -12,6 +12,7 @@
 
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -63,7 +64,16 @@ void DataFlash_Revo::FinishWrite(void)
     // If we reach the end of the memory, start from the beginning    
     if (df_PageAdr > df_NumPages) {
         df_PageAdr = 1;
+    }
+
 // TODO: а что, стирать уже не надо???
+    uint16_t block_num = df_PageAdr / (erase_size/DF_PAGE_SIZE); // number of erase block
+    uint16_t page_in_block = df_PageAdr % (erase_size/DF_PAGE_SIZE); // number of page in erase block
+
+//    if(block_num != last_block_num){
+    if(page_in_block==0 || df_PageAdr==1){ // начали писАть страницу - подготовим ее 
+        PageErase(df_PageAdr);
+        last_block_num = block_num; 
     }
 
     // switch buffer
@@ -351,6 +361,13 @@ void DataFlash_Revo::Init()
 {
 
     df_NumPages=0;
+
+#if BOARD_DATAFLASH_ERASE_SIZE  >= 65536
+    erase_cmd=JEDEC_PAGE_ERASE;
+#else
+    erase_cmd=JEDEC_SECTOR_ERASE;
+#endif
+    erase_size = BOARD_DATAFLASH_ERASE_SIZE;
     
     REVOMINIGPIO::_pinMode(DF_RESET,OUTPUT);
     // Reset the chip
@@ -380,8 +397,11 @@ void DataFlash_Revo::Init()
     
     _spi_sem->give();
 
+    df_NumPages   = BOARD_DATAFLASH_PAGES - 1;     // reserve last page for config information
 
     ReadManufacturerID();
+
+    getSectorCount(&df_NumPages);
 
     flash_died=false;
 
@@ -389,8 +409,7 @@ void DataFlash_Revo::Init()
 
     df_PageSize = DF_PAGE_SIZE;
 
-    // reserve last page for config information
-    df_NumPages   = BOARD_DATAFLASH_PAGES - 1;
+
 
 }
 
@@ -400,7 +419,7 @@ void DataFlash_Revo::WaitReady() {
     uint32_t t = AP_HAL::millis();
     while(ReadStatus()!=0){
     
-        REVOMINIScheduler::yield(20); // пока ждем пусть другие работают
+        REVOMINIScheduler::yield(0); // пока ждем пусть другие работают
         
         if(AP_HAL::millis() - t > 4000) {
             flash_died = true;
@@ -422,7 +441,7 @@ bool DataFlash_Revo::_sem_take(uint8_t timeout)
 }
 
 bool DataFlash_Revo::cs_assert(){
-    if (!_sem_take(50))
+    if (!_sem_take(100))
         return false;
 
     _spi->set_speed(AP_HAL::Device::SPEED_HIGH);
@@ -456,6 +475,57 @@ void DataFlash_Revo::ReadManufacturerID()
     cs_release();
 }
 
+bool DataFlash_Revo::getSectorCount(uint32_t *ptr){
+
+    uint8_t capacity = df_device & 0xFF;
+    uint8_t memtype =  (df_device>>8) & 0xFF;
+    uint32_t size=0;
+
+    
+
+    switch(df_manufacturer){
+    case 0xEF: //  Winbond Serial Flash 
+        if (memtype == 0x40) {
+            size = (1 << ((capacity & 0x0f) + 4)) * 16 ;
+/*
+ const uint8_t _capID[11]      = {0x10,  0x11,   0x12,   0x13,   0x14, 0x15, 0x16, 0x17, 0x18,  0x19,  0x43};
+  const uint32_t _memSize[11]  = {64L*K, 128L*K, 256L*K, 512L*K, 1L*M, 2L*M, 4L*M, 8L*M, 16L*M, 32L*M, 8L*M};
+*/
+            erase_size=4096;
+            erase_cmd=JEDEC_SECTOR_ERASE;
+            printf("Winbond SPI Flash found sectors=%ld\n", size);
+        }
+        break;
+    case 0xbf: // SST
+        if (memtype == 0x25) {
+            size = (1 << ((capacity & 0x07) + 8)) * 16;
+            printf("Microchip SST25VFxxxB SPI Flash found sectors=%ld\n",size);
+        }
+        break;
+    case 0x9D: // ISSI
+        if (memtype == 0x40 || memtype == 0x30) {
+            size      = (1 << ((capacity & 0x0f) + 4)) * 16;
+            printf("ISSI SPI Flash found sectors=%ld\n",size);
+        }
+        break;
+
+    default:
+        printf("unknown Flash! mfg=%x model=%x size=%x\n",df_manufacturer, memtype, capacity);
+
+        return false;
+    }
+    
+    if(size) {
+        size = BOARD_DATAFLASH_PAGES;
+    } else
+
+    size -= (erase_size/DF_PAGE_SIZE); // reserve last page for config information
+
+    *ptr = size;    // in 256b blocks    
+
+    return true;
+
+}
 
 // Read the status register
 uint8_t DataFlash_Revo::ReadStatusReg()
@@ -564,14 +634,14 @@ bool DataFlash_Revo::BlockRead(uint8_t BufferNum, uint16_t IntPageAdr, void *pBu
 * 8192 pages (256 bytes each).
 
 */
-/*
+
 void DataFlash_Revo::PageErase (uint16_t pageNum)
 {
 
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
     uint8_t cmd[4];
-    cmd[0] = JEDEC_SECTOR_ERASE;
+    cmd[0] = erase_cmd;
     cmd[1] = (PageAdr >> 16) & 0xff;
     cmd[2] = (PageAdr >>  8) & 0xff;
     cmd[3] = (PageAdr >>  0) & 0xff;
@@ -584,7 +654,7 @@ void DataFlash_Revo::PageErase (uint16_t pageNum)
         
     cs_release();
 }
-*/
+
 
 void DataFlash_Revo::ChipErase()
 {
@@ -742,6 +812,8 @@ void DataFlash_Revo::get_log_boundaries(uint16_t log_num, uint16_t & start_page,
     if (end_page == 0) {
         end_page = start_page;
     }
+    
+
 }
 
 bool DataFlash_Revo::check_wrapped(void)

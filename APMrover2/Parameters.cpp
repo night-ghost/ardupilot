@@ -233,7 +233,7 @@ const AP_Param::Info Rover::var_info[] = {
     // @Param: FS_THR_VALUE
     // @DisplayName: Throttle Failsafe Value
     // @Description: The PWM level on the throttle channel below which throttle failsafe triggers.
-    // @Range: 925 1100
+    // @Range: 910 1100
     // @Increment: 1
     // @User: Standard
     GSCALAR(fs_throttle_value,      "FS_THR_VALUE",     910),
@@ -546,20 +546,21 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Path: AP_MotorsUGV.cpp
     AP_SUBGROUPINFO(motors, "MOT_", 8, ParametersG2, AP_MotorsUGV),
 
-    // @Group: WENC_
+    // @Group: WENC
     // @Path: ../libraries/AP_WheelEncoder/AP_WheelEncoder.cpp
-    AP_SUBGROUPINFO(wheel_encoder, "WENC_", 9, ParametersG2, AP_WheelEncoder),
+    AP_SUBGROUPINFO(wheel_encoder, "WENC", 9, ParametersG2, AP_WheelEncoder),
 
     AP_GROUPEND
 };
 
 
 ParametersG2::ParametersG2(void)
-    : beacon(rover.serial_manager),
-      motors(rover.ServoRelayEvents)
+    :
 #if ADVANCED_FAILSAFE == ENABLED
-    , afs(rover.mission, rover.barometer, rover.gps, rover.rcmap)
+    afs(rover.mission, rover.barometer, rover.gps, rover.rcmap),
 #endif
+    beacon(rover.serial_manager),
+    motors(rover.ServoRelayEvents)
 {
     AP_Param::setup_object_defaults(this, var_info);
 }

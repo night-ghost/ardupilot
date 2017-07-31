@@ -374,9 +374,11 @@ uint64_t REVOMINIScheduler::_micros64() {
 
 void REVOMINIScheduler::system_initialized()
 {
+#ifndef I_KNOW_WHAT_I_DO
     if (_initialized) {
         AP_HAL::panic("PANIC: scheduler::system_initialized called more than once");
     }
+#endif
     _initialized = true;
     
     board_set_rtc_register(0,RTC_SIGNATURE_REG); // clear bootloader flag after init done

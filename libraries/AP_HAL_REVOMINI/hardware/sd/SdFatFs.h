@@ -84,6 +84,7 @@ class SdFatFs {
   inline uint32_t blockSize(void) const { return _card->blockSize(); }
   
   inline char* getRoot(void) { return _SDPath; };
+  FRESULT format(const char *filepath, Sd2Card *card);
 
   static const char *strError(FRESULT err);
 

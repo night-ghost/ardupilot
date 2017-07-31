@@ -186,6 +186,7 @@ for reviewing patches on their specific area. See [CONTRIBUTING.md](.github/CONT
   - ***Vehicle***: Plane
 - [Paul Riseborough](https://github.com/priseborough)
   - ***Subsystem***: AP_NavEKF2
+  - ***Subsystem***: AP_NavEKF3
 - [Lucas De Marchi](https://github.com/lucasdemarchi)
   - ***Subsystem***: Linux
 - [Peter Barker](https://github.com/peterbarker)

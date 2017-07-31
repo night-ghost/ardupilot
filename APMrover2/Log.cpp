@@ -197,7 +197,7 @@ void Rover::Log_Write_Steering()
     struct log_Steering pkt = {
         LOG_PACKET_HEADER_INIT(LOG_STEERING_MSG),
         time_us        : AP_HAL::micros64(),
-        demanded_accel : lateral_acceleration,
+        demanded_accel : control_mode->lateral_acceleration,
         achieved_accel : ahrs.groundspeed() * ins.get_gyro().z,
     };
     DataFlash.WriteBlock(&pkt, sizeof(pkt));
@@ -329,13 +329,13 @@ void Rover::Log_Write_Rangefinder()
     struct log_Rangefinder pkt = {
         LOG_PACKET_HEADER_INIT(LOG_RANGEFINDER_MSG),
         time_us               : AP_HAL::micros64(),
-        lateral_accel         : lateral_acceleration,
+        lateral_accel         : control_mode->lateral_acceleration,
         rangefinder1_distance : rangefinder.distance_cm(0),
         rangefinder2_distance : rangefinder.distance_cm(1),
         detected_count        : obstacle.detected_count,
         turn_angle            : static_cast<int8_t>(obstacle.turn_angle),
         turn_time             : turn_time,
-        ground_speed          : static_cast<uint16_t>(fabsf(ground_speed * 100)),
+        ground_speed          : static_cast<uint16_t>(fabsf(ground_speed * 100.0f)),
         throttle              : int8_t(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle))
     };
     DataFlash.WriteBlock(&pkt, sizeof(pkt));
@@ -504,9 +504,6 @@ void Rover::log_init(void)
 
     gcs().reset_cli_timeout();
 
-    if (g.log_bitmask != 0) {
-        start_logging();
-    }
 }
 
 #if CLI_ENABLED == ENABLED
@@ -529,17 +526,9 @@ void Rover::Log_Write_Vehicle_Startup_Messages()
 {
     // only 200(?) bytes are guaranteed by DataFlash
     Log_Write_Startup(TYPE_GROUNDSTART_MSG);
-    DataFlash.Log_Write_Mode(control_mode);
+    DataFlash.Log_Write_Mode(control_mode->mode_number());
     Log_Write_Home_And_Origin();
     gps.Write_DataFlash_Log_Startup_messages();
-}
-
-// start a new log
-void Rover::start_logging()
-{
-    DataFlash.EnableWrites(false);
-    DataFlash.StartUnstartedLogging();
-    DataFlash.EnableWrites(true);
 }
 
 #else  // LOGGING_ENABLED
@@ -553,7 +542,6 @@ int8_t Rover::process_logs(uint8_t argc, const Menu::arg *argv) { return 0; }
 void Rover::Log_Write_Control_Tuning() {}
 void Rover::Log_Write_Rangefinder() {}
 void Rover::Log_Write_Attitude() {}
-void Rover::start_logging() {}
 void Rover::Log_Write_RC(void) {}
 void Rover::Log_Write_GuidedTarget(uint8_t target_type, const Vector3f& pos_target, const Vector3f& vel_target) {}
 void Rover::Log_Write_Home_And_Origin() {}

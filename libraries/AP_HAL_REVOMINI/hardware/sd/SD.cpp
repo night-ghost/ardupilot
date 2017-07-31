@@ -244,6 +244,13 @@ uint8_t SDClass::stat(const char *filepath, FILINFO* fno){
     return 0;
 }
 
+uint8_t SDClass::format(const char *filepath){
+    lastError = _fatFs.format(filepath, &_card);
+    
+    
+    return lastError == FR_OK;
+}
+
 
 
 //* *************************************
@@ -429,7 +436,7 @@ int File::read()
 {
     UINT byteread;
     int8_t data;
-    f_read(&_fil, (void *)&data, 1, &byteread);
+    SD.lastError = f_read(&_fil, (void *)&data, 1, &byteread);
     return data;
 }
 
@@ -443,7 +450,7 @@ int File::read(void* buf, size_t len)
 {
     UINT bytesread;
 
-    f_read(&_fil, buf, len, &bytesread);
+    SD.lastError = f_read(&_fil, buf, len, &bytesread);
     return bytesread;
 
 }
@@ -461,11 +468,11 @@ void File::close()
 	    f_sync(&_fil);
 
 	    /* Close the file */
-	    f_close(&_fil);
+	    SD.lastError = f_close(&_fil);
 	}
 
 	if(_dir.fs != 0) {
-		f_closedir(&_dir);
+	    SD.lastError = f_closedir(&_dir);
 	}
         removeOpenFile(&_fil);
 	free(_name);
@@ -481,7 +488,7 @@ void File::close()
   */
 void File::flush()
 {
-    f_sync(&_fil);
+    SD.lastError = f_sync(&_fil);
 }
 
 /**
@@ -517,7 +524,8 @@ uint8_t File::seek(uint32_t pos)
   if(pos > size()) {
     return FALSE;
   } else {
-    return f_lseek(&_fil, pos) == FR_OK;
+    SD.lastError = f_lseek(&_fil, pos);
+    return SD.lastError == FR_OK;
   }
 }
 
@@ -553,7 +561,7 @@ size_t File::write(uint8_t data)
 size_t File::write(const char *buf, size_t size)
 {
     size_t byteswritten;
-    f_write(&_fil, (const void *)buf, size, (UINT *)&byteswritten);
+    SD.lastError = f_write(&_fil, (const void *)buf, size, (UINT *)&byteswritten);
     return byteswritten;
 }
 
@@ -627,7 +635,8 @@ uint8_t File::isDirectory()
 	return FALSE;
 
     // if not init get info
-    if (f_stat(_name, &fno) == FR_OK) {
+    SD.lastError = f_stat(_name, &fno);
+    if (SD.lastError == FR_OK) {
 	if(fno.fattrib & AM_DIR){
 	    return TRUE;
 	} else {
@@ -638,6 +647,8 @@ uint8_t File::isDirectory()
     return FALSE;
 }
 
+
+// TODO: some strange and not works at all
 File File::openNextFile(uint8_t mode)
 {
   FRESULT res = FR_OK;
@@ -658,8 +669,7 @@ File File::openNextFile(uint8_t mode)
     {
       return File();
     }
-    if(fno.fname[0] == '.')
-    {
+    if(fno.fname[0] == '.') {
       continue;
     }
 #if _USE_LFN

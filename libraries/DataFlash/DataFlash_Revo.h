@@ -41,6 +41,7 @@
 #define expect_memorytype            0x20
 #define expect_capacity              0x15
 
+#define MAX_ERASE_SIZE 16384
 
 using namespace REVOMINI;
 
@@ -125,6 +126,7 @@ private:
     uint16_t GetWritePage(void);
     void StartWrite(uint16_t PageAdr);
     void FinishWrite(void);
+    bool getSectorCount(uint32_t *ptr);
     
     // Read methods
     bool ReadBlock(void *pBuffer, uint16_t size);
@@ -134,6 +136,9 @@ private:
     uint16_t GetFilePage();
     uint16_t GetFileNumber();
 
+    uint8_t erase_cmd;
+    uint32_t erase_size;
+    uint16_t last_block_num;
 
 protected:
     uint8_t df_manufacturer;
@@ -141,7 +146,7 @@ protected:
 
     // page handling
     uint16_t df_PageSize;
-    uint16_t df_NumPages;
+    uint32_t df_NumPages;
 
     bool WritesOK() const override;
 

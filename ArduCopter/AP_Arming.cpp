@@ -63,7 +63,7 @@ bool AP_Arming_Copter::pre_arm_checks(bool display_failure)
     if (copter.ap.pre_arm_check) {
         // run gps checks because results may change and affect LED colour
         // no need to display failures because arm_checks will do that if the pilot tries to arm
-        pre_arm_gps_checks(false);
+        gps_checks(false);
         return true;
     }
 
@@ -96,15 +96,13 @@ bool AP_Arming_Copter::rc_calibration_checks(bool display_failure)
 
 bool AP_Arming_Copter::barometer_checks(bool display_failure)
 {
+    if (!AP_Arming::barometer_checks(display_failure)) {
+        return false;
+    }
+
+    bool ret = true;
     // check Baro
     if ((checks_to_perform == ARMING_CHECK_ALL) || (checks_to_perform & ARMING_CHECK_BARO)) {
-        // barometer health check
-        if (!barometer.all_healthy()) {
-            if (display_failure) {
-                gcs().send_text(MAV_SEVERITY_CRITICAL,"PreArm: Barometer not healthy");
-            }
-            return false;
-        }
         // Check baro & inav alt are within 1m if EKF is operating in an absolute position mode.
         // Do not check if intending to operate in a ground relative height mode as EKF will output a ground relative height
         // that may differ from the baro height due to baro drift.
@@ -115,11 +113,11 @@ bool AP_Arming_Copter::barometer_checks(bool display_failure)
                 if (display_failure) {
                     gcs().send_text(MAV_SEVERITY_CRITICAL,"PreArm: Altitude disparity");
                 }
-                return false;
+                ret = false;
             }
         }
     }
-    return true;
+    return ret;
 }
 
 bool AP_Arming_Copter::compass_checks(bool display_failure)
@@ -138,15 +136,6 @@ bool AP_Arming_Copter::compass_checks(bool display_failure)
     }
 
     return ret;
-}
-
-bool AP_Arming_Copter::gps_checks(bool display_failure)
-{
-    // check GPS
-    if (!pre_arm_gps_checks(display_failure)) {
-        return false;
-    }
-    return true;
 }
 
 bool AP_Arming_Copter::fence_checks(bool display_failure)
@@ -184,17 +173,9 @@ bool AP_Arming_Copter::ins_checks(bool display_failure)
 
 bool AP_Arming_Copter::board_voltage_checks(bool display_failure)
 {
-#if HAL_HAVE_BOARD_VOLTAGE
-    // check board voltage
-    if ((checks_to_perform == ARMING_CHECK_ALL) || (checks_to_perform & ARMING_CHECK_VOLTAGE)) {
-        if (hal.analogin->board_voltage() < BOARD_VOLTAGE_MIN || hal.analogin->board_voltage() > BOARD_VOLTAGE_MAX) {
-            if (display_failure) {
-                gcs().send_text(MAV_SEVERITY_CRITICAL,"PreArm: Check Board Voltage");
-            }
-            return false;
-        }
+    if (!AP_Arming::board_voltage_checks(display_failure)) {
+        return false;
     }
-#endif
 
     Parameters &g = copter.g;
 
@@ -390,7 +371,7 @@ void AP_Arming_Copter::pre_arm_rc_checks(const bool display_failure)
 }
 
 // performs pre_arm gps related checks and returns true if passed
-bool AP_Arming_Copter::pre_arm_gps_checks(bool display_failure)
+bool AP_Arming_Copter::gps_checks(bool display_failure)
 {
     // always check if inertial nav has started and is ready
     if (!ahrs.healthy()) {
@@ -433,6 +414,17 @@ bool AP_Arming_Copter::pre_arm_gps_checks(bool display_failure)
         }
         AP_Notify::flags.pre_arm_gps_check = false;
         return false;
+    }
+
+    // check for GPS glitch (as reported by EKF)
+    nav_filter_status filt_status;
+    if (_ahrs_navekf.get_filter_status(filt_status)) {
+        if (filt_status.flags.gps_glitching) {
+            if (display_failure) {
+                gcs().send_text(MAV_SEVERITY_CRITICAL,"PreArm: GPS glitching");
+            }
+            return false;
+        }
     }
 
     // check EKF compass variance is below failsafe threshold
@@ -563,11 +555,6 @@ bool AP_Arming_Copter::pre_arm_proximity_check(bool display_failure)
 //  has side-effect that logging is started
 bool AP_Arming_Copter::arm_checks(bool display_failure, bool arming_from_gcs)
 {
-    #if LOGGING_ENABLED == ENABLED
-    // start dataflash
-    copter.start_logging();
-    #endif
-
     // check accels and gyro are healthy
     if ((checks_to_perform == ARMING_CHECK_ALL) || (checks_to_perform & ARMING_CHECK_INS)) {
         //check if accelerometers have calibrated and require reboot
@@ -641,7 +628,7 @@ bool AP_Arming_Copter::arm_checks(bool display_failure, bool arming_from_gcs)
     }
 
     // always check gps
-    if (!pre_arm_gps_checks(display_failure)) {
+    if (!gps_checks(display_failure)) {
         return false;
     }
 
@@ -791,8 +778,10 @@ bool AP_Arming_Copter::arm_checks(bool display_failure, bool arming_from_gcs)
         return false;
     }
 
-    // if we've gotten this far all is ok
-    return true;
+    // superclass method should always be the last thing called; it
+    // has side-effects which would need to be cleaned up if one of
+    // our arm checks failed
+    return AP_Arming::arm_checks(arming_from_gcs);
 }
 
 enum HomeState AP_Arming_Copter::home_status() const

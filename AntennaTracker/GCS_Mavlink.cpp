@@ -220,10 +220,6 @@ bool GCS_MAVLINK_Tracker::try_send_message(enum ap_message id)
         tracker.send_waypoint_request(chan);
         break;
 
-    case MSG_STATUSTEXT:
-        // depreciated, use GCS_MAVLINK::send_statustext*
-        return false;
-
     case MSG_AHRS:
         CHECK_PAYLOAD_SIZE(AHRS);
         send_ahrs(tracker.ahrs);
@@ -817,16 +813,6 @@ mission_failed:
         handle_serial_control(msg, tracker.gps);
         break;
 
-    case MAVLINK_MSG_ID_GPS_INJECT_DATA:
-        handle_gps_inject(msg, tracker.gps);
-        break;
-
-    case MAVLINK_MSG_ID_GPS_RTCM_DATA:
-    case MAVLINK_MSG_ID_GPS_INPUT:
-    case MAVLINK_MSG_ID_HIL_GPS:
-        tracker.gps.handle_msg(msg);
-        break;
-
     case MAVLINK_MSG_ID_AUTOPILOT_VERSION_REQUEST:
         send_autopilot_version(FIRMWARE_VERSION);
         break;
@@ -899,7 +885,18 @@ void Tracker::gcs_retry_deferred(void)
     gcs().service_statustext();
 }
 
+AP_GPS *GCS_MAVLINK_Tracker::get_gps() const
+{
+    return &tracker.gps;
+}
+
 Compass *GCS_MAVLINK_Tracker::get_compass() const
 {
     return &tracker.compass;
 }
+
+/* dummy methods to avoid having to link against AP_Camera */
+void AP_Camera::control_msg(mavlink_message_t const*) {}
+void AP_Camera::configure(float, float, float, float, float, float, float) {}
+void AP_Camera::control(float, float, float, float, float, float) {}
+/* end dummy methods to avoid having to link against AP_Camera */

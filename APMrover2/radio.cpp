@@ -53,7 +53,7 @@ void Rover::rudder_arm_disarm_check()
     }
 
     // if not in a manual throttle mode then disallow rudder arming/disarming
-    if (auto_throttle_mode) {
+    if (control_mode->auto_throttle()) {
         rudder_arm_timer = 0;
         return;
     }
@@ -150,21 +150,6 @@ void Rover::read_radio()
         }
         channel_steer->set_pwm(steer);
         channel_throttle->set_pwm(thr);
-    }
-
-    // copy RC scaled inputs to outputs
-    g2.motors.set_throttle(channel_throttle->get_control_in());
-    g2.motors.set_steering(channel_steer->get_control_in());
-
-    // Check if the throttle value is above 50% and we need to nudge
-    // Make sure its above 50% in the direction we are travelling
-    if ((fabsf(g2.motors.get_throttle()) > 50.0f) &&
-        ((is_negative(g2.motors.get_throttle()) && in_reverse) ||
-         (is_positive(g2.motors.get_throttle()) && !in_reverse))) {
-        throttle_nudge = (g.throttle_max - g.throttle_cruise) *
-                         ((fabsf(channel_throttle->norm_input()) - 0.5f) / 0.5f);
-    } else {
-        throttle_nudge = 0;
     }
 
     // check if we try to do RC arm/disarm

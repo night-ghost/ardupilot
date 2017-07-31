@@ -10,11 +10,6 @@ bool Rover::start_command(const AP_Mission::Mission_Command& cmd)
         DataFlash.Log_Write_Mission_Cmd(mission, cmd);
     }
 
-    // exit immediately if not in AUTO mode
-    if (control_mode != AUTO) {
-        return false;
-    }
-
     gcs().send_text(MAV_SEVERITY_INFO, "Executing command ID #%i", cmd.id);
 
     // remember the course of our next navigation leg
@@ -130,27 +125,22 @@ bool Rover::start_command(const AP_Mission::Mission_Command& cmd)
 //      we double check that the flight mode is AUTO to avoid the possibility of ap-mission triggering actions while we're not in AUTO mode
 void Rover::exit_mission()
 {
-    if (control_mode == AUTO) {
-        gcs().send_text(MAV_SEVERITY_NOTICE, "No commands. Can't set AUTO. Setting HOLD");
-        set_mode(HOLD);
-    }
+    gcs().send_text(MAV_SEVERITY_NOTICE, "No commands. Can't set AUTO. Setting HOLD");
+    set_mode(mode_hold);
 }
 
 // verify_command_callback - callback function called from ap-mission at 10hz or higher when a command is being run
 //      we double check that the flight mode is AUTO to avoid the possibility of ap-mission triggering actions while we're not in AUTO mode
 bool Rover::verify_command_callback(const AP_Mission::Mission_Command& cmd)
 {
-    if (control_mode == AUTO) {
-        const bool cmd_complete = verify_command(cmd);
+    const bool cmd_complete = verify_command(cmd);
 
-        // send message to GCS
-        if (cmd_complete) {
-            gcs().send_mission_item_reached_message(cmd.index);
-        }
-
-        return cmd_complete;
+    // send message to GCS
+    if (cmd_complete) {
+        gcs().send_mission_item_reached_message(cmd.index);
     }
-    return false;
+
+    return cmd_complete;
 }
 
 /*******************************************************************************
@@ -215,9 +205,7 @@ bool Rover::verify_command(const AP_Mission::Mission_Command& cmd)
 
 void Rover::do_RTL(void)
 {
-    prev_WP = current_loc;
-    control_mode = RTL;
-    next_WP = home;
+    set_mode(mode_rtl);
 }
 
 void Rover::do_nav_wp(const AP_Mission::Mission_Command& cmd)
@@ -379,7 +367,6 @@ void Rover::nav_set_yaw_speed()
         gcs().send_text(MAV_SEVERITY_WARNING, "NAV_SET_YAW_SPEED not recvd last 3secs, stopping");
         g2.motors.set_throttle(g.throttle_min.get());
         g2.motors.set_steering(0.0f);
-        lateral_acceleration = 0.0f;
         return;
     }
 
@@ -390,9 +377,9 @@ void Rover::nav_set_yaw_speed()
     // 0.5 would set speed to the cruise speed
     // 1 is double the cruise speed.
     const float target_speed = g.speed_cruise * guided_control.target_speed * 2.0f;
-    calc_throttle(target_speed);
+    rover.control_mode->calc_throttle(target_speed);
 
-    Log_Write_GuidedTarget(guided_mode, Vector3f(steering, 0.0f, 0.0f), Vector3f(target_speed, 0.0f, 0.0f));
+    Log_Write_GuidedTarget(rover.mode_guided.guided_mode, Vector3f(steering, 0.0f, 0.0f), Vector3f(target_speed, 0.0f, 0.0f));
 }
 
 void Rover::nav_set_speed()
@@ -402,7 +389,6 @@ void Rover::nav_set_speed()
         gcs().send_text(MAV_SEVERITY_WARNING, "SET_VELOCITY not recvd last 3secs, stopping");
         g2.motors.set_throttle(g.throttle_min.get());
         g2.motors.set_steering(0.0f);
-        lateral_acceleration = 0.0f;
         prev_WP = current_loc;
         next_WP = current_loc;
         set_guided_WP(current_loc);  // exit Guided_Velocity to prevent spam
@@ -416,9 +402,9 @@ void Rover::nav_set_speed()
     nav_controller->update_waypoint(current_loc, next_WP);
 
     g2.motors.set_steering(steer_value);
-    calc_throttle(guided_control.target_speed);
+    rover.control_mode->calc_throttle(guided_control.target_speed);
 
-    Log_Write_GuidedTarget(guided_mode, Vector3f(steer_value, 0.0f, 0.0f), Vector3f(guided_control.target_speed, 0.0f, 0.0f));
+    Log_Write_GuidedTarget(rover.mode_guided.guided_mode, Vector3f(steer_value, 0.0f, 0.0f), Vector3f(guided_control.target_speed, 0.0f, 0.0f));
 }
 
 /********************************************************************************/
@@ -461,7 +447,7 @@ void Rover::do_yaw(const AP_Mission::Mission_Command& cmd)
     const int32_t steering = steerController.get_steering_out_angle_error(error_to_target_yaw);
     g2.motors.set_steering(steering);
     next_navigation_leg_cd = condition_value;
-    calc_throttle(g.speed_cruise);
+    control_mode->calc_throttle(g.speed_cruise);
 
     do_auto_rotation = true;
 }
@@ -483,7 +469,7 @@ bool Rover::do_yaw_rotation()
         // Calculate the steering to apply base on error calculated
         const int32_t steering = steerController.get_steering_out_angle_error(error_to_target_yaw);
         g2.motors.set_steering(steering);
-        calc_throttle(g.speed_cruise);
+        control_mode->calc_throttle(g.speed_cruise);
         do_auto_rotation = true;
         return false;
     }
@@ -565,36 +551,12 @@ void Rover::do_digicam_configure(const AP_Mission::Mission_Command& cmd)
 // do_digicam_control Send Digicam Control message with the camera library
 void Rover::do_digicam_control(const AP_Mission::Mission_Command& cmd)
 {
-    if (camera.control(cmd.content.digicam_control.session,
-                       cmd.content.digicam_control.zoom_pos,
-                       cmd.content.digicam_control.zoom_step,
-                       cmd.content.digicam_control.focus_lock,
-                       cmd.content.digicam_control.shooting_cmd,
-                       cmd.content.digicam_control.cmd_id)) {
-        log_picture();
-    }
-}
-
-// do_take_picture - take a picture with the camera library
-void Rover::do_take_picture()
-{
-    camera.trigger_pic(true);
-    log_picture();
-}
-
-// log_picture - log picture taken and send feedback to GCS
-void Rover::log_picture()
-{
-    if (!camera.using_feedback_pin()) {
-        gcs().send_message(MSG_CAMERA_FEEDBACK);
-        if (should_log(MASK_LOG_CAMERA)) {
-            DataFlash.Log_Write_Camera(ahrs, gps, current_loc);
-        }
-    } else {
-        if (should_log(MASK_LOG_CAMERA)) {
-            DataFlash.Log_Write_Trigger(ahrs, gps, current_loc);
-        }
-    }
+    camera.control(cmd.content.digicam_control.session,
+                   cmd.content.digicam_control.zoom_pos,
+                   cmd.content.digicam_control.zoom_step,
+                   cmd.content.digicam_control.focus_lock,
+                   cmd.content.digicam_control.shooting_cmd,
+                   cmd.content.digicam_control.cmd_id);
 }
 
 #endif

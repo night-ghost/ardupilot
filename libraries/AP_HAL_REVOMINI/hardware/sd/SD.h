@@ -135,6 +135,7 @@ public:
 
     static uint32_t getfree(const char *filepath, uint32_t * fssize); 
     static uint8_t stat(const char *filepath, FILINFO* fno);
+    static uint8_t format(const char *filepath);
 
     File openRoot(void);
 

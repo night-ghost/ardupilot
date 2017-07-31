@@ -122,11 +122,12 @@ void boardInit(void);
 
 #define BOARD_DATAFLASH_NAME "dataflash"
 #define BOARD_DATAFLASH_PAGES 0x2000
+#define BOARD_DATAFLASH_ERASE_SIZE (4096)// in bytes
+
 #if 1// if board's dataflash supports 4k erases then we can use it as FAT and share it via USB
 #define BOARD_DATAFLASH_FATFS
-#define BOARD_DATAFLASH_ERASE_SIZE (4096)// in bytes
 #define USB_MASSSTORAGE
-#define HAL_BOARD_LOG_DIRECTORY "0:/LOGS"
+#define HAL_BOARD_LOG_DIRECTORY "0:/"
 #define HAL_BOARD_TERRAIN_DIRECTORY "0:/TERRAIN"
 //#define HAL_PARAM_DEFAULTS_PATH "0:/APM/defaults.parm"
 #else

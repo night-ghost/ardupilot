@@ -176,9 +176,11 @@ float DataFlash_File::avail_space_percent()
     return (avail/(float)space) * 100;
 }
 
+#if 0 // why such hard?
+
 // find_oldest_log - find oldest log in _log_directory
 // returns 0 if no log was found
-uint16_t DataFlash_File::find_oldest_log(uint16_t *log_count)
+uint16_t DataFlash_File::find_oldest_log()
 {
     if (_cached_oldest_log != 0) {
         return _cached_oldest_log;
@@ -197,13 +199,19 @@ uint16_t DataFlash_File::find_oldest_log(uint16_t *log_count)
     File dir = SD.open(_log_directory);
     if (!dir) {
         // internal_error();
+        printf("error opening logs dir: %s", SD.strError(SD.lastError));
         return 0;
     }
 
-    // we only remove files which look like xxx.BIN
+    // we only count files which look like xxx.BIN
     while(1){
         File de=dir.openNextFile();
-        if(!de) break;
+        if(!de) {
+            if(SD.lastError){
+                printf("error scanning logs: %s", SD.strError(SD.lastError));
+            }
+            break;
+        }
         
         char *nm = de.name();
         de.close();
@@ -217,8 +225,6 @@ uint16_t DataFlash_File::find_oldest_log(uint16_t *log_count)
             // doesn't end in .BIN
             continue;
         }
-
-        if(log_count) (*log_count) += 1;
 
         uint16_t thisnum = strtoul(nm, nullptr, 10);
 //        if (thisnum > MAX_LOG_FILES) {
@@ -249,53 +255,88 @@ uint16_t DataFlash_File::find_oldest_log(uint16_t *log_count)
     return current_oldest_log;
 }
 
-void DataFlash_File::Prep_MinSpace()
+#else
+
+// this called on Prep() so on ground only, and result cached later
+uint16_t DataFlash_File::find_oldest_log()
 {
-    const uint16_t first_log_to_remove = find_oldest_log(NULL);
-    if (first_log_to_remove == 0) {
-        // no files to remove
-        return;
+
+    if (_cached_oldest_log != 0) {
+        return _cached_oldest_log;
     }
 
-    _cached_oldest_log = 0;
+    uint16_t i;
+    for (i=0; i<MAX_LOG_FILES; i++) {
+        if ( log_exists(i)) {
+            _cached_oldest_log=i;
+            return i;
+        }
+    }
+    
+    return 0;
+}
+#endif
 
-    uint16_t log_to_remove = first_log_to_remove;
 
-    uint16_t count = 0;
-    do {
-        float avail = avail_space_percent();
-        if (avail < 0) {
-            // internal_error()
-            break;
-        }
-        if (avail >= min_avail_space_percent) {
-            break;
-        }
-        if (count++ > MAX_LOG_FILES+10) {
-            // *way* too many deletions going on here.  Possible internal error.
-            // internal_error();
-            break;
-        }
-        char *filename_to_remove = _log_file_name(log_to_remove);
-        if (filename_to_remove == nullptr) {
-            // internal_error();
-            break;
-        }
-        if (SD.exists(filename_to_remove)) {
-            hal.console->printf("Removing (%s) for minimum-space requirements (%.2f%% < %.0f%%)\n",
-                                filename_to_remove, (double)avail, (double)min_avail_space_percent);
-            if (!SD.remove(filename_to_remove)) {
-                hal.console->printf("Failed to remove %s: %s\n", filename_to_remove, SD.strError(SD.lastError));
-                free(filename_to_remove);
-            } else {
-                free(filename_to_remove);
+void DataFlash_File::Prep_MinSpace()
+{
+    const uint16_t first_log_to_remove = find_oldest_log();
+    if (first_log_to_remove != 0) {
+
+        _cached_oldest_log = 0;
+
+        uint16_t log_to_remove = first_log_to_remove;
+
+        uint16_t count = 0;
+        do {
+            float avail = avail_space_percent();
+            if (avail < 0) {             // internal_error()
+
+#if defined(BOARD_DATAFLASH_FATFS)
+                hal.console->printf("error getting free space, formatting!\n");
+                SD.format(_log_directory);
+                return;
+#endif
+                break;
             }
-        }
-        log_to_remove++;
-        if (log_to_remove > MAX_LOG_FILES) {
-            log_to_remove = 1;
-        }
-    } while (log_to_remove != first_log_to_remove);
+            if (avail >= min_avail_space_percent) {
+                break;
+            }
+            if (count++ > MAX_LOG_FILES+10) {
+                // *way* too many deletions going on here.  Possible internal error.
+                // internal_error();
+                break;
+            }
+            char *filename_to_remove = _log_file_name(log_to_remove);
+            if (filename_to_remove == nullptr) {
+                // internal_error();
+                break;
+            }
+            if (SD.exists(filename_to_remove)) {
+                hal.console->printf("Removing (%s) for minimum-space requirements (%.2f%% < %.0f%%)\n",
+                                    filename_to_remove, (double)avail, (double)min_avail_space_percent);
+                if (!SD.remove(filename_to_remove)) {
+                    hal.console->printf("Failed to remove %s: %s\n", filename_to_remove, SD.strError(SD.lastError));
+                }
+                free(filename_to_remove);
+
+            }
+            log_to_remove++;
+            if (log_to_remove > MAX_LOG_FILES) {
+                log_to_remove = 1;
+            }
+        } while (log_to_remove != first_log_to_remove);
+
+    }
+// check the result
+#if defined(BOARD_DATAFLASH_FATFS)
+    float avail = avail_space_percent();
+    if (avail <= 0) {   // erase don't helps
+        hal.console->printf("erase don't get free space, formatting!\n");
+        SD.format(_log_directory);
+    }
+#endif
+
 }
 
 
@@ -464,7 +505,8 @@ uint16_t DataFlash_File::find_last_log()
         char buf[10];
         memset(buf, 0, sizeof(buf));
         if (fd.read(buf, sizeof(buf)-1) > 0) {
-            sscanf(buf, "%u", &ret);            
+            ret = strtoul(buf, nullptr, 10); // зачем тащить толстую функцию зря
+//            sscanf(buf, "%u", &ret);            
         }
         fd.close();    
     }
@@ -531,16 +573,25 @@ uint32_t DataFlash_File::_get_log_time(const uint16_t log_num) const
 */
 uint16_t DataFlash_File::_log_num_from_list_entry(const uint16_t list_entry)
 {
-    uint16_t oldest_log = find_oldest_log(NULL);
+    uint16_t oldest_log = find_oldest_log();
     if (oldest_log == 0) {
         // We don't have any logs...
         return 0;
     }
 
     uint32_t log_num = oldest_log + list_entry - 1;
+    
     if (log_num > MAX_LOG_FILES) {
         log_num -= MAX_LOG_FILES;
     }
+    while(!log_exists(log_num)){ // skip gaps
+        log_num++;
+        if(log_num>MAX_LOG_FILES) {
+            log_num=MAX_LOG_FILES;
+            break;
+        }
+    }
+
     return (uint16_t)log_num;
 }
 
@@ -550,7 +601,8 @@ uint16_t DataFlash_File::_log_num_from_list_entry(const uint16_t list_entry)
 void DataFlash_File::get_log_boundaries(const uint16_t list_entry, uint16_t & start_page, uint16_t & end_page)
 {
     const uint16_t log_num = _log_num_from_list_entry(list_entry);
-    if (log_num == 0) {
+    //if (log_num == 0) {
+    if (! log_exists(log_num)) {
         // that failed - probably no logs
         start_page = 0;
         end_page = 0;
@@ -611,7 +663,9 @@ int16_t DataFlash_File::get_log_data(const uint16_t list_entry, const uint16_t p
 void DataFlash_File::get_log_info(const uint16_t list_entry, uint32_t &size, uint32_t &time_utc)
 {
     uint16_t log_num = _log_num_from_list_entry(list_entry);
-    if (log_num == 0) {
+//    if (log_num == 0) {
+    if (! log_exists(log_num)) {
+
         // that failed - probably no logs
         size = 0;
         time_utc = 0;
@@ -625,7 +679,7 @@ void DataFlash_File::get_log_info(const uint16_t list_entry, uint32_t &size, uin
 
 
 /*
-  get the number of logs - note that the log numbers must be consecutive
+  get the number of logs [no more - note that the log numbers must be consecutive ]
  */
 uint16_t DataFlash_File::get_num_logs()
 {
@@ -633,17 +687,20 @@ uint16_t DataFlash_File::get_num_logs()
     uint16_t high = find_last_log();
     uint16_t i;
     for (i=high; i>0; i--) {
-        if (! log_exists(i)) {
-            break;
+        if (log_exists(i)) {
+            ret++;
+                if(_cached_oldest_log == 0 || i<_cached_oldest_log)
+                    _cached_oldest_log=i;
         }
-        ret++;
     }
+
     if (i == 0) {
         for (i=MAX_LOG_FILES; i>high; i--) {
-            if (! log_exists(i)) {
-                break;
+            if ( log_exists(i)) {
+                ret++;
+                if(_cached_oldest_log == 0 || i<_cached_oldest_log)
+                    _cached_oldest_log=i;
             }
-            ret++;
         }
     }
     return ret;
@@ -902,9 +959,13 @@ void DataFlash_File::_io_timer(void)
             nbytes -= ofs;
         }
     }
+    
+    if(nbytes==0) return;
 
     ssize_t nwritten = _write_fd.write(head, nbytes);
     if (nwritten <= 0) {
+        hal.console->printf("Log write %d bytes fails: %s\n",nbytes, SD.strError(SD.lastError));
+
         _write_fd.close();
         _initialised = false;
     } else {

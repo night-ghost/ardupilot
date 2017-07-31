@@ -21,6 +21,7 @@
 #include <AP_Motors/AP_Motors.h>
 #include <AP_Rally/AP_Rally.h>
 #include <AP_Beacon/AP_Beacon.h>
+#include <AP_Proximity/AP_Proximity.h>
 #include <stdint.h>
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4
@@ -101,8 +102,7 @@ public:
 
     void setVehicle_Startup_Log_Writer(vehicle_startup_message_Log_Writer writer);
 
-    /* poke backends to start if they're not already started */
-    void StartUnstartedLogging(void);
+    void PrepForArming();
 
     void EnableWrites(bool enable) { _writes_enabled = enable; }
     bool WritesEnabled() const { return _writes_enabled; }
@@ -153,6 +153,7 @@ public:
     void Log_Write_VisualOdom(float time_delta, const Vector3f &angle_delta, const Vector3f &position_delta, float confidence);
     void Log_Write_AOA_SSA(AP_AHRS &ahrs);
     void Log_Write_Beacon(AP_Beacon &beacon);
+    void Log_Write_Proximity(AP_Proximity &proximity);
 
     void Log_Write(const char *name, const char *labels, const char *fmt, ...);
 
@@ -323,6 +324,8 @@ private:
 
     // start page of log data
     uint16_t _log_data_page;
+
+    int8_t _log_sending_chan = -1;
 
     bool should_handle_log_message();
     void handle_log_message(class GCS_MAVLINK &, mavlink_message_t *msg);

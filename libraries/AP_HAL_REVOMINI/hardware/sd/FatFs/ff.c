@@ -2769,10 +2769,10 @@ FRESULT f_read (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_write (
-	FIL* fp,			/* Pointer to the file object */
+	FIL* fp,		/* Pointer to the file object */
 	const void *buff,	/* Pointer to the data to be written */
-	UINT btw,			/* Number of bytes to write */
-	UINT* bw			/* Pointer to number of bytes written */
+	UINT btw,		/* Number of bytes to write */
+	UINT* bw		/* Pointer to number of bytes written */
 )
 {
 	FRESULT res;
@@ -2809,7 +2809,10 @@ FRESULT f_write (
 #endif
 						clst = create_chain(fp->fs, fp->clust);	/* Follow or stretch cluster chain on the FAT */
 				}
-				if (clst == 0) break;		/* Could not allocate a new cluster (disk full) */
+				if (clst == 0) { /* Could not allocate a new cluster (disk full) */
+				    res=FR_DENIED;
+				    break;	
+				}
 				if (clst == 1) ABORT(fp->fs, FR_INT_ERR);
 				if (clst == 0xFFFFFFFF) ABORT(fp->fs, FR_DISK_ERR);
 				fp->clust = clst;			/* Update current cluster */
@@ -2880,7 +2883,7 @@ FRESULT f_write (
 	if (fp->fptr > fp->fsize) fp->fsize = fp->fptr;	/* Update file size if needed */
 	fp->flag |= FA__WRITTEN;						/* Set file change flag */
 
-	LEAVE_FF(fp->fs, FR_OK);
+	LEAVE_FF(fp->fs, res);
 }
 
 

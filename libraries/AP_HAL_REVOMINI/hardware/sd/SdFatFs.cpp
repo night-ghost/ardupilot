@@ -47,21 +47,25 @@ FRESULT SdFatFs::init(Sd2Card *card) {
 
     printf("Formatting DataFlash to FAT..."); 
 
-    res = f_mkfs((TCHAR const*)_SDPath, 1 /* unpartitioned */, card->blockSize() /* cluster in sectors */);
+    res = format((TCHAR const*)_SDPath, card);
 
     if( res == FR_OK){
-        res = f_mount(&_SDFatFs, (TCHAR const*)_SDPath, 1);
-        if(res == FR_OK) {
+        printf(" OK!\n");
+    } else {
+        printf(" Error: %s!\n", strError(res));
+    }
+#endif
+    return res;
+}
 
-            printf(" OK!\n");
-    	// FatFs Initialization done 
-            return res;
-        }
 
+FRESULT SdFatFs::format(const char *filepath, Sd2Card *card){
+    FRESULT res = f_mkfs(filepath, 1 /* unpartitioned */, card->blockSize() /* cluster in sectors */);
+
+    if(res == FR_OK){
+        res = f_mount(&_SDFatFs, filepath, 1);
     }
 
-    printf(" Error: %s!\n", strError(res));
-#endif
     return res;
 }
 

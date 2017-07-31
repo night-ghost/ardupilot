@@ -1,8 +1,6 @@
 board connection:
 
-just see board's documentation.
-
-this board REQUIRES external Compass via I2C bus
+this board REQUIRES external Compass & Baro via I2C bus. To get I2C 
 
 
 

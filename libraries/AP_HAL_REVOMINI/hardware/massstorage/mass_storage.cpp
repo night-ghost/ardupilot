@@ -32,7 +32,6 @@ void MassStorage::setup() const {
 
 
     SdFatFs *fs = SD.getVolume();
-//    uint32_t bpc = fs->blockSize();
 
     MAL_massBlockSize[0] = fs->sectorSize();
     MAL_massBlockCount[0] = fs->sectorCount();   // in blocks

@@ -89,6 +89,8 @@
 * rewritten SD library to support 'errno' and early distinguish between file and dir
 * compass processing (4027uS) and baro processing(1271uS)  moved out from interrupt level to low-priority io level, because its
  execution time spoils loop time (500Hz = 2000uS for all)
+* added reformatting of DataFlash in case of hard filesystem errors, which fixes FatFs bug when there is no free space 
+ after file overflows and then deleted
 
 * ...
 * a lot of minor enhancements

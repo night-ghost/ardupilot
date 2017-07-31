@@ -54,7 +54,7 @@ const AP_Scheduler::Task Rover::scheduler_tasks[] = {
     SCHED_TASK(update_alt,             10,   3400),
     SCHED_TASK(update_beacon,          50,     50),
     SCHED_TASK(update_visual_odom,     50,     50),
-    SCHED_TASK(update_wheel_encoder,   50,     50),
+    SCHED_TASK(update_wheel_encoder,   20,     50),
     SCHED_TASK(navigate,               10,   1600),
     SCHED_TASK(update_compass,         10,   2000),
     SCHED_TASK(update_commands,        10,   1000),
@@ -207,13 +207,7 @@ void Rover::mount_update(void)
 void Rover::update_trigger(void)
 {
 #if CAMERA == ENABLED
-    camera.trigger_pic_cleanup();
-    if (camera.check_trigger_pin()) {
-        gcs().send_message(MSG_CAMERA_FEEDBACK);
-        if (should_log(MASK_LOG_CAMERA)) {
-            DataFlash.Log_Write_Camera(ahrs, gps, current_loc);
-        }
-    }
+    camera.update_trigger();
 #endif
 }
 
@@ -277,7 +271,7 @@ void Rover::update_logging1(void)
 void Rover::update_logging2(void)
 {
     if (should_log(MASK_LOG_STEERING)) {
-        if (control_mode == STEERING || control_mode == AUTO || control_mode == RTL || control_mode == GUIDED) {
+        if (!control_mode->manual_steering()) {
             Log_Write_Steering();
         }
     }
@@ -403,9 +397,7 @@ void Rover::update_GPS_10Hz(void)
             ground_speed = ahrs.groundspeed();
 
 #if CAMERA == ENABLED
-            if (camera.update_location(current_loc, rover.ahrs) == true) {
-                do_take_picture();
-            }
+            camera.update();
 #endif
         }
     }
@@ -413,166 +405,12 @@ void Rover::update_GPS_10Hz(void)
 
 void Rover::update_current_mode(void)
 {
-    switch (control_mode) {
-    case AUTO:
-    case RTL:
-        if (!in_auto_reverse) {
-            set_reverse(false);
-        }
-        if (!do_auto_rotation) {
-            calc_lateral_acceleration();
-            calc_nav_steer();
-            calc_throttle(g.speed_cruise);
-        } else {
-            do_yaw_rotation();
-        }
-        break;
-
-    case GUIDED: {
-        if (!in_auto_reverse) {
-            set_reverse(false);
-        }
-        switch (guided_mode) {
-        case Guided_Angle:
-            nav_set_yaw_speed();
-            break;
-
-        case Guided_WP:
-            if (rtl_complete || verify_RTL()) {
-                // we have reached destination so stop where we are
-                if (fabsf(g2.motors.get_throttle()) > g.throttle_min.get()) {
-                    gcs().send_mission_item_reached_message(0);
-                }
-                g2.motors.set_throttle(g.throttle_min.get());
-                g2.motors.set_steering(0.0f);
-                lateral_acceleration = 0.0f;
-            } else {
-                calc_lateral_acceleration();
-                calc_nav_steer();
-                calc_throttle(rover.guided_control.target_speed);
-                Log_Write_GuidedTarget(guided_mode, Vector3f(next_WP.lat, next_WP.lng, next_WP.alt),
-                                       Vector3f(rover.guided_control.target_speed, g2.motors.get_throttle(), 0.0f));
-            }
-            break;
-
-        case Guided_Velocity:
-            nav_set_speed();
-            break;
-
-        default:
-            gcs().send_text(MAV_SEVERITY_WARNING, "Unknown GUIDED mode");
-            break;
-        }
-        break;
-    }
-
-    case STEERING: {
-        /*
-          in steering mode we control lateral acceleration
-          directly. We first calculate the maximum lateral
-          acceleration at full steering lock for this speed. That is
-          V^2/R where R is the radius of turn. We get the radius of
-          turn from half the STEER2SRV_P.
-         */
-        float max_g_force = ground_speed * ground_speed / steerController.get_turn_radius();
-
-        // constrain to user set TURN_MAX_G
-        max_g_force = constrain_float(max_g_force, 0.1f, g.turn_max_g * GRAVITY_MSS);
-
-        lateral_acceleration = max_g_force * (channel_steer->get_control_in()/4500.0f);
-        calc_nav_steer();
-
-        // and throttle gives speed in proportion to cruise speed, up
-        // to 50% throttle, then uses nudging above that.
-        float target_speed = channel_throttle->get_control_in() * 0.01f * 2 * g.speed_cruise;
-        set_reverse(target_speed < 0);
-        if (in_reverse) {
-            target_speed = constrain_float(target_speed, -g.speed_cruise, 0);
-        } else {
-            target_speed = constrain_float(target_speed, 0, g.speed_cruise);
-        }
-        calc_throttle(target_speed);
-        break;
-    }
-
-    case LEARNING:
-    case MANUAL:
-        // mark us as in_reverse when using a negative throttle to
-        // stop AHRS getting off
-        set_reverse(is_negative(g2.motors.get_throttle()));
-        break;
-
-    case HOLD:
-        // hold position - stop motors and center steering
-        g2.motors.set_throttle(0.0f);
-        g2.motors.set_steering(0.0f);
-        if (!in_auto_reverse) {
-            set_reverse(false);
-        }
-        break;
-
-    case INITIALISING:
-        break;
-    }
+    control_mode->update();
 }
 
 void Rover::update_navigation()
 {
-    switch (control_mode) {
-    case MANUAL:
-    case HOLD:
-    case LEARNING:
-    case STEERING:
-    case INITIALISING:
-        break;
-
-    case AUTO:
-        mission.update();
-        if (do_auto_rotation) {
-            do_yaw_rotation();
-        }
-        break;
-
-    case RTL:
-        // no loitering around the wp with the rover, goes direct to the wp position
-        if (verify_RTL()) {
-            g2.motors.set_throttle(g.throttle_min.get());
-            set_mode(HOLD);
-        } else {
-            calc_lateral_acceleration();
-            calc_nav_steer();
-        }
-        break;
-
-    case GUIDED:
-        switch (guided_mode) {
-        case Guided_Angle:
-            nav_set_yaw_speed();
-            break;
-
-        case Guided_WP:
-            // no loitering around the wp with the rover, goes direct to the wp position
-            if (rtl_complete || verify_RTL()) {
-                // we have reached destination so stop where we are
-                g2.motors.set_throttle(g.throttle_min.get());
-                g2.motors.set_steering(0.0f);
-                lateral_acceleration = 0.0f;
-            } else {
-                calc_lateral_acceleration();
-                calc_nav_steer();
-            }
-            break;
-
-        case Guided_Velocity:
-            nav_set_speed();
-            break;
-
-        default:
-            gcs().send_text(MAV_SEVERITY_WARNING, "Unknown GUIDED mode");
-            break;
-        }
-        break;
-    }
+    control_mode->update_navigation();
 }
 
 AP_HAL_MAIN_CALLBACKS(&rover);

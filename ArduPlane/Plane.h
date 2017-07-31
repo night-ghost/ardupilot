@@ -275,7 +275,7 @@ private:
 
     // Camera
 #if CAMERA == ENABLED
-    AP_Camera camera {&relay};
+    AP_Camera camera{&relay, MASK_LOG_CAMERA, current_loc, gps, ahrs};
 #endif
 
 #if OPTFLOW == ENABLED
@@ -851,7 +851,6 @@ private:
     void Log_Write_Vehicle_Startup_Messages();
     void Log_Write_AOA_SSA();
     void Log_Read(uint16_t log_num, int16_t start_page, int16_t end_page);
-    void start_logging();
 
     void load_parameters(void);
     void adjust_altitude_target();
@@ -896,9 +895,7 @@ private:
     bool verify_vtol_takeoff(const AP_Mission::Mission_Command &cmd);
     bool verify_vtol_land(const AP_Mission::Mission_Command &cmd);
     void do_loiter_at_location();
-    void do_take_picture();
     bool verify_loiter_heading(bool init);
-    void log_picture();
     void exit_mission_callback();
     void mavlink_delay(uint32_t ms);
     void read_control_switch();

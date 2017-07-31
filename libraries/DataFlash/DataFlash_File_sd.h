@@ -86,7 +86,7 @@ private:
 
     // possibly time-consuming preparations handling
     void Prep_MinSpace();
-    uint16_t find_oldest_log(uint16_t *log_count);
+    uint16_t find_oldest_log();
 
     bool file_exists(const char *filename) const;
     bool log_exists(const uint16_t lognum) const;

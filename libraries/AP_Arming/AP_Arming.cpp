@@ -295,7 +295,7 @@ bool AP_Arming::compass_checks(bool report)
         //check if compass is calibrating
         if (_compass.is_calibrating()) {
             if (report) {
-                gcs().send_text(MAV_SEVERITY_CRITICAL, "Arm: Compass calibration running");
+                gcs().send_text(MAV_SEVERITY_CRITICAL, "PreArm: Compass calibration running");
             }
             return false;
         }
@@ -367,7 +367,7 @@ bool AP_Arming::gps_checks(bool report)
     }
 
     // check GPSs are within 50m of each other and that blending is healthy
-    if ((checks_to_perform & ARMING_CHECK_ALL) || (checks_to_perform & ARMING_CHECK_GPS_CONFIG)) {
+    if ((checks_to_perform & ARMING_CHECK_ALL) || (checks_to_perform & ARMING_CHECK_GPS)) {
         float distance_m;
         if (!gps.all_consistent(distance_m)) {
             if (report) {
@@ -454,17 +454,17 @@ bool AP_Arming::manual_transmitter_checks(bool report)
 
 bool AP_Arming::board_voltage_checks(bool report)
 {
+#if HAL_HAVE_BOARD_VOLTAGE
     // check board voltage
     if ((checks_to_perform & ARMING_CHECK_ALL) || (checks_to_perform & ARMING_CHECK_VOLTAGE)) {
-        if(!is_zero(hal.analogin->board_voltage()) &&
-           ((hal.analogin->board_voltage() < AP_ARMING_BOARD_VOLTAGE_MIN) || (hal.analogin->board_voltage() > AP_ARMING_BOARD_VOLTAGE_MAX))) {
+        if(((hal.analogin->board_voltage() < AP_ARMING_BOARD_VOLTAGE_MIN) || (hal.analogin->board_voltage() > AP_ARMING_BOARD_VOLTAGE_MAX))) {
             if (report) {
                 gcs().send_text(MAV_SEVERITY_CRITICAL,"PreArm: Check board voltage");
             }
             return false;
         }
     }
-
+#endif
     return true;
 }
 
@@ -491,9 +491,13 @@ bool AP_Arming::pre_arm_checks(bool report)
 
 bool AP_Arming::arm_checks(uint8_t method)
 {
+    // note that this will prepare DataFlash to start logging
+    // so should be the last check to be done before arming
     if ((checks_to_perform & ARMING_CHECK_ALL) ||
         (checks_to_perform & ARMING_CHECK_LOGGING)) {
-        if (!DataFlash_Class::instance()->logging_started()) {
+        DataFlash_Class *df = DataFlash_Class::instance();
+        df->PrepForArming();
+        if (!df->logging_started()) {
             gcs().send_text(MAV_SEVERITY_CRITICAL, "Arm: Logging not started");
             return false;
         }

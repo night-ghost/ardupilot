@@ -207,58 +207,6 @@ void NOINLINE Copter::send_current_waypoint(mavlink_channel_t chan)
     mavlink_msg_mission_current_send(chan, mission.get_current_nav_index());
 }
 
-void NOINLINE Copter::send_proximity(mavlink_channel_t chan, uint16_t count_max)
-{
-#if PROXIMITY_ENABLED == ENABLED
-    // return immediately if no proximity sensor is present
-    if (g2.proximity.get_status() == AP_Proximity::Proximity_NotConnected) {
-        return;
-    }
-
-    // return immediately if no tx buffer room to send messages
-    if (count_max == 0) {
-        return;
-    }
-
-    bool send_upwards = true;
-
-    // send horizontal distances
-    AP_Proximity::Proximity_Distance_Array dist_array;
-    const uint8_t horiz_count = MIN(count_max, PROXIMITY_MAX_DIRECTION);  // send at most PROXIMITY_MAX_DIRECTION horizontal distances
-    if (g2.proximity.get_horizontal_distances(dist_array)) {
-        for (uint8_t i = 0; i < horiz_count; i++) {
-            mavlink_msg_distance_sensor_send(
-                chan,
-                AP_HAL::millis(),                               //  time since system boot
-                (uint16_t)(g2.proximity.distance_min() * 100),  // minimum distance the sensor can measure in centimeters
-                (uint16_t)(g2.proximity.distance_max() * 100),  // maximum distance the sensor can measure in centimeters
-                (uint16_t)(dist_array.distance[i] * 100),       // current distance reading (in cm?)
-                MAV_DISTANCE_SENSOR_LASER,                      // type from MAV_DISTANCE_SENSOR enum
-                PROXIMITY_SENSOR_ID_START + i,                  // onboard ID of the sensor
-                dist_array.orientation[i],                      //  direction the sensor faces from MAV_SENSOR_ORIENTATION enum
-                0);                                             // Measurement covariance in centimeters, 0 for unknown / invalid readings
-        }
-        // check if we still have room to send upwards distance
-        send_upwards = (count_max > 8);
-    }
-
-    // send upward distance
-    float dist_up;
-    if (send_upwards && g2.proximity.get_upward_distance(dist_up)) {
-        mavlink_msg_distance_sensor_send(
-            chan,
-            AP_HAL::millis(),                                        //  time since system boot
-            (uint16_t)(g2.proximity.distance_min() * 100),           // minimum distance the sensor can measure in centimeters
-            (uint16_t)(g2.proximity.distance_max() * 100),           // maximum distance the sensor can measure in centimeters
-            (uint16_t)(dist_up * 100),                               // current distance reading
-            MAV_DISTANCE_SENSOR_LASER,                               // type from MAV_DISTANCE_SENSOR enum
-            PROXIMITY_SENSOR_ID_START + PROXIMITY_MAX_DIRECTION +1,  // onboard ID of the sensor
-            MAV_SENSOR_ROTATION_PITCH_90,                            // direction upwards
-            0);                                                      // Measurement covariance in centimeters, 0 for unknown / invalid readings
-    }
-#endif
-}
-
 /*
   send RPM packet
  */
@@ -467,8 +415,9 @@ bool GCS_MAVLINK_Copter::try_send_message(enum ap_message id)
         CHECK_PAYLOAD_SIZE(DISTANCE_SENSOR);
         send_distance_sensor_downward(copter.rangefinder);
 #endif
-        CHECK_PAYLOAD_SIZE(DISTANCE_SENSOR);
-        copter.send_proximity(chan, comm_get_txspace(chan) / (packet_overhead()+9));
+#if PROXIMITY_ENABLED == ENABLED
+        send_proximity(copter.g2.proximity);
+#endif
         break;
 
     case MSG_RPM:
@@ -486,13 +435,9 @@ bool GCS_MAVLINK_Copter::try_send_message(enum ap_message id)
     case MSG_CAMERA_FEEDBACK:
 #if CAMERA == ENABLED
         CHECK_PAYLOAD_SIZE(CAMERA_FEEDBACK);
-        copter.camera.send_feedback(chan, copter.gps, copter.ahrs, copter.current_loc);
+        copter.camera.send_feedback(chan);
 #endif
         break;
-
-    case MSG_STATUSTEXT:
-        // depreciated, use GCS_MAVLINK::send_statustext*
-        return false;
 
     case MSG_FENCE_STATUS:
 #if AC_FENCE == ENABLED
@@ -1117,37 +1062,6 @@ void GCS_MAVLINK_Copter::handleMessage(mavlink_message_t* msg)
             result = MAV_RESULT_ACCEPTED;
             break;
 
-#if CAMERA == ENABLED
-        case MAV_CMD_DO_DIGICAM_CONFIGURE:
-            copter.camera.configure(packet.param1,
-                                    packet.param2,
-                                    packet.param3,
-                                    packet.param4,
-                                    packet.param5,
-                                    packet.param6,
-                                    packet.param7);
-
-            result = MAV_RESULT_ACCEPTED;
-            break;
-
-        case MAV_CMD_DO_DIGICAM_CONTROL:
-            if (copter.camera.control(packet.param1,
-                                      packet.param2,
-                                      packet.param3,
-                                      packet.param4,
-                                      packet.param5,
-                                      packet.param6)) {
-                copter.log_picture();
-            }
-            result = MAV_RESULT_ACCEPTED;
-            break;
-
-        case MAV_CMD_DO_SET_CAM_TRIGG_DIST:
-            copter.camera.set_trigger_distance(packet.param1);
-            result = MAV_RESULT_ACCEPTED;
-            break;
-
-#endif // CAMERA == ENABLED
         case MAV_CMD_DO_MOUNT_CONTROL:
 #if MOUNT == ENABLED
             copter.camera_mount.control(packet.param1, packet.param2, packet.param3, (MAV_MOUNT_MODE) packet.param7);
@@ -1679,15 +1593,6 @@ void GCS_MAVLINK_Copter::handleMessage(mavlink_message_t* msg)
         break;
     }
 
-    case MAVLINK_MSG_ID_GPS_RTCM_DATA:
-    case MAVLINK_MSG_ID_GPS_INPUT:
-    case MAVLINK_MSG_ID_HIL_GPS:
-    {
-      result = MAV_RESULT_ACCEPTED;
-      copter.gps.handle_msg(msg);
-      break;
-    }
-
 #if HIL_MODE != HIL_MODE_DISABLED
     case MAVLINK_MSG_ID_HIL_STATE:          // MAV ID: 90
     {
@@ -1746,11 +1651,6 @@ void GCS_MAVLINK_Copter::handleMessage(mavlink_message_t* msg)
         handle_serial_control(msg, copter.gps);
         break;
 
-    case MAVLINK_MSG_ID_GPS_INJECT_DATA:
-        handle_gps_inject(msg, copter.gps);
-        result = MAV_RESULT_ACCEPTED;
-        break;
-
 #if PRECISION_LANDING == ENABLED
     case MAVLINK_MSG_ID_LANDING_TARGET:
         result = MAV_RESULT_ACCEPTED;
@@ -1765,18 +1665,6 @@ void GCS_MAVLINK_Copter::handleMessage(mavlink_message_t* msg)
         copter.fence.handle_msg(*this, msg);
         break;
 #endif // AC_FENCE == ENABLED
-
-#if CAMERA == ENABLED
-    //deprecated.  Use MAV_CMD_DO_DIGICAM_CONFIGURE
-    case MAVLINK_MSG_ID_DIGICAM_CONFIGURE:      // MAV ID: 202
-        break;
-
-    //deprecated.  Use MAV_CMD_DO_DIGICAM_CONTROL
-    case MAVLINK_MSG_ID_DIGICAM_CONTROL:
-        copter.camera.control_msg(msg);
-        copter.log_picture();
-        break;
-#endif // CAMERA == ENABLED
 
 #if MOUNT == ENABLED
     //deprecated. Use MAV_CMD_DO_MOUNT_CONFIGURE
@@ -1927,6 +1815,20 @@ AP_Mission *GCS_MAVLINK_Copter::get_mission()
 Compass *GCS_MAVLINK_Copter::get_compass() const
 {
     return &copter.compass;
+}
+
+AP_GPS *GCS_MAVLINK_Copter::get_gps() const
+{
+    return &copter.gps;
+}
+
+AP_Camera *GCS_MAVLINK_Copter::get_camera() const
+{
+#if CAMERA == ENABLED
+    return &copter.camera;
+#else
+    return nullptr;
+#endif
 }
 
 AP_ServoRelayEvents *GCS_MAVLINK_Copter::get_servorelayevents() const
