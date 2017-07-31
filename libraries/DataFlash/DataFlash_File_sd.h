@@ -35,7 +35,7 @@ public:
     void Prep();
 
     /* Write a block of data at current offset */
-    bool WritePrioritisedBlock(const void *pBuffer, uint16_t size, bool is_critical);
+    bool _WritePrioritisedBlock(const void *pBuffer, uint16_t size, bool is_critical);
     uint32_t bufferspace_available();
 
     // high level interface
@@ -61,6 +61,14 @@ public:
     bool logging_failed() const;
 
     void vehicle_was_disarmed() override;
+
+    bool logging_started(void) const override { return !(!(_write_fd)); }
+
+    void PrepForArming();
+
+protected:
+    bool WritesOK() const override;
+    bool StartNewLogOK() const override;
 
 private:
     File _write_fd;

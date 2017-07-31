@@ -27,7 +27,8 @@
 #define JEDEC_PAGE_WRITE             0x02
 
 #define JEDEC_BULK_ERASE             0xC7
-#define JEDEC_SECTOR_ERASE           0xD8
+#define JEDEC_SECTOR_ERASE           0x20 // 4k erase
+#define JEDEC_PAGE_ERASE             0xD8 // 64K erase
 
 #define JEDEC_STATUS_BUSY            0x01
 #define JEDEC_STATUS_WRITEPROTECT    0x02
@@ -38,10 +39,6 @@
 #define JEDEC_STATUS_SEC             0x40
 #define JEDEC_STATUS_SRP0            0x80
 
-#define expect_memorytype            0x20
-#define expect_capacity              0x15
-
-#define MAX_ERASE_SIZE 16384
 
 using namespace REVOMINI;
 
@@ -177,7 +174,7 @@ public:
     void Prep();
 
     /* Write a block of data at current offset */
-    bool WritePrioritisedBlock(const void *pBuffer, uint16_t size, bool is_critical);
+    bool _WritePrioritisedBlock(const void *pBuffer, uint16_t size, bool is_critical);
 
     // high level interface
     uint16_t get_num_logs() override;
@@ -198,6 +195,8 @@ public:
     int16_t get_log_data(uint16_t log_num, uint16_t page, uint32_t offset, uint16_t len, uint8_t *data);
 
     uint32_t bufferspace_available();
+    
+    bool logging_started(void) const { return log_write_started; }
 };
 
 #endif // CONFIG_HAL_BOARD == HAL_BOARD_Revo

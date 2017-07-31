@@ -83,9 +83,6 @@ void DataFlash_Revo::FinishWrite(void)
 
 bool DataFlash_Revo::WritesOK() const
 {
-    if (!DataFlash_Backend::WritesOK()) {
-        return false;
-    }
     if (!CardInserted()) {
         return false;
     }
@@ -95,7 +92,7 @@ bool DataFlash_Revo::WritesOK() const
     return true;
 }
 
-bool DataFlash_Revo::WritePrioritisedBlock(const void *pBuffer, uint16_t size,
+bool DataFlash_Revo::_WritePrioritisedBlock(const void *pBuffer, uint16_t size,
     bool is_critical)
 {
     // is_critical is ignored - we're a ring buffer and never run out
@@ -884,8 +881,7 @@ uint16_t DataFlash_Revo::find_last_page_of_log(uint16_t log_number)
     uint32_t look_hash;
     uint32_t check_hash;
 
-    if(check_wrapped())
-    {
+    if(check_wrapped()) {
         StartRead(1);
         bottom = GetFileNumber();
         if (bottom > log_number)

@@ -82,7 +82,7 @@ void DataFlash_File::Init()
 
         if (!SD.mkdir(_log_directory)) {
             
-            hal.console->printf("Failed to create log directory %s: %s\n", _log_directory, SD.strError(SD.lastError));
+            printf("Failed to create log directory %s: %s\n", _log_directory, SD.strError(SD.lastError));
             _log_directory="0:";
         }
     }
@@ -96,16 +96,16 @@ void DataFlash_File::Init()
 
     // If we can't allocate the full size, try to reduce it until we can allocate it
     while (!_writebuf.set_size(bufsize) && bufsize >= _writebuf_chunk) {
-        hal.console->printf("DataFlash_File: Couldn't set buffer size to=%u\n", (unsigned)bufsize);
+        printf("DataFlash_File: Couldn't set buffer size to=%u\n", (unsigned)bufsize);
         bufsize >>= 1;
     }
 
     if (!_writebuf.get_size()) {
-        hal.console->printf("Out of memory for logging\n");
+        printf("Out of memory for logging\n");
         return;
     }
 
-    hal.console->printf("DataFlash_File: buffer size=%u\n", (unsigned)bufsize);
+    printf("DataFlash_File: buffer size=%u\n", (unsigned)bufsize);
 
     _initialised = true;
     hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&DataFlash_File::_io_timer, void));
@@ -293,7 +293,7 @@ void DataFlash_File::Prep_MinSpace()
             if (avail < 0) {             // internal_error()
 
 #if defined(BOARD_DATAFLASH_FATFS)
-                hal.console->printf("error getting free space, formatting!\n");
+                printf("error getting free space, formatting!\n");
                 SD.format(_log_directory);
                 return;
 #endif
@@ -313,10 +313,10 @@ void DataFlash_File::Prep_MinSpace()
                 break;
             }
             if (SD.exists(filename_to_remove)) {
-                hal.console->printf("Removing (%s) for minimum-space requirements (%.2f%% < %.0f%%)\n",
+                printf("Removing (%s) for minimum-space requirements (%.2f%% < %.0f%%)\n",
                                     filename_to_remove, (double)avail, (double)min_avail_space_percent);
                 if (!SD.remove(filename_to_remove)) {
-                    hal.console->printf("Failed to remove %s: %s\n", filename_to_remove, SD.strError(SD.lastError));
+                    printf("Failed to remove %s: %s\n", filename_to_remove, SD.strError(SD.lastError));
                 }
                 free(filename_to_remove);
 
@@ -332,7 +332,7 @@ void DataFlash_File::Prep_MinSpace()
 #if defined(BOARD_DATAFLASH_FATFS)
     float avail = avail_space_percent();
     if (avail <= 0) {   // erase don't helps
-        hal.console->printf("erase don't get free space, formatting!\n");
+        printf("erase don't get free space, formatting!\n");
         SD.format(_log_directory);
     }
 #endif
@@ -418,13 +418,36 @@ void DataFlash_File::EraseAll()
     }
 }
 
-/* Write a block of data at current offset */
-bool DataFlash_File::WritePrioritisedBlock(const void *pBuffer, uint16_t size, bool is_critical)
+
+bool DataFlash_File::WritesOK() const
 {
-    if (_write_fd == -1 || !_initialised || _open_error) {
+    if (!_write_fd) {
         return false;
     }
+    if (_open_error) {
+        return false;
+    }
+    return true;
+}
 
+
+bool DataFlash_File::StartNewLogOK() const
+{
+    if (_open_error) {
+        return false;
+    }
+    return DataFlash_Backend::StartNewLogOK();
+}
+
+
+/* Write a block of data at current offset */
+bool DataFlash_File::_WritePrioritisedBlock(const void *pBuffer, uint16_t size, bool is_critical)
+{
+/*
+    if (!(_write_fd) || !_initialised || _open_error) {
+        return false;
+    }
+*/
     if (! WriteBlockCheckStartupMessages()) {
         _dropped++;
         return false;
@@ -459,7 +482,7 @@ bool DataFlash_File::WritePrioritisedBlock(const void *pBuffer, uint16_t size, b
     // if no room for entire message - drop it:
     if (space < size) {
 //        hal.util->perf_count(_perf_overruns);
-        hal.console->printf("dropping block!\n");
+        printf("dropping block! size=%d\n", size);
 
         _dropped++;
         semaphore->give();
@@ -641,7 +664,7 @@ int16_t DataFlash_File::get_log_data(const uint16_t list_entry, const uint16_t p
         if (!(_read_fd)) {
             _open_error = true;
 
-            hal.console->printf("Log read open fail for %s: %s\n", fname, SD.strError(SD.lastError));
+            printf("Log read open fail for %s: %s\n", fname, SD.strError(SD.lastError));
             free(fname);
             return -1;            
         }
@@ -713,10 +736,17 @@ void DataFlash_File::stop_logging(void)
 {
     if (_write_fd) {
         _write_fd.close();
-        log_write_started = false;
     }
 }
 
+
+void DataFlash_File::PrepForArming()
+{
+    if (logging_started()) {
+        return;
+    }
+    start_new_log();
+}
 
 /*
   start writing to a new log file
@@ -755,14 +785,13 @@ uint16_t DataFlash_File::start_new_log(void)
     if (!(_write_fd)) {
         _initialised = false;
         _open_error = true;
-        hal.console->printf("Log open fail for %s: %s\n",fname, SD.strError(SD.lastError));
+        printf("Log open fail for %s: %s\n",fname, SD.strError(SD.lastError));
         free(fname);
         return 0xFFFF;
     }
     free(fname);
     _write_offset = 0;
     _writebuf.clear();
-    log_write_started = true;
 
     // now update lastlog.txt with the new log number
     fname = _lastlog_file_name();
@@ -964,7 +993,7 @@ void DataFlash_File::_io_timer(void)
 
     ssize_t nwritten = _write_fd.write(head, nbytes);
     if (nwritten <= 0) {
-        hal.console->printf("Log write %d bytes fails: %s\n",nbytes, SD.strError(SD.lastError));
+        printf("Log write %ld bytes fails: %s\n",nbytes, SD.strError(SD.lastError));
 
         _write_fd.close();
         _initialised = false;
@@ -1016,8 +1045,7 @@ bool DataFlash_File::logging_failed() const
         return true;
     }
     if (!io_thread_alive()) {
-        // No heartbeat in a second.  IO thread is dead?! Very Not
-        // Good.
+        // No heartbeat in a second.  IO thread is dead?! Very Not Good.
         return true;
     }
 
