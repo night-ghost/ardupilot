@@ -34,7 +34,8 @@ void UART_OSD::begin(uint32_t baud) {
 
     OSDns::osd_begin(REVOMINI::SPIDeviceManager::_get_device(BOARD_OSD_NAME));
 
-    REVOMINIScheduler::start_task(OSDns::osd_loop);
+    void * task = REVOMINIScheduler::start_task(OSDns::osd_loop, SLOW_TASK_STACK); // 
+    REVOMINIScheduler::set_task_ttw(task, 1000);
         
     _initialized = true;
 }
@@ -50,7 +51,7 @@ uint32_t UART_OSD::available() {
 
 int16_t UART_OSD::read() {
     if (available() <= 0)
-        return (-1);
+        return -1;
     return OSDns::osd_getc();
 }
 

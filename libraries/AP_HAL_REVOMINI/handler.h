@@ -5,6 +5,7 @@
 typedef uint64_t Handler;
 typedef void (*revo_isr_handler)(uint32_t arg);
 
+
 #pragma pack(push, 1)
 union Revo_handler { // кровь кишки ассемблер :) преобразование функторов в унифицированный вид
     voidFuncPtr vp;

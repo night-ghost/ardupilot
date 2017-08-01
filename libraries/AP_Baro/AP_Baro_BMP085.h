@@ -10,12 +10,17 @@
 class AP_Baro_BMP085 : public AP_Baro_Backend
 {
 public:
-    AP_Baro_BMP085(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev);
+    AP_Baro_BMP085(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::Device> dev);
 
     /* AP_Baro public interface: */
     void update();
+    
+    static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::Device> dev);
+    
 
 private:
+    bool _init();
+
     void _cmd_read_pressure();
     void _cmd_read_temp();
     bool _read_pressure();
@@ -25,7 +30,7 @@ private:
 
     void _timer(void);
 
-    AP_HAL::OwnPtr<AP_HAL::I2CDevice> _dev;
+    AP_HAL::OwnPtr<AP_HAL::Device> _dev;
     AP_HAL::DigitalSource *_eoc;
 
     uint8_t _instance;

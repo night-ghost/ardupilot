@@ -41,10 +41,10 @@ task 0x80509812000A4E0 tim   7738.1 int 57.756% tot 15.4763% mean time 172.4 max
 
 */
 
+#define ADDRESS_IN_FLASH(a) ((a)>FLASH_BASE && (a)<CCMDATARAM_BASE)
+
 using namespace REVOMINI;
 extern const AP_HAL::HAL& hal;
-
-#define ADDRESS_IN_FLASH(a) ((a)>FLASH_BASE && (a)<CCMDATARAM_BASE)
 
 
 AP_HAL::Proc REVOMINIScheduler::_failsafe = NULL;
@@ -55,6 +55,7 @@ volatile bool REVOMINIScheduler::_in_timer_proc = false;
 revo_timer REVOMINIScheduler::_timers[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS] IN_CCM;
 uint8_t    REVOMINIScheduler::_num_timers = 0;
 
+Handler    REVOMINIScheduler::_io_proc[REVOMINI_SCHEDULER_MAX_IO_PROCS] IN_CCM;
 uint8_t    REVOMINIScheduler::_num_io_proc=0;
 
 
@@ -76,6 +77,7 @@ static REVOMINIScheduler::task_t s_main = { 0 };
 
 
 struct REVOMINIScheduler::IO_COMPLETION REVOMINIScheduler::io_completion[MAX_IO_COMPLETION] IN_CCM;
+
 uint8_t REVOMINIScheduler::num_io_completion = 0;
 
 // Reference running task
@@ -92,9 +94,9 @@ bool     REVOMINIScheduler::flag_10s = false;
 uint64_t REVOMINIScheduler::task_time IN_CCM = 0;
 uint64_t REVOMINIScheduler::delay_time IN_CCM = 0;
 uint64_t REVOMINIScheduler::delay_int_time IN_CCM = 0;
-uint32_t REVOMINIScheduler::max_loop_time=0;
-uint64_t REVOMINIScheduler::ioc_time=0;
-uint64_t REVOMINIScheduler::sleep_time=0;
+uint32_t REVOMINIScheduler::max_loop_time IN_CCM =0;
+uint64_t REVOMINIScheduler::ioc_time IN_CCM =0;
+uint64_t REVOMINIScheduler::sleep_time IN_CCM =0;
 #endif
 
 
@@ -105,8 +107,10 @@ uint64_t REVOMINIScheduler::sleep_time=0;
 
 uint32_t REVOMINIScheduler::lowest_stack = (uint32_t)-1;
 uint32_t REVOMINIScheduler::main_stack   = (uint32_t)-1;
-uint32_t REVOMINIScheduler::max_stack_pc;
+uint32_t REVOMINIScheduler::max_stack_pc IN_CCM ;
 bool REVOMINIScheduler::disable_stack_check=false;
+
+bool REVOMINIScheduler::_in_io_proc IN_CCM =0;
 
 
 REVOMINIScheduler::REVOMINIScheduler()
@@ -262,14 +266,36 @@ void REVOMINIScheduler::register_delay_callback(AP_HAL::Proc proc, uint16_t min_
 }
 
 
+void REVOMINIScheduler::_run_io(void)
+{
+    if (_in_io_proc) {
+        return;
+    }
+    _in_io_proc = true;
+
+    // now call the IO based drivers
+    for (int i = 0; i < _num_io_proc; i++) {
+        if (_io_proc[i]) {
+            revo_call_handler(_io_proc[i],0);
+            yield(0); // не все сразу!
+        }
+    }
+
+    _in_io_proc = false;
+}
+
 
 void REVOMINIScheduler::register_io_process(AP_HAL::MemberProc proc)
 {
     if(_num_io_proc>=REVOMINI_SCHEDULER_MAX_IO_PROCS) return;
 
-    if(start_task(proc)) {
-        _num_io_proc++;
+    if(_num_io_proc==0){
+        void *task = start_task(_run_io);
+        set_task_ttw(task, 100); // 100uS between calls to same task
     }
+
+    Revo_handler h = { .mp=proc };
+    _io_proc[_num_io_proc++] = h.h;
 }
 
 
@@ -553,7 +579,7 @@ AP_HAL::Device::PeriodicHandle REVOMINIScheduler::_register_timer_task(uint32_t 
 #endif
 
 #if 1
-    if(period_us > 8000) { // slow tasks will run at individual IO tasks
+    if(period_us > 8000) { // slow tasks will runs at individual IO tasks
         void *task = _start_task(proc, SLOW_TASK_STACK);
         set_task_period(task, period_us);
         set_task_semaphore(task, sem);
@@ -819,9 +845,17 @@ void * REVOMINIScheduler::init_task(Handler handler, const uint8_t* stack)
     if (setjmp(task.context)) {
         // we comes via longjmp - the task itself
         while (1) {
-            if(task.handle) revo_call_handler(task.handle, 0); 
+            if(task.handle) {
+                task.active=true;
+                task.time_start=_micros();
+                revo_call_handler(task.handle, 0); 
+                task.active=false;
+            }
 
-            yield();        // in case that function not uses delay();
+            uint32_t t = _micros()-task.time_start; // execution time
+            if(task.def_ttw) t = task.def_ttw - t; // time to wait
+            else             t = 0;
+            yield(t);        // in case that function not uses delay();
         }
     }
     // caller returns
@@ -829,7 +863,8 @@ void * REVOMINIScheduler::init_task(Handler handler, const uint8_t* stack)
     return (void *)ret;
 }
 
-// start C function as task
+
+
 void * NOINLINE REVOMINIScheduler::_start_task(Handler handle, size_t stackSize)
 {
     // Check called from main task and valid task loop function
@@ -868,6 +903,13 @@ void REVOMINIScheduler::set_task_period(void *h, uint32_t period){
     
     task->period = period;
     task->start  = _micros();
+}
+
+// default TTW
+void REVOMINIScheduler::set_task_ttw(void *h, uint32_t period){
+    task_t *task = (task_t *)h;
+    
+    task->def_ttw = period;
 }
 
 // task wants to run only with this semaphore
@@ -944,11 +986,11 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
             if(!s_running->handle) continue; // skip finished tasks
             
             uint32_t now= _micros();
-            // если для задачи установлен период выполнения - проверим
-            if(s_running->period){
+            // если для задачи установлен период выполнения и она в самом начале - проверим 
+            if(s_running->period && !s_running->active){
                     // time from last run  less  than period
-                if( (now-s_running->start)  <   s_running->period) continue;
-            } else { // проверим задачи без строгого периода на допустимость
+                if( (now-s_running->time_start)  <   s_running->period) continue;
+            } else { // проверим задачи без строгого периода на допустимость либо обычный тайм слайс
             
                 // task has a ttw  and time since that moment still less than ttw - skip task
                 if(s_running->ttw && (now-s_running->t_yield) < s_running->ttw) continue;

@@ -33,9 +33,28 @@ extern const AP_HAL::HAL &hal;
 #define OVERSAMPLING BMP085_OVERSAMPLING_HIGHRES
 #endif
 
-AP_Baro_BMP085::AP_Baro_BMP085(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev)
+AP_Baro_BMP085::AP_Baro_BMP085(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::Device> dev)
     : AP_Baro_Backend(baro)
     , _dev(std::move(dev))
+{ }
+
+AP_Baro_Backend * AP_Baro_BMP085::probe(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::Device> dev) 
+{
+
+    if (!dev) {
+        return nullptr;
+    }
+
+    AP_Baro_BMP085 *sensor = new AP_Baro_BMP085(baro, std::move(dev));
+    if (!sensor || !sensor->_init()) {
+        delete sensor;
+        return nullptr;
+    }
+    return sensor;
+    
+}
+
+bool AP_Baro_BMP085::_init()
 {
     uint8_t buff[22];
 
@@ -52,9 +71,21 @@ AP_Baro_BMP085::AP_Baro_BMP085(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::I2CDevice> 
         _eoc->mode(HAL_GPIO_INPUT);
     }
 
+
+    uint8_t id;
+    
+    if (!_dev->read_registers(0xD0, &id, 1)) {
+        sem->give();
+        return false;
+    }
+    
+    if(id!=0x55) return false; // not BMP180 
+
+
     // We read the calibration data registers
     if (!_dev->read_registers(0xAA, buff, sizeof(buff))) {
-        AP_HAL::panic("BMP085: bad calibration registers");
+        sem->give();
+        return false;
     }
 
     ac1 = ((int16_t)buff[0] << 8) | buff[1];
@@ -68,11 +99,16 @@ AP_Baro_BMP085::AP_Baro_BMP085(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::I2CDevice> 
     mb = ((int16_t)buff[16] << 8) | buff[17];
     mc = ((int16_t)buff[18] << 8) | buff[19];
     md = ((int16_t)buff[20] << 8) | buff[21];
+    
+    if( (ac1==0 || ac1==0xFF) ||
+        (ac2==0 || ac2==0xFF) ||
+        (ac3==0 || ac3==0xFF) ||
+        (ac4==0 || ac4==0xFF) ||
+        (ac5==0 || ac5==0xFF) ||
+        (ac6==0 || ac6==0xFF) ) return false;
 
     _last_press_read_command_time = 0;
     _last_temp_read_command_time = 0;
-
-    _instance = _frontend.register_sensor();
 
     // Send a command to read temperature
     _cmd_read_temp();
@@ -82,6 +118,7 @@ AP_Baro_BMP085::AP_Baro_BMP085(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::I2CDevice> 
     sem->give();
 
     _dev->register_periodic_callback(20000, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP085::_timer, void));
+    return true;
 }
 
 /*

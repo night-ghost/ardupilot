@@ -1,4 +1,3 @@
-
 #ifndef __AP_HAL_REVOMINI_SCHEDULER_H__
 #define __AP_HAL_REVOMINI_SCHEDULER_H__
 
@@ -30,7 +29,7 @@
 
 
 #define MAIN_STACK_SIZE  8192U    // measured use of stack is only 1K - but it grows up to 4K when using FatFs
-#define DEFAULT_STACK_SIZE  8192U // Default tasks stack size and stack max
+#define DEFAULT_STACK_SIZE  8192U // Default tasks stack size and stack max - io_thread can do work with filesystem
 #define SLOW_TASK_STACK 2048U // small stack for sensors
 #define STACK_MAX  65536U
 
@@ -111,6 +110,7 @@ public:
         jmp_buf context;        //!< Task context
         const uint8_t* stack;   //!< Task stack
         uint16_t id;            // id of task
+        bool active;            // tas not ended
         uint32_t ttw;           // time to work
         uint32_t t_yield;       // time of yield
         uint32_t start;         // microseconds of timeslice start
@@ -118,6 +118,8 @@ public:
         uint32_t in_isr;        // time in ISR when task runs
         uint32_t period;        // if set then task starts on time basis only
         REVOMINI::Semaphore *sem;
+        uint32_t def_ttw;       // default TTW - not as hard as period
+        uint32_t time_start;    // start time of task
 #ifdef MTASK_PROF
         uint32_t ticks; // ticks of CPU to calculate context switch time
         uint64_t time;  // full time
@@ -203,7 +205,7 @@ public:
     void                  loop();      // to add ability to print out scheduler's stats in main thread
 
 
-    static void _do_io_process();
+//    static void _do_io_process();
 
 //    bool                  _run_1khz_procs();
     static inline bool in_interrupt(){ return (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) || (__get_BASEPRI()); }
@@ -245,6 +247,7 @@ public:
   
   static void set_task_period(void *h, uint32_t period);
   static void set_task_semaphore(void *h, REVOMINI::Semaphore *sem);
+  static void set_task_ttw(void *h, uint32_t ttw);
   
   static void stop_task(void * h);
   static task_t* get_empty_task();
@@ -362,12 +365,14 @@ private:
     static volatile bool _timer_event_missed;
     static uint32_t _scheduler_last_call;
 
+    static Handler _io_proc[REVOMINI_SCHEDULER_MAX_IO_PROCS];
     static uint8_t _num_io_proc;
 
     static revo_timer _timers[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS];
     static uint8_t    _num_timers;
 
     static void _run_timers(void);
+    static void _run_io(void);
 
     void _print_stats();
     void stats_proc(void);
@@ -400,6 +405,7 @@ private:
     static struct IO_COMPLETION io_completion[MAX_IO_COMPLETION];
 
     static uint8_t num_io_completion;
+    static bool _in_io_proc;
 
 };
 

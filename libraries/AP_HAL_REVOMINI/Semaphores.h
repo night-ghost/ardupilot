@@ -3,7 +3,6 @@
 #define __AP_HAL_REVOMINI_SEMAPHORES_H__
 
 #include <AP_HAL/AP_HAL.h>
-//#include <AP_HAL_REVOMINI/AP_HAL_REVOMINI.h>
 #include "AP_HAL_REVOMINI_Namespace.h"
 #include <exti.h>
 

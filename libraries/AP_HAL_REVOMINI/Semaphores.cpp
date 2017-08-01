@@ -45,8 +45,7 @@ bool Semaphore::take(uint32_t timeout_ms) {
 //                      or to add queue for such tasks and use setjmp/longjmp to emulate waiting in semaphore
             
             return false; 
-//        } else
-//            return _take_nonblocking(); // 2nd try is meaningless but let it be
+//        } 
     }
     return _take_from_mainloop(timeout_ms);
 }
