@@ -1289,7 +1289,7 @@ bool AP_Param::load_all(bool check_defaults_file)
  */
 void AP_Param::reload_defaults_file(bool panic_on_error)
 {
-#if HAL_OS_POSIX_IO == 1
+#if HAL_OS_POSIX_IO == 1 || defined(BOARD_HAS_SDIO)
     /*
       if the HAL specifies a defaults parameter file then override
       defaults using that file
@@ -1302,6 +1302,7 @@ void AP_Param::reload_defaults_file(bool panic_on_error)
             printf("Failed to load defaults from %s\n", default_file);
         }
     }
+
 #endif
 }
 
@@ -1936,6 +1937,8 @@ bool AP_Param::load_defaults_file(const char *filename, bool panic_on_error)
     return true;
 }
 
+#elif defined(BOARD_HAS_SDIO)
+    #include "sd_io.h"
 #endif // HAL_OS_POSIX_IO
 
 /* 

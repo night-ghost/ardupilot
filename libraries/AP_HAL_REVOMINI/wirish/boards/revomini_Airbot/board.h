@@ -94,14 +94,20 @@ void boardInit(void);
 #define BOARD_I2C_BUS_SLOW  1 // slow down bus with this number
 
 
-#define BOARD_BARO_DEFAULT HAL_BARO_MS5611_I2C
-#define BOARD_BARO_MS5611_I2C_ADDR 0x77
+//#define BOARD_BARO_DEFAULT HAL_BARO_MS5611_I2C
 
 #define HAL_BARO_MS5611_I2C_BUS         BOARD_I2C_BUS_INT
-#define HAL_BARO_MS5611_I2C_ADDR        BOARD_BARO_MS5611_I2C_ADDR
+#define HAL_BARO_MS5611_I2C_ADDR        (0x77)
 
 #define HAL_BARO_BMP280_BUS             BOARD_I2C_BUS_INT
 #define HAL_BARO_BMP280_I2C_ADDR        (0x76)
+
+#define HAL_BARO_BMP085_BUS             BOARD_I2C_BUS_INT
+#define HAL_BARO_BMP085_I2C_ADDR        (0x77)
+
+#define HAL_BARO_MS5607_I2C_BUS         BOARD_I2C_BUS_INT
+#define HAL_BARO_MS5607_I2C_ADDR        (0x77)
+
 
 #define BOARD_COMPASS_DEFAULT HAL_COMPASS_HMC5843
 #define BOARD_COMPASS_HMC5843_I2C_ADDR 0x1E
@@ -126,10 +132,11 @@ void boardInit(void);
 
 #if 1// if board's dataflash supports 4k erases then we can use it as FAT and share it via USB
 #define BOARD_DATAFLASH_FATFS
+#define BOARD_HAS_SDIO
 #define USB_MASSSTORAGE
 #define HAL_BOARD_LOG_DIRECTORY "0:/"
 #define HAL_BOARD_TERRAIN_DIRECTORY "0:/TERRAIN"
-//#define HAL_PARAM_DEFAULTS_PATH "0:/APM/defaults.parm"
+//#define HAL_PARAM_DEFAULTS_PATH "0:/defaults.parm"
 #else
 // old dataflash logs
 #endif

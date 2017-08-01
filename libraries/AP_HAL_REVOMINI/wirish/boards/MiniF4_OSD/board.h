@@ -102,6 +102,7 @@ void boardInit(void);
 
 #if 1// if board's dataflash supports 4k erases then we can use it as FAT and share it via USB
 #define BOARD_DATAFLASH_FATFS
+#define BOARD_HAS_SDIO
 #define USB_MASSSTORAGE
 #define HAL_BOARD_LOG_DIRECTORY "0:/"
 #define HAL_BOARD_TERRAIN_DIRECTORY "0:/TERRAIN"

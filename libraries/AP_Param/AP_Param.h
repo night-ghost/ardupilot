@@ -524,7 +524,7 @@ private:
     // find a default value given a pointer to a default value in flash
     static float get_default_value(const AP_Param *object_ptr, const float *def_value_ptr);
 
-#if HAL_OS_POSIX_IO == 1
+#if HAL_OS_POSIX_IO == 1 || defined(BOARD_HAS_SDIO)
     /*
       load a parameter defaults file. This happens as part of load_all()
      */

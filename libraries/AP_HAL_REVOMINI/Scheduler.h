@@ -382,6 +382,8 @@ private:
     static uint32_t max_loop_time;
     
     bool _set_10s_flag();
+    static uint64_t ioc_time;
+    static uint64_t sleep_time;
 #endif
 
 #ifdef MTASK_PROF

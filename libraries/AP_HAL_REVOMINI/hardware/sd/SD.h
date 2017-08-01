@@ -74,6 +74,7 @@ public:
     size_t write(const char *buf, size_t size);
 
     int read();
+    UINT gets(char* buf, size_t len);
     int peek();
     int available();
     void flush();

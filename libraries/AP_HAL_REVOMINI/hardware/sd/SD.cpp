@@ -455,6 +455,25 @@ int File::read(void* buf, size_t len)
 
 }
 
+UINT File::gets(char* buf, size_t len)
+{
+    UINT bytesread=0;
+
+    while(len--){
+
+        uint8_t c;
+        uint8_t ret = read(&c,1);
+        if(!ret) break; // EOF
+        if(c=='\n') break;
+        if(c=='\r') continue;
+        *buf++=c;
+        bytesread++;
+    }        
+        
+    return bytesread;
+
+}
+
 /**
   * @brief  Close a file on the SD disk
   * @param  None

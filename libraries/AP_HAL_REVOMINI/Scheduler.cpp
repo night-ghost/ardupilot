@@ -93,6 +93,8 @@ uint64_t REVOMINIScheduler::task_time IN_CCM = 0;
 uint64_t REVOMINIScheduler::delay_time IN_CCM = 0;
 uint64_t REVOMINIScheduler::delay_int_time IN_CCM = 0;
 uint32_t REVOMINIScheduler::max_loop_time=0;
+uint64_t REVOMINIScheduler::ioc_time=0;
+uint64_t REVOMINIScheduler::sleep_time=0;
 #endif
 
 
@@ -113,7 +115,7 @@ REVOMINIScheduler::REVOMINIScheduler()
     s_running = &s_main; //  CCM don't initialized! - Reference running task
     s_top = MAIN_STACK_SIZE;                       // Initial top stack for task allocation
 
-    memset(&s_main,0, sizeof(s_main));
+    memset(&s_main, 0, sizeof(s_main));
 
     Revo_handler h = { .vp=loc_ret };
 
@@ -121,11 +123,7 @@ REVOMINIScheduler::REVOMINIScheduler()
     s_main.prev = &s_main,
 //    s_main.active = true,
     s_main.handle = h.h;
-    s_main.guard = STACK_GUARD,
-
-#ifdef MTASK_PROF
-    s_main.start=_micros();
-#endif
+    s_main.guard = STACK_GUARD;
 
 }
 
@@ -169,9 +167,6 @@ void REVOMINIScheduler::init()
 // set flag for stats output each 10 seconds
     register_timer_task(10000000, FUNCTOR_BIND_MEMBER(&REVOMINIScheduler::_set_10s_flag, bool), NULL);
 #endif
-
-// for sheduler debug
-//    register_io_process(FUNCTOR_BIND_MEMBER(&REVOMINIScheduler::stats_proc, void) );
 
 }
 
@@ -461,7 +456,7 @@ void REVOMINIScheduler::_print_stats(){
 
             for(int i=0; i< _num_timers; i++) {
                 if(_timers[i].proc){    // task not cancelled?
-                    hal.console->printf("task 0x%llX tim %8.1f int %5.3f%% tot %6.4f%% mean time %5.1f max time %ld\n", _timers[i].proc, _timers[i].fulltime/1000.0, _timers[i].fulltime*100.0 / task_time, (_timers[i].fulltime / 10.0) / t, (float)_timers[i].fulltime/_timers[i].count, _timers[i].micros );
+                    hal.console->printf("shed task 0x%llX tim %8.1f int %5.3f%% tot %6.4f%% mean time %5.1f max time %ld\n", _timers[i].proc, _timers[i].fulltime/1000.0, _timers[i].fulltime*100.0 / task_time, (_timers[i].fulltime / 10.0) / t, (float)_timers[i].fulltime/_timers[i].count, _timers[i].micros );
                     _timers[i].micros = 0; // reset max time
                 }
             }
@@ -473,10 +468,10 @@ void REVOMINIScheduler::_print_stats(){
 #ifdef MTASK_PROF    
             task_t* ptr = &s_main;
 
-            hal.console->printf("\ntask switch time %7.3fms count %ld mean %6.3fuS\n", yield_time/(float)us_ticks/1000.0, yield_count, yield_time /(float)us_ticks / (float)yield_count );
+            hal.console->printf("\nsleep time %f%% task switch avg time %6.3fuS\n", sleep_time/1000.0/t*100,  yield_time /(float)us_ticks / (float)yield_count );
         
             do {
-                hal.console->printf("task %d times: full %8.1fms (%7.2f%%) max %lduS ad %lx\n",  ptr->id, ptr->time/1000.0, 100.0 * ptr->time/1000.0 / t, ptr->max_time, ptr->maxt_addr );
+                hal.console->printf("task %d (0x%llx) times: full %8.1fms (%7.2f%%) max %lduS at %lx\n",  ptr->id, ptr->handle, ptr->time/1000.0, 100.0 * ptr->time/1000.0 / t, ptr->max_time, ptr->maxt_addr );
         
                 ptr->max_time=0; // reset max time
                 
@@ -509,14 +504,18 @@ void REVOMINIScheduler::_print_stats(){
             } break;
         
         case 5: {
-            hal.console->printf("\nIO completion sats\n");
+            hal.console->printf("\nIO completion time=%9.1fms (%7.3f%%)\n", ioc_time/1000.0,  ioc_time/1000.0/t*100);
+            uint64_t iot=0;
             for(uint8_t i=0; i<num_io_completion; i++){
                 struct IO_COMPLETION &io = io_completion[i];
                 
-                if(io.handler)
+                if(io.handler) {
                     hal.console->printf("task %llx time %9.1fms (%7.3f%%)\n", io.handler,  io.time/1000.0, 100.0 * io.time / t / 1000);
-                
+                    iot+=io.time;
+                }    
             }
+            if(ioc_time)
+                hal.console->printf("IO completion effectiveness=%7.3f%%\n",  100.0 * iot/ioc_time);
         
             }break;
             
@@ -589,7 +588,7 @@ store:
         rt.last_run = _micros(); // now
         rt.sem  = sem;
         rt.mode = mode;
-#if 0
+#if 0/* useless*/
         rt.ioc = ioc;
 #endif
 #ifdef SHED_PROF
@@ -597,7 +596,7 @@ store:
         rt.micros = 0;
         rt.fulltime = 0;
 #endif
-        noInterrupts();            // 64-bits should be 
+        noInterrupts();    // 64-bits should be 
         rt.proc = proc;    //     last one, not interferes - guard is over
         interrupts();
         return (AP_HAL::Device::PeriodicHandle)&rt;
@@ -728,8 +727,10 @@ void REVOMINIScheduler::_run_timers(){
 
 
     full_t = _micros() - full_t;         // full time of scheduler
+#ifdef MTASK_PROF
 // исключить время работы прерывания из времени задачи, которую оно прервало
     s_running->in_isr += full_t;
+#endif
 
 #ifdef SHED_PROF
     uint32_t shed_t = full_t - job_t;   // net time
@@ -889,6 +890,7 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
     }
 
     disable_stack_check = true;
+    uint32_t slTime;
 
     { // isolate 'me' - task that calls yield()
         task_t *me = s_running;
@@ -926,6 +928,7 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
         // begin of context switch
 #ifdef MTASK_PROF
         yield_time += stopwatch_getticks()-ticks; // time of setjmp
+        slTime = _micros();
 #endif
 
 
@@ -981,7 +984,7 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
                 // проверим сохранность дескриптора
                 if(s_running->guard != STACK_GUARD){
                     // TODO исключить задачу из планирования
-                    AP_HAL::panic("PANIC: stack guard spoiled in process %d (from %d)\n",s_running->id, me->id);
+                    AP_HAL::panic("PANIC: stack guard spoiled in process %d (from %d)\n", s_running->id, me->id);
                 }
             }
             
@@ -990,12 +993,18 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
     }
 
 
+
     { // isolate 'me' again
         task_t *me = s_running; // switch to
+        
+        uint32_t now = _micros();
 
         me->ttw=0; // time to wait is over
-        me->start = _micros(); // task startup time
+        me->start = now; // task startup time
         me->in_isr=0; // reset ISR time
+
+        slTime = now - slTime;
+        sleep_time += slTime;
 
 #ifdef MTASK_PROF
         me->ticks = stopwatch_getticks();
@@ -1053,7 +1062,11 @@ uint8_t REVOMINIScheduler::register_io_completion(Handler handler){
 
 void REVOMINIScheduler::PendSV_Handler(){ // isr at lowest priority to do all IO completion routines
     bool do_it = false;
-    
+
+#ifdef SHED_PROF
+    uint32_t full_t=_micros();
+#endif
+
     do {
         do_it = false;
         for(uint8_t i=0; i<num_io_completion; i++){
@@ -1083,6 +1096,16 @@ void REVOMINIScheduler::PendSV_Handler(){ // isr at lowest priority to do all IO
             }
         }
     } while(do_it);
+
+#ifdef SHED_PROF
+    full_t=_micros() - full_t;
+    ioc_time += full_t;
+#endif
+
+#ifdef MTASK_PROF
+// исключить время работы прерывания из времени задачи, которую оно прервало
+    s_running->in_isr += full_t;
+#endif
 
 }
 

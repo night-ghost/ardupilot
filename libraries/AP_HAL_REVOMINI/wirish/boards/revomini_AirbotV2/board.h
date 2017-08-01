@@ -113,6 +113,7 @@ void boardInit(void);
 #define BOARD_SDCARD_CS_PIN   2
 #define BOARD_SDCARD_DET_PIN   38 // PB7
 
+#define BOARD_HAS_SDIO
 #define HAL_BOARD_LOG_DIRECTORY "0:/APM/LOGS"
 #define HAL_BOARD_TERRAIN_DIRECTORY "0:/APM/TERRAIN"
 //#define HAL_PARAM_DEFAULTS_PATH "0:/APM/defaults.parm"
