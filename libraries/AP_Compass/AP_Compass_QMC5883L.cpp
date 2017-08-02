@@ -91,16 +91,15 @@ bool AP_Compass_QMC5883L::init()
     if (!_dev->get_semaphore()->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         return false;
     }
-    //must reset first
-    _dev->write_register(QMC5883L_REG_CONF2,QMC5883L_RST);
 
     _dev->set_retries(10);
 
-    uint8_t whoami;
-    if (!_dev->read_registers(QMC5883L_REG_ID, &whoami,1)||
-    		whoami != QMC5883_ID_VAL){
-        // not an QMC5883L
-        goto fail;
+#if 0
+    _dump_registers();
+#endif
+
+    if(!_check_whoami()){
+    	 goto fail;
     }
 
     if (!_dev->write_register(0x0B, 0x01)||
@@ -142,6 +141,21 @@ bool AP_Compass_QMC5883L::init()
  fail:
     _dev->get_semaphore()->give();
     return false;
+}
+bool AP_Compass_QMC5883L::_check_whoami()
+{
+    uint8_t whoami;
+    //Affected by other devices,must read registers 0x00 once or reset,after can read the ID registers reliably
+    _dev->read_registers(0x00,&whoami,1);
+    if (!_dev->read_registers(0x0C, &whoami,1)||
+      		whoami != 0x01){
+    	return false;
+    }
+    if (!_dev->read_registers(QMC5883L_REG_ID, &whoami,1)||
+    		whoami != QMC5883_ID_VAL){
+    	return false;
+    }
+    return true;
 }
 
 void AP_Compass_QMC5883L::timer()
@@ -229,3 +243,17 @@ void AP_Compass_QMC5883L::read()
 
     _sem->give();
 }
+
+void AP_Compass_QMC5883L::_dump_registers()
+{
+	  printf("QMC5883L registers dump\n");
+	    for (uint8_t reg = QMC5883L_REG_DATA_OUTPUT_X; reg <= 0x30; reg++) {
+	        uint8_t v;
+	        _dev->read_registers(reg,&v,1);
+	        printf("%02x:%02x ", (unsigned)reg, (unsigned)v);
+	        if ((reg - ( QMC5883L_REG_DATA_OUTPUT_X-1)) % 16 == 0) {
+	            printf("\n");
+	        }
+	    }
+}
+

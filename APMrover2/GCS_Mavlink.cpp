@@ -90,7 +90,7 @@ void Rover::send_extended_status1(mavlink_channel_t chan)
         control_sensors_present,
         control_sensors_enabled,
         control_sensors_health,
-        static_cast<uint16_t>(scheduler.load_average(20000) * 1000),
+        static_cast<uint16_t>(scheduler.load_average() * 1000),
         battery.voltage() * 1000,  // mV
         battery_current,        // in 10mA units
         battery_remaining,      // in %
@@ -796,7 +796,7 @@ void GCS_MAVLINK_Rover::handleMessage(mavlink_message_t* msg)
             switch (packet.command) {
 
             case MAV_CMD_NAV_RETURN_TO_LAUNCH:
-                rover.set_mode(rover.mode_rtl);
+                rover.set_mode(rover.mode_rtl, MODE_REASON_GCS_COMMAND);
                 result = MAV_RESULT_ACCEPTED;
                 break;
 
@@ -832,7 +832,7 @@ void GCS_MAVLINK_Rover::handleMessage(mavlink_message_t* msg)
                 break;
 
             case MAV_CMD_MISSION_START:
-                rover.set_mode(rover.mode_auto);
+                rover.set_mode(rover.mode_auto, MODE_REASON_GCS_COMMAND);
                 result = MAV_RESULT_ACCEPTED;
                 break;
 
@@ -889,19 +889,19 @@ void GCS_MAVLINK_Rover::handleMessage(mavlink_message_t* msg)
             switch (static_cast<uint16_t>(packet.param1)) {
             case MAV_MODE_MANUAL_ARMED:
             case MAV_MODE_MANUAL_DISARMED:
-                rover.set_mode(rover.mode_manual);
+                rover.set_mode(rover.mode_manual, MODE_REASON_GCS_COMMAND);
                 result = MAV_RESULT_ACCEPTED;
                 break;
 
             case MAV_MODE_AUTO_ARMED:
             case MAV_MODE_AUTO_DISARMED:
-                rover.set_mode(rover.mode_auto);
+                rover.set_mode(rover.mode_auto, MODE_REASON_GCS_COMMAND);
                 result = MAV_RESULT_ACCEPTED;
                 break;
 
             case MAV_MODE_STABILIZE_DISARMED:
             case MAV_MODE_STABILIZE_ARMED:
-                rover.set_mode(rover.mode_learning);
+                rover.set_mode(rover.mode_learning, MODE_REASON_GCS_COMMAND);
                 result = MAV_RESULT_ACCEPTED;
                 break;
 

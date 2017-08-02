@@ -850,9 +850,11 @@ private:
     void Log_Write_Home_And_Origin();
     void Log_Write_Vehicle_Startup_Messages();
     void Log_Write_AOA_SSA();
+    void Log_Write_AETR();
     void Log_Read(uint16_t log_num, int16_t start_page, int16_t end_page);
 
     void load_parameters(void);
+    void convert_mixers(void);
     void adjust_altitude_target();
     void setup_glide_slope(void);
     int32_t get_RTL_altitude();
@@ -940,6 +942,10 @@ private:
     bool reached_loiter_target(void);
     bool print_buffer(char *&buf, uint16_t &buf_size, const char *fmt, ...);
     uint16_t create_mixer(char *buf, uint16_t buf_size, const char *filename);
+    bool mix_one_channel(char *&buf, uint16_t &buf_size, uint8_t out_chan, uint8_t in_chan);
+    bool mix_two_channels(char *&buf, uint16_t &buf_size, uint8_t out_chan, uint8_t in_chan1, uint8_t in_chan2, bool left_channel);
+    bool mix_passthrough(char *&buf, uint16_t &buf_size, uint8_t out_chan, uint8_t in_chan);
+    bool mix_trim_channel(char *&buf, uint16_t &buf_size, uint8_t out_chan);
     bool setup_failsafe_mixing(void);
     void set_control_channels(void);
     void init_rc_in();
