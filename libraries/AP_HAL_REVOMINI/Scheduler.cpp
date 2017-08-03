@@ -135,20 +135,17 @@ bool REVOMINIScheduler::is_main_task() { return s_running == &s_main; }
 
 void REVOMINIScheduler::init()
 {
-
     memset(_timers,       0, sizeof(_timers) );
+    memset(_io_proc,      0, sizeof(_io_proc) );
     memset(io_completion, 0, sizeof(io_completion) );
+    
 
     CLEAR_BIT(SCB->SCR, ((uint32_t)SCB_SCR_SLEEPDEEP_Msk)); //we don't need deep sleep
     SET_BIT(  SCB->SCR, ((uint32_t)SCB_SCR_SEVONPEND_Msk)); //we need Event on each interrupt
 
-
     timer_foreach(timer_reset); // timer_reset(dev) moved out from configTimeBase so reset by hands
 
     uint32_t period    = (2000000UL / SHED_FREQ) - 1; 
-    
-    
-    // TODO
                 // dev    period   freq, kHz
     configTimeBase(TIMER7, period, 2000);       //2MHz 0.5us ticks
     timer_attach_interrupt(TIMER7, TIMER_UPDATE_INTERRUPT, _timer_isr_event, 11); // low priority - only PendSV and USB are lower
@@ -163,7 +160,7 @@ void REVOMINIScheduler::init()
 
 
     // only Timer6 from spare timers has personal NVIC line - TIM6_DAC_IRQn
-    uint32_t freq = configTimeBase(TIMER6, 0, 20000);       //20MHz - we here don't know real freq so can't set period
+    uint32_t freq = configTimeBase(TIMER6, 0, 20000);     // 20MHz - we here don't know real freq so can't set period
     timer_set_reload(TIMER6, freq / 1000000);             // period to generate 1uS requests
     timer_enable_irq(TIMER6, TIMER_UPDATE_INTERRUPT); // enable interrupt requests from timer but not enable them in NVIC - will be events
     timer_resume(TIMER6);

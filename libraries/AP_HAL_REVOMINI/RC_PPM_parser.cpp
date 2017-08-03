@@ -22,7 +22,7 @@ extern const AP_HAL::HAL& hal;
 
 
 void PPM_parser::init(uint8_t ch){
-    memset((void *)&val[0], 0, sizeof(val));
+    memset((void *)&_val[0], 0, sizeof(val));
     last_pulse={0,0};
     channel_ctr=0;
     
@@ -78,7 +78,7 @@ bool PPM_parser::_process_ppmsum_pulse(uint16_t value)
 {
     if (value >= 2700) { // Frame synchronization
 	if( channel_ctr >= REVOMINI_RC_INPUT_MIN_CHANNELS ) {
-	    valid_channels = channel_ctr;
+	    _channels = channel_ctr;
 	}
 	channel_ctr = 0;
 	_got_ppm=true;
@@ -86,13 +86,13 @@ bool PPM_parser::_process_ppmsum_pulse(uint16_t value)
         return true;	    
     } else if(value > 700 && value < 2300) {
         if (channel_ctr < REVOMINI_RC_INPUT_NUM_CHANNELS) {
-    	    last_signal =  systick_uptime();
-    	    if(val[channel_ctr] != value) last_change = last_signal;
-            val[channel_ctr] = value;
+    	    _last_signal =  systick_uptime();
+    	    if(_val[channel_ctr] != value) _last_change = _last_signal;
+            _val[channel_ctr] = value;
 
             channel_ctr++;
             if (channel_ctr >= REVOMINI_RC_INPUT_NUM_CHANNELS) {
-                valid_channels = REVOMINI_RC_INPUT_NUM_CHANNELS;
+                _channels = REVOMINI_RC_INPUT_NUM_CHANNELS;
             }
         }
         return true;
@@ -182,16 +182,16 @@ void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1)
         {
 
             for (i=0; i<num_values; i++) {
-                if(val[i] != values[i]) last_change = systick_uptime();
-                val[i] = values[i];
+                if(val[i] != values[i]) _last_change = systick_uptime();
+                _val[i] = values[i];
             }
-            valid_channels = num_values;
+            _channels = num_values;
             
             _rc_mode = BOARD_RC_SBUS; // lock input mode, SBUS has a parity and other checks so false positive is unreal
             
             if (!sbus_failsafe) {
                 _got_dsm = true;
-                last_signal = systick_uptime();
+                _last_signal = systick_uptime();
             }
         }
         goto reset_ok;
@@ -271,12 +271,12 @@ void PPM_parser::_process_dsm_pulse(uint16_t width_s0, uint16_t width_s1)
                 _rc_mode = BOARD_RC_DSM; // lock input mode, DSM has a checksum so false positive is unreal
 
                 for (i=0; i<num_values; i++) {
-                    if(val[i] != values[i]) last_change = systick_uptime();
-                    val[i] = values[i];
+                    if(val[i] != values[i]) _last_change = systick_uptime();
+                    _val[i] = values[i];
                 }
-                valid_channels = num_values;
+                _channels = num_values;
                 _got_dsm = true;
-                last_signal = systick_uptime();
+                _last_signal = systick_uptime();
             }
         }
         memset(&dsm_state, 0, sizeof(dsm_state));

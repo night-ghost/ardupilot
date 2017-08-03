@@ -17,10 +17,6 @@ extern const AP_HAL::HAL& hal;
 
 #if defined(BOARD_NRF_CS_PIN) && defined(BOARD_NRF_NAME)
 
-volatile uint16_t NRF_parser::val[REVOMINI_RC_INPUT_NUM_CHANNELS] IN_CCM;
-volatile uint64_t NRF_parser::last_signal IN_CCM;
-uint64_t          NRF_parser::last_change IN_CCM;
-volatile uint8_t  NRF_parser::channels = 0;
 
 static uint8_t NRF_Buffer[NRF_MAX_PAYLOAD_SIZE];
 static uint8_t ackPayload[NRF24L01_MAX_PAYLOAD_SIZE];
@@ -36,8 +32,8 @@ void NRF_parser::init(uint8_t ch){
 
     memset((void *)&val[0],    0, sizeof(val));
     
-    last_signal=0;
-    last_change =0;
+    _last_signal=0;
+    _last_change =0;
 
 
     REVOMINIGPIO::_pinMode(BOARD_NRF24_CS_PIN, OUTPUT);
@@ -242,16 +238,16 @@ void NRF_parser::inavSetHoppingChannels(void)
 }
 
 void NRF_parser::set_val(uint8_t ch, uint16_t val){
-    if(rcData[ch] != val) {
-        rcData[ch] = val;
-        last_change = systick_uptime();
+    if(_val[ch] != val) {
+        _val[ch] = val;
+        _last_change = systick_uptime();
     }
 
 }
 
 void NRF_parser::inavNrf24SetRcDataFromPayload(uint16_t *rcData, const uint8_t *payload)
 {
-    memset(rcData, 0, sizeof(rcData));
+    memset(_val, 0, sizeof(_val));
     // payload[0] and payload[1] are zero in DATA state
     // the AETR channels have 10 bit resolution
     uint8_t lowBits = payload[6]; // least significant bits for AETR
@@ -267,7 +263,7 @@ void NRF_parser::inavNrf24SetRcDataFromPayload(uint16_t *rcData, const uint8_t *
         // small payload variant of protocol, supports 6 channels
         set_val(RC_SPI_AUX1, PWM_RANGE_MIN + (payload[7] << 2) );
         set_val(RC_SPI_AUX2, PWM_RANGE_MIN + (payload[1] << 2) );
-        channels = RC_SPI_AUX2+1;
+        _channels = RC_SPI_AUX2+1;
     } else {
         // channel AUX1 is used for rate, as per the deviation convention
         const uint8_t rate = payload[7];
@@ -303,17 +299,17 @@ void NRF_parser::inavNrf24SetRcDataFromPayload(uint16_t *rcData, const uint8_t *
         set_val(RC_SPI_AUX11, PWM_RANGE_MIN + (payload[14] << 2) );
         set_val(RC_SPI_AUX12, PWM_RANGE_MIN + (payload[15] << 2) );
         
-        channels = RC_SPI_AUX12+1;
+        _channels = RC_SPI_AUX12+1;
     }
     if (payloadSize == INAV_PROTOCOL_PAYLOAD_SIZE_MAX) {
         // large payload variant of protocol
         // channels AUX13 to AUX16 have 8 bit resolution
         set_val(RC_SPI_AUX13, PWM_RANGE_MIN + (payload[16] << 2) );
         set_val(RC_SPI_AUX14, PWM_RANGE_MIN + (payload[17] << 2) );
-        channels = RC_SPI_AUX14+1;
+        _channels = RC_SPI_AUX14+1;
     }
     
-    last_signal = systick_uptime();
+    _last_signal = systick_uptime();
 }
 
 void NRF_parser::inavNrf24Setup(const uint32_t *fixedId)

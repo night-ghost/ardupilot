@@ -10,6 +10,7 @@
 
 #include "AP_HAL_REVOMINI_Namespace.h"
 #include "handler.h"
+#include "Config.h"
 
 #include "Semaphores.h"
 #include "GPIO.h"
@@ -59,10 +60,6 @@ extern "C" {
 
 #define RAMEND ((size_t)&_estack)
 
-
-
-#define SHED_PROF // profiling
-#define MTASK_PROF
 
 typedef enum REVO_cb_type {
     CB_MEMBERPROC = 0,

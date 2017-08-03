@@ -21,23 +21,12 @@ public:
      {}
 
     void init(uint8_t ch);
-    inline uint64_t get_last_signal()    const { noInterrupts(); uint64_t t= last_signal;     interrupts(); return t;  } 
-    inline uint64_t get_last_change()    const { noInterrupts(); uint64_t t= last_change;     interrupts(); return t; }
-    inline uint8_t  get_valid_channels() const { noInterrupts(); uint8_t  t= valid_channels;  interrupts(); return t; }
-    inline uint16_t get_val(uint8_t ch)  const { noInterrupts(); uint16_t t= val[ch];         interrupts(); return t;  }
-
 
 protected:
     void parse_pulses(void);
     void start_ioc(void);
 
 private:
-
-    volatile uint64_t last_signal;
-    volatile uint64_t last_change;
-    volatile uint16_t val[REVOMINI_RC_INPUT_NUM_CHANNELS];
-    volatile uint8_t  valid_channels;
-
     void rxIntRC(uint16_t value0, uint16_t value1, bool state);
 
     bool _process_ppmsum_pulse(uint16_t value);

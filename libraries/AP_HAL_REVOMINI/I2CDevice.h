@@ -30,7 +30,6 @@
 #include <i2c.h>
 #include "i2c_soft.h"
 
-//#define I2C_DEBUG
 
 using namespace REVOMINI;
 

@@ -97,18 +97,8 @@ public:
 
 
     void init(uint8_t ch);
-    inline uint64_t get_last_signal()   const { noInterrupts(); uint64_t t=  last_signal; interrupts(); return t; }
-    inline uint64_t get_last_change()   const { noInterrupts(); uint64_t t=  last_change; interrupts(); return t; }
-    inline uint8_t  get_valid_channels()const { noInterrupts(); uint8_t t=  channels;  interrupts(); return t; }
-    inline uint16_t get_val(uint8_t ch) const { noInterrupts(); uint16_t t= rcData[ch]; interrupts(); return t; }
 
 private:
-
-    static volatile uint64_t last_signal;
-    static volatile uint16_t rcData[REVOMINI_RC_INPUT_NUM_CHANNELS];
-    static volatile uint8_t  channels;
-    static uint64_t last_change;
-
     static AP_HAL::OwnPtr<AP_HAL::SPIDevice> nrf;
 
     void set_val(uint8_t ch, uint16_t val);

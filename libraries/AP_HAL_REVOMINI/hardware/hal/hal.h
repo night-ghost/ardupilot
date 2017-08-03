@@ -11,14 +11,14 @@
 #include "delay.h"
 #include "adc.h"
 #include "systick.h"
-
+#include "../../Config.h"
 #include <boards.h>
+
 
 
 #define DEBUG_BUILD 1
 
-//#define ISR_PROF
-
+//#define ISR_PERF - we moves out all time-consuming calculations from ISR to io_completion level
 
 
 #ifdef __cplusplus

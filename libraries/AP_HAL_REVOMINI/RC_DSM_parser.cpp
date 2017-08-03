@@ -16,10 +16,10 @@ using namespace REVOMINI;
 extern const AP_HAL::HAL& hal;
 
 #if defined(BOARD_SPEKTRUM_RX_PIN)
-volatile uint16_t DSM_parser::_dsm_val[REVOMINI_RC_INPUT_NUM_CHANNELS] IN_CCM;
-volatile uint64_t DSM_parser::_dsm_last_signal IN_CCM;
-uint64_t          DSM_parser::last_dsm_change IN_CCM;
-volatile uint8_t  DSM_parser::_dsm_channels = 0;
+volatile uint16_t DSM_parser::_val[REVOMINI_RC_INPUT_NUM_CHANNELS] IN_CCM;
+volatile uint64_t DSM_parser::_last_signal IN_CCM;
+uint64_t          DSM_parser::_last_change IN_CCM;
+volatile uint8_t  DSM_parser::_channels = 0;
 struct DSM_parser::DSM        DSM_parser::dsm IN_CCM;
 uint8_t           DSM_parser::_ioc=0;
 #endif
@@ -35,10 +35,10 @@ REVOMINIUARTDriver DSM_parser::uartSDriver(_UART5);
 void DSM_parser::init(uint8_t ch)  {
 #if defined(BOARD_SPEKTRUM_RX_PIN)
 
-    memset((void *)&_dsm_val[0],    0, sizeof(_dsm_val));
+    memset((void *)&_val[0],    0, sizeof(_val));
     
-    _dsm_last_signal=0;
-    last_dsm_change =0;
+    _last_signal=0;
+    _last_change =0;
 
     uint32_t sig = board_get_rtc_register(RTC_DSM_BIND_REG);
     if( (sig & ~DSM_BIND_SIGN_MASK) == DSM_BIND_SIGNATURE) {
@@ -99,8 +99,8 @@ void DSM_parser::_io_completion(){
                 num_values >= 5) {
                 for (uint8_t i=0; i<num_values; i++) {
                     if (values[i] != 0) {
-                        if(_dsm_val[i] != values[i]) last_dsm_change = systick_uptime();
-                        _dsm_val[i] = values[i];
+                        if(_val[i] != values[i]) _last_change = systick_uptime();
+                        _val[i] = values[i];
                     }
                 }
                 /*
@@ -108,10 +108,10 @@ void DSM_parser::_io_completion(){
                   as they are spread across multiple frames. We just
                   use the max num_values we get
                  */
-                if (num_values > _dsm_channels) {
-                    _dsm_channels = num_values;
+                if (num_values > _channels) {
+                    _channels = num_values;
                 }
-                _dsm_last_signal = systick_uptime();
+                _last_signal = systick_uptime();
             }
         }
     }

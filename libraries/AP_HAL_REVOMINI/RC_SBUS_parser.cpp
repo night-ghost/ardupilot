@@ -19,10 +19,6 @@ using namespace REVOMINI;
 
 extern const AP_HAL::HAL& hal;
 
-volatile uint16_t SBUS_parser::_val[REVOMINI_RC_INPUT_NUM_CHANNELS] IN_CCM;
-volatile uint64_t SBUS_parser::_last_signal IN_CCM;
-uint64_t          SBUS_parser::last_change IN_CCM;
-volatile uint8_t  SBUS_parser::_channels = 0;
 struct SBUS_parser::SBUS        SBUS_parser::sbus IN_CCM;
 REVOMINIUARTDriver SBUS_parser::uartSDriver(_USART1);
 uint8_t SBUS_parser::_ioc=0;
@@ -32,7 +28,7 @@ void SBUS_parser::init(uint8_t ch){
     memset((void *)&_val[0],    0, sizeof(_val));
     
     _last_signal=0;
-    last_change =0;
+    _last_change =0;
     
     _ioc = REVOMINIScheduler::register_io_completion(_io_completion);
 
@@ -118,7 +114,7 @@ void SBUS_parser::_io_completion() {
             {
     
                 for (uint8_t i=0; i<num_values; i++) {
-                    if(_val[i] != values[i]) last_change = systick_uptime();
+                    if(_val[i] != values[i]) _last_change = systick_uptime();
                     _val[i] = values[i];
                 }
                 _channels = num_values;

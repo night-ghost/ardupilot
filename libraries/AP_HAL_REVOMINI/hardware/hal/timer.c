@@ -869,9 +869,6 @@ static inline void dispatch_basic(const timer_dev *dev) {
  * Utilities
  */
 
-
-
-
 static void enable_advanced_irq(const timer_dev *dev, timer_interrupt_id id, uint8_t priority);
 
 #define PRIO_DISABLE_FLAG 0x80

@@ -5,8 +5,8 @@
 #include <AP_HAL/AP_HAL.h>
 #include "AP_HAL_REVOMINI_Namespace.h"
 #include <exti.h>
+#include "Config.h"
 
-#define SEM_PROF 
 
 class REVOMINI::Semaphore : public AP_HAL::Semaphore {
 public:

@@ -6,7 +6,6 @@
 #if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
 
 #include <AP_HAL_REVOMINI/AP_HAL_REVOMINI.h>
-//#include "AP_HAL_REVOMINI_Namespace.h"
 #include "handler.h"
 
 #include <AP_Param/AP_Param.h>
