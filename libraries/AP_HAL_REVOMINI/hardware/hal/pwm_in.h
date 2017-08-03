@@ -55,26 +55,6 @@ typedef struct PULSE {
 #include "ring_buffer_pulse.h"
 
 
-#ifdef PWM_SUPPORTED
-struct PWM_State  {
-    uint8_t state;
-    uint16_t lower; //rise;
-    uint16_t upper; //fall;
-    uint16_t last_val;
-    uint16_t capture;
-    uint16_t error;
-    uint32_t last_pulse;
-};
-
-extern struct PWM_State Inputs[];
-extern bool _is_ppmsum;
-
-
-static inline uint16_t pwmRead(uint8_t channel, uint32_t *time){
-    if(time) *time=Inputs[channel].last_pulse;
-    return Inputs[channel].capture;
-}
-#endif
 
 struct PPM_State  {
     Handler handler;

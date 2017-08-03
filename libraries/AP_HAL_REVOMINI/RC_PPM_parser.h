@@ -9,10 +9,8 @@
 class REVOMINI::PPM_parser :  public REVOMINI::_parser {
 public:
     PPM_parser()
-        : last_signal(0)
-        , last_change(0)
-        , valid_channels(0)
-        , _ch(0)
+        : _ch(0)
+        , last_pulse({0,0})
         , _got_ppm(false)
         , _got_dsm(false)
         , _was_ppm(false)

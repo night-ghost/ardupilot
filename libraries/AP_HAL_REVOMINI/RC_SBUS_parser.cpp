@@ -19,18 +19,19 @@ using namespace REVOMINI;
 
 extern const AP_HAL::HAL& hal;
 
-struct SBUS_parser::SBUS        SBUS_parser::sbus IN_CCM;
 REVOMINIUARTDriver SBUS_parser::uartSDriver(_USART1);
-uint8_t SBUS_parser::_ioc=0;
 
 void SBUS_parser::init(uint8_t ch){
 
     memset((void *)&_val[0],    0, sizeof(_val));
+    memset((void *)&sbus,       0, sizeof(sbus));
     
     _last_signal=0;
     _last_change =0;
     
-    _ioc = REVOMINIScheduler::register_io_completion(_io_completion);
+    
+    
+    _ioc = REVOMINIScheduler::register_io_completion(FUNCTOR_BIND_MEMBER(&SBUS_parser::_io_completion, void));
 
 #if 0
     uint8_t bad_sbus[] = {
@@ -61,7 +62,8 @@ void SBUS_parser::late_init(uint8_t b){
         // initialize SBUS UART
         uartSDriver.end();
         uartSDriver.begin(100000);
-        uartSDriver.setCallback(add_uart_input);
+        Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&SBUS_parser::add_uart_input, void) };
+        uartSDriver.setCallback(h.h);
     }
 
 }

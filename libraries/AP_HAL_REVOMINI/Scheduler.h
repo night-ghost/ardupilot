@@ -127,7 +127,7 @@ public:
     };
 
     typedef struct IO_COMPLETION {
-        uint64_t handler;
+        Handler handler;
         REVOMINI::Semaphore *sem;
         bool request;
 #ifdef SHED_PROF
@@ -143,7 +143,7 @@ public:
     void     delay_microseconds(uint16_t us) { _delay_microseconds(us); }
     void     delay_microseconds_boost(uint16_t us) override { _delay_microseconds_boost(us); }
     
-    inline   uint32_t millis() { yield(50);   return _millis(); }
+    inline   uint32_t millis() { yield(50);   return _millis(); } // this allows to run io_proc without calls to delay()
     inline   uint32_t micros() {    return _micros(); }
     
     void     register_timer_process(AP_HAL::MemberProc proc) { _register_timer_process(proc, 1000); }

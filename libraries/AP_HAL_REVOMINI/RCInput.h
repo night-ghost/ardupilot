@@ -9,11 +9,10 @@
 #include "UARTDriver.h"
 #include <usart.h>
 #include "RC_parser.h"
+#include "Config.h"
 
 #pragma GCC pop_options
 
-#define REVOMINI_RC_INPUT_MIN_CHANNELS 4
-#define REVOMINI_RC_INPUT_NUM_CHANNELS 20
 
 
 #define  RC_DEAD_TIME 60000 // 60 seconds no data changes

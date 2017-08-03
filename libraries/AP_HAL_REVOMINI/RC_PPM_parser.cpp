@@ -22,8 +22,11 @@ extern const AP_HAL::HAL& hal;
 
 
 void PPM_parser::init(uint8_t ch){
-    memset((void *)&_val[0], 0, sizeof(val));
-    last_pulse={0,0};
+    memset((void *)&_val[0], 0, sizeof(_val));
+    _last_signal=0;
+    _last_change=0;
+    _channels=0;
+    
     channel_ctr=0;
     
     _ch = ch + 1;
@@ -182,7 +185,7 @@ void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1)
         {
 
             for (i=0; i<num_values; i++) {
-                if(val[i] != values[i]) _last_change = systick_uptime();
+                if(_val[i] != values[i]) _last_change = systick_uptime();
                 _val[i] = values[i];
             }
             _channels = num_values;
@@ -271,7 +274,7 @@ void PPM_parser::_process_dsm_pulse(uint16_t width_s0, uint16_t width_s1)
                 _rc_mode = BOARD_RC_DSM; // lock input mode, DSM has a checksum so false positive is unreal
 
                 for (i=0; i<num_values; i++) {
-                    if(val[i] != values[i]) _last_change = systick_uptime();
+                    if(_val[i] != values[i]) _last_change = systick_uptime();
                     _val[i] = values[i];
                 }
                 _channels = num_values;

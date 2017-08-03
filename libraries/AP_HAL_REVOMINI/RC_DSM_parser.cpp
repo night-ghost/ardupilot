@@ -1,3 +1,5 @@
+#include <AP_HAL/HAL.h>
+
 #include <exti.h>
 #include <timer.h>
 #include "RCInput.h"
@@ -15,14 +17,6 @@ using namespace REVOMINI;
 
 extern const AP_HAL::HAL& hal;
 
-#if defined(BOARD_SPEKTRUM_RX_PIN)
-volatile uint16_t DSM_parser::_val[REVOMINI_RC_INPUT_NUM_CHANNELS] IN_CCM;
-volatile uint64_t DSM_parser::_last_signal IN_CCM;
-uint64_t          DSM_parser::_last_change IN_CCM;
-volatile uint8_t  DSM_parser::_channels = 0;
-struct DSM_parser::DSM        DSM_parser::dsm IN_CCM;
-uint8_t           DSM_parser::_ioc=0;
-#endif
 
 #if defined(BOARD_DSM_USART)
 REVOMINIUARTDriver DSM_parser::uartSDriver(BOARD_DSM_USART);
@@ -35,7 +29,8 @@ REVOMINIUARTDriver DSM_parser::uartSDriver(_UART5);
 void DSM_parser::init(uint8_t ch)  {
 #if defined(BOARD_SPEKTRUM_RX_PIN)
 
-    memset((void *)&_val[0],    0, sizeof(_val));
+    memset((void *)&_val[0],   0, sizeof(_val));
+    memset((void *)&dsm,       0, sizeof(dsm));
     
     _last_signal=0;
     _last_change =0;
@@ -52,11 +47,12 @@ void DSM_parser::init(uint8_t ch)  {
     REVOMINIGPIO::_write(BOARD_SPEKTRUM_PWR_PIN, BOARD_SPEKTRUM_PWR_ON);
  #endif
 
-    _ioc = REVOMINIScheduler::register_io_completion(_io_completion);
+    _ioc = REVOMINIScheduler::register_io_completion(FUNCTOR_BIND_MEMBER(&DSM_parser::_io_completion, void));
 
     // initialize DSM UART
     uartSDriver.begin(115200);
-    uartSDriver.setCallback(add_dsm_uart_input);
+    Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&DSM_parser::add_dsm_uart_input, void) };
+    uartSDriver.setCallback(h.h);
 }
 
 /*

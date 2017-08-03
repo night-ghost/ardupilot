@@ -19,11 +19,11 @@ private:
 
     static REVOMINIUARTDriver uartSDriver; 
 
-    static void add_dsm_uart_input(); // add some DSM input bytes, for RCInput over a serial port
-    static void _io_completion();
-    static uint8_t _ioc;
+    void add_dsm_uart_input(); // add some DSM input bytes, for RCInput over a serial port
+    void _io_completion();
+    uint8_t _ioc;
     
-    static struct DSM { // state of add_dsm_uart_input
+    struct DSM { // state of add_dsm_uart_input
         uint8_t frame[16];
         uint8_t partial_frame_count;
         uint64_t last_input_ms;

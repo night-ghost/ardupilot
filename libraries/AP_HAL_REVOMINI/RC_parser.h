@@ -1,5 +1,7 @@
 #pragma once 
 
+#include "Config.h"
+
 class REVOMINI::_parser { // universal parser interface
 public:
     _parser() {};
@@ -21,7 +23,7 @@ public:
 
     virtual bool bind(int dsmMode) const  { return true; }
 
-private:
+protected:
     volatile uint64_t _last_signal;
     volatile uint16_t _val[REVOMINI_RC_INPUT_NUM_CHANNELS];
     uint64_t          _last_change;

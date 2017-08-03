@@ -59,11 +59,15 @@ uint64_t micros64(){
 
 // revo internals
 
+void delay(uint32_t ms);
+void delay_microseconds(uint16_t us);
+void yield(uint32_t us);
+
 void delay(uint32_t ms){
     REVOMINIScheduler::_delay(ms); 
 }
 
-void     delay_microseconds(uint16_t us) { 
+void delay_microseconds(uint16_t us) { 
     REVOMINIScheduler::_delay_microseconds(us); 
 }
 

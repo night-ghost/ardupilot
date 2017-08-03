@@ -7,6 +7,7 @@
 #include <usart.h>
 
 #include <gpio_hal.h>
+#include <hal.h>
 #include "Scheduler.h"
 
 #define DEFAULT_TX_TIMEOUT 10000 // in uS - 10ms
@@ -26,7 +27,7 @@ public:
 
     inline bool tx_pending() {   return ( usart_txfifo_nbytes(_usart_device) > 0); }
 
-    inline void setCallback(usart_cb cb) { usart_set_callback(_usart_device, cb); }
+    inline void setCallback(Handler cb) { usart_set_callback(_usart_device, cb); }
 
     uint32_t available() override;
     uint32_t inline  txspace() override {    return usart_txfifo_freebytes(_usart_device); }

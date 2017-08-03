@@ -111,65 +111,7 @@ used as:
 
 
 
-#ifdef PWM_SUPPORTED // there is no pins 2&3 in RevoMini
-
-/*  initial check for pin2-pin3 bridge. If detected switch to PPMSUM  
-    default to standard PWM
-*/
-    
-
-    is_PPM = false;
-    uint8_t channel3_status = 0;
-    const uint8_t pin2  = 5; //input pin 2
-    const uint8_t pin3  = 12;//input pin 3
-
-    
-    //set pin2 as output and pin 3 as input
-    REVOMINIGPIO::_pinMode(pin2, OUTPUT);
-    REVOMINIGPIO::_pinMode(pin3, INPUT);
-
-    //default pin3 to 0
-    REVOMINIGPIO::_write(pin3, 0);
-    REVOMINIScheduler::_delay(1);
-
-    //write 1 to pin 2 and read pin3
-    REVOMINIGPIO::_write(pin2, 1);
-    REVOMINIScheduler::_delay(1);
-    //if pin3 is 1 increment counter
-    if (REVOMINIGPIO::_read(pin3) == 1)
-	channel3_status++;
-
-    //write 0 to pin 2 and read pin3
-    REVOMINIGPIO::_write(pin2, 0);
-    REVOMINIScheduler::_delay(1);
-    //if pin3 is 0 increment counter
-    if (REVOMINIGPIO::_read(pin3) == 0)
-	channel3_status++;
-
-    //write 1 to pin 2 and read pin3
-    REVOMINIGPIO::_write(pin2, 1);
-    REVOMINIScheduler::_delay(1);
-    //if pin3 is 1 increment counter
-    if (REVOMINIGPIO::_read(pin3) == 1)
-	channel3_status++;
-
-    //if counter is 3 then we are in PPMSUM
-    if (channel3_status == 3)
-        is_PPM = true;
-#else
     is_PPM=true;
-#endif
-
-#ifdef PWM_SUPPORTED
-#define NUM_PWM_CHANNELS 6 // PWM_CHANNELS defined only in .c
-
-    if (!is_PPM) { //PWM
-	// Init Radio In
-	hal.console->println("Init Default PWM");
-        for (byte channel = 0; channel < NUM_PWM_CHANNELS; channel++)
-            pinData[channel].edge = FALLING_EDGE;
-    }
-#endif    
 
     clear_overrides();
 
@@ -212,19 +154,7 @@ bool REVOMINIRCInput::new_input()
 
 uint8_t REVOMINIRCInput::num_channels()
 {
-#ifdef PWM_SUPPORTED
-    if(is_PPM){
-        return _valid_channels;
-    } 
-    // PWM
-    noInterrupts();
-    uint8_t n = _rcin.channel_count;
-    interrupts(); 
-    return n;
-#else
-
     return _valid_channels;
-#endif
 }
 
 
@@ -294,12 +224,6 @@ uint16_t REVOMINIRCInput::read(uint8_t ch)
             _last_read = pulse;
         } else {
 
-#ifdef PWM_SUPPORTED
-            if (!is_PPM) {
-                data = pwmRead(ch, &pulse);
-                break;
-            } 
-#endif    
             if( ch == 2) data = 900;
             else         data = 1000;
         }

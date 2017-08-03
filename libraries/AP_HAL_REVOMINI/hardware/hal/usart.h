@@ -19,7 +19,7 @@
 typedef void (* usart_cb)();
 
 typedef struct usart_state {
-    uint8_t txbusy:6;
+    uint8_t txbusy;
 
     uint8_t rx_buf[USART_RX_BUF_SIZE]; /**< @brief Deprecated.
                                       * Actual RX buffer used by rb.
@@ -27,7 +27,7 @@ typedef struct usart_state {
                                       * a future release. */
     uint8_t tx_buf[USART_TX_BUF_SIZE];
 
-    usart_cb callback;
+    Handler callback;
 } usart_state;
 
 /** USART device type */
@@ -256,7 +256,7 @@ static inline void usart_reset_tx(const usart_dev *dev) {
     dev->state->txbusy = 0;
 }
 
-static inline void usart_set_callback(const usart_dev *dev, usart_cb cb)
+static inline void usart_set_callback(const usart_dev *dev, Handler cb)
 {
     dev->state->callback = cb;
 }

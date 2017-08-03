@@ -154,6 +154,8 @@ void usart_setup(const usart_dev *dev, uint32_t baudRate, uint16_t wordLength,
     assert_param(IS_USART_MODE(mode));
     assert_param(IS_USART_HARDWARE_FLOW_CONTROL(hardwareFlowControl));
 
+    memset(dev->state, 0, sizeof(*dev->state));
+
     dev->state->txbusy = 0;
     dev->state->callback = NULL;
 
@@ -291,7 +293,6 @@ void usart_putudec(const usart_dev *dev, uint32_t val) {
  * Interrupt handlers.
  */
 
-#define USART_SAFE_INSERT
 
 static inline void usart_rx_irq(const usart_dev *dev)    {
 #ifdef ISR_PERF
@@ -310,8 +311,7 @@ static inline void usart_rx_irq(const usart_dev *dev)    {
             USART_ClearFlag(dev->USARTx, USART_FLAG_RXNE);
 
             if(dev->state->callback) {
-//                revo_call_handler(dev->state->callback, (uint32_t)dev); 
-                 (dev->state->callback)();
+                revo_call_handler(dev->state->callback, (uint32_t)dev); 
             }
 
 	}
