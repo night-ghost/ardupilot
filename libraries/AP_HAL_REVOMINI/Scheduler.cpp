@@ -147,6 +147,8 @@ void REVOMINIScheduler::init()
 
     uint32_t period    = (2000000UL / SHED_FREQ) - 1; 
     
+    
+    // TODO
                 // dev    period   freq, kHz
     configTimeBase(TIMER7, period, 2000);       //2MHz 0.5us ticks
     timer_attach_interrupt(TIMER7, TIMER_UPDATE_INTERRUPT, _timer_isr_event, 11); // low priority - only PendSV and USB are lower
@@ -291,7 +293,7 @@ void REVOMINIScheduler::register_io_process(AP_HAL::MemberProc proc)
 
     if(_num_io_proc==0){
         void *task = start_task(_run_io);
-        set_task_ttw(task, 100); // 100uS between calls to same task
+        set_task_ttw(task, 100); // 100uS between calls to this task - no more 10kHz
     }
 
     Revo_handler h = { .mp=proc };

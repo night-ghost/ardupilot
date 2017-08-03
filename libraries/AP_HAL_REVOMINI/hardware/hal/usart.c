@@ -213,7 +213,7 @@ void usart_setup(const usart_dev *dev, uint32_t baudRate, uint16_t wordLength,
     NVIC_InitTypeDef NVIC_InitStructure;
     /* Enable the USART Interrupt */
     NVIC_InitStructure.NVIC_IRQChannel = dev->irq;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);

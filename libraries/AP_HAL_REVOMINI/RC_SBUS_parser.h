@@ -5,7 +5,6 @@
 #include "RC_parser.h"
 #include "RCInput.h"
 
-//#ifdef BOARD_SBUS_UART1
 
 class REVOMINI::SBUS_parser : public REVOMINI::_parser {
 public:
@@ -15,8 +14,8 @@ public:
     void late_init(uint8_t ch);
     inline uint64_t get_last_signal()    const { noInterrupts(); uint64_t t= _last_signal; interrupts(); return t; } 
     inline uint64_t get_last_change()    const { noInterrupts(); uint64_t t=  last_change; interrupts(); return t; }
-    inline uint8_t  get_valid_channels() const { noInterrupts(); uint8_t t=  _channels; interrupts(); return t; }
-    inline uint16_t get_val(uint8_t ch)  const { noInterrupts(); uint16_t t=  _val[ch]; interrupts(); return t; }
+    inline uint8_t  get_valid_channels() const { noInterrupts(); uint8_t  t=  _channels;   interrupts(); return t; }
+    inline uint16_t get_val(uint8_t ch)  const { noInterrupts(); uint16_t t=  _val[ch];    interrupts(); return t; }
     
 private:
 
@@ -39,5 +38,4 @@ private:
     } sbus;
 
 };
-//#endif
 

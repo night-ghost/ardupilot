@@ -91,6 +91,11 @@
  execution time spoils loop time (500Hz = 2000uS for all)
 * added reformatting of DataFlash in case of hard filesystem errors, which fixes FatFs bug when there is no free space 
  after file overflows and then deleted
+* added autodetect for all known types of baro on external I2C bus
+* added autodetect for all known types ofcompass on external I2C bus
+* added check to I2C_Mgr for same device on same bus - to prevent autodetection like MS5611 (already initialized) as BMP_085
+* added time offset HAL parameter
+* added time syncronization between board's time and GPS time - so logs now will show real local date&time
 
 * ...
 * a lot of minor enhancements
@@ -102,3 +107,20 @@
 остается 74.3%, из них 65% ожидание
 собственно на расчет с частотой 400 раз в секунду уходит около 10% всего времени
 
+interrupts priorities:
+0 PWM input
+1 soft_uart
+2 micros() Timer5
+3 usb
+4 uart
+5 gpio pin
+6
+7
+8
+9 dma
+a
+b scheduler - Timer7
+c
+d
+e
+f io_completion

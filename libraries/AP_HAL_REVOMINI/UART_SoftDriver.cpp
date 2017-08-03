@@ -81,8 +81,8 @@ void SerialDriver::begin(uint32_t baud) {
     rxBitCount = 9;
 
     rxSetCapture(); // wait for start bit
-    timer_attach_interrupt(channel->timer, TIMER_RX_INTERRUPT,     rxNextBit, 0 );
-    timer_attach_interrupt(channel->timer, TIMER_UPDATE_INTERRUPT, txNextBit, 0 ); // also enables interrupt
+    timer_attach_interrupt(channel->timer, TIMER_RX_INTERRUPT,     rxNextBit, 1 );
+    timer_attach_interrupt(channel->timer, TIMER_UPDATE_INTERRUPT, txNextBit, 1 ); // also enables interrupt
     // so disable it
     txDisableInterrupts();
     

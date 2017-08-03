@@ -23,6 +23,7 @@ typedef enum gpio_pin_mode {
     GPIO_OUTPUT_OD_PU, 		/**< Output open-drain with pullUp */
     GPIO_AF_OUTPUT_OD_PU, 	/**< Alternate function output open drain with pullup */
     /* GPIO_INPUT_PU treated as a special case, for ODR twiddling */
+    GPIO_PIN_MODE_LAST
 } gpio_pin_mode;
 
 

@@ -33,12 +33,36 @@
  # define HAL_GPIO_LED_OFF          HIGH
 #endif
 
+#define GPIO_INT_PRIORITY 5
+
+/*
+    case OUTPUT:
+        outputMode = ;
+        break;
+    case OUTPUT_OPEN_DRAIN:
+        outputMode = ;
+        break;
+    case INPUT:
+    case INPUT_FLOATING:
+        outputMode = GPIO_INPUT_FLOATING;
+        break;
+    case INPUT_ANALOG:
+        outputMode = ;
+        break;
+    case INPUT_PULLUP:
+        outputMode = ;
+        break;
+    case INPUT_PULLDOWN:
+        outputMode = ;
+*/
+
+
 typedef enum HALPinMode {
-    OUTPUT, /* Basic digital output: when the pin is HIGH, the
+    OUTPUT = GPIO_OUTPUT_PP, /* Basic digital output: when the pin is HIGH, the
                voltage is held at +3.3v (Vcc) and when it is LOW, it
                is pulled down to ground. */
 
-    OUTPUT_OPEN_DRAIN, /**< In open drain mode, the pin indicates
+    OUTPUT_OPEN_DRAIN = GPIO_OUTPUT_OD, /**< In open drain mode, the pin indicates
                           "low" by accepting current flow to ground
                           and "high" by providing increased
                           impedance. An example use would be to
@@ -54,7 +78,7 @@ typedef enum HALPinMode {
                           mode, no current is ever actually sourced
                           from the pin. */
 
-    INPUT, /**< Basic digital input. The pin voltage is sampled; when
+    INPUT = GPIO_INPUT_FLOATING, /**< Basic digital input. The pin voltage is sampled; when
               it is closer to 3.3v (Vcc) the pin status is high, and
               when it is closer to 0v (ground) it is low. If no
               external circuit is pulling the pin voltage to high or
@@ -62,12 +86,14 @@ typedef enum HALPinMode {
               sensitive to noise (e.g., a breath of air across the pin
               might cause the state to flip). */
 
-    INPUT_ANALOG, /**< This is a special mode for when the pin will be
+    INPUT_FLOATING = GPIO_INPUT_FLOATING, /**< Synonym for INPUT. */
+
+    INPUT_ANALOG = GPIO_INPUT_ANALOG, /**< This is a special mode for when the pin will be
                      used for analog (not digital) reads.  Enables ADC
                      conversion to be performed on the voltage at the
                      pin. */
 
-    INPUT_PULLUP, /**< The state of the pin in this mode is reported
+    INPUT_PULLUP = GPIO_INPUT_PU, /**< The state of the pin in this mode is reported
                      the same way as with INPUT, but the pin voltage
                      is gently "pulled up" towards +3.3v. This means
                      the state will be high unless an external device
@@ -75,7 +101,7 @@ typedef enum HALPinMode {
                      in which case the "gentle" pull up will not
                      affect the state of the input. */
 
-    INPUT_PULLDOWN, /**< The state of the pin in this mode is reported
+    INPUT_PULLDOWN = GPIO_INPUT_PD, /**< The state of the pin in this mode is reported
                        the same way as with INPUT, but the pin voltage
                        is gently "pulled down" towards 0v. This means
                        the state will be low unless an external device
@@ -83,10 +109,9 @@ typedef enum HALPinMode {
                        which case the "gentle" pull down will not
                        affect the state of the input. */
 
-    INPUT_FLOATING, /**< Synonym for INPUT. */
 
-    PWM, /**< This is a special mode for when the pin will be used for
-            PWM output (a special case of digital output). */
+    PWM = GPIO_PIN_MODE_LAST, /**< This is a special mode for when the pin will be used for
+                            PWM output (a special case of digital output). */
 
     PWM_OPEN_DRAIN, /**< Like PWM, except that instead of alternating
                        cycles of LOW and HIGH, the voltage on the pin
@@ -96,17 +121,11 @@ typedef enum HALPinMode {
 
 
 typedef enum ExtIntTriggerMode {
-    RISING, /**< To trigger an interrupt when the pin transitions LOW
-               to HIGH */
-    FALLING, /**< To trigger an interrupt when the pin transitions
-                HIGH to LOW */
-    CHANGE /**< To trigger an interrupt when the pin transitions from
-              LOW to HIGH or HIGH to LOW (i.e., when the pin
-              changes). */
+    RISING  = (uint8_t)EXTI_RISING, /**< To trigger an interrupt when the pin transitions LOW to HIGH */
+    FALLING = (uint8_t)EXTI_FALLING, /**< To trigger an interrupt when the pin transitions   HIGH to LOW */
+    CHANGE  = (uint8_t)EXTI_RISING_FALLING/**< To trigger an interrupt when the pin transitions from LOW to HIGH or HIGH to LOW (i.e., when the pin changes). */
 } ExtIntTriggerMode;
 
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
 
 class REVOMINI::REVOMINIDigitalSource : public AP_HAL::DigitalSource {
 public:
@@ -124,7 +143,6 @@ private:
 };
 
 
-#pragma GCC pop_options
 
 class REVOMINI::REVOMINIGPIO : public AP_HAL::GPIO {
 public:
@@ -140,8 +158,14 @@ public:
 
     /* Interrupt interface: */
     static bool    _attach_interrupt(uint8_t pin, uint64_t p, uint8_t mode, uint8_t priority);
-    inline bool    attach_interrupt(uint8_t pin, AP_HAL::MemberProc p, uint8_t mode) { Revo_handler h = { .mp = p  };  return _attach_interrupt(pin, h.h, mode, 5);   }
-    inline bool    attach_interrupt(uint8_t pin, AP_HAL::Proc p, uint8_t mode) {       Revo_handler h = { .hp = p  };  return _attach_interrupt(pin, h.h, mode, 5);   }
+    inline bool    attach_interrupt(uint8_t pin, AP_HAL::MemberProc p, uint8_t mode) { 
+        Revo_handler h = { .mp = p  };  
+        return _attach_interrupt(pin, h.h, mode, GPIO_INT_PRIORITY);   
+    }
+    inline bool    attach_interrupt(uint8_t pin, AP_HAL::Proc p, uint8_t mode) {       
+        Revo_handler h = { .hp = p  };  
+        return _attach_interrupt(pin, h.h, mode, GPIO_INT_PRIORITY);   
+    }
     
     void           detach_interrupt(uint8_t pin);
     static inline void    enable_interrupt(uint8_t pin, bool e) { exti_enable_interrupt((afio_exti_num)(PIN_MAP[pin].gpio_bit), e); }
@@ -164,15 +188,7 @@ public:
 
 
 static inline exti_trigger_mode exti_out_mode(ExtIntTriggerMode mode) {
-    switch (mode) {
-    case FALLING:
-        return EXTI_FALLING;
-    case CHANGE:
-        return EXTI_RISING_FALLING;
-    case RISING:
-    default:
-        return EXTI_RISING;
-    }
+    return (exti_trigger_mode)mode;
 }
 
 

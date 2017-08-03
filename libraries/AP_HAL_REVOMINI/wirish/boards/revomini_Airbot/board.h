@@ -134,7 +134,7 @@ void boardInit(void);
 #define BOARD_DATAFLASH_FATFS
 #define BOARD_HAS_SDIO
 #define USB_MASSSTORAGE
-#define HAL_BOARD_LOG_DIRECTORY "0:/"
+#define HAL_BOARD_LOG_DIRECTORY "0:"
 #define HAL_BOARD_TERRAIN_DIRECTORY "0:/TERRAIN"
 //#define HAL_PARAM_DEFAULTS_PATH "0:/defaults.parm"
 #else
@@ -274,7 +274,8 @@ void boardInit(void);
     AP_GROUPINFO("PWM_TYPE",     7, AP_Param_Helper, _pwm_type, 0), \
     AP_GROUPINFO("CONNECT_ESC",  6, AP_Param_Helper, _connect_esc, 0), \
     AP_GROUPINFO("DBG_WAYBACK",  8, AP_Param_Helper, _dbg_wayback, 0), \
-    AP_GROUPINFO("RC_INPUT",     9, AP_Param_Helper, _rc_input, 0)
+    AP_GROUPINFO("TIME_OFFSET",  10, AP_Param_Helper, _time_offset, 0), \
+    AP_GROUPINFO("RC_INPUT",     11, AP_Param_Helper, _rc_input, 0)
 
 #endif
 
@@ -290,6 +291,7 @@ void boardInit(void);
     AP_Int8 _pwm_type; \
     AP_Int8 _dbg_wayback; \
     AP_Int8 _usb_storage; \
+    AP_Int8 _time_offset; \
     AP_Int8 _rc_input;
 
 #define WAYBACK_DEBUG

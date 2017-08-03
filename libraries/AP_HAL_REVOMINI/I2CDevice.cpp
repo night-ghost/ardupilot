@@ -139,17 +139,6 @@ void REVOI2CDevice::init(){
 #endif
 
     default:
-/*
-I2C bus 160 addr 2C errors 124862  - AnalogSource
-I2C bus 0 addr 55 errors 0           RevoI2cDevice
-I2C bus 0 addr 77 errors 0           RevoI2cDevice
-I2C bus 135 addr 0 errors 536879760  AP_AHRSView
-I2C bus 135 addr 0 errors 536879760  AP_AHRSView
-I2C bus 0 addr 1E errors 0           RevoI2cDevice
-I2C bus 84 addr A0 errors 257        SPIDevice
-
-
-*/
             volatile int xx=_bus; // for debug
             return;
     }

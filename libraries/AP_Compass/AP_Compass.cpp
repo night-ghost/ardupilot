@@ -765,15 +765,35 @@ void Compass::_detect_backends(void)
                 AP_Compass_AK8963::name, false);
     ADD_BACKEND(DRIVER_LSM9DS1, AP_Compass_LSM9DS1::probe(*this, hal.spi->get_device("lsm9ds1_m")),
                 AP_Compass_LSM9DS1::name, false);
-#else
-    #error Unrecognised HAL_COMPASS_TYPE setting
 #endif
 
 #ifdef BOARD_I2C_BUS_EXT
     //external i2c bus
     ADD_BACKEND(DRIVER_QMC5883, AP_Compass_QMC5883L::probe(*this, hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_COMPASS_QMC5883L_I2C_ADDR),
-            								true,ROTATION_ROLL_180),
-    			AP_Compass_QMC5883L::name, true);
+    								true,ROTATION_NONE),
+    		AP_Compass_QMC5883L::name, true);
+
+    ADD_BACKEND(DRIVER_HMC5883, AP_Compass_HMC5843::probe(*this, hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_COMPASS_HMC5843_I2C_ADDR)),
+                AP_Compass_HMC5843::name, true);
+
+
+    // lis3mdl
+    ADD_BACKEND(DRIVER_LIS3MDL, AP_Compass_LIS3MDL::probe(*this, hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_COMPASS_LIS3MDL_I2C_ADDR),
+                                                          true, ROTATION_NONE),
+                AP_Compass_LIS3MDL::name, true);
+        
+    // AK09916
+    ADD_BACKEND(DRIVER_AK09916, AP_Compass_AK09916::probe(*this, hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_COMPASS_AK09916_I2C_ADDR),
+                                                          true, ROTATION_NONE),
+                AP_Compass_AK09916::name, true);
+
+    ADD_BACKEND(DRIVER_IST8310, AP_Compass_IST8310::probe(*this, hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_COMPASS_IST8310_I2C_ADDR),
+                                                          ROTATION_NONE), 
+                AP_Compass_IST8310::name, true);
+
+    ADD_BACKEND(DRIVER_BMM150, AP_Compass_BMM150::probe(*this, hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_COMPASS_BMM150_I2C_ADDR)),
+                AP_Compass_BMM150::name, true);
+
 #endif
 
 #if HAL_WITH_UAVCAN

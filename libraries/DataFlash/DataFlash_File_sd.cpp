@@ -55,13 +55,14 @@ void DataFlash_File::Init()
 {
     DataFlash_Backend::Init();
 
+    if(HAL_REVOMINI::state.sd_busy) return; // SD mounted via USB
+
     semaphore = hal.util->new_semaphore();
     if (semaphore == nullptr) {
         AP_HAL::panic("Failed to create DataFlash_File semaphore");
         return;
     }
 
-    if(HAL_REVOMINI::state.sd_busy) return; // SD mounted via USB
 
     // create the log directory if need be
     const char* custom_dir = hal.util->get_custom_log_directory();
@@ -97,7 +98,7 @@ void DataFlash_File::Init()
     // If we can't allocate the full size, try to reduce it until we can allocate it
     while (!_writebuf.set_size(bufsize) && bufsize >= _writebuf_chunk) {
         printf("DataFlash_File: Couldn't set buffer size to=%u\n", (unsigned)bufsize);
-        bufsize >>= 1;
+        bufsize /= 2;
     }
 
     if (!_writebuf.get_size()) {

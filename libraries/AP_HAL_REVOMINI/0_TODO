@@ -1,12 +1,3 @@
-files that requires to be compiled with -O0
-
-
-or via 
-
-void __attribute__((optimize("O0"))) foo(unsigned char data) {
-    // unmodifiable compiler code
-}
-
 
 still not tested/works:
 

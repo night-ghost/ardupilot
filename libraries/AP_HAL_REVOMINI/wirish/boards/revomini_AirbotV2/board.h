@@ -237,7 +237,8 @@ void boardInit(void);
     AP_GROUPINFO("PWM_TYPE",     6, AP_Param_Helper, _pwm_type, 0), \
     AP_GROUPINFO("CONNECT_ESC",  7, AP_Param_Helper, _connect_esc, 0), \
     AP_GROUPINFO("USB_STORAGE",  8, AP_Param_Helper, _usb_storage, 0), \
-    AP_GROUPINFO("RC_INPUT",     9, AP_Param_Helper, _rc_input, 0)
+    AP_GROUPINFO("TIME_OFFSET",  9, AP_Param_Helper, _time_offset, 0), \
+    AP_GROUPINFO("RC_INPUT",     10, AP_Param_Helper, _rc_input, 0)
     
 
 // parameters
@@ -250,6 +251,7 @@ void boardInit(void);
     AP_Int8 _connect_esc; \
     AP_Int8 _pwm_type; \
     AP_Int8 _rc_input; \
+    AP_Int8 _time_offset; \
     AP_Int8 _usb_storage; 
     
 #endif

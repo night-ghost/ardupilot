@@ -39,6 +39,8 @@
 
 using namespace REVOMINI;
 
+extern const AP_HAL::HAL& hal;
+
 static AP_HAL::OwnPtr<REVOMINI::SPIDevice> _spi;
 AP_HAL::Semaphore                *_spi_sem;
 
@@ -80,18 +82,14 @@ uint8_t spi_detect(){
 
 
 
-uint32_t get_fattime ()
+uint32_t get_fattime()
 {
- 
-    // User gets date and time from GPS or real-time clock here
-//    AP_GPS  should inform HAL about date&time
-
-    uint32_t now = millis(); // + gps_time_shift
+    uint64_t now = hal.util->get_system_clock_ms(); //millis + gps_time_shift
 
     uint16_t year      = 1970;
     uint8_t month;
 
-    uint32_t seconds = now / 1000;
+    uint64_t seconds = now / 1000;
     uint32_t sys_days    = seconds / (24*60*60uL);
     uint16_t day_seconds = seconds % (24*60*60uL);
 
@@ -131,13 +129,13 @@ uint32_t get_fattime ()
     uint16_t sec = day_seconds % 60;
     
  
-    /* Pack date and time into a DWORD variable */
-    return    ((DWORD)(year - 1980) << 25)
-            | ((DWORD)month << 21)
-            | ((DWORD)days << 16)
-            | ((DWORD)hour << 11)
-            | ((DWORD)min << 5)
-            | ((DWORD)sec >> 1);
+    /* Pack date and time into a uint32_t variable */
+    return    ((uint32_t)(year - 1980) << 25)
+            | ((uint32_t)month << 21)
+            | ((uint32_t)days << 16)
+            | ((uint32_t)hour << 11)
+            | ((uint32_t)min << 5)
+            | ((uint32_t)sec >> 1);
 }
 
 #endif
@@ -229,7 +227,7 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
     _spi = std::move(spi);
 
     REVOMINIGPIO::_pinMode(DF_RESET,OUTPUT);
-    // Reset the chip
+    // Reset the chip. We don't need a semaphore because no SPI activity
     REVOMINIGPIO::_write(DF_RESET,0);
     REVOMINIScheduler::_delay(1);
     REVOMINIGPIO::_write(DF_RESET,1);
@@ -245,12 +243,13 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
         return false;
     }
 
-    if(!_spi_sem->take(10)) return false;
+    if(!_spi_sem->take(10)) return false; // just for check
 
     _spi_sem->give();
 
     Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&Sd2Card::_timer, void) };
-    systick_attach_callback(h.h);
+    systick_attach_callback(h.h); // not at common interrupt level as tasks because it can be called at USB interrupt level. 
+    //                                  Systick has own interrupt level above all IRQ
 
     return disk_initialize(0) == RES_OK;    
 }

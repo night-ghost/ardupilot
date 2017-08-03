@@ -102,7 +102,7 @@
     #define STM32_TICKS_PER_US          168
     #define STM32_NR_GPIO_PORTS          5
     #define STM32_DELAY_US_MULT         (STM32_TICKS_PER_US/3)
-    #define STM32_SRAM_END              ((void*)0x20010000)
+    #define STM32_SRAM_END              ((void*)0x20020000)
 
     #define NR_GPIO_PORTS               STM32_NR_GPIO_PORTS
     #define DELAY_US_MULT               STM32_DELAY_US_MULT
@@ -111,7 +111,8 @@
     #define STM32_TICKS_PER_US          168
     #define STM32_NR_GPIO_PORTS          5
     #define STM32_DELAY_US_MULT         (STM32_TICKS_PER_US/3)
-    #define STM32_SRAM_END              ((void*)0x20010000)
+    #define STM32_SRAM_END              ((void*)0x20020000)
+    #define STM32_CCM_END               ((void*)0x10010000)
 
     #define NR_GPIO_PORTS               STM32_NR_GPIO_PORTS
     #define DELAY_US_MULT               STM32_DELAY_US_MULT

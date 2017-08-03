@@ -826,8 +826,7 @@ static inline uint8_t spi_read(){
 }
 
 /* Receive multiple byte */
-static inline 
-void read_spi_multi (
+static inline void read_spi_multi (
 	BYTE *buff,		/* Pointer to data buffer */
 	UINT btr		/* Number of bytes to receive (even number) */
 ){
@@ -1024,16 +1023,6 @@ static bool erase_page(uint16_t pageNum)
     cs_release();
     return 1;
 }
-
-#if 0
-void erase_chip(){
-    Flash_Jedec_WriteEnable();
- 
-    if (!cs_assert()) return;
-    spi_write(JEDEC_BULK_ERASE);
-    cs_release();
-}
-#endif
 
 BYTE sd_getSectorCount(DWORD *ptr){
 

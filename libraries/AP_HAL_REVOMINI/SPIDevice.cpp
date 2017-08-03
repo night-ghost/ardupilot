@@ -20,14 +20,11 @@
 #include <boards.h>
 
 
-#pragma GCC optimize ("O0")
-
-
 #include "SPIDevice.h"
 #include "GPIO.h"
 
-//#pragma GCC pop_options
 
+#define ADDRESS_IN_RAM(addr) ((uint32_t)(addr)>=0x20000000)
 
 
 using namespace REVOMINI;
@@ -90,6 +87,8 @@ static volatile GPIO_TypeDef *miso_port;
 static          uint16_t      miso_pin;
 
 static uint16_t dly_time;
+
+
 static void dly_spi() {
     delay_ns100(dly_time);
 };
@@ -120,10 +119,15 @@ uint8_t SPIDevice::_transfer_s(uint8_t bt) {
     return bt;
 }
 
+uint8_t SPIDevice::transfer(uint8_t out){
 
-/////////////// hardware
-
-
+    if(_desc.soft) {
+        return _transfer_s(out);
+    } else {
+        return _transfer(out);
+    }
+    
+}
 
 
 uint8_t SPIDevice::_transfer(uint8_t data) {
@@ -146,16 +150,8 @@ uint8_t SPIDevice::_transfer(uint8_t data) {
 }
 
 
-uint8_t SPIDevice::transfer(uint8_t out){
 
-    if(_desc.soft) {
-        return _transfer_s(out);
-    } else {
-        return _transfer(out);
-    }
-    
-}
-    
+#pragma GCC optimize ("O0")
 
 bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, uint32_t recv_len){
     if(bus_busy) {
@@ -216,7 +212,7 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
 
         if(_desc.dma){
             if(send_len){
-                if((send_len > MIN_DMA_BYTES || _desc.dma>1)  && (uint32_t)send>=0x20000000){ // long enough and not in CCM
+                if((send_len > MIN_DMA_BYTES || _desc.dma>1)  && ADDRESS_IN_RAM(send)){ // long enough and not in CCM
                     dma_transfer(send, NULL, send_len);
                     was_dma=true;
                 } else {
@@ -224,7 +220,7 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
                 }
             }
             if(recv_len) {
-                if((recv_len>MIN_DMA_BYTES || _desc.dma>1) && (uint32_t)recv>=0x20000000) { // long enough and not in CCM
+                if((recv_len>MIN_DMA_BYTES || _desc.dma>1) && ADDRESS_IN_RAM(recv)) { // long enough and not in CCM
                     dma_transfer(NULL, recv, recv_len);
                     was_dma=true;
                 } else {
@@ -269,6 +265,15 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
 }
 
 
+/////////////// hardware
+
+
+
+
+    
+
+
+
 bool SPIDevice::transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t len) {
 
     _cs_assert();
@@ -282,7 +287,7 @@ bool SPIDevice::transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t
     } else {
         spi_set_speed(_desc.dev, determine_baud_rate(_speed)); //- on cs_assert()
         
-        if(_desc.dma && (send==NULL || (uint32_t)send>=0x20000000) && (recv==NULL || (uint32_t)recv>=0x20000000) ) {
+        if(_desc.dma && (send==NULL || ADDRESS_IN_RAM(send)) && (recv==NULL || ADDRESS_IN_RAM(recv)) ) {
             dma_transfer(send, recv, len);
         } else {
             if (send != NULL && recv !=NULL && len) {

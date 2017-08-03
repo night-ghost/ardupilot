@@ -76,17 +76,14 @@ void boardInit(void);
 #define BOARD_SOFT_SCL          105
 #define BOARD_SOFT_SDA          26
 
-
-#define BOARD_BARO_DEFAULT   HAL_BARO_BMP085_I2C
-#define HAL_BARO_BMP085_BUS  BOARD_I2C_BUS_EXT
+//#define BOARD_BARO_DEFAULT   HAL_BARO_BMP085_I2C
+//#define HAL_BARO_BMP085_BUS  BOARD_I2C_BUS_EXT
 
 #define BOARD_COMPASS_DEFAULT HAL_COMPASS_HMC5843
-#define BOARD_COMPASS_HMC5843_I2C_ADDR 0x1E
-#define BOARD_COMPASS_HMC5843_ROTATION ROTATION_NONE
 
 #define HAL_COMPASS_HMC5843_I2C_BUS     BOARD_I2C_BUS_EXT
-#define HAL_COMPASS_HMC5843_I2C_ADDR    BOARD_COMPASS_HMC5843_I2C_ADDR
-#define HAL_COMPASS_HMC5843_ROTATION    BOARD_COMPASS_HMC5843_ROTATION
+#define HAL_COMPASS_HMC5843_I2C_ADDR    (0x1E)
+#define HAL_COMPASS_HMC5843_ROTATION    ROTATION_NONE
 
 
 #define BOARD_INS_DEFAULT HAL_INS_MPU60XX_SPI
@@ -104,7 +101,7 @@ void boardInit(void);
 #define BOARD_DATAFLASH_FATFS
 #define BOARD_HAS_SDIO
 #define USB_MASSSTORAGE
-#define HAL_BOARD_LOG_DIRECTORY "0:/"
+#define HAL_BOARD_LOG_DIRECTORY "0:"
 #define HAL_BOARD_TERRAIN_DIRECTORY "0:/TERRAIN"
 //#define HAL_PARAM_DEFAULTS_PATH "0:/APM/defaults.parm"
 #else
@@ -113,7 +110,7 @@ void boardInit(void);
 
 #define BOARD_OSD_NAME "osd"
 #define BOARD_OSD_CS_PIN   103
-#define BOARD_OSD_VSYNC_PIN   9 // PC3, Frequency input
+#define BOARD_OSD_VSYNC_PIN   9 // PC3, Frequency input (pin 11)
 
 #define BOARD_OWN_NAME "MiniF4_OSD"
 
@@ -230,7 +227,8 @@ void boardInit(void);
     AP_GROUPINFO("PWM_TYPE",     6, AP_Param_Helper, _pwm_type, 0), \
     AP_GROUPINFO("CONNECT_ESC",  7, AP_Param_Helper, _connect_esc, 0), \
     AP_GROUPINFO("USB_STORAGE",  8, AP_Param_Helper, _usb_storage, 0), \
-    AP_GROUPINFO("RC_INPUT",     9, AP_Param_Helper, _rc_input, 0)
+    AP_GROUPINFO("TIME_OFFSET",  9, AP_Param_Helper, _time_offset, 0), \
+    AP_GROUPINFO("RC_INPUT",     10, AP_Param_Helper, _rc_input, 0)
     
 
 // parameters
@@ -242,6 +240,7 @@ void boardInit(void);
     AP_Int8 _connect_esc; \
     AP_Int8 _pwm_type; \
     AP_Int8 _rc_input; \
+    AP_Int8 _time_offset; \
     AP_Int8 _usb_storage; 
     
 #endif

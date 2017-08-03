@@ -57,8 +57,8 @@ void usb_init(void){
     usb_open();
 
     usb_default_attr(&usb_attr);
-    usb_attr.preempt_prio = 1;
-    usb_attr.sub_prio = 3;
+    usb_attr.preempt_prio = 3;
+    usb_attr.sub_prio = 0;
     usb_attr.use_present_pin = 1;
     usb_attr.present_port = PIN_MAP[BOARD_USB_SENSE].gpio_device;
     usb_attr.present_pin =  PIN_MAP[BOARD_USB_SENSE].gpio_bit;

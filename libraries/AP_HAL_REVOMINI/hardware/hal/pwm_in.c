@@ -132,6 +132,7 @@ struct PPM_State  {
                 }
                 input->last_val = val;
 
+                if(time>0x7fff) time=0x7fff; // limit to 15 bit
 
                 Pulse p={
                     .length  = time, 
@@ -309,7 +310,7 @@ static inline void pwmInitializeInput(uint8_t ppmsum){
 
 
             NVIC_EnableIRQ(channel->tim_irq);
-            NVIC_SetPriority(channel->tim_irq, 0); // highest - bit time is ~10uS
+            NVIC_SetPriority(channel->tim_irq, 0); // highest - bit time is ~10uS only - ~1680 commands
 	
 
 	    if(last_tim != channel->tim) {

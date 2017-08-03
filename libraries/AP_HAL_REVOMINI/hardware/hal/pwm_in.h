@@ -46,11 +46,11 @@ typedef void (*rcc_clockcmd)(uint32_t, FunctionalState);
 #endif
 
 typedef struct PULSE {
-    uint16_t length;
-    bool state;
+    unsigned int length:15;
+    bool state:1;
 } Pulse;
 
-#define PULSES_QUEUE_SIZE (25*12*2*2) // 2 full frames by 25 bytes (12 bits, 2 measures per bit) each
+#define PULSES_QUEUE_SIZE (25*12*2) // 1 full frame by 25 bytes (12 bits, 2 measures per bit) each
 
 #include "ring_buffer_pulse.h"
 
@@ -77,11 +77,11 @@ static inline uint16_t pwmRead(uint8_t channel, uint32_t *time){
 #endif
 
 struct PPM_State  {
-    uint8_t state;          // 1 or 0
-    uint16_t last_val;      // length 
+    Handler handler;
     uint32_t last_pulse;    // time of edge
     volatile pulse_buffer pulses;   // ring buffer
-    Handler handler;
+    uint16_t last_val;      // length 
+    uint8_t state;          // 1 or 0
     Pulse pulse_mem[PULSES_QUEUE_SIZE]; // memory
 };
 

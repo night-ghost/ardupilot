@@ -24,30 +24,20 @@ void REVOMINIGPIO::init()
 }
 
 
-void REVOMINIGPIO::_pinMode(uint8_t pin, uint8_t output)
+void REVOMINIGPIO::_pinMode(uint8_t pin, uint8_t mode)
 {
     gpio_pin_mode outputMode;
     bool pwm = false;
 
-    switch(output) {
+    switch(mode) {
     case OUTPUT:
-        outputMode = GPIO_OUTPUT_PP;
-        break;
     case OUTPUT_OPEN_DRAIN:
-        outputMode = GPIO_OUTPUT_OD;
-        break;
     case INPUT:
-    case INPUT_FLOATING:
-        outputMode = GPIO_INPUT_FLOATING;
-        break;
+//    case INPUT_FLOATING:
     case INPUT_ANALOG:
-        outputMode = GPIO_INPUT_ANALOG;
-        break;
     case INPUT_PULLUP:
-        outputMode = GPIO_INPUT_PU;
-        break;
     case INPUT_PULLDOWN:
-        outputMode = GPIO_INPUT_PD;
+        outputMode = (gpio_pin_mode)mode;
         break;
 
     case PWM:
@@ -148,30 +138,21 @@ AP_HAL::DigitalSource* REVOMINIGPIO::channel(uint16_t pin) {
 }
 
 
-void REVOMINIDigitalSource::mode(uint8_t output)
+void REVOMINIDigitalSource::mode(uint8_t mode)
 {
     gpio_pin_mode outputMode;
 
-    switch(output) {
+    switch(mode) {
     case OUTPUT:
-        outputMode = GPIO_OUTPUT_PP;
-        break;
     case OUTPUT_OPEN_DRAIN:
-        outputMode = GPIO_OUTPUT_OD;
-        break;
     case INPUT:
-    case INPUT_FLOATING:
-        outputMode = GPIO_INPUT_FLOATING;
-        break;
+//    case INPUT_FLOATING:
     case INPUT_ANALOG:
-        outputMode = GPIO_INPUT_ANALOG;
-        break;
     case INPUT_PULLUP:
-        outputMode = GPIO_INPUT_PU;
-        break;
     case INPUT_PULLDOWN:
-        outputMode = GPIO_INPUT_PD;
+        outputMode = mode;
         break;
+
     // no PWM via this interface!
     default:
         assert_param(0);

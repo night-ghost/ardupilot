@@ -24,6 +24,10 @@
 #include "AP_Compass.h"
 #include "AP_Compass_Backend.h"
 
+#ifndef HAL_COMPASS_IST8310_I2C_ADDR
+#define HAL_COMPASS_IST8310_I2C_ADDR 0x0E
+#endif
+
 class AP_Compass_IST8310 : public AP_Compass_Backend
 {
 public:

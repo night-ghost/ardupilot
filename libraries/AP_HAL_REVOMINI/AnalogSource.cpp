@@ -55,9 +55,9 @@ REVOMINIAnalogSource::REVOMINIAnalogSource(uint8_t pin) :
 
 
 float REVOMINIAnalogSource::read_latest() {
-    noInterrupts();
-    uint16_t latest = _latest;
-    interrupts();
+//    noInterrupts(); operation is atomary
+    uint16_t latest = _latest; 
+//    interrupts();
     return latest;
 }
 

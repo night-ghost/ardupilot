@@ -7,6 +7,10 @@
 
 #include "AP_Baro_Backend.h"
 
+#ifndef HAL_BARO_BMP085_I2C_ADDR
+ #define HAL_BARO_BMP085_I2C_ADDR        (0x77)
+#endif
+
 class AP_Baro_BMP085 : public AP_Baro_Backend
 {
 public:

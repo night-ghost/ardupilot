@@ -136,6 +136,19 @@ public:
 
     /* AP_HAL::I2CDeviceManager implementation */
     AP_HAL::OwnPtr<AP_HAL::I2CDevice> get_device(uint8_t bus, uint8_t address) {
+
+        // let's first check for existence of such device on same bus
+        uint8_t n = REVOI2CDevice::get_dev_count();
+
+        for(uint8_t i=0; i<n; i++){
+            REVOI2CDevice * d = REVOI2CDevice::get_device(i);
+            if(d){
+                if(d->get_bus() == bus && d->get_addr() == address) { // device already exists
+                    return nullptr;
+                }
+            }
+        }
+    
         return AP_HAL::OwnPtr<AP_HAL::I2CDevice>(
             new REVOI2CDevice(bus, address)
         );
