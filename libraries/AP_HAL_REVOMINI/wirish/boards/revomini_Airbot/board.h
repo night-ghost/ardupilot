@@ -261,7 +261,8 @@ void boardInit(void);
     AP_GROUPINFO("CONNECT_ESC",  6, AP_Param_Helper, _connect_esc, 0), \
     AP_GROUPINFO("DBG_WAYBACK",  8, AP_Param_Helper, _dbg_wayback, 0), \
     AP_GROUPINFO("USB_STORAGE",  9, AP_Param_Helper, _usb_storage, 0), \
-    AP_GROUPINFO("RC_INPUT",     10, AP_Param_Helper, _rc_input, 0)
+    AP_GROUPINFO("TIME_OFFSET",  10, AP_Param_Helper, _time_offset, 0), \
+    AP_GROUPINFO("RC_INPUT",     11, AP_Param_Helper, _rc_input, 0)
 
 #else
 
@@ -274,8 +275,8 @@ void boardInit(void);
     AP_GROUPINFO("PWM_TYPE",     7, AP_Param_Helper, _pwm_type, 0), \
     AP_GROUPINFO("CONNECT_ESC",  6, AP_Param_Helper, _connect_esc, 0), \
     AP_GROUPINFO("DBG_WAYBACK",  8, AP_Param_Helper, _dbg_wayback, 0), \
-    AP_GROUPINFO("TIME_OFFSET",  10, AP_Param_Helper, _time_offset, 0), \
-    AP_GROUPINFO("RC_INPUT",     11, AP_Param_Helper, _rc_input, 0)
+    AP_GROUPINFO("TIME_OFFSET",  9, AP_Param_Helper, _time_offset, 0), \
+    AP_GROUPINFO("RC_INPUT",     10, AP_Param_Helper, _rc_input, 0)
 
 #endif
 
@@ -297,8 +298,8 @@ void boardInit(void);
 #define WAYBACK_DEBUG
 
 
-#define HAL_CONSOLE USB_Driver // console on USB
-//#define HAL_CONSOLE uart1Driver // console on radio
+//#define HAL_CONSOLE USB_Driver // console on USB
+#define HAL_CONSOLE uart1Driver // console on radio
 
 
 #endif
