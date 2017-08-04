@@ -1030,43 +1030,67 @@ BYTE sd_getSectorCount(DWORD *ptr){
     uint8_t memtype =  (df_device>>8) & 0xFF;
     uint32_t size=0;
     
+    printf("SPI Flash codes: mfg=%x type=%x cap=%x\n ",df_manufacturer, memtype, capacity);
 
+    const char * mfg=NULL;
     
     switch(df_manufacturer){
     case 0xEF: //  Winbond Serial Flash 
         if (memtype == 0x40) {
-            size = (1 << ((capacity & 0x0f) + 4)) * 16 ;
+            mfg="Winbond";
+            size = (1 << ((capacity & 0x0f) + 8)) ;
 /*
  const uint8_t _capID[11]      = {0x10,  0x11,   0x12,   0x13,   0x14, 0x15, 0x16, 0x17, 0x18,  0x19,  0x43};
   const uint32_t _memSize[11]  = {64L*K, 128L*K, 256L*K, 512L*K, 1L*M, 2L*M, 4L*M, 8L*M, 16L*M, 32L*M, 8L*M};
 */
             erase_size=4096;
             erase_cmd=JEDEC_SECTOR_ERASE;
-            printf("Winbond SPI Flash found sectors=%ld\n", size);
         }
         break;
     case 0xbf: // SST
         if (memtype == 0x25) {
-            size = (1 << ((capacity & 0x07) + 8)) * 16;
-            printf("Microchip SST25VFxxxB SPI Flash found sectors=%ld\n",size);
+            mfg="Microchip";
+            size = (1 << ((capacity & 0x07) + 12))*8 ;
         }
         break;
+        
+    case 0x20: // micron
+        if (memtype == 0xba){// JEDEC_ID_MICRON_N25Q128        0x20ba18
+            mfg="Micron";
+            size = (1 << ((capacity & 0x0f) + 8))*8 ;
+            erase_size=4096;
+            erase_cmd=JEDEC_SECTOR_ERASE;
+        } else if(memtype==0x20) {  // JEDEC_ID_MICRON_M25P16         0x202015
+            mfg="Micron";
+            size = (1 << ((capacity & 0x0f) + 8))*8 ;
+        }
+        break;
+        
+    case 0xC2:     //JEDEC_ID_MACRONIX_MX25L6406E   0xC22017
+        if (memtype == 0x20) { 
+            mfg="MACRONIX";
+            size = (1 << ((capacity & 0x0f) + 8))*8 ;
+            erase_size=4096;
+            erase_cmd=JEDEC_SECTOR_ERASE;
+        }
+        break;
+    
     case 0x9D: // ISSI
         if (memtype == 0x40 || memtype == 0x30) {
-            size      = (1 << ((capacity & 0x0f) + 4)) * 16;
-            printf("ISSI SPI Flash found sectors=%ld\n",size);
+            mfg = "ISSI";
+            size      = (1 << ((capacity & 0x0f) + 8))*8;
         }
         break;
 
     default:
-        printf("unknown Flash! mfg=%x model=%x size=%x\n",df_manufacturer, memtype, capacity);
-        
         break;
     }
 
-    if(size) {
-        size = BOARD_DATAFLASH_PAGES;
-    } else
+    if(mfg && size) printf("%s SPI Flash found sectors=%ld\n", mfg, size);
+    else  {
+        printf("unknown Flash!\n");
+        size = BOARD_DATAFLASH_PAGES; // as defined 
+    } 
 
     if(erase_size > MAX_ERASE_SIZE)   size -= (erase_size/DF_PAGE_SIZE); // reserve for RMW ops
         
