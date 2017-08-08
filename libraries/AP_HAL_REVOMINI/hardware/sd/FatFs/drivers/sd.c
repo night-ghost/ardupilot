@@ -1038,7 +1038,7 @@ BYTE sd_getSectorCount(DWORD *ptr){
     case 0xEF: //  Winbond Serial Flash 
         if (memtype == 0x40) {
             mfg="Winbond";
-            size = (1 << ((capacity & 0x0f) + 8)) ;
+            size = (1 << ((capacity & 0x0f) + 8)) *8;
 /*
  const uint8_t _capID[11]      = {0x10,  0x11,   0x12,   0x13,   0x14, 0x15, 0x16, 0x17, 0x18,  0x19,  0x43};
   const uint32_t _memSize[11]  = {64L*K, 128L*K, 256L*K, 512L*K, 1L*M, 2L*M, 4L*M, 8L*M, 16L*M, 32L*M, 8L*M};
