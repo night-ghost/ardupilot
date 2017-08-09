@@ -127,6 +127,8 @@ typedef enum ExtIntTriggerMode {
 } ExtIntTriggerMode;
 
 
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
 class REVOMINI::REVOMINIDigitalSource : public AP_HAL::DigitalSource {
 public:
     REVOMINIDigitalSource(const gpio_dev *device, uint8_t bit): _device(device), _bit(bit){ }
@@ -142,6 +144,7 @@ private:
     uint8_t _bit;
 };
 
+#pragma GCC pop_options
 
 
 class REVOMINI::REVOMINIGPIO : public AP_HAL::GPIO {

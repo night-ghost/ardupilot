@@ -6,6 +6,7 @@
 #include "RCInput.h"
 #include <pwm_in.h>
 #include <AP_HAL/utility/dsm.h>
+#include <AP_HAL/utility/sumd.h>
 #include "sbus.h"
 #include "GPIO.h"
 #include "ring_buffer_pulse.h"
@@ -63,16 +64,21 @@ void PPM_parser::rxIntRC(uint16_t value0, uint16_t value1, bool state)
 {
 
     if(state && _rc_mode!=BOARD_RC_SBUS) { // falling and not SBUS detected
-        if(_rc_mode==BOARD_RC_DSM || !_process_ppmsum_pulse( (value0 + value1) >>1 ) ) { // process PPM only if no DSM detected
+        if(_rc_mode==BOARD_RC_DSM || _rc_mode==BOARD_RC_SUMD || _rc_mode == BOARD_RC_SBUS_NI || !_process_ppmsum_pulse( (value0 + value1) >>1 ) ) { // process PPM only if no DSM detected
 
-            // not PPM - try treat as DSM
-            _process_dsm_pulse(value0>>1, value1>>1);
+            if(_rc_mode != BOARD_RC_SBUS_NI){
+                // not PPM - try treat as DSM
+                _process_dsm_pulse(value0>>1, value1>>1);
+            }
             
-            // here we can also test for non-inverted SBUS but then need 2nd memory structures
+            if(!(_rc_mode==BOARD_RC_DSM || _rc_mode==BOARD_RC_SUMD)){
+                // test for non-inverted SBUS in 2nd memory structures
+                _process_sbus_pulse(value0>>1, value1>>1, 1); 
+            }
         }
     } else { // rising
             // try treat as SBUS (inverted)
-            _process_sbus_pulse(value1>>1, value0>>1); // was 0 so now is length of 0, last is a length of 1
+            _process_sbus_pulse(value1>>1, value0>>1, 0); // was 0 so now is length of 0, last is a length of 1
     }
 }
 
@@ -114,14 +120,16 @@ bool PPM_parser::_process_ppmsum_pulse(uint16_t value)
   pulses are captured on each edges and SBUS parser called on rising edge - beginning of start bit
 */
 
-void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1)
+void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1, uint8_t id)
 {
     // convert to bit widths, allowing for up to 4usec error, assuming 100000 bps - inverted
     uint16_t bits_s0 = (width_s0+4) / 10;
     uint16_t bits_s1 = (width_s1+4) / 10;
+    
+    struct SbusState &state=sbus_state[id];
 
-    uint8_t byte_ofs = sbus_state.bit_ofs/12;
-    uint8_t bit_ofs  = sbus_state.bit_ofs%12;
+    uint8_t byte_ofs = state.bit_ofs/12;
+    uint8_t bit_ofs  = state.bit_ofs%12;
     uint16_t nlow;
 
     if (bits_s1 == 0 || bits_s0 == 0) {        // invalid data
@@ -134,8 +142,8 @@ void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1)
         
 
     // pull in the high bits
-    sbus_state.bytes[byte_ofs] |= ((1U<<bits_s1)-1) << bit_ofs;
-    sbus_state.bit_ofs += bits_s1;
+    state.bytes[byte_ofs] |= ((1U<<bits_s1)-1) << bit_ofs;
+    state.bit_ofs += bits_s1;
     bit_ofs += bits_s1;
 
     // pull in the low bits
@@ -144,16 +152,16 @@ void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1)
         nlow = 12 - bit_ofs;
     }
     bits_s0 -= nlow;
-    sbus_state.bit_ofs += nlow;
+    state.bit_ofs += nlow;
 
-    if (sbus_state.bit_ofs == 25*12 && bits_s0 > 12) { // all frame got and was gap
+    if (state.bit_ofs == 25*12 && bits_s0 > 12) { // all frame got and was gap
         // we have a full frame
         uint8_t bytes[25];
         uint16_t i;
 
         for (i=0; i<25; i++) {
             // get inverted data
-            uint16_t v = ~sbus_state.bytes[i];
+            uint16_t v = ~state.bytes[i];
     
             if ((v & 1) != 0) {        // check start bit
                 goto reset;
@@ -190,7 +198,11 @@ void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1)
             }
             _channels = num_values;
             
-            _rc_mode = BOARD_RC_SBUS; // lock input mode, SBUS has a parity and other checks so false positive is unreal
+            if(id){
+                _rc_mode = BOARD_RC_SBUS_NI; // lock input mode, SBUS has a parity and other checks so false positive is unreal
+            } else {
+                _rc_mode = BOARD_RC_SBUS; // lock input mode, SBUS has a parity and other checks so false positive is unreal
+            }
             
             if (!sbus_failsafe) {
                 _got_dsm = true;
@@ -205,7 +217,7 @@ void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1)
 reset:
 
 reset_ok:
-    memset(&sbus_state, 0, sizeof(sbus_state));
+    memset(&state, 0, sizeof(state));
 }
 
 
@@ -264,22 +276,47 @@ void PPM_parser::_process_dsm_pulse(uint16_t width_s0, uint16_t width_s1)
                 if ((v & 0x200) != 0x200) {
                     goto reset;
                 }
-                bytes[i] = ((v>>1) & 0xFF);
-            }
-            uint16_t values[8];
-            uint16_t num_values=0;
-            if (dsm_decode(AP_HAL::micros64(), bytes, values, &num_values, 8) &&
-                num_values >= REVOMINI_RC_INPUT_MIN_CHANNELS) {
+                uint8_t bt= ((v>>1) & 0xFF);
+                bytes[i] = bt;
+                if(_rc_mode != BOARD_RC_DSM) { // try to decode  SUMD data
+                    uint16_t values[REVOMINI_RC_INPUT_NUM_CHANNELS];
+                    uint8_t rssi;
+                    uint8_t rx_count;
+                    uint16_t channel_count;
 
-                _rc_mode = BOARD_RC_DSM; // lock input mode, DSM has a checksum so false positive is unreal
-
-                for (i=0; i<num_values; i++) {
-                    if(_val[i] != values[i]) _last_change = systick_uptime();
-                    _val[i] = values[i];
+                    if (sumd_decode(bt, &rssi, &rx_count, &channel_count, values, REVOMINI_RC_INPUT_NUM_CHANNELS) == 0) {
+                        if (channel_count > REVOMINI_RC_INPUT_NUM_CHANNELS) {
+                            continue;
+                        }
+                        _rc_mode = BOARD_RC_SUMD;
+                        for (uint8_t j=0; j<channel_count; j++) {
+                            if (values[j] != 0) {
+                                if(_val[j] != values[j]) _last_change = systick_uptime();
+                                _val[j] = values[j];
+                            }
+                        }
+                        _channels = channel_count;
+                        _last_signal = systick_uptime();
+//                        _rssi = rssi;
+                    }
                 }
-                _channels = num_values;
-                _got_dsm = true;
-                _last_signal = systick_uptime();
+            }
+            if(_rc_mode != BOARD_RC_SUMD) { // try to decode buffer as DSM
+                uint16_t values[8];
+                uint16_t num_values=0;
+                if (dsm_decode(AP_HAL::micros64(), bytes, values, &num_values, 8) &&
+                    num_values >= REVOMINI_RC_INPUT_MIN_CHANNELS) {
+
+                    _rc_mode = BOARD_RC_DSM; // lock input mode, DSM has a checksum so false positive is unreal
+
+                    for (i=0; i<num_values; i++) {
+                        if(_val[i] != values[i]) _last_change = systick_uptime();
+                        _val[i] = values[i];
+                    }
+                    _channels = num_values;
+                    _got_dsm = true;
+                    _last_signal = systick_uptime();
+                }
             }
         }
         memset(&dsm_state, 0, sizeof(dsm_state));

@@ -29,7 +29,7 @@ private:
 
     bool _process_ppmsum_pulse(uint16_t value);
     void _process_dsm_pulse(uint16_t width_s0, uint16_t width_s1);
-    void _process_sbus_pulse(uint16_t width_s0, uint16_t width_s1);
+    void _process_sbus_pulse(uint16_t width_s0, uint16_t width_s1, uint8_t id);
 
 
     void add_dsm_input();  // add some DSM  input bytes, for RCInput over a PPMSUM line
@@ -65,7 +65,7 @@ private:
     struct SbusState {
         uint16_t bytes[25]; // including start bit, parity and stop bits
         uint16_t bit_ofs;
-    } sbus_state;
+    } sbus_state[2];
 
     // state of DSM bit decoder
     struct DSM_State {

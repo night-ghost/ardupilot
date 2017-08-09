@@ -843,17 +843,19 @@ void * REVOMINIScheduler::init_task(Handler handler, const uint8_t* stack)
     // Create context for new task, caller will return
     if (setjmp(task.context)) {
         // we comes via longjmp - the task itself
+        uint32_t t;
         while (1) {
             if(task.handle) {
                 task.active=true;
                 task.time_start=_micros();
                 revo_call_handler(task.handle, 0); 
                 task.active=false;
-            }
 
-            uint32_t t = _micros()-task.time_start; // execution time
-            if(task.def_ttw) t = task.def_ttw - t; // time to wait
-            else             t = 0;
+                t = _micros()-task.time_start; // execution time
+                if(task.def_ttw && task.def_ttw > t) t = task.def_ttw - t; // time to wait
+                else                                 t = 0;
+            } else t=0;
+             
             yield(t);        // in case that function not uses delay();
         }
     }

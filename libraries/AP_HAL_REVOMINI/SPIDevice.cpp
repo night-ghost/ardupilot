@@ -19,10 +19,10 @@
 #include <spi.h>
 #include <boards.h>
 
-
+#pragma GCC optimize ("O0")
 #include "SPIDevice.h"
 #include "GPIO.h"
-
+//#pragma GCC pop_options
 
 #define ADDRESS_IN_RAM(addr) ((uint32_t)(addr)>=0x20000000)
 
@@ -94,6 +94,7 @@ static void dly_spi() {
 };
 
 
+#pragma GCC optimize ("O0")
 
 
 uint8_t SPIDevice::_transfer_s(uint8_t bt) {
@@ -118,6 +119,8 @@ uint8_t SPIDevice::_transfer_s(uint8_t bt) {
 
     return bt;
 }
+
+
 
 uint8_t SPIDevice::transfer(uint8_t out){
 
@@ -151,7 +154,6 @@ uint8_t SPIDevice::_transfer(uint8_t data) {
 
 
 
-#pragma GCC optimize ("O0")
 
 bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, uint32_t recv_len){
     if(bus_busy) {
@@ -263,12 +265,6 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
     return ret==0;
 
 }
-
-
-/////////////// hardware
-
-
-
 
     
 

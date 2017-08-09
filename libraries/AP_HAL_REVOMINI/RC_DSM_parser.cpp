@@ -5,6 +5,7 @@
 #include "RCInput.h"
 #include <pwm_in.h>
 #include <AP_HAL/utility/dsm.h>
+#include <AP_HAL/utility/sumd.h>
 #include "sbus.h"
 #include "GPIO.h"
 #include "ring_buffer_pulse.h"
@@ -83,31 +84,58 @@ void DSM_parser::_io_completion(){
         }
         
 
+        char c= uartSDriver.read();
+        
+        if(state != S_DSM) { // try to decode  SUMD data
+            uint16_t values[REVOMINI_RC_INPUT_NUM_CHANNELS];
+            uint8_t rssi;
+            uint8_t rx_count;
+            uint16_t channel_count;
 
-        dsm.frame[dsm.partial_frame_count] = uartSDriver.read();
-        dsm.partial_frame_count += 1;
-
-	if (dsm.partial_frame_count == dsm_frame_size) {
-            dsm.partial_frame_count = 0;
-            uint16_t values[16] {};
-            uint16_t num_values=0;
-            if (dsm_decode(AP_HAL::micros64(), dsm.frame, values, &num_values, 16) &&
-                num_values >= 5) {
-                for (uint8_t i=0; i<num_values; i++) {
+            if (sumd_decode(c, &rssi, &rx_count, &channel_count, values, REVOMINI_RC_INPUT_NUM_CHANNELS) == 0) {
+                if (channel_count > REVOMINI_RC_INPUT_NUM_CHANNELS) {
+                    continue;
+                }
+                state=S_SUMD;
+                for (uint8_t i=0; i<channel_count; i++) {
                     if (values[i] != 0) {
                         if(_val[i] != values[i]) _last_change = systick_uptime();
                         _val[i] = values[i];
                     }
                 }
+                _channels = channel_count;
+                _last_signal = systick_uptime();
+//                _rssi = rssi;
+            }
+        }
+
+        if(state!=S_SUMD) {
+            dsm.frame[dsm.partial_frame_count] = c;
+            dsm.partial_frame_count += 1;
+
+    	    if (dsm.partial_frame_count == dsm_frame_size) {
+                dsm.partial_frame_count = 0;
+                uint16_t values[REVOMINI_RC_INPUT_NUM_CHANNELS] {};
+                uint16_t num_values=0;
+                if (dsm_decode(AP_HAL::micros64(), dsm.frame, values, &num_values, 16) &&
+                    num_values >= 5 && num_values <REVOMINI_RC_INPUT_NUM_CHANNELS) {
+                    state=S_DSM;
+                    for (uint8_t i=0; i<num_values; i++) {
+                        if (values[i] != 0) {
+                            if(_val[i] != values[i]) _last_change = systick_uptime();
+                            _val[i] = values[i];
+                        }
+                    }
                 /*
                   the apparent number of channels can change on DSM,
                   as they are spread across multiple frames. We just
                   use the max num_values we get
                  */
-                if (num_values > _channels) {
-                    _channels = num_values;
+                    if (num_values > _channels) {
+                        _channels = num_values;
+                    }
+                    _last_signal = systick_uptime();
                 }
-                _last_signal = systick_uptime();
             }
         }
     }
