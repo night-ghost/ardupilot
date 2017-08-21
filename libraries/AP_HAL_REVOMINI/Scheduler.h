@@ -84,7 +84,6 @@ typedef struct RevoTimer {
     Handler proc;          //AP_HAL::Device::PeriodicCb proc and AP_HAL::MemberProc mp together
     REVOMINI::Semaphore *sem;
     revo_cb_type mode;
-    uint8_t ioc;        // IO_completion id for slow tasks
 
 #ifdef SHED_PROF
     uint32_t micros;    // max exec time
@@ -386,6 +385,7 @@ private:
     bool _set_10s_flag();
     static uint64_t ioc_time;
     static uint64_t sleep_time;
+    static uint32_t max_delay_err;
 #endif
 
 #ifdef MTASK_PROF

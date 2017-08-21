@@ -22,25 +22,6 @@
 #include <usb.h>
 
 
-/*
-
-stats for Copter
-
-Scheduler stats:
-
-  % of full time: 26.79  Efficiency 0.924 max loop time 2904 
-delay times: in main 85.83 including in semaphore  0.00  in timer  7.71 in isr  0.00 
-
-Task times:
-task 0x809966920008114 tim      0.0 int 0.000% tot 0.0000% mean time   1.0 max time 1
-task 0x809A8252000811C tim    493.0 int 3.680% tot 0.9859% mean time   9.9 max time 22
-task 0x809376D20007FE0 tim      2.6 int 0.019% tot 0.0051% mean time   1.0 max time 3
-task 0x804667520009F68 tim   2167.8 int 16.180% tot 4.3357% mean time 436.9 max time 452
-task 0x8048D7D2000A480 tim   2996.4 int 22.365% tot 5.9929% mean time 852.0 max time 864
-task 0x80509812000A4E0 tim   7738.1 int 57.756% tot 15.4763% mean time 172.4 max time 2462
-
-*/
-
 #define ADDRESS_IN_FLASH(a) ((a)>FLASH_BASE && (a)<CCMDATARAM_BASE)
 
 using namespace REVOMINI;
@@ -97,6 +78,7 @@ uint64_t REVOMINIScheduler::delay_int_time IN_CCM = 0;
 uint32_t REVOMINIScheduler::max_loop_time IN_CCM =0;
 uint64_t REVOMINIScheduler::ioc_time IN_CCM =0;
 uint64_t REVOMINIScheduler::sleep_time IN_CCM =0;
+uint32_t REVOMINIScheduler::max_delay_err=0;
 #endif
 
 
@@ -202,12 +184,17 @@ void REVOMINIScheduler::_delay(uint16_t ms)
         delay_int_time +=us;
     else
         delay_time     +=us;
+    
+    uint32_t err = labs(ms*1000 - us);
+    if(err > max_delay_err)  max_delay_err = err;
 #endif
 }
 
 void REVOMINIScheduler::_delay_microseconds_boost(uint16_t us){
     _delay_microseconds(us);
 }
+
+#define NO_YIELD_TIME 3
 
 void REVOMINIScheduler::_delay_microseconds(uint16_t us)
 {
@@ -218,7 +205,7 @@ void REVOMINIScheduler::_delay_microseconds(uint16_t us)
     uint32_t rtime = stopwatch_getticks(); // start ticks
     uint32_t dt    = us_ticks * us;  // delay time in ticks
 
-    uint32_t ny = 3 * us_ticks; // no-yield time 3 uS in ticks
+    uint32_t ny = NO_YIELD_TIME * us_ticks; // no-yield time in ticks
     uint32_t tw;
 
     while ((tw = stopwatch_getticks() - rtime) < dt) { // tw - time waiting, in ticks
@@ -228,12 +215,15 @@ void REVOMINIScheduler::_delay_microseconds(uint16_t us)
     }    
 
 #ifdef SHED_PROF
-    us=_micros()-t; // real time
+    uint32_t r_us=_micros()-t; // real time
     
     if(_in_timer_proc)
-        delay_int_time +=us;
+        delay_int_time +=r_us;
     else
-        delay_time     +=us;
+        delay_time     +=r_us;
+
+    uint32_t err = labs(us - r_us);
+    if(err > max_delay_err)  max_delay_err = err;
 #endif
 
 }
@@ -466,13 +456,18 @@ void REVOMINIScheduler::_print_stats(){
 
             hal.console->printf("\nSched stats:\n  %% of full time: %5.2f  Efficiency %5.3f max loop time %ld \n", (task_time/10.0)/t /* in percent*/ , shed_eff, max_loop_time );
             hal.console->printf("delay times: in main %5.2f including in semaphore %5.2f  in timer %5.2f",         (delay_time/10.0)/t, (Semaphore::sem_time/10.0)/t,  (delay_int_time/10.0)/t);
+            max_loop_time=0;
 
 #ifdef ISR_PROF
-            hal.console->printf("in isr %5.2f max %5.2f", (isr_time/10.0/(float)us_ticks)/t, max_isr_time/(float)us_ticks );
+            hal.console->printf("\nISR time %5.2f max %5.2f", (isr_time/10.0/(float)us_ticks)/t, max_isr_time/(float)us_ticks );
+            max_isr_time=0;
 #endif
 #if 0
             hal.console->printf("\nIMU times: mean %5.2f max %5ld", (float)_IMU_fulltime/_IMU_count, _IMU_maxtime );
+            _IMU_maxtime=0;
 #endif
+            hal.console->printf("\nmax delay() error= %ld", max_delay_err );
+            max_delay_err=0;
         } break;
 
         case 1:{
@@ -521,7 +516,7 @@ void REVOMINIScheduler::_print_stats(){
             uint32_t heap_ptr = (uint32_t)__brkval; // here should be upper bound of sbrk()
             uint32_t bottom=(uint32_t)&_sdata;
             
-            // 48K after boot 
+            // 48K after boot 72K while logging on
             hal.console->printf("\nMemory used: %ldk:\n",(heap_ptr-bottom)/1024);
             hal.console->printf("Free stack: %ldk:\n",(lowest_stack - (uint32_t)&_eccm)/1024);
             hal.console->printf("Main stack use: %ldk at %lx\n",((uint32_t)&_sccm + 0x10000 /* 64K CCM */ - main_stack)/1024, max_stack_pc);
@@ -566,17 +561,6 @@ bool REVOMINIScheduler::_set_10s_flag(){
 AP_HAL::Device::PeriodicHandle REVOMINIScheduler::_register_timer_task(uint32_t period_us, Handler proc, REVOMINI::Semaphore *sem, revo_cb_type mode){
     uint8_t i;
     
-
-#if 0 // это бесполезно, ибо переход к io_completion происходит без выполнения основной программы
-
-    uint8_t ioc=0;
-
-    if(period_us > 8000) { // slow tasks will run at IO_Completion level
-        ioc=register_io_completion(proc);
-        set_io_completion_sem(ioc, sem);
-    }
-#endif
-
 #if 1
     if(period_us > 8000) { // slow tasks will runs at individual IO tasks
         void *task = _start_task(proc, SLOW_TASK_STACK);
@@ -613,9 +597,6 @@ store:
         rt.last_run = _micros(); // now
         rt.sem  = sem;
         rt.mode = mode;
-#if 0/* useless*/
-        rt.ioc = ioc;
-#endif
 #ifdef SHED_PROF
         rt.count = 0;
         rt.micros = 0;
@@ -697,49 +678,42 @@ void REVOMINIScheduler::_run_timers(){
             if( (now - tim.last_run) > tim.period) { // time to run?
                 uint8_t ret=1;  // OK by default
 
-#if 0 
-                if(tim.ioc) { // slow tasks runs at IO_completion level
-                    do_io_completion(tim.ioc);
-                } else 
-#endif
-                {         // fast tasks runs here
-                    if(tim.sem && !tim.sem->take_nonblocking()) { // semaphore active? take!
-                        // can't get semaphore, just do nothing - will try next time
-                        continue;
-                    }
-#ifdef SHED_PROF
-                    uint32_t t = _micros();
-#endif          
-                    Revo_cb r = { .h=tim.proc }; // don't touch it without hardware debugger!
-
-                    switch(tim.mode){
-                    case CB_PERIODIC:
-                        (r.pcb)();              // call task
-                        break;
-                    case CB_PERIODICBOOL:
-                        ret = (r.pcbb)();       // call task
-                        break;
-                    case CB_MEMBERPROC:
-                        (r.mp)();              // call task
-                        break;
-                    }
-                    if(tim.sem) tim.sem->give(); //  semaphore active? give back ASAP!
-                
-                    is_error = Semaphore::get_error(); // was there semaphore errors in this task?
-                
-                    if(is_error) ret=0; // bad result if was any, need to reschedule
-
-                    now = _micros();
-#ifdef SHED_PROF
-                    t = now - t;               // work time
-
-                    if(tim.micros < t)
-                        tim.micros    =  t;      // max time
-                    tim.count     += 1;          // number of calls
-                    tim.fulltime  += t;          // full time, mean time = full / count
-                    job_t += t;                  // time of all jobs
-#endif        
+                if(tim.sem && !tim.sem->take_nonblocking()) { // semaphore active? take!
+                    // can't get semaphore, just do nothing - will try next time
+                    continue;
                 }
+#ifdef SHED_PROF
+                uint32_t t = _micros();
+#endif          
+                Revo_cb r = { .h=tim.proc }; // don't touch it without hardware debugger!
+
+                switch(tim.mode){
+                case CB_PERIODIC:
+                    (r.pcb)();              // call task
+                    break;
+                case CB_PERIODICBOOL:
+                    ret = (r.pcbb)();       // call task
+                    break;
+                case CB_MEMBERPROC:
+                    (r.mp)();              // call task
+                    break;
+                }
+                if(tim.sem) tim.sem->give(); //  semaphore active? give back ASAP!
+                
+                is_error = Semaphore::get_error(); // was there semaphore errors in this task?
+                
+                if(is_error) ret=0; // bad result if was any, need to reschedule
+
+                now = _micros();
+#ifdef SHED_PROF
+                t = now - t;               // work time
+
+                if(tim.micros < t)
+                    tim.micros    =  t;      // max time
+                tim.count     += 1;          // number of calls
+                tim.fulltime  += t;          // full time, mean time = full / count
+                job_t += t;                  // time of all jobs
+#endif        
                 
                 if(ret) {  // ok?
                     tim.last_run    += tim.period; // прошлое время запуска - по надобности а не по факту
@@ -920,6 +894,10 @@ void REVOMINIScheduler::set_task_semaphore(void *h, REVOMINI::Semaphore *sem){
     task->sem = sem;
 }
 
+/* TODO: добавить круговую очередь истории планировщика, дабы посмотреть в ретроспективе как принималось решение о планировании
+
+ сохранять: задача, время старта,время завершения, время ожидания перед стартом
+*/
 
 void REVOMINIScheduler::yield(uint16_t ttw) // time to wait 
 {
@@ -927,14 +905,16 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
     if(ntask==0        || // no tasks
       (ttw && ttw < 5) || // don't mess into delays less than 5uS - 840 steps
       in_interrupt() ) { // don't switch privileged context
-
+#ifdef USE_WFE
         __WFE();
+#endif
         return;
     }
 
     disable_stack_check = true;
+#ifdef MTASK_PROF
     uint32_t slTime;
-
+#endif
     { // isolate 'me' - task that calls yield()
         task_t *me = s_running;
     
@@ -947,8 +927,9 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
 
         uint32_t dt =  t - me->start;       // time in task
         if(dt >= me->in_isr) dt -= me->in_isr;  // minus time in interrupts
-        else dt=0;
-        if(dt > me->max_delay) me->max_delay = dt; // and remember maximum
+        else                 dt=0;
+        
+        if(dt > me->max_delay) me->max_delay = dt; // and remember maximum to not schedule long tasks in small slices
 
 #ifdef MTASK_PROF
         if(dt > me->max_time) {
@@ -961,7 +942,7 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
 #endif
         if (setjmp(me->context)) {
             // we come here via longjmp - context switch is over
-#ifdef MTASK_PROF
+#if defined(MTASK_PROF)
             yield_time += stopwatch_getticks() - s_running->ticks; // time of longjmp
             yield_count++;                  // count each context switch
 #endif
@@ -980,10 +961,11 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
             if(s_running == 0) {
                 s_running = &s_main; // in case of error
             }
+#ifdef USE_WFE
             if(s_running == me) {  // 'me' is the task that calls yield(), so full loop - there is no job.
                 __WFE(); //  Timer6 makes events each uS to not spoil microsecond delays
             }
-    
+#endif    
             if(!s_running->handle) continue; // skip finished tasks
             
             uint32_t now= _micros();
@@ -1046,10 +1028,9 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
         me->start = now; // task startup time
         me->in_isr=0; // reset ISR time
 
+#ifdef MTASK_PROF
         slTime = now - slTime;
         sleep_time += slTime;
-
-#ifdef MTASK_PROF
         me->ticks = stopwatch_getticks();
 #endif
         longjmp(me->context, true);
@@ -1118,11 +1099,12 @@ void REVOMINIScheduler::PendSV_Handler(){ // isr at lowest priority to do all IO
             if(io.request) {
                 io.request=false; // ASAP - it can be set again in interrupt
                 if(io.handler){
+#if 0
                     if(io.sem && !io.sem->take_nonblocking()) { // semaphore active? take!
                         reschedule_proc(io.handler);// can't get semaphore, will try next time
                         continue;
                     }
-
+#endif
                     do_it=true;
 #ifdef SHED_PROF
                     uint32_t t = _micros();

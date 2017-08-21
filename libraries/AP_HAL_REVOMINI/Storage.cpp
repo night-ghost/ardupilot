@@ -39,7 +39,7 @@ using namespace REVOMINI;
 
 extern const AP_HAL::HAL& hal;
 
-// The EEPROM class uses 2x16k FLASH ROM pages to emulate 8k of EEPROM.
+// The EEPROM class uses 2x16k FLASH ROM pages to emulate up to 8k of EEPROM.
 
 
 
@@ -97,7 +97,7 @@ static void error_parse(uint16_t status){
 uint8_t REVOMINIStorage::read_byte(uint16_t loc){
 
     // 'bytes' are packed 2 per word
-    // Read existing dataword and change upper or lower byte
+    // Read existing dataword and use upper or lower byte
 
     uint16_t data;
     error_parse( eeprom.read(loc >> 1, &data) );

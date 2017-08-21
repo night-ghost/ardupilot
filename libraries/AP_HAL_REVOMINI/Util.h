@@ -54,7 +54,7 @@ public:
     // create a new semaphore
     Semaphore *new_semaphore(void)  override { return new REVOMINI::Semaphore; } 
 private:
-    uint64_t gps_shift;
+    uint64_t gps_shift; // shift from board time to real time
 };
 
 #endif // __AP_HAL_REVOMINI_UTIL_H__

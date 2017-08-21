@@ -19,3 +19,5 @@
 #define SEM_PROF 
 #define SHED_PROF 
 #define MTASK_PROF
+
+#define USE_WFE

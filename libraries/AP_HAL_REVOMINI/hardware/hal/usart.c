@@ -233,6 +233,8 @@ void usart_disable(const usart_dev *dev)
     /* Clean up buffer */
     usart_reset_rx(dev);
     usart_reset_tx(dev);
+    dev->state->is_used=false;
+
 }
 
 

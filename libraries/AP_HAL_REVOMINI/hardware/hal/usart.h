@@ -19,15 +19,15 @@
 typedef void (* usart_cb)();
 
 typedef struct usart_state {
+    Handler callback;
+
     uint8_t txbusy;
 
-    uint8_t rx_buf[USART_RX_BUF_SIZE]; /**< @brief Deprecated.
-                                      * Actual RX buffer used by rb.
-                                      * This field will be removed in
-                                      * a future release. */
+    uint8_t rx_buf[USART_RX_BUF_SIZE];
     uint8_t tx_buf[USART_TX_BUF_SIZE];
 
-    Handler callback;
+    uint8_t is_used; // flag that USART is used
+
 } usart_state;
 
 /** USART device type */

@@ -7,12 +7,6 @@
 
 #ifdef BOARD_SPEKTRUM_RX_PIN
 
-enum DSM_STATE {
-    S_NONE,
-    S_DSM,
-    S_SUMD
-};
-
 class REVOMINI::DSM_parser : public REVOMINI::_parser {
 public:
     DSM_parser() {}
@@ -35,8 +29,6 @@ private:
         uint64_t last_input_ms;
     } dsm;
 
-    enum DSM_STATE state;
-    
     static void _rc_bind(uint16_t dsmMode);    
 };
 #endif

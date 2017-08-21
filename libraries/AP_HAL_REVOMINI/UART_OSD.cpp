@@ -35,7 +35,7 @@ void UART_OSD::begin(uint32_t baud) {
     OSDns::osd_begin(REVOMINI::SPIDeviceManager::_get_device(BOARD_OSD_NAME));
 
     void * task = REVOMINIScheduler::start_task(OSDns::osd_loop, SLOW_TASK_STACK); // 
-    REVOMINIScheduler::set_task_ttw(task, 1000);
+    REVOMINIScheduler::set_task_ttw(task, 10000); // 100Hz
         
     _initialized = true;
 }
@@ -55,7 +55,6 @@ int16_t UART_OSD::read() {
     return OSDns::osd_getc();
 }
 
-/* REVOMINI implementations of Print virtual methods */
 size_t UART_OSD::write(uint8_t c) {
 
     if (REVOMINIScheduler::_in_timerprocess() || !_initialized) {      // not allowed from timers
