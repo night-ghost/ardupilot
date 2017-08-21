@@ -23,7 +23,8 @@ void systick_attach_callback(Handler callback) {
 }
 
 void systick_detach_callback(Handler callback) {  
-    for(uint8_t i=0; i< num_handlers; i++) {
+    uint8_t i;
+    for(i=0; i< num_handlers; i++) {
         if(systick_handlers[i] == callback)
             systick_handlers[i] = 0;
     }
@@ -54,8 +55,8 @@ void SysTick_Handler(void)
 {
     systick_uptime_millis++;
 
-
-    for(uint8_t i=0; i< num_handlers; i++) {
+    uint8_t i;
+    for(i=0; i< num_handlers; i++) {
         if(systick_handlers[i])
             revo_call_handler(systick_handlers[i], 0);
     }
@@ -79,7 +80,8 @@ void __attribute__((noreturn)) error_throb(uint32_t num){
     
     /* Error fade. */
     while (1) {
-        for(uint16_t k=0; k<num; k++) {
+        uint16_t k;
+        for(k=0; k<num; k++) {
             if (CC == TOP_CNT)  {
                 slope = -1;
             } else if (CC == 0) {

@@ -3,6 +3,7 @@
 #include "RC_parser.h"
 #include "RCInput.h"
 
+#include <stdio.h>
 #include <AP_HAL/HAL.h>
 
 #ifdef BOARD_SPEKTRUM_RX_PIN

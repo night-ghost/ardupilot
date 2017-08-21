@@ -32,11 +32,6 @@ based on:
  */
 
 #include "boards.h"
-//#include "systick.h"
-//#include "gpio_hal.h"
-//#include "exti.h"
-//#include "timer.h"
-//#include "adc.h"
 #include <usb.h>
 
 static void setupFlash(void);
@@ -178,11 +173,14 @@ void INLINE init(void) {
     systick_init(SYSTICK_RELOAD_VAL);
 
     stopwatch_init(); // will use stopwatch_delay_us() and stopwatch_get_ticks()
+    
 
     boardInit(); // board-specific part of init
 /*
      only CPU init here, all another moved to modules .init() functions
 */
+    usart_disable_all();
+
 }
 
 void pre_init(){ // before any stack usage @NG

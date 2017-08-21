@@ -652,14 +652,14 @@ uint16_t EEPROMClass::write(uint16_t Address, uint16_t Data)
   * @brief  Return number of variable
   * @retval Number of variables
   */
-uint16_t EEPROMClass::count(uint16_t *count)
+uint16_t EEPROMClass::count(uint16_t *cnt)
 {
 	// Get valid Page for write operation
 	uint32_t pageBase = _FindValidPage();
 	if (pageBase == 0)
 		return EEPROM_NO_VALID_PAGE;	// No valid page, return max. numbers
 
-	*count = _GetVariablesCount(pageBase, 0xFFFF);
+	*cnt = _GetVariablesCount(pageBase, 0xFFFF);
 	return EEPROM_OK;
 }
 

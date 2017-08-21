@@ -24,7 +24,6 @@
 #include "GPIO.h"
 //#pragma GCC pop_options
 
-#define ADDRESS_IN_RAM(addr) ((uint32_t)(addr)>=0x20000000)
 
 
 using namespace REVOMINI;

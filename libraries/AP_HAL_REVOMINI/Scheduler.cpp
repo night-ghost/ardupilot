@@ -87,6 +87,11 @@ uint32_t REVOMINIScheduler::max_delay_err=0;
  uint32_t REVOMINIScheduler::yield_count IN_CCM =0;
 #endif
 
+#ifdef SHED_DEBUG
+ revo_sched_log REVOMINIScheduler::logbuf[SHED_DEBUG_SIZE] IN_CCM;
+ uint16_t REVOMINIScheduler::sched_log_ptr;
+#endif
+
 uint32_t REVOMINIScheduler::lowest_stack = (uint32_t)-1;
 uint32_t REVOMINIScheduler::main_stack   = (uint32_t)-1;
 uint32_t REVOMINIScheduler::max_stack_pc IN_CCM ;
@@ -939,6 +944,17 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
         me->time+=dt;                           // calculate sum
     
         uint32_t ticks = stopwatch_getticks();
+
+ #ifdef SHED_DEBUG
+        revo_sched_log &lp = logbuf[sched_log_ptr];
+        lp.end = t;
+        lp.task_id=me.id;
+        lp.ttw = ttw;
+        sched_log_ptr++;
+        if(sched_log_ptr >= SHED_DEBUG_SIZE) sched_log_ptr=0;
+        logbuf[sched_log_ptr]= { 0 }; // clear next
+ #endif
+
 #endif
         if (setjmp(me->context)) {
             // we come here via longjmp - context switch is over
@@ -1028,10 +1044,19 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
         me->start = now; // task startup time
         me->in_isr=0; // reset ISR time
 
+
 #ifdef MTASK_PROF
         slTime = now - slTime;
         sleep_time += slTime;
         me->ticks = stopwatch_getticks();
+
+ #ifdef SHED_DEBUG
+        revo_sched_log &lp = logbuf[sched_log_ptr];
+        lp.start = now;
+        lp.sleep = slTime;
+        lp.task_id=me.id;
+ #endif
+
 #endif
         longjmp(me->context, true);
         // never comes here

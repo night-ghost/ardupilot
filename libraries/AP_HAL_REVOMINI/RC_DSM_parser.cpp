@@ -120,6 +120,8 @@ void DSM_parser::_io_completion(){
 void DSM_parser::_rc_bind(uint16_t dsmMode){
     
 
+    printf("\nBinding DSM for mode %d\n", dsmMode);
+
     REVOMINIScheduler::_delay(72);
 
     for (int i = 0; i < dsmMode; i++) {                         /*Pulse RX pin a number of times*/
@@ -152,9 +154,9 @@ bool DSM_parser::bind(int dsmMode) const {
     uartSDriver.begin(115200);                                  	/*Restore USART RX pin to RS232 receive mode*/
 
 #else
-    // store request to bing in BACKUP RAM
+    // store request to bind in BACKUP RAM
     board_set_rtc_register(DSM_BIND_SIGNATURE | ( dsmMode & DSM_BIND_SIGN_MASK), RTC_DSM_BIND_REG);
-     
+    printf("\nDSM binding code=%d stored!\n", dsmMode );
 #endif
     return true;
 }

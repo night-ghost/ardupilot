@@ -261,11 +261,11 @@ File::File()
      _dir.fs = 0;
 }
 
-File::File(const char* name)
+File::File(const char* fname)
 {
-    _name = (char*)malloc(strlen(name) +1);
+    _name = (char*)malloc(strlen(fname) +1);
     assert(_name  != NULL );
-    sprintf(_name, "%s", name);
+    sprintf(_name, "%s", fname);
     _fil.fs = 0;
     _dir.fs = 0;
 }
@@ -577,16 +577,16 @@ size_t File::write(uint8_t data)
   * @param  len: the number of elements in buf
   * @retval Number of data written
   */
-size_t File::write(const char *buf, size_t size)
+size_t File::write(const char *buf, size_t sz)
 {
     size_t byteswritten;
-    SD.lastError = f_write(&_fil, (const void *)buf, size, (UINT *)&byteswritten);
+    SD.lastError = f_write(&_fil, (const void *)buf, sz, (UINT *)&byteswritten);
     return byteswritten;
 }
 
-size_t File::write(const uint8_t *buf, size_t size)
+size_t File::write(const uint8_t *buf, size_t sz)
 {
-    return write((const char *)buf, size);
+    return write((const char *)buf, sz);
 }
 
 /**
@@ -634,10 +634,10 @@ int File::available()
 
 char* File::name()
 {
-	char *name = strrchr(_name, '/');
-	if (name && name[0] == '/')
-		name++;
-	return name;
+	char *fname = strrchr(_name, '/');
+	if (fname && fname[0] == '/')
+		fname++;
+	return fname;
 }
 
 /**

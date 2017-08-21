@@ -92,6 +92,18 @@ typedef struct RevoTimer {
 #endif
 } revo_timer;
 
+#ifdef SHED_DEBUG
+typedef struct RevoSchedLog {
+    uint32_t start;
+    uint32_t end;
+    uint32_t sleep;
+    uint32_t ttw;
+    uint8_t task_id;
+} revo_sched_log;
+
+#define SHED_DEBUG_SIZE 512
+#endif
+
 
 class REVOMINI::REVOMINIScheduler : public AP_HAL::Scheduler {
 public:
@@ -391,7 +403,13 @@ private:
 #ifdef MTASK_PROF
     static uint64_t yield_time;
     static uint32_t yield_count;
+
+ #ifdef SHED_DEBUG
+    static revo_sched_log logbuf[SHED_DEBUG_SIZE];
+    static uint16_t sched_log_ptr;
+ #endif
 #endif
+
 
     static uint32_t lowest_stack;
     static uint32_t main_stack;

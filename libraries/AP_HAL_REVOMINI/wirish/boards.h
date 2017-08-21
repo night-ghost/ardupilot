@@ -49,6 +49,7 @@
 #include <gpio_hal.h>
 #include <timer.h>
 #include <adc.h>
+#include <usart.h>
 #include <pwm_in.h>
 
 /* Set of all possible pin names; not all boards have all these (note
@@ -69,11 +70,6 @@ enum {
     D100, D101, D102, D103, D104, D105, D106, D107, D108, D109, 
     D110, D111, };
 
-/**
- * @brief Maps each Maple pin to a corresponding stm32_pin_info.
- * @see stm32_pin_info
- */
-
 
 /**
  * @brief Stores STM32-specific information related to a given Maple pin.
@@ -89,6 +85,10 @@ typedef struct stm32_pin_info {
     uint8_t adc_channel;          /**< Pin ADC channel, or ADCx if none. */
 } stm32_pin_info;
 
+/**
+ * @brief Maps each Maple pin to a corresponding stm32_pin_info.
+ * @see stm32_pin_info
+ */
 extern const stm32_pin_info PIN_MAP[];
 
 /**

@@ -1,5 +1,8 @@
+#include <AP_HAL/AP_HAL.h>
+
 #pragma GCC push_options
 #pragma GCC optimize ("O2")
+
 
 #include <exti.h>
 #include <timer.h>

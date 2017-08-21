@@ -138,11 +138,11 @@ AP_HAL::DigitalSource* REVOMINIGPIO::channel(uint16_t pin) {
 }
 
 
-void REVOMINIDigitalSource::mode(uint8_t mode)
+void REVOMINIDigitalSource::mode(uint8_t md)
 {
     gpio_pin_mode outputMode;
 
-    switch(mode) {
+    switch(md) {
     case OUTPUT:
     case OUTPUT_OPEN_DRAIN:
     case INPUT:
@@ -150,7 +150,7 @@ void REVOMINIDigitalSource::mode(uint8_t mode)
     case INPUT_ANALOG:
     case INPUT_PULLUP:
     case INPUT_PULLDOWN:
-        outputMode = mode;
+        outputMode = (gpio_pin_mode)md;
         break;
 
     // no PWM via this interface!

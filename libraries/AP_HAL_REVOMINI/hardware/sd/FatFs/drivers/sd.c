@@ -969,8 +969,8 @@ static bool read_page( BYTE *buf, DWORD pageNum){
     read_spi_multi(sector_buf, DF_PAGE_SIZE);
 
     cs_release();
-
-    for(uint16_t i=0; i<DF_PAGE_SIZE;i++){
+    uint16_t i;
+    for(i=0; i<DF_PAGE_SIZE;i++){
         buf[i] = ~sector_buf[i];       // let filesystem will be inverted, this allows extend files without having to Read-Modify-Write on FAT
                                     // original: 0xFF is clear and 0 can be programmed any time
                                     // inverted: 0 is clear and 1 can be programmed any time
@@ -984,7 +984,8 @@ static bool read_page( BYTE *buf, DWORD pageNum){
 static bool write_page(const BYTE *buf, DWORD pageNum){
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
-    for(uint16_t i=0; i<DF_PAGE_SIZE;i++){
+    uint16_t i;
+    for(i=0; i<DF_PAGE_SIZE;i++){
         sector_buf[i] = ~buf[i];       // let filesystem will be inverted, this allows extend files without having to Read-Modify-Write on FAT
     }
 
@@ -1416,7 +1417,8 @@ DRESULT sd_ioctl (
 	    
 	    if(start_sector>=sd_max_sectors || end_sector>=sd_max_sectors) return RES_PARERR;
 
-	    for(uint32_t  sector=start_sector; sector <= end_sector;sector++){
+            uint32_t  sector;
+	    for(sector=start_sector; sector <= end_sector;sector++){
                 uint32_t  df_sect = sector * (FAT_SECTOR_SIZE/DF_PAGE_SIZE);    // sector in DataFlash
                 block = df_sect / (erase_size/DF_PAGE_SIZE);    // number of EraseBlock
                 if(last_block!=block){
