@@ -110,13 +110,11 @@ void boardInit(void);
 
 
 #define BOARD_COMPASS_DEFAULT HAL_COMPASS_HMC5843
-#define BOARD_COMPASS_HMC5843_I2C_ADDR 0x1E
 //#define BOARD_HMC5883_DRDY_PIN  38  // PB7 - but it not used by driver
-#define BOARD_COMPASS_HMC5843_ROTATION ROTATION_NONE
 
 #define HAL_COMPASS_HMC5843_I2C_BUS     BOARD_I2C_BUS_INT
-#define HAL_COMPASS_HMC5843_I2C_ADDR    BOARD_COMPASS_HMC5843_I2C_ADDR
-#define HAL_COMPASS_HMC5843_ROTATION    BOARD_COMPASS_HMC5843_ROTATION
+#define HAL_COMPASS_HMC5843_I2C_ADDR    (0x1E)
+#define HAL_COMPASS_HMC5843_ROTATION    ROTATION_NONE
 
 
 #define BOARD_INS_DEFAULT HAL_INS_MPU60XX_SPI
@@ -154,7 +152,7 @@ void boardInit(void);
 
 
 // use soft I2C driver instead hardware
-#define BOARD_SOFT_I2C
+//#define BOARD_SOFT_I2C
 
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
@@ -167,6 +165,10 @@ void boardInit(void);
 #define SERVO_PIN_4 49 // PA2
 #define SERVO_PIN_5 48 // PA1
 #define SERVO_PIN_6 22 // PA8
+
+//#define HAL_CONSOLE USB_Driver // console on USB
+#define HAL_CONSOLE uart1Driver // console on radio
+#define HAL_CONSOLE_PORT 1
 
 
 /*
@@ -262,7 +264,8 @@ void boardInit(void);
     AP_GROUPINFO("DBG_WAYBACK",  8, AP_Param_Helper, _dbg_wayback, 0), \
     AP_GROUPINFO("USB_STORAGE",  9, AP_Param_Helper, _usb_storage, 0), \
     AP_GROUPINFO("TIME_OFFSET",  10, AP_Param_Helper, _time_offset, 0), \
-    AP_GROUPINFO("RC_INPUT",     11, AP_Param_Helper, _rc_input, 0)
+    AP_GROUPINFO("CONSOLE_UART", 11, AP_Param_Helper, _console_uart, HAL_CONSOLE_PORT), \
+    AP_GROUPINFO("RC_INPUT",     12, AP_Param_Helper, _rc_input, 0)
 
 #else
 
@@ -276,7 +279,8 @@ void boardInit(void);
     AP_GROUPINFO("CONNECT_ESC",  6, AP_Param_Helper, _connect_esc, 0), \
     AP_GROUPINFO("DBG_WAYBACK",  8, AP_Param_Helper, _dbg_wayback, 0), \
     AP_GROUPINFO("TIME_OFFSET",  9, AP_Param_Helper, _time_offset, 0), \
-    AP_GROUPINFO("RC_INPUT",     10, AP_Param_Helper, _rc_input, 0)
+    AP_GROUPINFO("CONSOLE_UART", 10, AP_Param_Helper, _console_uart, HAL_CONSOLE_PORT), \
+    AP_GROUPINFO("RC_INPUT",     11, AP_Param_Helper, _rc_input, 0)
 
 #endif
 
@@ -293,13 +297,11 @@ void boardInit(void);
     AP_Int8 _dbg_wayback; \
     AP_Int8 _usb_storage; \
     AP_Int8 _time_offset; \
+    AP_Int8 _console_uart; \
     AP_Int8 _rc_input;
 
 #define WAYBACK_DEBUG
 
-
-//#define HAL_CONSOLE USB_Driver // console on USB
-#define HAL_CONSOLE uart1Driver // console on radio
 
 
 #endif

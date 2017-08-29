@@ -157,7 +157,7 @@ void usart_setup(const usart_dev *dev, uint32_t baudRate, uint16_t wordLength,
     memset(dev->state, 0, sizeof(*dev->state));
 
     dev->state->txbusy = 0;
-    dev->state->callback = NULL;
+    dev->state->callback = 0;
 
     /* Disable USARTx */
     USART_Cmd(dev->USARTx, DISABLE);

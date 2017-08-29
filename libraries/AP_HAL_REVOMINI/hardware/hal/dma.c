@@ -44,7 +44,7 @@ static Handler dma1_handlers[8] IN_CCM;
 static const dma_dev dma1 = {
     .regs     = (dma_reg_map *)DMA1_BASE,
     .clk_id   = RCC_AHB1Periph_DMA1,
-    .irq_lines = { 11, 12, 13, 14, 15, 16, 17, 47},
+    .irq_lines = { DMA1_Stream0_IRQn, DMA1_Stream1_IRQn, DMA1_Stream2_IRQn, DMA1_Stream3_IRQn, DMA1_Stream4_IRQn, DMA1_Stream5_IRQn, DMA1_Stream6_IRQn, DMA1_Stream7_IRQn},
     .handlers  = dma1_handlers
 };
 /** DMA1 device */
@@ -56,7 +56,7 @@ static Handler dma2_handlers[8] IN_CCM;
 static const dma_dev dma2 = {
     .regs     = (dma_reg_map *)DMA2_BASE,
     .clk_id   = RCC_AHB1Periph_DMA2,
-    .irq_lines = { 56, 57, 58, 59, 60, 68, 69, 70},
+    .irq_lines = { DMA2_Stream0_IRQn, DMA2_Stream1_IRQn, DMA2_Stream2_IRQn, DMA2_Stream3_IRQn, DMA2_Stream4_IRQn, DMA2_Stream5_IRQn, DMA2_Stream6_IRQn, DMA2_Stream7_IRQn},
     .handlers  = dma2_handlers
 
 };
@@ -171,8 +171,8 @@ void dma_init_transfer(dma_stream stream, DMA_InitTypeDef *v){
     stream &= 0xF;
     dma_stream_t *DMAy_Streamx = &dev->regs->STREAM[stream];
     
-    DMAy_Streamx->CR &= ~DMA_CR_EN; // disable
-    DMAy_Streamx->PAR = (uint32_t)v->DMA_PeripheralBaseAddr;
+    DMAy_Streamx->CR  &= ~DMA_CR_EN; // disable
+    DMAy_Streamx->PAR  = (uint32_t)v->DMA_PeripheralBaseAddr;
     DMAy_Streamx->M0AR = (uint32_t)v->DMA_Memory0BaseAddr;
     DMAy_Streamx->NDTR = v->DMA_BufferSize;
 
@@ -224,8 +224,7 @@ void dma_init_transfer(dma_stream stream, DMA_InitTypeDef *v){
 }
 
     
-void dma_set_num_transfers(dma_stream stream,
-                                         uint16_t num_transfers) {
+void dma_set_num_transfers(dma_stream stream, uint16_t num_transfers) {
                                          
     const dma_dev * dev=DMAS[(stream>>4) & 3]; 
     stream &= 0xF;
@@ -345,7 +344,7 @@ static inline void dispatch_handler(dma_stream stream) {
 #ifdef ISR_PERF
     t = stopwatch_getticks();
 #endif
-    dma_dev * dev=DMAS[(stream>>4) & 3]; 
+    const dma_dev * dev=DMAS[(stream>>4) & 3]; 
 
     Handler handler = dev->handlers[stream & 0xF];
     if (handler) {

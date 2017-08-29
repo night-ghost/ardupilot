@@ -59,11 +59,10 @@ typedef uint64_t Handler;
 #define OK	1
 #define ERROR	0
 
-#define I2C_OK		0
-#define I2C_NO_DEVICE	1
-#define I2C_ERROR	2
+#define ADDRESS_IN_RAM(a) ((uint32_t)(a) >= SRAM1_BASE && (uint32_t)(a) < (uint32_t)(STM32_SRAM_END) )
+#define ADDRESS_IN_CCM(a) ((uint32_t)(a) >= CCMDATARAM_BASE && (uint32_t)(a) < (uint32_t)(STM32_CCM_END) )
+#define ADDRESS_IN_FLASH(a) ((a)>FLASH_BASE && (a)<CCMDATARAM_BASE)
 
-#define ADDRESS_IN_RAM(a) ((uint32_t)a >= 0x20000000)
 
 union Revo_hal_handler { // кровь кишки ассемблер :) преобразование функторов в унифицированный вид
     voidFuncPtr vp;

@@ -138,6 +138,11 @@ void boardInit(void);
 #define SERVO_PIN_5 48 // PA1
 #define SERVO_PIN_6 22 // PA8
 
+
+//#define HAL_CONSOLE uart1Driver // console on radio
+#define HAL_CONSOLE USB_Driver // console on USB
+#define HAL_CONSOLE_PORT 0 // console on USB
+
 /*
      DMA modes:
      
@@ -228,7 +233,8 @@ void boardInit(void);
     AP_GROUPINFO("CONNECT_ESC",  7, AP_Param_Helper, _connect_esc, 0), \
     AP_GROUPINFO("USB_STORAGE",  8, AP_Param_Helper, _usb_storage, 0), \
     AP_GROUPINFO("TIME_OFFSET",  9, AP_Param_Helper, _time_offset, 0), \
-    AP_GROUPINFO("RC_INPUT",     10, AP_Param_Helper, _rc_input, 0)
+    AP_GROUPINFO("CONSOLE_UART", 10, AP_Param_Helper, _console_uart, HAL_CONSOLE_PORT), \
+    AP_GROUPINFO("RC_INPUT",     11, AP_Param_Helper, _rc_input, 0)
     
 
 // parameters
@@ -241,11 +247,10 @@ void boardInit(void);
     AP_Int8 _pwm_type; \
     AP_Int8 _rc_input; \
     AP_Int8 _time_offset; \
+    AP_Int8 _console_uart; \
     AP_Int8 _usb_storage; 
     
 #endif
 
 #define USB_MASSSTORAGE 
 
-#define HAL_CONSOLE USB_Driver // console on USB
-//#define HAL_CONSOLE uart1Driver // console on radio

@@ -94,6 +94,8 @@ static REVOMINIUtil      utilInstance;
 
 HAL_state HAL_REVOMINI::state;
 
+//const AP_HAL::UARTDriver** HAL_REVOMINI::uarts[] = { &uartA, &uartB, &uartC, &uartD, &uartE, &uartF };
+
 /*
         AP_HAL::UARTDriver* _uartA, // console
         AP_HAL::UARTDriver* _uartB, // 1st GPS
@@ -138,9 +140,20 @@ HAL_REVOMINI::HAL_REVOMINI() :
         &utilInstance,	 /* util */
         nullptr,         /* no optical flow */
         nullptr          /* no CAN */
-    ) 
+    )
+    
+    , uarts{ &uartA, &uartB, &uartC, &uartD, &uartE, &uartF }
 
-{}
+{
+
+    uint32_t sig = board_get_rtc_register(RTC_CONSOLE_REG);
+    if( (sig & ~CONSOLE_PORT_MASK) == CONSOLE_PORT_SIGNATURE) {
+        AP_HAL::UARTDriver** up = uarts[sig & CONSOLE_PORT_MASK];
+        if(up){        
+            console =  *up;
+        }
+    }
+}
 
 extern const AP_HAL::HAL& hal;
 
@@ -185,7 +198,9 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
     }
     
 
-    (&HAL_CONSOLE)->begin(57600);  // init telemetry port as console
+    if(console != uartA) {
+        console->begin(57600);  // init telemetry port as console
+    }
 
     rcin->init();
 
@@ -257,11 +272,31 @@ void usb_mass_mal_USBdisconnect(){
 }
 
 void HAL_REVOMINI::lateInit() {
-    static AP_HAL::UARTDriver** uarts[] = { &uartA, &uartB, &uartC, &uartD, &uartE, &uartF };
     
     if(lateInitDone) return;
     
     lateInitDone=true;
+
+    uint32_t sig = board_get_rtc_register(RTC_CONSOLE_REG);
+    uint8_t port = hal_param_helper->_console_uart;
+
+    if(port < sizeof(uarts)/sizeof(AP_HAL::UARTDriver**) ){
+
+        if( (sig & ~CONSOLE_PORT_MASK) == CONSOLE_PORT_SIGNATURE) {
+            if(port != (sig & CONSOLE_PORT_MASK)) { // wrong console - reboot needed
+                board_set_rtc_register(CONSOLE_PORT_SIGNATURE | (port & CONSOLE_PORT_MASK), RTC_CONSOLE_REG);
+                REVOMINIScheduler::_reboot(false);
+            }
+        } else { // no signature - set and check console
+            board_set_rtc_register(CONSOLE_PORT_SIGNATURE | (port & CONSOLE_PORT_MASK), RTC_CONSOLE_REG);
+
+            AP_HAL::UARTDriver** up = uarts[port];
+            if(up && *up != console) {
+
+                REVOMINIScheduler::_reboot(false);
+            }
+        }
+    }
 
     { // one-time connection to COM-port
         uint8_t conn = hal_param_helper->_connect_com;

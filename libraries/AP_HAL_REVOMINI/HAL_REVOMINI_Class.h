@@ -44,7 +44,7 @@ public:
     static HAL_state state;
     
 private:
-
+    AP_HAL::UARTDriver** uarts[6];
 
     void connect_uart(AP_HAL::UARTDriver* uartL,AP_HAL::UARTDriver* uartR, AP_HAL::Proc proc);
     // parameters in hal_param_helper

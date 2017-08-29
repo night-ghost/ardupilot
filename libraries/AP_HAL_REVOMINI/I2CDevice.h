@@ -30,11 +30,22 @@
 #include <i2c.h>
 #include "i2c_soft.h"
 
+#define MAX_I2C_DEVICES 10
 
 using namespace REVOMINI;
 
+#ifdef I2C_DEBUG
+typedef struct I2C_STATE {
+    uint8_t addr;
+    uint8_t bus;
+    uint8_t send_len;
+    uint8_t recv_len;
+    uint8_t ret;
+    uint8_t sr1;
+    uint8_t sr2;
+} I2C_State;
+#endif
 
-#define MAX_I2C_DEVICES 10
 
 class REVOMINI::REVOI2CDevice : public AP_HAL::I2CDevice {
 public:
@@ -94,36 +105,45 @@ public:
     inline bool unregister_callback(PeriodicHandle h) override  { return REVOMINIScheduler::unregister_timer_task(h); }
 
     inline uint32_t get_error_count() {return _lockup_count; }
+    inline uint8_t get_last_error() {return last_error; }
     inline uint8_t get_bus() {return _bus; }
     inline uint8_t get_addr() {return _address; }
     
     static inline uint8_t get_dev_count() {return dev_count; }
     static inline REVOMINI::REVOI2CDevice * get_device(uint8_t i) { return devices[i]; }
 
+    void do_bus_reset();
+
+
 private:
     void init();
 
-    uint8_t _bus;
+    uint8_t  _bus;
     uint16_t _offs;
-    uint8_t _address;
-    uint8_t _retries;
+    uint8_t  _address;
+    uint8_t  _retries;
     uint32_t _lockup_count;
-    bool _initialized;
+    bool     _initialized;
+    uint8_t  last_error;
+    bool     _slow;
+    bool     _failed;
+    bool     need_reset;
 
     const i2c_dev *_dev;
     Soft_I2C s_i2c; // per-bus instances
 
     static REVOMINI::Semaphore _semaphores[3]; // individual for each bus + softI2C
+    
     static REVOMINI::REVOI2CDevice * devices[MAX_I2C_DEVICES]; // links to all created devices
     static uint8_t dev_count;
-
     static bool lateInitDone;
 
-    bool _slow;
-    bool _failed;
+    void _do_bus_reset();
     
 #ifdef I2C_DEBUG
-    static uint8_t last_addr, last_op, last_send_len, last_recv_len, busy, last_status;
+#define I2C_LOG_SIZE 128
+    static I2C_State log[I2C_LOG_SIZE];
+    static uint8_t log_ptr;
 #endif
 };
 

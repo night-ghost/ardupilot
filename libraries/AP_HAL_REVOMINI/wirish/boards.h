@@ -191,6 +191,9 @@ extern void clock_gettime(uint32_t mode, void *ptr);
 #define DSM_BIND_SIGNATURE      0xD82B14D0 // last nibble for DSM code
 #define DSM_BIND_SIGN_MASK      0xF // mask for last nibble - DSM code
 
+#define CONSOLE_PORT_SIGNATURE  0xC07501e0 // last nibble for port number
+#define CONSOLE_PORT_MASK       0xF // mask for last nibble - port number
+
 
 #define MASS_STORAGE_SIGNATURE  0x5106a8ed
 
@@ -199,6 +202,7 @@ extern void clock_gettime(uint32_t mode, void *ptr);
 #define RTC_SIGNATURE_REG       0 
 #define RTC_DSM_BIND_REG        1   
 #define RTC_MASS_STORAGE_REG    2
+#define RTC_CONSOLE_REG         3
 
 
 

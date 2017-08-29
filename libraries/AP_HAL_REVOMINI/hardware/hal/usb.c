@@ -365,11 +365,11 @@ int usb_configure(usb_attr_t * attr)
 void usb_setParams(usb_attr_t * attr)
 {
     if (attr == NULL)
-	return 0;
+	return;
 
     if (attr->use_present_pin) {
 	if (!IS_GPIO_ALL_PERIPH(attr->present_port->GPIOx) || !IS_GPIO_PIN_SOURCE(attr->present_pin))
-		return 0;
+		return;
 	gpio_set_mode(attr->present_port, attr->present_pin, GPIO_INPUT_FLOATING);
     }
 

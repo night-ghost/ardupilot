@@ -14,7 +14,7 @@ using namespace REVOMINI;
 
 namespace AP_HAL {
 
-void init()
+void init() // early init on creation of HAL class
 {
 }
 

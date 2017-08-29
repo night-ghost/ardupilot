@@ -25,7 +25,8 @@ REVOI2CDevice * REVOI2CDevice::devices[MAX_I2C_DEVICES]; // links to all created
 uint8_t REVOI2CDevice::dev_count; // number of devices
 
 #ifdef I2C_DEBUG
-uint8_t REVOI2CDevice::last_addr, REVOI2CDevice::last_op, REVOI2CDevice::last_send_len, REVOI2CDevice::last_recv_len, REVOI2CDevice::busy, REVOI2CDevice::last_status;
+ I2C_State REVOI2CDevice::log[I2C_LOG_SIZE] IN_CCM;
+ uint8_t   REVOI2CDevice::log_ptr=0;
 #endif
 
 
@@ -40,9 +41,10 @@ REVOI2CDevice::REVOI2CDevice(uint8_t bus, uint8_t address)
         , _retries(1)
         , _lockup_count(0)
         , _initialized(false)
-        , _dev(NULL)
         , _slow(false)
         , _failed(false)
+        , need_reset(false)
+        , _dev(NULL)
     {
 
 
@@ -68,6 +70,8 @@ void REVOI2CDevice::init(){
     if(!lateInitDone) {
         ((HAL_REVOMINI&) hal).lateInit();
     }
+
+    if(need_reset) do_bus_reset();
 
     if(_failed) return;
 
@@ -139,7 +143,6 @@ void REVOI2CDevice::init(){
 #endif
 
     default:
-            volatile int xx=_bus; // for debug
             return;
     }
     _dev = dev; // remember
@@ -148,6 +151,7 @@ void REVOI2CDevice::init(){
     if(_dev) {
 //      i2c_init(_dev, _offs, I2C_400KHz_SPEED);
         i2c_init(_dev, _offs, _slow?I2C_100KHz_SPEED:I2C_250KHz_SPEED);
+//        i2c_init(_dev, _offs, _slow?I2C_75KHz_SPEED:I2C_250KHz_SPEED);
     }else {
         s_i2c.init( );
 
@@ -169,31 +173,21 @@ bool REVOI2CDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *re
     
 again:
 
-#ifdef I2C_DEBUG
-    uint8_t was_addr=last_addr, was_send_len=last_send_len, was_recv_len=last_recv_len, was_busy=busy, was_status=last_status;
 
-    if(busy){
-        return false; // bus is busy, semaphores fails
+    uint32_t ret=0;
+    uint8_t last_op=0;
+
+    if(!_initialized) {
+        init();
+        if(!_initialized) return false;
     }
 
-    last_addr=_address; last_send_len=send_len; last_recv_len=recv_len; busy=1;
-#endif
 
-	uint8_t numbytes=0;
-	uint32_t ret=0;
-
-	if(!_initialized) {
-	    init();
-            if(!_initialized) return false;
-	}
-
-
-        if(!_dev){ // no hardware so use soft I2C
+    if(!_dev){ // no hardware so use soft I2C
             
             if(recv_len) memset(recv, 0, recv_len); // for DEBUG
             
             if(recv_len==0){ // only write
-                numbytes = send_len-1;
                 //                 uint8_t addr, uint8_t reg, uint8_t len, uint8_t * data)
                 ret=s_i2c.writeBuffer( _address, *send, send_len-1, &send[1] );
             
@@ -203,76 +197,97 @@ again:
             } else {
                 ret=s_i2c.transfer(_address, send_len, send, recv_len, recv);
             }
-
-#ifdef I2C_DEBUG
-            busy=false;
-#endif
             
             if(ret == I2C_NO_DEVICE) 
                 return false;
 
             if(ret == I2C_OK) 
                 return true;
-            
+
+            _lockup_count ++;          
+            last_error = ret;  
+              
             if(!s_i2c.bus_reset()) return false;    
 
             if(retries--) goto again;
 
             return false;
-        }
-
+    } // software I2C
 
         
-	if(recv_len==0) { // only write
-#ifdef I2C_DEBUG
-    last_op=1;
-#endif
-
-	    numbytes = send_len;
-	    ret = i2c_write(_dev,  _address, send, &numbytes);
-
-	} else if(send_len==1) { // only read - send byte is address
-#ifdef I2C_DEBUG
-    last_op=0;
-#endif
-	    numbytes=recv_len;
-	    ret = i2c_read(_dev,  _address, send, 1, recv, &numbytes);
-	} else {
-#ifdef I2C_DEBUG
-    last_op=0;
-#endif
-	    numbytes=recv_len;
-	    ret = i2c_read(_dev,  _address, send, send_len, recv, &numbytes);
-	}
-
-#ifdef I2C_DEBUG
-    busy=0; last_status=ret;
-#endif
-
-
-    if(ret == I2C_NO_DEVICE) 
-        return false;
-    if(ret == I2C_OK) 
-        return true;
-
-
-// all other errors
-    _lockup_count ++;  
-    _initialized=false;
-	    
-    i2c_deinit(_dev); // disable I2C hardware
-    if(!i2c_bus_reset(_dev)) {
-        _failed = true;
-        return false;        
+// Hardware
+    if(recv_len==0) { // only write
+        last_op=1;
+        ret = i2c_write(_dev, _address, send, send_len);
+    } else {
+        last_op=0;
+        ret = i2c_read(_dev,  _address, send, send_len, recv, recv_len);
     }
-    REVOMINIScheduler::_delay_microseconds(50);
 
+#ifdef I2C_DEBUG
+     I2C_State &sp = log[log_ptr];
+     sp.bus      =_bus;
+     sp.addr     =_address;
+     sp.send_len = send_len;
+     sp.recv_len = recv_len;
+     sp.ret      = ret;
+     sp.sr1      = _dev->I2Cx->SR1;
+     sp.sr2      = _dev->I2Cx->SR2;
+     if(log_ptr<I2C_LOG_SIZE-1) log_ptr++;
+     else                       log_ptr=0;
+#endif
+
+    if(ret == I2C_OK) return true;
+
+    if(ret == I2C_ERR_STOP || ret == I2C_STOP_BERR) { // bus or another errors on Stop. Data is good but bus reset required
+
+        need_reset = true;
+        
+        // we not count such errors as _lockup_count
+    
+        Revo_handler h = { .mp=FUNCTOR_BIND_MEMBER(&REVOI2CDevice::do_bus_reset, void) }; // schedule reset as io_task
+        REVOMINIScheduler::_register_io_process(h.h, IO_ONCE); 
+        
+        return true; // data is OK
+    } 
+    
+    if(ret != I2C_NO_DEVICE) { // for all errors except NO_DEVICE do bus reset
+
+        last_error = ret;   // remember
+        if(last_op) last_error+=50; // to distinguish read and write errors
+
+        _lockup_count ++;  
+        _initialized=false; // will be reinitialized at next transfer
+        
+        _do_bus_reset();
+        
+        if(_failed) return false;
+    }
 
     if(retries--) goto again;
 
     return false;
 }
 
+
+void REVOI2CDevice::do_bus_reset(){ // public - with semaphores
+    if(_semaphores[_bus].take(HAL_SEMAPHORE_BLOCK_FOREVER)){
+        _do_bus_reset();
+        _semaphores[_bus].give();
+    }
+}
+
+void REVOI2CDevice::_do_bus_reset(){ // private
+//        _dev->I2Cx->CR1|=I2C_CR1_SWRST;
+
+    if(!need_reset) return; // already done
+    
+    i2c_deinit(_dev); // disable I2C hardware
+    if(!i2c_bus_reset(_dev)) {
+        _failed = true;         // can't do it in limited time
+    }
+    need_reset = false; // done
+}
 
 
 bool REVOI2CDevice::read_registers_multiple(uint8_t first_reg, uint8_t *recv,

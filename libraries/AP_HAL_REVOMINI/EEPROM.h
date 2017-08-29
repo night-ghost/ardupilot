@@ -107,7 +107,7 @@ public:
 	uint16_t _CheckErasePage(uint32_t, uint16_t);
         static FLASH_Status _ErasePageByAddress(uint32_t Page_Address);
 
-//        static inline void set_erase_handler(func_t h) { erase_handler = h; }
+        static void FLASH_OB_WRPConfig(uint32_t OB_WRP, FunctionalState NewState);
 
 private:
 	uint32_t PageBase0; // uses 2 flash pages
@@ -126,8 +126,6 @@ private:
 	uint16_t _GetVariablesCount(uint32_t, uint16_t);
 	uint16_t _PageTransfer(uint32_t, uint32_t, uint16_t);
 	uint16_t _VerifyPageFullWriteVariable(uint16_t, uint16_t);
-	
-//	static func_t erase_handler;
 };
 
 

@@ -394,9 +394,6 @@ spi_baud_rate SPIDevice::determine_baud_rate(SPIFrequency freq)
 // DMA
 
 
-#define NEW_API
-
-#if defined(NEW_API)
 typedef struct SPI_DMA {
     uint32_t channel;
     dma_stream stream_rx;    
@@ -406,27 +403,9 @@ typedef struct SPI_DMA {
 static const Spi_DMA spi_dma[] = {
     { DMA_CR_CH3, DMA2_STREAM2, DMA2_STREAM3 }, // SPI1
     { DMA_CR_CH0, DMA1_STREAM3, DMA1_STREAM4 }, // SPI2
-    { DMA_CR_CH0, DMA1_STREAM0, DMA1_STREAM5 }, // SPI3
+    { DMA_CR_CH0, DMA1_STREAM2, DMA1_STREAM5 }, // SPI3
 
 };
-#else
-typedef struct SPI_DMA {
-    uint32_t channel;
-    DMA_Stream_TypeDef * stream_rx;    
-    DMA_Stream_TypeDef * stream_tx;
-    uint32_t rx_flag;
-    uint32_t tx_flag;
-    uint32_t enable;
-} Spi_DMA;
-
-static const Spi_DMA spi_dma[] = {
-    { DMA_Channel_3, DMA2_Stream2, DMA2_Stream3, DMA_FLAG_TCIF2, DMA_FLAG_TCIF3, RCC_AHB1Periph_DMA2}, // SPI1
-    { DMA_Channel_0, DMA1_Stream3, DMA1_Stream4, DMA_FLAG_TCIF3, DMA_FLAG_TCIF4, RCC_AHB1Periph_DMA1}, // SPI2
-    { DMA_Channel_0, DMA1_Stream0, DMA1_Stream5, DMA_FLAG_TCIF0, DMA_FLAG_TCIF5, RCC_AHB1Periph_DMA1}, // SPI3
-
-};
-
-#endif
 
 static uint32_t rw_workbyte[] = { 0xffff }; // not in stack!
 
@@ -439,7 +418,6 @@ void  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t
 
     const Spi_DMA &dp = spi_dma[_desc.bus-1];
 
-#if defined(NEW_API)
     dma_init(dp.stream_rx); dma_init(dp.stream_tx);
 
 //  проверить, не занят ли поток DMA перед использованием
@@ -448,17 +426,6 @@ void  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t
     } 
 
     dma_clear_isr_bits(dp.stream_rx); dma_clear_isr_bits(dp.stream_tx);
-#else
-    RCC_AHB1PeriphClockCmd(dp.enable, ENABLE);        
-
-    DMA_DeInit(dp.stream_rx);
-    DMA_DeInit(dp.stream_tx);
-
-
-    // datasheet requires clearing flags before set Enable
-    DMA_ClearFlag(dp.stream_rx, dp.rx_flag);
-    DMA_ClearFlag(dp.stream_tx, dp.tx_flag);
-#endif
 
     /* shared DMA configuration values */
     DMA_InitStructure.DMA_Channel               = dp.channel;
@@ -485,11 +452,7 @@ void  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t
       DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)rw_workbyte;
       DMA_InitStructure.DMA_MemoryInc       = DMA_MemoryInc_Disable;
     }
-#if defined(NEW_API)
     dma_init_transfer(dp.stream_rx, &DMA_InitStructure);
-#else
-    DMA_Init(dp.stream_rx, &DMA_InitStructure);
-#endif
 
   // transmit stream
     DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
@@ -500,22 +463,13 @@ void  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t
       DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)rw_workbyte;
       DMA_InitStructure.DMA_MemoryInc       = DMA_MemoryInc_Disable;
     }
-#if defined(NEW_API)
     dma_init_transfer(dp.stream_tx, &DMA_InitStructure);
-#else
-    DMA_Init(dp.stream_tx, &DMA_InitStructure);
-#endif
 
-#if defined(NEW_API)
     dma_enable(dp.stream_rx); dma_enable(dp.stream_tx);
 
     if(_completion_cb) {// we should call it after completion via interrupt
         dma_attach_interrupt(dp.stream_rx, isr_handler, DMA_CR_TCIE);
     }
-#else
-    DMA_Cmd(dp.stream_rx, ENABLE);
-    DMA_Cmd(dp.stream_tx, ENABLE);
-#endif
 
     /* Enable SPI TX/RX request */
     SPI_I2S_DMACmd(_desc.dev->SPIx, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, ENABLE);
@@ -527,34 +481,17 @@ void  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t
     // need to wait
     uint16_t dly = btr >>2; // 20 MHZ -> ~0.5 uS per byte
    /* Wait until Receive Complete */
-#if defined(NEW_API)
     while ( (dma_get_isr_bits(dp.stream_rx) & DMA_FLAG_TCIF) == 0) { 
         if(dly!=0)
             REVOMINIScheduler::yield(dly); // пока ждем пусть другие работают. на меньших скоростях SPI вызовется несколько раз
     }
-#else
-    while (DMA_GetFlagStatus(dp.stream_rx,dp.rx_flag) == RESET) { 
-        if(dly!=0)
-            REVOMINIScheduler::yield(dly); // пока ждем пусть другие работают. на меньших скоростях SPI вызовется несколько раз
-    }
-#endif
 
-#if defined(NEW_API)
     dma_disable(dp.stream_rx); dma_disable(dp.stream_tx);
-#else
-    DMA_Cmd(dp.stream_rx, DISABLE);
-    DMA_Cmd(dp.stream_tx, DISABLE);
-#endif
 
     /* Disable SPI RX/TX request */
     SPI_I2S_DMACmd(_desc.dev->SPIx, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, DISABLE);
 
-#if defined(NEW_API)
     dma_clear_isr_bits(dp.stream_rx); dma_clear_isr_bits(dp.stream_tx);
-#else
-    DMA_ClearFlag(dp.stream_rx,dp.rx_flag);
-    DMA_ClearFlag(dp.stream_tx,dp.tx_flag);
-#endif
     
     _cs_release();
 

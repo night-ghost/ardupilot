@@ -643,7 +643,7 @@ static INLINE uint16_t timer_get_count(const timer_dev *dev) {
     return (uint16_t)(dev->regs->CNT);
 }
 
-static inline uint32_t timer_get_count32(const timer_dev *dev) {
+static INLINE uint32_t timer_get_count32(const timer_dev *dev) {
     return dev->regs->CNT;
 }
 

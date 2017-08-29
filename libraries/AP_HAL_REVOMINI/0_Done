@@ -96,6 +96,8 @@
 * added check to I2C_Mgr for same device on same bus - to prevent autodetection like MS5611 (already initialized) as BMP_085
 * added time offset HAL parameter
 * added time syncronization between board's time and GPS time - so logs now will show real local date&time
+* i2c driver is fully rewritten, added parsing of bus error flags - ARLO & BERR
+* i2c reads more than 3 bytes does via DMA
 
 * ...
 * a lot of minor enhancements

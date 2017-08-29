@@ -1,4 +1,4 @@
-#include <AP_HAL/AP_HAL.h>
+//#include <AP_HAL/AP_HAL.h> // uncomment this for GCC 4.8.3
 
 #pragma GCC push_options
 #pragma GCC optimize ("O2")

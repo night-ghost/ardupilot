@@ -168,17 +168,17 @@ File SDClass::open(const char *filepath, uint8_t mode)
 
     lastError=f_stat(filepath, &fno);
 
-    if(fno.fattrib & AM_DIR) {
+    if(lastError == FR_OK && fno.fattrib & AM_DIR) { // exists and is dir
         if(!(mode & FILE_WRITE)){
             lastError = f_opendir(&file._dir, filepath);
         } else {
             lastError = FR_IS_DIR;
         }
         if( lastError != FR_OK) file.close();
-    } else {
+    } else { // dir not exists - regular file
     
         if((mode & FILE_WRITE) && lastError==FR_OK) { // режимы открытия файла отличаются. если существует файл
-            mode &= ~FA_CREATE_NEW;    //  то убираем флаг создания - а то ошибка будет "файл существует"            
+            mode &= ~FA_CREATE_NEW;                  //  то убираем флаг создания - а то ошибка будет "файл существует"            
         }
 
         lastError = f_open(&file._fil, filepath, mode);
@@ -559,8 +559,9 @@ uint32_t File::size()
 }
 
 File::operator bool() const {
-  return  (_name == NULL)? FALSE : TRUE; // TODO
+    return  (_name == NULL)? FALSE : TRUE; // TODO
 }
+
 /**
   * @brief  Write data to the file
   * @param  data: Data to write to the file
@@ -699,18 +700,17 @@ File File::openNextFile(uint8_t mode)
 	len += strlen(fn) +2;
 	fullPath = (char*)malloc(len);
 	if (fullPath != NULL) {
-	  // Avoid twice '/'
-	  if ((name_len > 0)  && (_name[name_len-1] == '/'))
-	  {
-		sprintf(fullPath, "%s%s", _name, fn);
-	  } else {
-	    sprintf(fullPath, "%s/%s", _name, fn);
-	  }
-	  File filtmp = SD.open(fullPath, mode);
-	  free(fullPath);
-	  return filtmp;
+	    // Avoid twice '/'
+	    if ((name_len > 0)  && (_name[name_len-1] == '/'))  {
+                sprintf(fullPath, "%s%s", _name, fn);
+	    } else {
+	        sprintf(fullPath, "%s/%s", _name, fn);
+	    }
+	    File filtmp = SD.open(fullPath, mode);
+	    free(fullPath);
+	    return filtmp;
 	} else {
-		return File();
+	    return File();
 	}
   }
 }

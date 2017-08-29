@@ -3,40 +3,44 @@
 
 #include <hal_types.h>
 #include <hal.h>
+#include "dma.h"
 
+#define I2C_50KHz_SPEED                          50000
+#define I2C_75KHz_SPEED                          75000
 #define I2C_100KHz_SPEED                        100000
 #define I2C_250KHz_SPEED                        250000
 #define I2C_400KHz_SPEED                        400000
 
-/* I2C clock speed configuration (in Hz)
-  WARNING:
-   Make sure that this define is not already declared in other files (ie.
-  stm324xg_eval.h file). It can be used in parallel by other modules. */
-#ifndef I2C_SPEED
- #define I2C_SPEED              100000
-#endif /* I2C_SPEED */
+// missed definition in .h
+#define FLAG_MASK         ((uint32_t)0x00FFFFFF)  /*<! I2C FLAG mask */
 
-
-/* Maximum Timeout values for flags and events waiting loops. These timeouts are
-   not based on accurate values, they just guarantee that the application will
-   not remain stuck if the I2C communication is corrupted.
-   You may modify these timeout values depending on CPU frequency and application
-   conditions (interrupts routines ...). */
+/* Maximum Timeout values for events waiting loops */
    
-#undef I2C_FLAG_TIMEOUT
-#undef I2C_LONG_TIMEOUT
-#define I2C_FLAG_TIMEOUT         ((uint32_t)0x4000)
-#define I2C_LONG_TIMEOUT         ((uint32_t)(50 * I2C_FLAG_TIMEOUT))
+#undef  I2C_TIMEOUT
+#define I2C_TIMEOUT         (2000)// in uS
+
+#define I2C_OK          0
+#define I2C_NO_DEVICE   1
+#define I2C_ERROR       2
+#define I2C_BUS_BUSY    2
+#define I2C_BUS_BERR    99
+#define I2C_ERR_STOP    98
+#define I2C_STOP_BERR   97
 
 
-//#define sEE_I2C2                          I2C2
-//#define sEE_I2C1                          I2C1
+typedef struct I2C_DMA {
+    uint32_t channel;
+    dma_stream stream_rx;
+    dma_stream stream_tx;
+} I2C_dma;
+
+/*
+typedef struct i2c_state {
+    bool active;
+} i2c_state;
+*/
 
 
-/* Time constant for the delay caclulation allowing to have a millisecond
-   incrementing counter. This value should be equal to (System Clock / 1000).
-   ie. if system clock = 168MHz then sEE_TIME_CONST should be 168. */
-//#define sEE_TIME_CONST                   168
 /**
  * @brief I2C device type.
  */
@@ -49,6 +53,9 @@ typedef struct i2c_dev {
     uint8_t gpio_af;     
     IRQn_Type ev_nvic_line;  /* Event IRQ number */
     IRQn_Type er_nvic_line;  /* Error IRQ number */        
+    I2C_dma dma;
+    voidFuncPtr dma_isr;
+//    i2c_state *state;
 } i2c_dev;
 
 #ifdef __cplusplus
@@ -59,10 +66,8 @@ typedef struct i2c_dev {
 void i2c_init(const i2c_dev *dev, uint16_t address, uint32_t speed);
 void i2c_deinit(const i2c_dev *dev);
 
-uint8_t i2c_is_busy();
-
-uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint8_t *len);
-uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint8_t txlen, uint8_t *rx_buff, uint8_t *rxlen);
+uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint8_t txlen);
+uint32_t i2c_read (const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint8_t txlen, uint8_t *rx_buff, uint8_t rxlen);
 
 void i2c_lowLevel_deinit(const i2c_dev *dev);
 

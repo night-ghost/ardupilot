@@ -1039,10 +1039,11 @@ BYTE sd_getSectorCount(DWORD *ptr){
     case 0xEF: //  Winbond Serial Flash 
         if (memtype == 0x40) {
             mfg="Winbond";
-            size = (1 << ((capacity & 0x0f) + 8)) *8;
+            size = (1 << ((capacity & 0x0f) + 8));
 /*
- const uint8_t _capID[11]      = {0x10,  0x11,   0x12,   0x13,   0x14, 0x15, 0x16, 0x17, 0x18,  0x19,  0x43};
-  const uint32_t _memSize[11]  = {64L*K, 128L*K, 256L*K, 512L*K, 1L*M, 2L*M, 4L*M, 8L*M, 16L*M, 32L*M, 8L*M};
+  const uint8_t _capID[11]      = {0x10,  0x11,   0x12,   0x13,   0x14, 0x15, 0x16, 0x17, 0x18,  0x19,  0x43};
+  const uint32_t _memSize[11]  = {64L*K, 128L*K, 256L*K, 512L*K, 1L*M, 2L*M, 4L*M, 8L*M, 16L*M, 32L*M, 8L*M}; megabytes
+  const uint32_t _memSize[11]  = {64L*K, 128L*K, 256L*K, 512L*K, 1L*M, 2L*M, 4L*M, 8L*M, 16L*M, 32L*M, 8L*M}; megabytes
 */
             erase_size=4096;
             erase_cmd=JEDEC_SECTOR_ERASE;
@@ -1051,26 +1052,26 @@ BYTE sd_getSectorCount(DWORD *ptr){
     case 0xbf: // SST
         if (memtype == 0x25) {
             mfg="Microchip";
-            size = (1 << ((capacity & 0x07) + 12))*8 ;
+            size = (1 << ((capacity & 0x07) + 12));
         }
         break;
         
     case 0x20: // micron
         if (memtype == 0xba){// JEDEC_ID_MICRON_N25Q128        0x20ba18
             mfg="Micron";
-            size = (1 << ((capacity & 0x0f) + 8))*8 ;
+            size = (1 << ((capacity & 0x0f) + 8));
             erase_size=4096;
             erase_cmd=JEDEC_SECTOR_ERASE;
         } else if(memtype==0x20) {  // JEDEC_ID_MICRON_M25P16         0x202015
             mfg="Micron";
-            size = (1 << ((capacity & 0x0f) + 8))*8 ;
+            size = (1 << ((capacity & 0x0f) + 8));
         }
         break;
         
     case 0xC2:     //JEDEC_ID_MACRONIX_MX25L6406E   0xC22017
         if (memtype == 0x20) { 
             mfg="MACRONIX";
-            size = (1 << ((capacity & 0x0f) + 8))*8 ;
+            size = (1 << ((capacity & 0x0f) + 8));
             erase_size=4096;
             erase_cmd=JEDEC_SECTOR_ERASE;
         }
@@ -1079,7 +1080,7 @@ BYTE sd_getSectorCount(DWORD *ptr){
     case 0x9D: // ISSI
         if (memtype == 0x40 || memtype == 0x30) {
             mfg = "ISSI";
-            size      = (1 << ((capacity & 0x0f) + 8))*8;
+            size      = (1 << ((capacity & 0x0f) + 8));
         }
         break;
 

@@ -22,6 +22,39 @@ EEPROMClass::EEPROMClass(void)
 {
 }
 
+static void reset_flash_errors(){
+    if(FLASH->SR & 0xE0) FLASH->SR = 0xE0; // reset Programming Sequence, Parallelism and Alignment errors
+    if(FLASH->SR & FLASH_FLAG_WRPERR) {  // write protection detected
+        FLASH_OB_Unlock();
+        
+        FLASH_OB_WRPConfig(OB_WRP_Sector_All, DISABLE); // remove protection            
+        FLASH->SR |= FLASH_FLAG_WRPERR; // reset flag
+    }
+}
+
+// библиотечная версия содержит ошибку и не разблокирует память
+void EEPROMClass::FLASH_OB_WRPConfig(uint32_t OB_WRP, FunctionalState NewState)
+{ 
+  
+  /* Check the parameters */
+  assert_param(IS_OB_WRP(OB_WRP));
+  assert_param(IS_FUNCTIONAL_STATE(NewState));
+    
+    FLASH_WaitForLastOperation();
+
+//  if(status == FLASH_COMPLETE) {  тут может быть любая ошибка - оттого мы и вызываем разблокировку!
+    if(NewState != DISABLE)
+    {
+      *(__IO uint16_t*)OPTCR_BYTE2_ADDRESS &= (~OB_WRP);
+    }
+    else
+    {
+      *(__IO uint16_t*)OPTCR_BYTE2_ADDRESS |= (uint16_t)OB_WRP;
+    }
+//  }
+}
+
+
 
 FLASH_Status EEPROMClass::write_16(uint32_t addr, uint16_t data){
     uint16_t n_try=16;
@@ -29,12 +62,7 @@ again:
     FLASH_Status  sts = FLASH_ProgramHalfWord(addr, data);
     
     if(sts != FLASH_COMPLETE ) {
-        if(FLASH->SR & 0xE0) FLASH->SR = 0xE0; // reset Programming Sequence, Parallelism and Alignment errors
-        if(FLASH->SR & 0x10) {  // write protection detected
-            FLASH_OB_Unlock();
-            
-            FLASH_OB_WRPConfig(OB_WRP_Sector_All, DISABLE); // remove protection
-        }
+        reset_flash_errors();
         if(n_try-- > 0) goto again;
     }
     
@@ -47,12 +75,8 @@ again:
     FLASH_Status  sts = FLASH_ProgramByte(addr, data);
     
     if(sts != FLASH_COMPLETE ) {
-        if(FLASH->SR & 0xE0) FLASH->SR = 0xE0; // reset Programming Sequence, Parallelism and Alignment errors
-        if(FLASH->SR & 0x10) {  // write protection detected
-            FLASH_OB_Unlock();
-            
-            FLASH_OB_WRPConfig(OB_WRP_Sector_All, DISABLE); // remove protection
-        }
+        reset_flash_errors();
+
         if(n_try-- > 0) goto again;
     }
     
@@ -522,7 +546,7 @@ uint16_t EEPROMClass::_init(void) //
 uint16_t EEPROMClass::_format(void)
 {
 	uint16_t status;
-	
+	uint16_t n_try=16;
 
 again:
 
@@ -540,13 +564,9 @@ again:
 	if (status == EEPROM_OK) return status;
 error:
         // something went wrong
-        if(FLASH->SR & 0xE0) FLASH->SR = 0xE0; // reset Programming Sequence, Parallelism and Alignment errors
-        if(FLASH->SR & 0x10) {  // write protection detected
-            FLASH_OB_Unlock();
-            
-            FLASH_OB_WRPConfig(OB_WRP_Sector_All, DISABLE); // remove protection
-            goto again;
-        }
+        reset_flash_errors();
+
+        if(n_try-- > 0) goto again;
         
 	return status;
 }

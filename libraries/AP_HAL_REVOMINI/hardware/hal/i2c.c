@@ -1,16 +1,16 @@
-#include <i2c.h>
-//#include "gpiopins.h"
+#include "i2c.h"
+#include "dma.h"
 #include "systick.h"
 #include "stm32f4xx_i2c.h"
 #include "stm32f4xx_dma.h"
 
-DMA_InitTypeDef I2C1DMA_InitStructure;
-DMA_InitTypeDef I2C2DMA_InitStructure;
 
-#define TIMEOUT 500
-//__IO uint32_t sTimeout = I2C_LONG_TIMEOUT;
 
-//static i2c1_timeout = I2C_LONG_TIMEOUT;
+#define I2C_Yield(x) hal_yield(x)
+
+static void i2c1_isr_handler();
+static void i2c2_isr_handler();
+
 
 static const i2c_dev i2c_dev1 = {
     .I2Cx         = I2C1,
@@ -21,11 +21,12 @@ static const i2c_dev i2c_dev1 = {
     .gpio_af	  = GPIO_AF_I2C1,
     .ev_nvic_line = I2C1_EV_IRQn,
     .er_nvic_line = I2C1_ER_IRQn,
+    .dma          = { DMA_CR_CH1, DMA1_STREAM0, DMA1_STREAM6 }, // I2C1
+    .dma_isr      = i2c1_isr_handler,
 };
 /** I2C1 device */
 const i2c_dev* const _I2C1 = &i2c_dev1;
 
-//static i2c2_timeout = I2C_LONG_TIMEOUT;
 
 static const i2c_dev i2c_dev2 = {
     .I2Cx         = I2C2,
@@ -36,29 +37,25 @@ static const i2c_dev i2c_dev2 = {
     .gpio_af	  = GPIO_AF_I2C2,
     .ev_nvic_line = I2C2_EV_IRQn,
     .er_nvic_line = I2C2_ER_IRQn,
+    .dma          = { DMA_CR_CH7, DMA1_STREAM3 /* intersects with spi2_tx */ , DMA1_STREAM7 }, // I2C2
+    .dma_isr      = i2c2_isr_handler,
 };
+
 /** I2C2 device */
 const i2c_dev* const _I2C2 = &i2c_dev2;
 
 
 typedef enum {TX = 0, RX = 1, TXREG = 2} I2C_Dir;
 
-__IO uint8_t I2C_BLOCKED = 0;
-
-/*
-#define I2C_BUF_SIZE 16
-
-__IO uint16_t sEEAddress = 0;
-__IO uint32_t  sEETimeout = I2C_LONG_TIMEOUT;
-__IO uint8_t   sEEDataNum;
-*/
-
 static void delay_10us(){
     hal_delay_microseconds(10);
 }
 
+static uint16_t i2c_bit_time=4; // on 250kHz 1 bit is 4uS
+
+
 /**
- * @brief  DeInitializes peripherals used by the I2C EEPROM driver.
+ * @brief  DeInitializes peripherals used by the I2C driver.
  * @param  None
  * @retval None
  */
@@ -72,10 +69,11 @@ void i2c_lowLevel_deinit(const i2c_dev *dev){
     I2C_DeInit(dev->I2Cx);
 
     /*!< GPIO configuration */
-    /*!< Configure I2C pins: SCL */
-    GPIO_InitStructure.GPIO_Pin = BIT(dev->scl_pin);
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+
+    /*!< Configure I2C pins: SCL */
+    GPIO_InitStructure.GPIO_Pin = BIT(dev->scl_pin);
     GPIO_Init(dev->gpio_port->GPIOx, &GPIO_InitStructure);
 
     /*!< Configure I2C pins: SDA */
@@ -104,13 +102,14 @@ static inline void i2c_lowLevel_init(const i2c_dev *dev)  {
 
 
 // common configuration
-    /* GPIO configuration */
-    /* Configure SCL */
-    GPIO_InitStructure.GPIO_Pin = BIT(dev->scl_pin);
+    /* common GPIO configuration */
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz; // GPIO_Speed_50MHz;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+
+    /* Configure SCL */
+    GPIO_InitStructure.GPIO_Pin = BIT(dev->scl_pin);
     GPIO_Init(dev->gpio_port->GPIOx, &GPIO_InitStructure);
 
     /* Configure SDA */
@@ -128,15 +127,18 @@ void i2c_init(const i2c_dev *dev, uint16_t address, uint32_t speed)
 
     i2c_lowLevel_init(dev);
 
+
+    i2c_bit_time = 1000000l / speed;
+
     /* I2C configuration */
     I2C_StructInit(&I2C_InitStructure);
 
-    I2C_InitStructure.I2C_Mode = I2C_Mode_I2C;
-    I2C_InitStructure.I2C_DutyCycle = I2C_DutyCycle_2;
-    I2C_InitStructure.I2C_OwnAddress1 = address;
-    I2C_InitStructure.I2C_Ack = I2C_Ack_Enable;
+    I2C_InitStructure.I2C_Mode                = I2C_Mode_I2C;
+    I2C_InitStructure.I2C_DutyCycle           = I2C_DutyCycle_2;
+    I2C_InitStructure.I2C_OwnAddress1         = address;
+    I2C_InitStructure.I2C_Ack                 = I2C_Ack_Enable;
     I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
-    I2C_InitStructure.I2C_ClockSpeed = speed;
+    I2C_InitStructure.I2C_ClockSpeed          = speed;
 
     I2C_ITConfig(dev->I2Cx, I2C_IT_EVT | I2C_IT_BUF | I2C_IT_ERR, DISABLE);
 
@@ -145,7 +147,8 @@ void i2c_init(const i2c_dev *dev, uint16_t address, uint32_t speed)
     /* Apply I2C configuration after enabling it */
     I2C_Init(dev->I2Cx, &I2C_InitStructure);
 
-    I2C_BLOCKED = 0;
+    dma_init(dev->dma.stream_rx);
+    dma_disable(dev->dma.stream_rx);
 }
 
 /**
@@ -159,42 +162,52 @@ void i2c_deinit(const i2c_dev *dev)
 }
 
 
-uint8_t i2c_is_busy() {
-    return I2C_BLOCKED;
-}
 
+#define DMA_BUFSIZE 16 // we read just 6 bytes from compass
+
+static uint8_t dma_buffer[DMA_BUFSIZE];
 
 /* Send a buffer to the i2c port */
-uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint8_t *len)
+uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint8_t len)
 {
 
 //    uint16_t sent = 0;
     const uint8_t *buffer = tx_buff;
 
     uint32_t state = I2C_ERROR;
+    uint16_t sr1;
     
     /*!< While the bus is busy */
-    uint32_t timeout = I2C_LONG_TIMEOUT;
-    while (I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_BUSY )) {
-	if (timeout-- == 0)
-	    return state;
+    uint32_t t = hal_micros();
+    while ((dev->I2Cx->SR2 & (I2C_FLAG_BUSY>>16) & FLAG_MASK) != 0) {
+	if (hal_micros() - t > I2C_TIMEOUT)
+	    return state; // 2 - bus busy
 	
-	delay_10us();
+	I2C_Yield(0); 
     }
 
     state++;
 
+
+
     // Bus got!  enable Acknowledge for our operation
-    I2C_AcknowledgeConfig(dev->I2Cx, ENABLE);
+    dev->I2Cx->CR1 |= I2C_CR1_ACK; 
+    dev->I2Cx->CR1 &= ~I2C_NACKPosition_Next; 
 
     // Send START condition
-    I2C_GenerateSTART(dev->I2Cx, ENABLE);
+    dev->I2Cx->CR1 |= I2C_CR1_START;
 
     // Test on EV5 and clear it (cleared by reading SR1 then writing to DR)
-    timeout = I2C_FLAG_TIMEOUT;
-    while (!I2C_CheckEvent(dev->I2Cx, I2C_EVENT_MASTER_MODE_SELECT )) {
-	if (timeout-- == 0)
-	    return state;
+    t = hal_micros();
+
+    while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_SB & FLAG_MASK) == 0) { // wait for start bit generated
+        if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+            dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+            state = I2C_BUS_BERR;
+            goto err_exit;
+        }
+	if (hal_micros() - t > I2C_TIMEOUT)
+	    return state; // 3 - failed to start
     }
 
 
@@ -203,152 +216,326 @@ uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uin
     // Send address for write
     I2C_Send7bitAddress(dev->I2Cx, addr<<1, I2C_Direction_Transmitter );
 
-    timeout = I2C_FLAG_TIMEOUT;
+    t = hal_micros();
     // Test on EV6 and clear it
-    while (!I2C_CheckEvent(dev->I2Cx,  I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED )){
+    while ( ((sr1 = dev->I2Cx->SR1) & I2C_FLAG_ADDR & FLAG_MASK) == 0)  {
 
-        if(I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_AF ) != RESET) {
-            dev->I2Cx->SR1 &= ~I2C_SR1_AF; // reset it
+        if(sr1 & I2C_FLAG_AF & FLAG_MASK) {
+            dev->I2Cx->SR1 = ~I2C_SR1_AF; // reset it
             
-            I2C_GenerateSTOP(dev->I2Cx, ENABLE); // release bus
-            return I2C_NO_DEVICE; // Acknolege Failed
+            state = I2C_NO_DEVICE; // Acknolege Failed
+            goto err_exit;
         }
 
-	if ((timeout--) == 0)
-	    return state;
+        if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+            dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+            state = I2C_BUS_BERR;
+            goto err_exit;
+        }
+
+	if (hal_micros() - t > I2C_TIMEOUT)
+	    goto err_exit; // 4 failed to send address
+    }
+
+    /* Clear ADDR register by reading SR1 then SR2 register (SR1 has already been read) */
+    (void) dev->I2Cx->SR2;
+
+    state++;
+
+    while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_TXE & FLAG_MASK)  == 0) { // wait for TX empty
+        if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+            dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+            state = I2C_BUS_BERR;
+            goto err_exit;
+        }
+
+        if (hal_micros() - t > I2C_TIMEOUT) goto err_exit; // 5 - TXe not set on 1st byte
     }
 
     state++;
 
-    I2C_SendData(dev->I2Cx, *buffer++); // 1st byte
+    dev->I2Cx->DR = *buffer++; // 1st byte
 
 
-    if ((*len) < 2) { // only 1 byte
-	/* Send the current byte */
-//	I2C_SendData(dev->I2Cx, *buffer); WTF??? @NG
-	/* Point to the next byte to be written */
-//	sent++;
-	/* Test on EV8 and clear it */
-	timeout = I2C_LONG_TIMEOUT;
-//	while (!I2C_CheckEvent(dev->I2Cx, I2C_EVENT_MASTER_BYTE_TRANSMITTED )) {
-	while(I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_BTF ) == RESET) { // wait for end of transmission
-	    if ((timeout--) == 0)
-		return state;
+    if (len < 2) { // only 1 byte
+        /* Test on EV8 and clear it */
+	t = hal_micros();
+//	while(I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_BTF ) == RESET) { // wait for end of transmission
+        while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_TXE & FLAG_MASK)  == 0) { // wait for TX empty
+            if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+                dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+                state = I2C_BUS_BERR;
+                goto err_exit;
+            }
+
+    	    if (hal_micros() - t > I2C_TIMEOUT) goto err_exit; // 6 1-st byte transmit failed
         }
 
         state++;
 
-	/*!< STOP condition */
-	I2C_GenerateSTOP(dev->I2Cx, DISABLE);
-	I2C_ClearFlag(dev->I2Cx, I2C_FLAG_STOPF );
-	/* Send STOP condition */
-	I2C_GenerateSTOP(dev->I2Cx, ENABLE);
-	(*len)=0; // done
+	dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP); 	/*!< STOP condition */
+	dev->I2Cx->SR1 = (uint16_t)~I2C_FLAG_STOPF;
+	dev->I2Cx->CR1 |= I2C_CR1_STOP;         	/* Send STOP condition */
+
     } else {
 	do {
-	    timeout = I2C_LONG_TIMEOUT;
-	    while (!I2C_CheckEvent(dev->I2Cx, I2C_EVENT_MASTER_BYTE_TRANSMITTED )) {
-	        if ((timeout--) == 0)
-		    return state;
+	    t = hal_micros();
+            while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_TXE & FLAG_MASK)  == 0) { // wait for TX empty
+                if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+                    dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+                    state = I2C_BUS_BERR;
+                    goto err_exit;
+                }
+
+                if (hal_micros() - t > I2C_TIMEOUT) {
+                            // byte   1 2 3 4 5...
+		    goto err_exit; // 6 7 8 9 10 byte transmit failed
+		}		    
+//                I2C_Yield(i2c_bit_time*8);   // 250kHz so 1 bit is 4uS, 8 bits
             }
             state++;
 
-            if(--(*len) == 0) { // last is sent, no more bytes
+            if(--len == 0) { // last is sent, no more bytes
             
-	        timeout = I2C_LONG_TIMEOUT;
-	        while(I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_BTF ) == RESET) { // wait for end of transmission
-	            if ((timeout--) == 0)
-		        return state;
+	        t = hal_micros();
+                while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_TXE & FLAG_MASK)  == 0) { // wait for TX empty
+                    if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+                        dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+                        state = I2C_BUS_BERR;
+                        goto err_exit;
+                    }
+
+	            if (hal_micros() - t > I2C_TIMEOUT) goto err_exit; // 7 2nd byte transmit failed
                 }
                                 
-		/*!< STOP condition */
-		I2C_GenerateSTOP(dev->I2Cx, DISABLE);
-		I2C_ClearFlag(dev->I2Cx, I2C_FLAG_STOPF );
-		/* Send STOP condition */
-		I2C_GenerateSTOP(dev->I2Cx, ENABLE);
+		dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP); /*!< STOP condition */
+		dev->I2Cx->SR1 = (uint16_t)~I2C_FLAG_STOPF; 
+		dev->I2Cx->CR1 |= I2C_CR1_STOP; /* Send STOP condition */
             } else 
-	        I2C_SendData(dev->I2Cx, *buffer++); // next byte
-	} while((*len) );
+	        dev->I2Cx->DR = *buffer++; // next byte
+	} while(len);
 
     }
 
+    // Wait to make sure that STOP control bit has been cleared - bus released
+    t = hal_micros();
+    while (dev->I2Cx->CR1 & I2C_CR1_STOP ){
+        if(dev->I2Cx->SR1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+            dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+            return I2C_STOP_BERR; // bus error on STOP
+        }
+        if (hal_micros() - t > I2C_TIMEOUT) return I2C_ERR_STOP; // stop error
+    }
+
     return I2C_OK;
+
+err_exit:// after any error make STOP to release bus
+    dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP);       /*!< STOP condition */
+    dev->I2Cx->SR1 = (uint16_t)~I2C_FLAG_STOPF; 
+    dev->I2Cx->CR1 |= I2C_CR1_STOP;                    /* Send STOP condition */
+    return state;
 }
 
 
-uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint8_t txlen, uint8_t *rx_buff, uint8_t *rxlen)
+
+static void i2c_isr_handler(const i2c_dev *dev){
+
+    if(dma_get_isr_bits(dev->dma.stream_rx) & DMA_FLAG_TCIF) { // was receive
+        dma_disable(dev->dma.stream_rx);
+
+
+        dev->I2Cx->CR2 &= ~(I2C_CR2_LAST | I2C_CR2_DMAEN);        /* Disable I2C DMA request */
+
+        dma_clear_isr_bits(dev->dma.stream_rx); 
+
+        dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP);     /*!< STOP condition */
+        dev->I2Cx->SR1 = (uint16_t)~I2C_FLAG_STOPF; 
+        dev->I2Cx->CR1 |= I2C_CR1_STOP;     /* Send STOP condition */
+        // transfer done!
+    }
+    
+/*
+    if(dma_get_isr_bits(dev->dma.stream_tx) & DMA_FLAG_TCIF) { // was transmit - not used
+    }
+
+*/
+}
+
+static void i2c1_isr_handler(){
+    i2c_isr_handler(_I2C1);
+}
+
+static void i2c2_isr_handler(){
+    i2c_isr_handler(_I2C2);
+}
+
+
+//#define MIN_DMA_BYTES 2 // 1 and 2 requires special handling
+#define MIN_DMA_BYTES 3 // baro MS5611 not works well in DMA mode
+
+
+uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint8_t txlen, uint8_t *rx_buff, uint8_t rxlen)
 {
 
     uint8_t *buffer8 = rx_buff;
     
     uint32_t state=I2C_ERROR; 
-    //uint32_t sr2;
+
+    bool dma_mode=false;
+    uint16_t sr1;
+    
+    // in case of DMA transfer
+    dma_stream rx_stream = dev->dma.stream_rx;
+
+    if(rxlen>MIN_DMA_BYTES && rxlen < DMA_BUFSIZE) { // will be DMA transfer
+
+        dma_mode=true;
+
+    //  проверить, не занят ли поток DMA перед использованием
+    
+        uint32_t t = hal_micros();
+        while(dma_is_stream_enabled(rx_stream) /* || dma_is_stream_enabled(dp.stream_tx) we don't use TX */  ) {
+            // wait for transfer termination
+            if (hal_micros() - t > I2C_TIMEOUT) {
+                dma_disable(rx_stream);  // something went wrong so let it get stopped
+                return 103; // DMA stream busy
+            }
+            I2C_Yield(0); 
+        }
+
+        // init DMA beforehand
+        DMA_InitTypeDef DMA_InitStructure;
+        DMA_StructInit(&DMA_InitStructure);
+    
+        dma_init(rx_stream); 
+    
+        dma_clear_isr_bits(rx_stream); 
+    
+        DMA_InitStructure.DMA_Channel               = dev->dma.channel;
+        DMA_InitStructure.DMA_Memory0BaseAddr       = (uint32_t)dma_buffer;
+        DMA_InitStructure.DMA_BufferSize            = rxlen;
+        DMA_InitStructure.DMA_PeripheralBaseAddr    = (uint32_t)(&(dev->I2Cx->DR));
+        DMA_InitStructure.DMA_PeripheralDataSize    = DMA_PeripheralDataSize_Byte;
+        DMA_InitStructure.DMA_MemoryDataSize        = DMA_MemoryDataSize_Byte;
+        DMA_InitStructure.DMA_PeripheralInc         = DMA_PeripheralInc_Disable;
+        DMA_InitStructure.DMA_MemoryInc             = DMA_MemoryInc_Enable;
+        DMA_InitStructure.DMA_Mode                  = DMA_Mode_Normal;
+        DMA_InitStructure.DMA_Priority              = DMA_Priority_High;
+        DMA_InitStructure.DMA_FIFOMode              = DMA_FIFOMode_Disable;
+        DMA_InitStructure.DMA_FIFOThreshold         = DMA_FIFOThreshold_Full;
+        DMA_InitStructure.DMA_MemoryBurst           = DMA_MemoryBurst_Single;
+        DMA_InitStructure.DMA_PeripheralBurst       = DMA_PeripheralBurst_Single;
+        DMA_InitStructure.DMA_DIR                   = DMA_DIR_PeripheralToMemory;
+        
+        dma_init_transfer(rx_stream, &DMA_InitStructure);
+
+        dma_attach_interrupt(rx_stream, (Handler)dev->dma_isr, DMA_CR_TCIE);
+
+        dma_enable(rx_stream);
+        dev->I2Cx->CR2 |= I2C_CR2_LAST;         // generate NACK on last byte
+    }
+
 
     // While the bus is busy
-    uint32_t timeout = I2C_FLAG_TIMEOUT;
-    while (I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_BUSY )){ 
-	if ((timeout--) == 0)
+    uint32_t t = hal_micros();
+    while ((dev->I2Cx->SR2 & (I2C_FLAG_BUSY>>16) & FLAG_MASK) != 0 ){ 
+        if (hal_micros() - t > I2C_TIMEOUT)
 	    return state; // 2 - bus busy
 
-	delay_10us();
+        I2C_Yield(0); 
     }
 
     state++; 
 
-    // Bus got!  enable Acknowledge for our operation
-    I2C_AcknowledgeConfig(dev->I2Cx, ENABLE);
-
-    // Send START condition
-    I2C_GenerateSTART(dev->I2Cx, ENABLE);
+    dev->I2Cx->CR1 &= ~I2C_NACKPosition_Next; // I2C_NACKPosition_Current
+    dev->I2Cx->CR1 |= I2C_CR1_ACK;      // Bus got!  enable Acknowledge for our operation
+    
+    dev->I2Cx->CR1 |= I2C_CR1_START;    // Send START condition
 
     // Test on EV5 and clear it (cleared by reading SR1 then writing to DR)
-    timeout = I2C_LONG_TIMEOUT;
-    while (!I2C_CheckEvent(dev->I2Cx, I2C_EVENT_MASTER_MODE_SELECT )){
-
-
-	if ((timeout--) == 0)
-	    return state; // 3 error Master can't be selected (bus has owner)
+    t = hal_micros();
+    while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_SB & FLAG_MASK) == 0) { // wait for start bit generated
+        if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+            dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+            state = I2C_BUS_BERR;
+            goto err_exit;
+        }
+        if (hal_micros() - t > I2C_TIMEOUT)  return state; // 3 error Master can't be selected (bus has owner)
     }
 
     state++; 
 
     // Send address for write
     I2C_Send7bitAddress(dev->I2Cx, addr<<1, I2C_Direction_Transmitter );
-    timeout = I2C_FLAG_TIMEOUT;
+    
+    t = hal_micros();
     // Test on EV6 and clear it
-    while (!I2C_CheckEvent(dev->I2Cx, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED )){
-        if(I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_AF ) != RESET) {
-            dev->I2Cx->SR1 &= ~I2C_SR1_AF; // reset it
-            I2C_GenerateSTOP(dev->I2Cx, ENABLE); // release bus
-            return I2C_NO_DEVICE; // Acknolege Failed
+    while ( ((sr1 = dev->I2Cx->SR1) & I2C_FLAG_ADDR & FLAG_MASK) == 0)  {
+        if(sr1 & I2C_FLAG_AF & FLAG_MASK) {
+            dev->I2Cx->SR1 = ~I2C_SR1_AF; // reset it
+            state = I2C_NO_DEVICE; // Acknolege Failed
+            goto err_exit;
+
         }
-	if ((timeout--) == 0)
-	    return state;  // 4 TX mode not acknoleged
+        if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+            dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+            state = I2C_BUS_BERR;
+            goto err_exit;
+        }
+
+        if (hal_micros() - t > I2C_TIMEOUT) {
+            goto err_exit;  // 4 TX mode not acknoleged
+        }
     }
 
     state++; 
 
+    /* Clear ADDR register by reading SR1 then SR2 register (SR1 has already been read) */
+    (void) dev->I2Cx->SR2;
+
+    while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_TXE & FLAG_MASK)  == 0) { // wait for TX empty
+        if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+            dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+            state = I2C_BUS_BERR;
+            goto err_exit;
+        }
+
+        if (hal_micros() - t > I2C_TIMEOUT) goto err_exit; // 5 - TXe not set on 1st byte
+    }
+
+    state++;
+
+
     while(tx_buff && txlen--) {
-        I2C_SendData(dev->I2Cx, *tx_buff++);
+        dev->I2Cx->DR = *tx_buff++;
 
         // Test on EV8 and clear it
-        timeout = I2C_LONG_TIMEOUT;
-        while (I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_BTF ) == RESET){
-            if ((timeout--) == 0)
-                return state; // 5 write error
+        t = hal_micros();
+        while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_TXE & FLAG_MASK)  == 0) { // wait for TX empty
+            if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+                dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+                state = I2C_BUS_BERR;
+                goto err_exit;
+            }
+
+            if (hal_micros() - t > I2C_TIMEOUT)  goto err_exit; // 6 write error
         }
         
         state++; 
     }
 
     // Send START condition a second time
-    I2C_GenerateSTART(dev->I2Cx, ENABLE);
+    dev->I2Cx->CR1 |= I2C_CR1_START;
 
     // Test on EV5 and clear it (cleared by reading SR1 then writing to DR)
-    timeout = I2C_FLAG_TIMEOUT;
-    while (!I2C_CheckEvent(dev->I2Cx, I2C_EVENT_MASTER_MODE_SELECT )){
-	if ((timeout--) == 0)
-	    return state; // 6 restart error
+    t = hal_micros();
+    while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_SB & FLAG_MASK) == 0) { // wait for Restart generated - bit was Cleared by reading the SR1 register followed by writing the DR register
+        if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+            dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+            state = I2C_BUS_BERR;
+            goto err_exit;
+        }
+        if (hal_micros() - t > I2C_TIMEOUT)   goto err_exit; // 7 restart error
     }
 
     state++; 
@@ -358,57 +545,54 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
 
 
 //[ wait for end of address sending
-	timeout = I2C_LONG_TIMEOUT;
-	while (I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_ADDR ) == RESET)  {
-	
-	    if(I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_AF ) != RESET) return state; // 7 Acknolege Failed
-	    
-	    if ((timeout--) == 0)
-		return state+1; // 8 send read address error
-	}
-//]
+    t = hal_micros();
+    while ( ((sr1 = dev->I2Cx->SR1) & I2C_FLAG_ADDR & FLAG_MASK) == 0)  {
+        if(sr1 & I2C_FLAG_AF & FLAG_MASK) goto err_exit; // 8 Acknolege Failed - not "no device"!
 
+        if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+            dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+            state = I2C_BUS_BERR;
+            goto err_exit;
+        }
+	    
+        if (hal_micros() - t > I2C_TIMEOUT) {
+            state+=1; // 9 send read address error
+            goto err_exit;
+        }
+    }
+//]
  
     state+=2; // 9+ read data error
 
-    if ((*rxlen) ==1) { // 1 byte reads - by hands
+    if (rxlen ==1) { // 1 byte reads - by hands
 
 	// Disable Acknowledgement - send NACK for single byte BEFORE resetting ADDR
-	I2C_AcknowledgeConfig(dev->I2Cx, DISABLE);
+	dev->I2Cx->CR1 &= ~I2C_CR1_ACK;
 
-	/* Clear ADDR register by reading SR1 then SR2 register (SR1 has already been read) */
+	/* Clear ADDR flag by reading SR1 then SR2 register (SR1 has already been read) */
 	(void) dev->I2Cx->SR2;
 
-
-	/*!< STOP condition */
-	I2C_GenerateSTOP(dev->I2Cx, DISABLE);
-	I2C_ClearFlag(dev->I2Cx, I2C_FLAG_STOPF );
-	/* Send STOP condition */
-	I2C_GenerateSTOP(dev->I2Cx, ENABLE);
+	dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP); /*!< STOP condition */
+	dev->I2Cx->SR1 = (uint16_t)~I2C_FLAG_STOPF; 
+	dev->I2Cx->CR1 |= I2C_CR1_STOP;         /* Send STOP condition */
 
 	/* Wait for the byte to be received */
-	timeout = I2C_LONG_TIMEOUT;
-	while (I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_RXNE ) == RESET)  {
-	    if ((timeout--) == 0)
-		return state; // 9 read data error
+	t = hal_micros();
+	while ( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_RXNE & FLAG_MASK) == 0)  {
+            if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+                dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+                state = I2C_BUS_BERR;
+                goto err_exit;
+            }
+	    if (hal_micros() - t > I2C_TIMEOUT) return state; // 10 read data error - STOP already generated
 	}
 
         state++;
 
 	/*!< Read the byte received  */
-	*buffer8 = I2C_ReceiveData(dev->I2Cx);
+	*buffer8 = (uint8_t)(dev->I2Cx->DR);
 
-	(*rxlen)--;
-	/* Wait to make sure that STOP control bit has been cleared */
-	timeout = I2C_FLAG_TIMEOUT;
-	while (dev->I2Cx->CR1 & I2C_CR1_STOP ){
-	    if ((timeout--) == 0)
-		return state; // 10 stop error
-	}
-
-	(*rxlen)=0; // done
-
-    } else if ((*rxlen) ==2) { // 2 byte reads - by hands, special case
+    } else if (rxlen==2) { // 2 byte reads - by hands, special case
 
 /*
 For 2-byte reception:
@@ -421,97 +605,126 @@ For 2-byte reception:
 
 */
 
-
 	// Disable Acknowledgement - send NACK for single byte BEFORE resetting ADDR
-	I2C_AcknowledgeConfig(dev->I2Cx, DISABLE);
-	I2C_NACKPositionConfig(dev->I2Cx, I2C_NACKPosition_Next);
+	dev->I2Cx->CR1 &= ~I2C_CR1_ACK; //I2C_AcknowledgeConfig(dev->I2Cx, DISABLE);
+	dev->I2Cx->CR1 |= I2C_NACKPosition_Next; //I2C_NACKPositionConfig(dev->I2Cx, I2C_NACKPosition_Next);
 
 	/* Clear ADDR register by reading SR1 then SR2 register (SR1 has already been read) */
 	(void) dev->I2Cx->SR2;
 
 	/* Wait for the byte to be received */
-	timeout = I2C_LONG_TIMEOUT;
-	while (I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_RXNE ) == RESET)  {
-	    if ((timeout--) == 0)
-		return state; // 9 read data error
+	t = hal_micros();
+	while ( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_RXNE & FLAG_MASK) == 0)  {
+            if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+                dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+                state = I2C_BUS_BERR;
+                goto err_exit;
+            }
+
+	    if (hal_micros() - t > I2C_TIMEOUT) goto err_exit; // 10 read data error
 	}
 
         state++;
 
-	/*!< Read the 1st byte received  */
-	*buffer8++ = I2C_ReceiveData(dev->I2Cx);
 
-	/*!< STOP condition */
-	I2C_GenerateSTOP(dev->I2Cx, DISABLE);
-	I2C_ClearFlag(dev->I2Cx, I2C_FLAG_STOPF );
-	/* Send STOP condition */
-	I2C_GenerateSTOP(dev->I2Cx, ENABLE);
+	*buffer8++ = (uint8_t)(dev->I2Cx->DR);	/*!< Read the 1st byte received  */
+
+	dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP);    /*!< STOP condition */
+	dev->I2Cx->SR1 = (uint16_t)~I2C_FLAG_STOPF; 
+	dev->I2Cx->CR1 |= I2C_CR1_STOP;                 /* Send STOP condition */
 
 	/* Wait for the byte to be received */
-	timeout = I2C_LONG_TIMEOUT;
-	while (I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_RXNE ) == RESET)  {
-	    if ((timeout--) == 0)
-		return state; // 10 read data 2 error
+	t = hal_micros();
+	while ((dev->I2Cx->SR1 & I2C_FLAG_RXNE & FLAG_MASK) == 0)  {
+	    if (hal_micros() - t > I2C_TIMEOUT) return state; // 10 read data 2 error - stop already generated
 	}
 
         state++;
-
-
-	/*!< Read the 2nd byte received  */
-	*buffer8 = I2C_ReceiveData(dev->I2Cx);
-
-	/* Wait to make sure that STOP control bit has been cleared */
-	timeout = I2C_FLAG_TIMEOUT;
-	while (dev->I2Cx->CR1 & I2C_CR1_STOP ){
-	    if ((timeout--) == 0)
-		return state; // 11 stop error
-	}
-
-	// Re-Enable Acknowledgement to be ready for another reception
-//	I2C_AcknowledgeConfig(dev->I2Cx, ENABLE);
-	I2C_NACKPositionConfig(dev->I2Cx, I2C_NACKPosition_Current);
-
-	(*rxlen)=0; // done
+	
+	*buffer8 = (uint8_t)(dev->I2Cx->DR);    /*!< Read the 2nd byte received  */
 
     } else { // More than 2 Byte Master Reception procedure 
     
-	/* Clear ADDR bit by reading SR1 then SR2 register (SR1 has already been read) */
-	(void) dev->I2Cx->SR2;
+        if(dma_mode) { // DMA transfers
+            dev->I2Cx->CR2 |= I2C_CR2_DMAEN;         /* Enable I2C RX request */
 
-        do {
-    
+            /* Clear ADDR bit by reading SR1 then SR2 register (SR1 has already been read) */
+            (void) dev->I2Cx->SR2;
+                
+            t = hal_micros();
+            // need to wait until DMA transfer complete */
+            while ( dma_is_stream_enabled(rx_stream)) {
+	        if (hal_micros() - t > I2C_TIMEOUT) {
+                    dev->I2Cx->CR2 &= ~(I2C_CR2_LAST | I2C_CR2_DMAEN); // Disable I2C DMA request 
+	            dma_disable(rx_stream);
+                    dma_clear_isr_bits(rx_stream); 
+	            state = 100; // 100 DMA error
+	            goto err_exit;
+	        }
+                I2C_Yield(i2c_bit_time * 8 * rxlen); // пока ждем пусть другие работают
+            }
 
-	    /* Wait for the byte to be received */
-	    timeout = I2C_LONG_TIMEOUT;
-	    while (I2C_GetFlagStatus(dev->I2Cx, I2C_FLAG_RXNE ) == RESET)  { // wait for byte
-	        if ((timeout--) == 0)
-	        //               byte 0  1  2  3  4  5  6
-	            return state; //  9 10 11 12 13 14 15...
-	    }
+            // DMA disabled and stop generated in ISR
+            dma_detach_interrupt(rx_stream);
+
+            memmove(dma_buffer, rx_buff, rxlen); // move to destination
+
+        } else { // by hands
+
+            /* Clear ADDR bit by reading SR1 then SR2 register (SR1 has already been read) */
+            (void) dev->I2Cx->SR2;
+
+            do {
+                /* Wait for the byte to be received */
+	        t = hal_micros();
+        	while ( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_RXNE & FLAG_MASK) == 0)  {
+                    if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+                        dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+                        state = I2C_BUS_BERR;
+                        goto err_exit;
+                    }
+
+	            if (hal_micros() - t > I2C_TIMEOUT) {
+	            //                byte 0  1  2  3  4  5  6
+	                goto err_exit; //  9 10 11 12 13 14 15...
+	            }
+	        }
 	     
-	    state++; 
+	        state++; 
 
-
-	    /*!< Read the byte received  */
-	    *buffer8++ = I2C_ReceiveData(dev->I2Cx);
-	    *rxlen -= 1; // 1 byte done
+	        /*!< Read the byte received  */
+	        *buffer8++ = (uint8_t)(dev->I2Cx->DR);
+	        rxlen -= 1; // 1 byte done
 	    
 	    
-	    if((*rxlen) == 1) { // last second byte
-	        // Disable Acknowledgement - send NACK for last byte 
-	        I2C_AcknowledgeConfig(dev->I2Cx, DISABLE);
+	        if(rxlen == 1) { // last second byte
+	            dev->I2Cx->CR1 &= ~I2C_CR1_ACK;     // Disable Acknowledgement - send NACK for last byte 
 
-	        /*!< STOP condition */
-	        I2C_GenerateSTOP(dev->I2Cx, DISABLE);
-	        I2C_ClearFlag(dev->I2Cx, I2C_FLAG_STOPF );
-	        /* Send STOP condition */
-	        I2C_GenerateSTOP(dev->I2Cx, ENABLE);	                
-	    }
-
-        } while((*rxlen));
-
+	            dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP); /*!< STOP condition */
+	            dev->I2Cx->SR1 = (uint16_t)~I2C_FLAG_STOPF; 
+	            dev->I2Cx->CR1 |= I2C_CR1_STOP;     /* Send STOP condition */
+	        }
+            } while(rxlen);
+        }
+    }      
+    // Wait to make sure that STOP control bit has been cleared - bus released
+    t = hal_micros();
+    while (dev->I2Cx->CR1 & I2C_CR1_STOP ){
+        if(dev->I2Cx->SR1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
+            dev->I2Cx->SR1 = ~(I2C_SR1_ARLO | I2C_FLAG_BERR); // reset them
+            return I2C_STOP_BERR; // bus error on STOP
+        }
+        if (hal_micros() - t > I2C_TIMEOUT) return I2C_ERR_STOP; // stop error
     }
+
     return I2C_OK;
+
+err_exit:// after any error make STOP to release bus
+    dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP);    /*!< STOP condition */
+    dev->I2Cx->SR1 = (uint16_t)~I2C_FLAG_STOPF; 
+    dev->I2Cx->CR1 |= I2C_CR1_STOP;                 /* Send STOP condition */
+    return state;
+
 }
 
 
@@ -551,7 +764,7 @@ again:
     /* Wait for any clock stretching to finish */
     while (!gpio_read_bit(dev->gpio_port, dev->scl_pin)) {// device can output 1 so check clock first
         if(systick_uptime()-t > MAX_I2C_TIME) return false;
-        hal_yield(10);
+        I2C_Yield(10);
     }
     delay_10us();	// 50kHz
 
@@ -559,7 +772,7 @@ again:
         /* Wait for any clock stretching to finish */
         while (!gpio_read_bit(dev->gpio_port, dev->scl_pin)){
             if(systick_uptime()-t > MAX_I2C_TIME) return false;
-            hal_yield(10);
+            I2C_Yield(10);
         }
         delay_10us();	// 50kHz
 

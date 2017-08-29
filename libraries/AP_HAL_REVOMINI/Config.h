@@ -7,7 +7,8 @@
 
 #define USART_SAFE_INSERT // ignore received bytes if buffer overflows
 
-//#define I2C_DEBUG
+#define I2C_DEBUG
+
 //#define DEBUG_SPI
 
 #define  RC_DEAD_TIME 60000 // 60 seconds no data changes
@@ -19,5 +20,6 @@
 #define SEM_PROF 
 #define SHED_PROF 
 #define MTASK_PROF
+#define SHED_DEBUG
 
 #define USE_WFE

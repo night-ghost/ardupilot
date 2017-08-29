@@ -21,12 +21,13 @@ extern const AP_HAL::HAL& hal;
 #define SCL_read      ((scl_port->IDR & scl_pin)!=0)
 #define SDA_read      ((sda_port->IDR & sda_pin)!=0)
 
+#define I2C_yield(x)     hal_yield(x)
 
 static void delay_10us(){
     hal_delay_microseconds(10);
 }
 
-void Soft_I2C::_delay(void) {   hal_delay_microseconds(_dly_time); } // delay at each line change so speed is near 250kHz
+void Soft_I2C::_delay(void) {   hal_delay_us_ny(_dly_time); } // delay at each line change so speed is near 250kHz
 
 bool Soft_I2C::_Start(void)
 {
@@ -228,7 +229,7 @@ uint32_t Soft_I2C::read( uint8_t addr, uint8_t reg, uint8_t len, uint8_t *buf)
         f = f && _ReceiveByte(&buf[cnt++]);
         if (len == 1) f = f && _NoAck();
         else          f = f && _Ack();
-
+        I2C_yield(0);
         len--;
     }
     _Stop();
@@ -258,6 +259,7 @@ uint32_t Soft_I2C::transfer(uint8_t  addr, uint8_t  send_len, const uint8_t *sen
             i2cErrorCount++;
             return I2C_ERROR;
         }
+        I2C_yield(0);
     }
 
     f = f && _Start();
@@ -269,6 +271,7 @@ uint32_t Soft_I2C::transfer(uint8_t  addr, uint8_t  send_len, const uint8_t *sen
         if(len == 1) f = f && _NoAck();
         else         f = f && _Ack();
         len--;
+        I2C_yield(0);
     }
     _Stop();
 
@@ -288,7 +291,7 @@ bool Soft_I2C::wait_scl(){
 
     while (stopwatch_getticks()  < dt) {
         if (SCL_read)  return true; // line released
-        REVOMINIScheduler::yield(10); // пока ожидаем - пусть другие работают
+        I2C_yield(0); // пока ожидаем - пусть другие работают
     }
     
     return false;

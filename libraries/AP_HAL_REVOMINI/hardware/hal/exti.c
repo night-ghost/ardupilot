@@ -171,7 +171,7 @@ void exti_detach_interrupt(afio_exti_num num)
 	NVIC_Init(&NVIC_InitStructure);
   
 	/* Finally, unregister the user's handler */
-	handlers[num] = (Handler)NULL;	
+	handlers[num] = (Handler)0;	
 }
 
 void exti_enable_interrupt(afio_exti_num num, bool e){

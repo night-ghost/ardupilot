@@ -199,6 +199,10 @@ void boardInit(void);
                              { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* caller controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, false, 1 },
 #endif
 
+//#define HAL_CONSOLE USB_Driver // console on USB
+#define HAL_CONSOLE uart1Driver // console on radio
+#define HAL_CONSOLE_PORT 1 // console on radio
+
 /*
     // @Param: MOTOR_LAYOUT
     // @DisplayName: Motor layout scheme
@@ -255,6 +259,13 @@ void boardInit(void);
     // @Description: Allows to see local date & time in logs
     // @Values: -11..+11
     AP_GROUPINFO("TIME_OFFSET",  10, AP_Param_Helper, _time_offset, 0), \
+
+    // @Param: CONSOLE_UART
+    // @DisplayName: number of port to use as console
+    // @Description: Allows to specify console port
+    // @Values: 0:USB, 1:connect to UART 1, 2:connect to UART 2, etc
+    AP_GROUPINFO("CONSOLE_UART", 11, AP_Param_Helper, _console_uart, 0), \
+
     
     // @Param: RC_INPUT
     // @DisplayName: Type of RC input
@@ -275,7 +286,8 @@ void boardInit(void);
     AP_GROUPINFO("DBG_WAYBACK",  8, AP_Param_Helper, _dbg_wayback, 0), \
     AP_GROUPINFO("USB_STORAGE",  9, AP_Param_Helper, _usb_storage, 0), \
     AP_GROUPINFO("TIME_OFFSET",  10, AP_Param_Helper, _time_offset, 0), \
-    AP_GROUPINFO("RC_INPUT",     11, AP_Param_Helper, _rc_input, 0)
+    AP_GROUPINFO("CONSOLE_UART", 11, AP_Param_Helper, _console_uart, HAL_CONSOLE_PORT), \
+    AP_GROUPINFO("RC_INPUT",     12, AP_Param_Helper, _rc_input, 0)
     
 
 // parameters
@@ -290,11 +302,10 @@ void boardInit(void);
     AP_Int8 _dbg_wayback; \
     AP_Int8 _usb_storage; \
     AP_Int8 _time_offset; \
+    AP_Int8 _console_uart; \
     AP_Int8 _rc_input;
     
 #define ERROR_USART _USART1 // main port - telemetry, all panic messages goes there
 
-//#define HAL_CONSOLE USB_Driver // console on USB
-#define HAL_CONSOLE uart1Driver // console on radio
 
 #endif

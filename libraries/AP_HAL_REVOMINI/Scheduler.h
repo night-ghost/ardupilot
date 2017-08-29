@@ -54,6 +54,7 @@ extern "C" {
     void hal_yield(uint16_t ttw);
     void hal_delay(uint16_t t);
     void hal_delay_microseconds(uint16_t t);
+    void hal_delay_us_ny(uint16_t t);
     uint32_t hal_micros();
 }
 
@@ -97,6 +98,8 @@ typedef struct RevoSchedLog {
     uint32_t start;
     uint32_t end;
     uint32_t sleep;
+    uint32_t loop_count;
+    uint32_t ttw_skip_count;
     uint32_t ttw;
     uint8_t task_id;
 } revo_sched_log;
@@ -104,6 +107,15 @@ typedef struct RevoSchedLog {
 #define SHED_DEBUG_SIZE 512
 #endif
 
+enum Revo_IO_Flags {
+    IO_PERIODIC,
+    IO_ONCE,
+};
+
+typedef struct REVO_IO {
+    Handler h;
+    Revo_IO_Flags flags;
+} Revo_IO;
 
 class REVOMINI::REVOMINIScheduler : public AP_HAL::Scheduler {
 public:
@@ -133,6 +145,7 @@ public:
         uint64_t time;  // full time
         uint32_t max_time; //  maximal execution time of task - to show
         uint32_t maxt_addr; // address of end of max-time code
+        uint32_t count;     // call count to calc mean
 #endif
         uint32_t guard; // stack guard
     };
@@ -143,6 +156,7 @@ public:
         bool request;
 #ifdef SHED_PROF
         uint64_t time;
+        uint32_t count;
 #endif
     } IO_Completion;
 
@@ -161,8 +175,8 @@ public:
     inline void  suspend_timer_procs(){     _timer_suspended = true; }
 
     void     register_delay_callback(AP_HAL::Proc, uint16_t min_time_ms);
-    void     register_io_process(AP_HAL::MemberProc);
-
+    static void  _register_io_process(Handler h, Revo_IO_Flags flags);
+    void         register_io_process(AP_HAL::MemberProc proc) { Revo_handler h = { .mp=proc }; _register_io_process(h.h, IO_PERIODIC); }
 
     void     resume_timer_procs();
 
@@ -200,6 +214,8 @@ public:
     static void _delay(uint16_t ms);
     static void _delay_microseconds(uint16_t us);
     static void _delay_microseconds_boost(uint16_t us);
+
+    static void _delay_us_ny(uint16_t us); // no yield delay
 
     static inline  uint32_t _millis() {    return systick_uptime(); } //systick_uptime returns 64-bit time
     static inline  uint64_t _millis64() {  return systick_uptime(); }
@@ -373,7 +389,7 @@ private:
     static volatile bool _timer_event_missed;
     static uint32_t _scheduler_last_call;
 
-    static Handler _io_proc[REVOMINI_SCHEDULER_MAX_IO_PROCS];
+    static Revo_IO _io_proc[REVOMINI_SCHEDULER_MAX_IO_PROCS];
     static uint8_t _num_io_proc;
 
     static revo_timer _timers[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS];
@@ -403,6 +419,7 @@ private:
 #ifdef MTASK_PROF
     static uint64_t yield_time;
     static uint32_t yield_count;
+    static uint32_t max_wfe_time;
 
  #ifdef SHED_DEBUG
     static revo_sched_log logbuf[SHED_DEBUG_SIZE];

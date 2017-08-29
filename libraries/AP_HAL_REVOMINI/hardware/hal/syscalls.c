@@ -31,6 +31,7 @@
  */
 
 #include <syscalls.h>
+#include <systick.h>
 
 /* _end and _eccm is set in the linker command file */
 extern caddr_t _end;
@@ -99,7 +100,7 @@ static caddr_t _sbrk_ccm(int nbytes) {
 
     uint32_t top = (uint32_t)get_stack_top() - 256; // reserve some memory
 
-    if(stack_bottom) top = stack_bottom;
+    if(stack_bottom) top = (uint32_t)stack_bottom;
 
     if ( top > (unsigned int)heap_ptr+nbytes) // there is place in stack
     {

@@ -3,6 +3,7 @@
 
 #include "Scheduler.h"
 
+#include <stdio.h>
 #include <AP_HAL_REVOMINI/AP_HAL_REVOMINI.h>
 
 
@@ -22,8 +23,6 @@
 #include <usb.h>
 
 
-#define ADDRESS_IN_FLASH(a) ((a)>FLASH_BASE && (a)<CCMDATARAM_BASE)
-
 using namespace REVOMINI;
 extern const AP_HAL::HAL& hal;
 
@@ -36,7 +35,7 @@ volatile bool REVOMINIScheduler::_in_timer_proc = false;
 revo_timer REVOMINIScheduler::_timers[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS] IN_CCM;
 uint8_t    REVOMINIScheduler::_num_timers = 0;
 
-Handler    REVOMINIScheduler::_io_proc[REVOMINI_SCHEDULER_MAX_IO_PROCS] IN_CCM;
+Revo_IO    REVOMINIScheduler::_io_proc[REVOMINI_SCHEDULER_MAX_IO_PROCS] IN_CCM;
 uint8_t    REVOMINIScheduler::_num_io_proc=0;
 
 
@@ -85,11 +84,12 @@ uint32_t REVOMINIScheduler::max_delay_err=0;
 #ifdef MTASK_PROF
  uint64_t REVOMINIScheduler::yield_time IN_CCM = 0;
  uint32_t REVOMINIScheduler::yield_count IN_CCM =0;
-#endif
+ uint32_t REVOMINIScheduler::max_wfe_time IN_CCM =0;
 
-#ifdef SHED_DEBUG
- revo_sched_log REVOMINIScheduler::logbuf[SHED_DEBUG_SIZE] IN_CCM;
- uint16_t REVOMINIScheduler::sched_log_ptr;
+ #ifdef SHED_DEBUG
+  revo_sched_log REVOMINIScheduler::logbuf[SHED_DEBUG_SIZE] IN_CCM;
+  uint16_t REVOMINIScheduler::sched_log_ptr;
+ #endif
 #endif
 
 uint32_t REVOMINIScheduler::lowest_stack = (uint32_t)-1;
@@ -189,9 +189,7 @@ void REVOMINIScheduler::_delay(uint16_t ms)
         delay_int_time +=us;
     else
         delay_time     +=us;
-    
-    uint32_t err = labs(ms*1000 - us);
-    if(err > max_delay_err)  max_delay_err = err;
+
 #endif
 }
 
@@ -203,14 +201,18 @@ void REVOMINIScheduler::_delay_microseconds_boost(uint16_t us){
 
 void REVOMINIScheduler::_delay_microseconds(uint16_t us)
 {
+    uint32_t rtime = stopwatch_getticks(); // get start ticks first
+
 #ifdef SHED_PROF
     uint32_t t = _micros(); 
 #endif
+    uint16_t no_yield_t=us/20; // 5%
+    // guard time for main process
+    if(s_running->id==0 && no_yield_t<NO_YIELD_TIME) no_yield_t=NO_YIELD_TIME;
 
-    uint32_t rtime = stopwatch_getticks(); // start ticks
-    uint32_t dt    = us_ticks * us;  // delay time in ticks
-
-    uint32_t ny = NO_YIELD_TIME * us_ticks; // no-yield time in ticks
+    uint32_t dt = us_ticks * us;  // delay time in ticks
+    uint32_t ny = us_ticks * no_yield_t; // no-yield time in ticks
+    
     uint32_t tw;
 
     while ((tw = stopwatch_getticks() - rtime) < dt) { // tw - time waiting, in ticks
@@ -227,12 +229,40 @@ void REVOMINIScheduler::_delay_microseconds(uint16_t us)
     else
         delay_time     +=r_us;
 
+    if(s_running->id !=0) return; // check only for main task
+
     uint32_t err = labs(us - r_us);
-    if(err > max_delay_err)  max_delay_err = err;
+    if(err <= max_delay_err) {
+        return;
+    }
+    max_delay_err = err;
+    
+    if(err>1000) {
+        printf("\n delay() error=%ld too big!\n",err);
+    }
+    
 #endif
 
 }
 
+void REVOMINIScheduler::_delay_us_ny(uint16_t us){ // precise no yield delay
+    uint32_t rtime = stopwatch_getticks(); // get start ticks first
+
+    uint32_t dt = us_ticks * us;  // delay time in ticks
+    
+    while ((stopwatch_getticks() - rtime) < dt) {
+        // __WFE(); 
+    }    
+
+#ifdef SHED_PROF
+    if(_in_timer_proc)
+        delay_int_time +=us;
+    else
+        delay_time     +=us;
+    
+#endif
+
+}
 
 void REVOMINIScheduler::register_delay_callback(AP_HAL::Proc proc, uint16_t min_time_ms)
 {
@@ -269,8 +299,11 @@ void REVOMINIScheduler::_run_io(void)
 
     // now call the IO based drivers
     for (int i = 0; i < _num_io_proc; i++) {
-        if (_io_proc[i]) {
-            revo_call_handler(_io_proc[i],0);
+        if (_io_proc[i].h) {
+            revo_call_handler(_io_proc[i].h,0);
+            if(_io_proc[i].flags == IO_ONCE){
+                _io_proc[i].h = 0;
+            }
             yield(0); // не все сразу!
         }
     }
@@ -279,7 +312,7 @@ void REVOMINIScheduler::_run_io(void)
 }
 
 
-void REVOMINIScheduler::register_io_process(AP_HAL::MemberProc proc)
+void REVOMINIScheduler::_register_io_process(Handler h, Revo_IO_Flags flags)
 {
     if(_num_io_proc>=REVOMINI_SCHEDULER_MAX_IO_PROCS) return;
 
@@ -288,8 +321,18 @@ void REVOMINIScheduler::register_io_process(AP_HAL::MemberProc proc)
         set_task_ttw(task, 100); // 100uS between calls to this task - no more 10kHz
     }
 
-    Revo_handler h = { .mp=proc };
-    _io_proc[_num_io_proc++] = h.h;
+    uint8_t i;
+    for(i=0; i<_num_io_proc; i++){ // find free slots
+        if(_io_proc[i].h == 0) {  // found
+            _io_proc[i].h = h; 
+            _io_proc[i].flags = flags;
+            return;
+        }
+    }
+
+    i=_num_io_proc++;
+    _io_proc[i].h = h;
+    _io_proc[i].flags = flags;
 }
 
 
@@ -471,8 +514,9 @@ void REVOMINIScheduler::_print_stats(){
             hal.console->printf("\nIMU times: mean %5.2f max %5ld", (float)_IMU_fulltime/_IMU_count, _IMU_maxtime );
             _IMU_maxtime=0;
 #endif
-            hal.console->printf("\nmax delay() error= %ld", max_delay_err );
+            hal.console->printf("\nmax delay() error= %ld wfe time = %ld\n", max_delay_err, max_wfe_time );
             max_delay_err=0;
+            max_wfe_time=0;
         } break;
 
         case 1:{
@@ -496,7 +540,7 @@ void REVOMINIScheduler::_print_stats(){
             hal.console->printf("\nsleep time %f%% task switch avg time %6.3fuS\n", sleep_time/1000.0/t*100,  yield_time /(float)us_ticks / (float)yield_count );
         
             do {
-                hal.console->printf("task %d (0x%llx) times: full %8.1fms (%7.2f%%) max %lduS at %lx\n",  ptr->id, ptr->handle, ptr->time/1000.0, 100.0 * ptr->time/1000.0 / t, ptr->max_time, ptr->maxt_addr );
+                hal.console->printf("task %d (0x%llx) times: full %8.1fms (%7.2f%%) mean %8.1fuS max %lduS at %lx\n",  ptr->id, ptr->handle, ptr->time/1000.0, 100.0 * ptr->time/1000.0 / t, (float)ptr->time / ptr->count, ptr->max_time, ptr->maxt_addr );
         
                 ptr->max_time=0; // reset max time
                 
@@ -512,7 +556,7 @@ void REVOMINIScheduler::_print_stats(){
             for(uint8_t i=0; i<n; i++){
                 REVOI2CDevice * d = REVOI2CDevice::get_device(i);
                 if(d){
-                    hal.console->printf("bus %d addr %x errors %ld \n",d->get_bus(), d->get_addr(), d->get_error_count());   
+                    hal.console->printf("bus %d addr %x errors %ld last error=%d\n",d->get_bus(), d->get_addr(), d->get_error_count(), d->get_last_error());   
                 }
             }
             }break;
@@ -535,7 +579,7 @@ void REVOMINIScheduler::_print_stats(){
                 struct IO_COMPLETION &io = io_completion[i];
                 
                 if(io.handler) {
-                    hal.console->printf("task %llx time %9.1fms (%7.3f%%)\n", io.handler,  io.time/1000.0, 100.0 * io.time / t / 1000);
+                    hal.console->printf("task %llx time %9.1fms (%7.3f%%) mean %7.3fuS\n", io.handler,  io.time/1000.0, 100.0 * io.time / t / 1000, (float)io.time/io.count);
                     iot+=io.time;
                 }    
             }
@@ -899,16 +943,25 @@ void REVOMINIScheduler::set_task_semaphore(void *h, REVOMINI::Semaphore *sem){
     task->sem = sem;
 }
 
-/* TODO: добавить круговую очередь истории планировщика, дабы посмотреть в ретроспективе как принималось решение о планировании
+#ifdef SHED_DEBUG
+static uint16_t next_log_ptr(uint16_t sched_log_ptr){
+    uint16_t lp = sched_log_ptr+ 1;
+    if(lp >= SHED_DEBUG_SIZE) lp=0;
+    return lp;
+}
+#endif
 
- сохранять: задача, время старта,время завершения, время ожидания перед стартом
-*/
 
 void REVOMINIScheduler::yield(uint16_t ttw) // time to wait 
 {
     uint8_t ntask = task_n;
+#ifdef SHED_DEBUG
+    uint32_t loop_count=0;
+    uint32_t ttw_skip_count=0;
+#endif
+
     if(ntask==0        || // no tasks
-      (ttw && ttw < 5) || // don't mess into delays less than 5uS - 840 steps
+      ( s_running->id==0 && ttw && ttw < 5) || // don't mess into delays less than 5uS from main task - 840 steps
       in_interrupt() ) { // don't switch privileged context
 #ifdef USE_WFE
         __WFE();
@@ -946,13 +999,14 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
         uint32_t ticks = stopwatch_getticks();
 
  #ifdef SHED_DEBUG
-        revo_sched_log &lp = logbuf[sched_log_ptr];
-        lp.end = t;
-        lp.task_id=me.id;
-        lp.ttw = ttw;
-        sched_log_ptr++;
-        if(sched_log_ptr >= SHED_DEBUG_SIZE) sched_log_ptr=0;
-        logbuf[sched_log_ptr]= { 0 }; // clear next
+        {
+            revo_sched_log &lp = logbuf[sched_log_ptr];
+            lp.end = t;
+            lp.task_id=me->id;
+            lp.ttw = ttw;
+            sched_log_ptr = next_log_ptr(sched_log_ptr);
+            ZeroIt(logbuf[sched_log_ptr]); // clear next
+        }
  #endif
 
 #endif
@@ -971,20 +1025,57 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
         slTime = _micros();
 #endif
 
+#ifdef SHED_DEBUG
+        loop_count=0;
+        ttw_skip_count=0;
+#endif
 
         while(true) { // find task to switch to
             s_running = s_running->next; // Next task in run queue will continue
+
+#ifdef SHED_DEBUG
+            if(!(ADDRESS_IN_RAM(s_running) || ADDRESS_IN_CCM(s_running )) ){
+                AP_HAL::panic("PANIC: s_rinning spoiled in process %d\n", me->id);
+            }
+#endif
             if(s_running == 0) {
                 s_running = &s_main; // in case of error
             }
-#ifdef USE_WFE
+            uint32_t now= _micros(); // renew each loop
+
             if(s_running == me) {  // 'me' is the task that calls yield(), so full loop - there is no job.
+#ifdef SHED_DEBUG
+                loop_count++;
+#endif
+
+                // если задача вызвала yield а за заданное время задержки так и не нашлось кого выполнить - то просто вернемся
+                // TODO это излишне, в таком случае оно просто должно выбрать себя для выполнения
+                if(!me->sem && ttw && (now-t >=ttw)) {
+ #ifdef SHED_DEBUG
+                    slTime = now - slTime;
+                    revo_sched_log &lp = logbuf[sched_log_ptr];
+                    lp.start = now;
+                    lp.sleep = slTime;
+                    lp.task_id=me->id;
+                    lp.loop_count=loop_count;
+                    lp.ttw_skip_count=ttw_skip_count;
+                    ZeroIt(logbuf[next_log_ptr(sched_log_ptr)]); // clear next
+ #endif
+                    return;
+                }
+#ifdef USE_WFE
                 __WFE(); //  Timer6 makes events each uS to not spoil microsecond delays
-            }
+ #ifdef SHED_DEBUG
+                uint32_t wfe_time = _micros() - now;
+                if(wfe_time > max_wfe_time){
+                    max_wfe_time = wfe_time;
+                }
+ #endif
 #endif    
-            if(!s_running->handle) continue; // skip finished tasks
+
+            }
+            if(!s_running->handle) continue; // skip finished tasks                
             
-            uint32_t now= _micros();
             // если для задачи установлен период выполнения и она в самом начале - проверим 
             if(s_running->period && !s_running->active){
                     // time from last run  less  than period
@@ -997,6 +1088,10 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
                    //     main task always    task max execution time more than we have
                 if(ttw && s_running->id!=0 && s_running->max_delay > ttw) { 
                     s_running->max_delay --; //  понемногу уменьшаем дабы совсем не выключить
+#ifdef SHED_DEBUG
+                    ttw_skip_count++;
+#endif
+
                     continue;
                 }
             }
@@ -1049,12 +1144,16 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
         slTime = now - slTime;
         sleep_time += slTime;
         me->ticks = stopwatch_getticks();
+        me->count++;
 
  #ifdef SHED_DEBUG
         revo_sched_log &lp = logbuf[sched_log_ptr];
         lp.start = now;
         lp.sleep = slTime;
-        lp.task_id=me.id;
+        lp.task_id=me->id;
+        lp.loop_count=loop_count;
+        lp.ttw_skip_count=ttw_skip_count;
+        ZeroIt(logbuf[next_log_ptr(sched_log_ptr)]); // clear next
  #endif
 
 #endif
@@ -1124,13 +1223,8 @@ void REVOMINIScheduler::PendSV_Handler(){ // isr at lowest priority to do all IO
             if(io.request) {
                 io.request=false; // ASAP - it can be set again in interrupt
                 if(io.handler){
-#if 0
-                    if(io.sem && !io.sem->take_nonblocking()) { // semaphore active? take!
-                        reschedule_proc(io.handler);// can't get semaphore, will try next time
-                        continue;
-                    }
-#endif
                     do_it=true;
+
 #ifdef SHED_PROF
                     uint32_t t = _micros();
 #endif
@@ -1141,6 +1235,7 @@ void REVOMINIScheduler::PendSV_Handler(){ // isr at lowest priority to do all IO
 #ifdef SHED_PROF
                     t = _micros() - t;
                     io.time += t;
+                    io.count++;
 #endif
                 }
             }
@@ -1192,4 +1287,6 @@ void revo_call_handler(uint64_t hh, uint32_t arg){
 void hal_yield(uint16_t ttw){ REVOMINIScheduler::yield(ttw); }
 void hal_delay(uint16_t t){   REVOMINIScheduler::_delay(t); }
 void hal_delay_microseconds(uint16_t t){ REVOMINIScheduler::_delay_microseconds(t);}
+void hal_delay_us_ny(uint16_t t){ REVOMINIScheduler::_delay_us_ny(t);}
+
 uint32_t hal_micros() { return REVOMINIScheduler::_micros(); }
