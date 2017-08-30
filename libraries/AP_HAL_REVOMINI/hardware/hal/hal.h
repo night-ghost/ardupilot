@@ -19,7 +19,7 @@
   extern "C" {
 #endif
 
-extern void clock_gettime(uint32_t a1, void *a2);
+extern void clock_gettime(uint32_t a1, void *a2); // to mimics Posix
 
 extern void revo_call_handler(Handler h, uint32_t arg);
 extern void hal_yield(uint16_t ttw);
@@ -35,7 +35,6 @@ extern uint32_t hal_micros();
 #ifdef ISR_PROF
     extern uint64_t isr_time;
 #endif
-
 
 
 #endif

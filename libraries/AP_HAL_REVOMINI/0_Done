@@ -97,6 +97,7 @@
 * added time offset HAL parameter
 * added time syncronization between board's time and GPS time - so logs now will show real local date&time
 * i2c driver is fully rewritten, added parsing of bus error flags - ARLO & BERR
+* errors at STOP don't cause data loss or time errors - bus reset scheduled as once io_task
 * i2c reads more than 3 bytes does via DMA
 
 * ...

@@ -17,7 +17,7 @@
 /* Maximum Timeout values for events waiting loops */
    
 #undef  I2C_TIMEOUT
-#define I2C_TIMEOUT         (2000)// in uS
+#define I2C_TIMEOUT         (4000)// in uS
 
 #define I2C_OK          0
 #define I2C_NO_DEVICE   1
@@ -26,6 +26,8 @@
 #define I2C_BUS_BERR    99
 #define I2C_ERR_STOP    98
 #define I2C_STOP_BERR   97
+#define I2C_STOP_BUSY   96
+#define I2C_ERR_TIMEOUT 95
 
 
 typedef struct I2C_DMA {
@@ -73,6 +75,10 @@ void i2c_lowLevel_deinit(const i2c_dev *dev);
 
 void i2c_master_release_bus(const i2c_dev *dev);
 bool i2c_bus_reset(const i2c_dev *dev);
+
+#ifdef I2C_DEBUG
+uint32_t i2c_get_operation_time(uint8_t *psr1);
+#endif
 
 extern const i2c_dev* const _I2C1;
 extern const i2c_dev* const _I2C2;

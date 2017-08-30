@@ -36,11 +36,14 @@ using namespace REVOMINI;
 
 #ifdef I2C_DEBUG
 typedef struct I2C_STATE {
+    uint32_t start;
+    uint32_t time;
     uint8_t addr;
     uint8_t bus;
     uint8_t send_len;
     uint8_t recv_len;
     uint8_t ret;
+    uint8_t op_sr1;
     uint8_t sr1;
     uint8_t sr2;
 } I2C_State;
@@ -141,7 +144,7 @@ private:
     void _do_bus_reset();
     
 #ifdef I2C_DEBUG
-#define I2C_LOG_SIZE 128
+#define I2C_LOG_SIZE 99
     static I2C_State log[I2C_LOG_SIZE];
     static uint8_t log_ptr;
 #endif

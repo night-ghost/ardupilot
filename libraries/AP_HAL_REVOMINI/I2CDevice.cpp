@@ -225,7 +225,10 @@ again:
     }
 
 #ifdef I2C_DEBUG
-     I2C_State &sp = log[log_ptr];
+     I2C_State &sp = log[log_ptr]; // remember last operation
+     
+     sp.start    = i2c_get_operation_time(&sp.op_sr1);
+     sp.time     = REVOMINIScheduler::_micros();
      sp.bus      =_bus;
      sp.addr     =_address;
      sp.send_len = send_len;
@@ -239,9 +242,12 @@ again:
 
     if(ret == I2C_OK) return true;
 
-    if(ret == I2C_ERR_STOP || ret == I2C_STOP_BERR) { // bus or another errors on Stop. Data is good but bus reset required
-
+    if(ret == I2C_ERR_STOP || ret == I2C_STOP_BERR || ret == I2C_STOP_BUSY) { // bus or another errors on Stop, or bus busy after Stop.
+                                                                            //   Data is good but bus reset required
         need_reset = true;
+        _initialized=false; // will be reinitialized at next transfer
+
+        _dev->I2Cx->CR1 |= I2C_CR1_SWRST; // set for some time
         
         // we not count such errors as _lockup_count
     
@@ -253,15 +259,23 @@ again:
     
     if(ret != I2C_NO_DEVICE) { // for all errors except NO_DEVICE do bus reset
 
-        last_error = ret;   // remember
-        if(last_op) last_error+=50; // to distinguish read and write errors
+        if(ret == I2C_BUS_BUSY) {
+            _dev->I2Cx->CR1 |= I2C_CR1_SWRST;           // set SoftReset for some time 
+            hal_yield(0);
+            _dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_SWRST); // clear SoftReset flag            
+        }
+         
 
-        _lockup_count ++;  
-        _initialized=false; // will be reinitialized at next transfer
+        if((_retries-retries) > 0){ // not reset bus or log error on 1st try
+            last_error = ret;   // remember
+            if(last_op) last_error+=50; // to distinguish read and write errors
+            _lockup_count ++;  
+            _initialized=false; // will be reinitialized at next transfer
         
-        _do_bus_reset();
+            _do_bus_reset();
         
-        if(_failed) return false;
+            if(_failed) return false;
+        }
     }
 
     if(retries--) goto again;
@@ -278,7 +292,8 @@ void REVOI2CDevice::do_bus_reset(){ // public - with semaphores
 }
 
 void REVOI2CDevice::_do_bus_reset(){ // private
-//        _dev->I2Cx->CR1|=I2C_CR1_SWRST;
+
+    _dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_SWRST); // clear soft reset flag
 
     if(!need_reset) return; // already done
     
