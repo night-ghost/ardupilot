@@ -99,6 +99,10 @@
 * i2c driver is fully rewritten, added parsing of bus error flags - ARLO & BERR
 * errors at STOP don't cause data loss or time errors - bus reset scheduled as once io_task
 * i2c reads more than 3 bytes does via DMA
+* ALL I2C reads does via DMA!
+* added parsing of TIMEOUT bus flag
+* added asyncronous bus reset in case when loockup occures after STOP generation
+* full BusReset changed to SoftReset on 1st try
 
 * ...
 * a lot of minor enhancements
