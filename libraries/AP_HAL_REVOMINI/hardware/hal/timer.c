@@ -557,7 +557,7 @@ void timer_foreach(void (*fn)(const timer_dev*)) {
     fn(TIMER5);
     fn(TIMER6);
     fn(TIMER7);
-    //fn(TIMER8);
+    fn(TIMER8); // used in PWM_IN
 }
 
 /**

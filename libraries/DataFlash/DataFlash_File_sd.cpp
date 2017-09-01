@@ -776,21 +776,38 @@ uint16_t DataFlash_File::start_new_log(void)
     if (log_num > MAX_LOG_FILES) {
         log_num = 1;
     }
-    char *fname = _log_file_name(log_num);
-    if (fname == nullptr) {
-        return 0xFFFF;
-    }
-    _write_fd = SD.open(fname, O_WRITE|O_CREAT|O_TRUNC);
     _cached_oldest_log = 0;
 
-    if (!(_write_fd)) {
-        _initialised = false;
-        _open_error = true;
+
+    char *fname;
+    while(1) { // try to create log file
+
+        fname = _log_file_name(log_num);
+        if (fname == nullptr) {
+            _open_error = true;
+            return 0xFFFF;      // no memory
+        }
+
+        _write_fd = SD.open(fname, O_WRITE|O_CREAT|O_TRUNC);
+
+        if (_write_fd) {     // file opened
+            free(fname);
+            break;
+        }
+        
+        // opening failed
         printf("Log open fail for %s: %s\n",fname, SD.strError(SD.lastError));
         free(fname);
-        return 0xFFFF;
+
+        log_num++;                          // if not at end - try to open next log
+            
+        if (log_num >= MAX_LOG_FILES) {    // at end - opening failed
+            _initialised = false;
+            _open_error = true;
+
+            return 0xFFFF;
+        }
     }
-    free(fname);
     _write_offset = 0;
     _writebuf.clear();
 

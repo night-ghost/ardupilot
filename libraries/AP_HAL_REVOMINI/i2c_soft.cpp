@@ -1,12 +1,12 @@
 #include <AP_HAL/AP_HAL.h>
 #include "i2c_soft.h"
+#include <i2c.h>
 
 // Software I2C driver
 // Can be configured to use any suitable pins
 
 using namespace REVOMINI;
 
-//static uint16_t i2cErrorCount = 0;
 extern const AP_HAL::HAL& hal;
 
 #define SCL_H_NW      {scl_port->BSRRL = scl_pin; }

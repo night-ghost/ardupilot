@@ -116,8 +116,8 @@
 
 interrupts priorities:
 0 PWM input
-1 soft_uart
-2 micros() Timer5
+1 soft_uart 
+2 micros() Timer5 / timer_i2C
 3 usb
 4 uart
 5 gpio pin
@@ -131,3 +131,18 @@ c
 d
 e
 f io_completion
+
+Timer usage:
+
+1
+2 RC-Output
+3 RC-Output
+4
+5 micros()
+6 event generation for WFE
+7 scheduler
+8 PPM_IN
+9
+10
+11
+12 PPM_IN

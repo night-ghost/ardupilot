@@ -3,11 +3,9 @@
 
 #define DEBUG_BUILD 1
 
-
-
 #define USART_SAFE_INSERT // ignore received bytes if buffer overflows
 
-#define I2C_DEBUG
+//#define I2C_DEBUG
 
 //#define DEBUG_SPI
 
@@ -20,6 +18,6 @@
 #define SEM_PROF 
 #define SHED_PROF 
 #define MTASK_PROF
-#define SHED_DEBUG
+//#define SHED_DEBUG
 
 #define USE_WFE

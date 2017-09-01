@@ -270,13 +270,6 @@ void boardInit(void) {
     }
 #endif
 
-#ifdef DEBUG_BUILD
-//*///    enable clock in sleep for debugging
-    DBGMCU->CR |= DBGMCU_STANDBY | DBGMCU_STOP | DBGMCU_SLEEP;
-    DBGMCU->APB1FZ |= DBGMCU_TIM5_STOP | DBGMCU_TIM7_STOP;  // stop internal timers in debug
-    DBGMCU->APB2FZ |= DBGMCU_TIM11_STOP;
-//*///
-#endif
 }
 
 

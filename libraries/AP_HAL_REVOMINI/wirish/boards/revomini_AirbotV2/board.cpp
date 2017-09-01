@@ -265,13 +265,6 @@ void boardInit(void) {
     gpio_write_bit(PIN_MAP[BOARD_SBUS_INVERTER].gpio_device, PIN_MAP[BOARD_SBUS_INVERTER].gpio_bit, 0); // not inverted
 #endif
 
-
-//*///    enable clock in sleep for debugging
-    DBGMCU->CR |= DBGMCU_STANDBY | DBGMCU_STOP | DBGMCU_SLEEP;
-    DBGMCU->APB1FZ |= DBGMCU_TIM5_STOP | DBGMCU_TIM7_STOP;  // stop internal timers
-    DBGMCU->APB2FZ |= DBGMCU_TIM11_STOP;
-//*///
-
 }
 
 

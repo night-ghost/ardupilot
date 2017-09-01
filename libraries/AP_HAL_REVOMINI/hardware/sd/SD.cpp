@@ -96,7 +96,8 @@ uint8_t SDClass::exists(const char *filepath)
     lastError=f_stat(filepath, &fno);
 //    fno->fattrib & AM_DIR
 
-    return lastError == FR_OK;
+                                // FatFs gives such error for root directory
+    return lastError == FR_OK || lastError == FR_INVALID_NAME;
 }
 
 /**

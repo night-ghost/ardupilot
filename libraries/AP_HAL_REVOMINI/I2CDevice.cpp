@@ -71,7 +71,7 @@ void REVOI2CDevice::init(){
         ((HAL_REVOMINI&) hal).lateInit();
     }
 
-    if(need_reset) do_bus_reset();
+    if(need_reset) _do_bus_reset();
 
     if(_failed) return;
 
@@ -150,8 +150,9 @@ void REVOI2CDevice::init(){
     
     if(_dev) {
 //      i2c_init(_dev, _offs, I2C_400KHz_SPEED);
-        i2c_init(_dev, _offs, _slow?I2C_100KHz_SPEED:I2C_250KHz_SPEED);
+//        i2c_init(_dev, _offs, _slow?I2C_100KHz_SPEED:I2C_250KHz_SPEED);
 //        i2c_init(_dev, _offs, _slow?I2C_75KHz_SPEED:I2C_250KHz_SPEED);
+        i2c_init(_dev, _offs, _slow?I2C_250KHz_SPEED:I2C_400KHz_SPEED);
     }else {
         s_i2c.init( );
 
@@ -266,7 +267,7 @@ again:
         }
          
 
-        if((_retries-retries) > 0){ // not reset bus or log error on 1st try
+        if((_retries-retries) > 0 || ret==I2C_BUS_BERR){ // not reset bus or log error on 1st try, except ArbitrationLost error
             last_error = ret;   // remember
             if(last_op) last_error+=50; // to distinguish read and write errors
             _lockup_count ++;  

@@ -173,13 +173,19 @@ void INLINE init(void) {
     systick_init(SYSTICK_RELOAD_VAL);
 
     stopwatch_init(); // will use stopwatch_delay_us() and stopwatch_get_ticks()
-    
+
+//*///    enable clock in sleep for debugging
+    DBGMCU->CR |= DBGMCU_STANDBY | DBGMCU_STOP | DBGMCU_SLEEP;
+    DBGMCU->APB1FZ |=  DBGMCU_TIM4_STOP | DBGMCU_TIM5_STOP | DBGMCU_TIM7_STOP;  // stop internal timers
+    DBGMCU->APB2FZ |= DBGMCU_TIM11_STOP;
+//*///    
 
     boardInit(); // board-specific part of init
 /*
      only CPU init here, all another moved to modules .init() functions
 */
     usart_disable_all();
+
 
 }
 

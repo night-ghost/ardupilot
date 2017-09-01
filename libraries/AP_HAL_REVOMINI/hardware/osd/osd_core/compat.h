@@ -59,10 +59,6 @@ static inline uint32_t pgm_read_word(const void * v){
 }
 #endif
 
-template<typename T> void ZeroIt(T& value)
-{
-    memset(&value,0,sizeof(value));
-}
 
 #include <AP_HAL_REVOMINI/AP_HAL_REVOMINI.h>
 #include <AP_HAL_REVOMINI/GPIO.h>
