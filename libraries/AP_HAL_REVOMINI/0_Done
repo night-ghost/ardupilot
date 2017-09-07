@@ -103,6 +103,8 @@
 * added asyncronous bus reset in case when loockup occures after STOP generation
 * full BusReset changed to SoftReset on 1st try
 * new SoftI2C driver uses timer and works in interrupts
+* added support for SUMD and non-inverted SBUS via PPM pins
+* added support for SUMD via UARTs
 * ...
 * a lot of minor enhancements
 

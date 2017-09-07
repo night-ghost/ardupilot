@@ -26,14 +26,14 @@ void SBUS_parser::init(uint8_t ch){
     memset((void *)&_val[0],    0, sizeof(_val));
     memset((void *)&sbus,       0, sizeof(sbus));
     
-    _last_signal =0;
+    _last_signal=0;
     _last_change =0;
-        
+    
+    
     
     _ioc = REVOMINIScheduler::register_io_completion(FUNCTOR_BIND_MEMBER(&SBUS_parser::_io_completion, void));
 
-#if 0 //just a testcase
-
+#if 0
     uint8_t bad_sbus[] = {
         0x0F,0x0F,0x67,0xE0,0x40,0x00,0xD8,0x18,
         0x78,0xC0,0xC3,0x7C,0x03,0x84,0x07,0x00,

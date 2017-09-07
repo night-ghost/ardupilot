@@ -64,8 +64,6 @@ _parser *REVOMINIRCInput::parsers[] = { // individual parsers on each PPM pin an
 #endif
 }; 
 
-// #define PPM_INPUTS (sizeof(parsers) / sizeof(_parser)) GCC bug - sometimes it is 0
-
 #define PPM_INPUTS (ARRAY_SIZE(parsers))
 
 
@@ -109,9 +107,6 @@ used as:
                int     cs
 
 */
-
-
-
 
     is_PPM=true;
 
@@ -201,14 +196,17 @@ uint16_t REVOMINIRCInput::read(uint8_t ch)
         got = inp+1;
 
     } else {
+        uint32_t best_t=(uint32_t) -1;
+        
         for(uint8_t i=0; i<PPM_INPUTS;i++) {
             const _parser *p = parsers[i];
             pulse = p->get_last_signal();
             last  = p->get_last_change();
-            if( pulse >_last_read && (now - last ) < RC_DEAD_TIME) {
+            uint32_t dt = now-pulse; // time from signal
+            if( pulse >_last_read && dt<best_t && (now - last ) < RC_DEAD_TIME) {
+                best_t = dt;
                 data = _read_ppm(ch,i);
                 got = i+1;
-                break;
             }
         }
     }

@@ -27,6 +27,8 @@ enum BOARD_RC_MODE {
     BOARD_RC_NONE=0,
     BOARD_RC_SBUS,
     BOARD_RC_DSM,
+    BOARD_RC_SUMD,
+    BOARD_RC_SBUS_NI,
 };
 
 
