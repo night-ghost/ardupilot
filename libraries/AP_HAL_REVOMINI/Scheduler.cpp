@@ -132,25 +132,32 @@ void REVOMINIScheduler::init()
 
     timer_foreach(timer_reset); // timer_reset(dev) moved out from configTimeBase so reset by hands
 
-    uint32_t period    = (2000000UL / SHED_FREQ) - 1; 
+    {
+        uint32_t period    = (2000000UL / SHED_FREQ) - 1; 
                 // dev    period   freq, kHz
-    configTimeBase(TIMER7, period, 2000);       //2MHz 0.5us ticks
-    timer_attach_interrupt(TIMER7, TIMER_UPDATE_INTERRUPT, _timer_isr_event, 11); // low priority - only PendSV and USB are lower
-    timer_resume(TIMER7);
+        configTimeBase(TIMER7, period, 2000);       //2MHz 0.5us ticks
+        Revo_handler h = { .isr = _timer_isr_event };
+        timer_attach_interrupt(TIMER7, TIMER_UPDATE_INTERRUPT, h.h , 11); // low priority - only PendSV and USB are lower
+        timer_resume(TIMER7);
+    }
 
+    {
 // timer5 - 32-bit general timer, unused for other needs
 // so we can read micros32() directly from its counter and micros64() from counter and overflows
-    configTimeBase(TIMER5, 0, 1000);       //1MHz 1us ticks
-    timer_set_count(TIMER5,(1000000/SHED_FREQ)/2); // to not interfere with TIMER7
-    timer_attach_interrupt(TIMER5, TIMER_UPDATE_INTERRUPT, _timer5_ovf, 2); // high priority
-    timer_resume(TIMER5);
+        configTimeBase(TIMER5, 0, 1000);       //1MHz 1us ticks
+        timer_set_count(TIMER5,(1000000/SHED_FREQ)/2); // to not interfere with TIMER7
+        Revo_handler h = { .isr = _timer5_ovf };
+        timer_attach_interrupt(TIMER5, TIMER_UPDATE_INTERRUPT, h.h, 2); // high priority
+        timer_resume(TIMER5);
+    }
 
-
-    // only Timer6 from spare timers has personal NVIC line - TIM6_DAC_IRQn
-    uint32_t freq = configTimeBase(TIMER6, 0, 20000);     // 20MHz - we here don't know real freq so can't set period
-    timer_set_reload(TIMER6, freq / 1000000);             // period to generate 1uS requests
-    timer_enable_irq(TIMER6, TIMER_UPDATE_INTERRUPT); // enable interrupt requests from timer but not enable them in NVIC - will be events
-    timer_resume(TIMER6);
+    {
+        // only Timer6 from spare timers has personal NVIC line - TIM6_DAC_IRQn
+        uint32_t freq = configTimeBase(TIMER6, 0, 20000);     // 20MHz - we here don't know real freq so can't set period
+        timer_set_reload(TIMER6, freq / 1000000);             // period to generate 1uS requests
+        timer_enable_irq(TIMER6, TIMER_UPDATE_INTERRUPT); // enable interrupt requests from timer but not enable them in NVIC - will be events
+        timer_resume(TIMER6);
+    }
     
     
 #ifdef SHED_PROF
@@ -398,7 +405,7 @@ void REVOMINIScheduler::_run_timer_procs(bool called_from_isr) {
     _in_timer_proc = false;
 }
 
-void REVOMINIScheduler::_timer_isr_event(TIM_TypeDef *tim) {
+void REVOMINIScheduler::_timer_isr_event(uint32_t v  /* TIM_TypeDef *tim */) {
     uint32_t sp; 
 
  // Get stack pointer, assuming we the thread that generated
@@ -410,7 +417,7 @@ void REVOMINIScheduler::_timer_isr_event(TIM_TypeDef *tim) {
     _run_timer_procs(true);
 }
 
-void REVOMINIScheduler::_timer5_ovf(TIM_TypeDef *tim) {
+void REVOMINIScheduler::_timer5_ovf(uint32_t v /* TIM_TypeDef *tim */) {
     timer5_ovf_cnt++;
 }
 

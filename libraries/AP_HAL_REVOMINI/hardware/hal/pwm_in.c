@@ -54,7 +54,7 @@ typedef void (*rcc_clockcmd)( uint32_t, FunctionalState);
 /**************** PWM INPUT **************************************/
 
 // Forward declaration
-static inline void pwmIRQHandler(TIM_TypeDef *tim);
+static inline void pwmIRQHandler(uint32_t v/*TIM_TypeDef *tim */);
 
 static void pwmInitializeInput(uint8_t ppmsum);
 
@@ -62,14 +62,14 @@ static void pwmInitializeInput(uint8_t ppmsum);
 extern const struct TIM_Channel PWM_Channels[];
 
 
-
 struct PPM_State PPM_Inputs[PPM_CHANNELS] IN_CCM;
 static uint16_t num_ppm_channels = 1;
 
 
-static void pwmIRQHandler(TIM_TypeDef *tim){
-    uint8_t i;
-    uint16_t val = 0;
+static void pwmIRQHandler(uint32_t v /* TIM_TypeDef *tim */){
+        TIM_TypeDef * tim = (TIM_TypeDef *)v;
+        uint8_t i;
+        uint16_t val = 0;
 
 	for (i = 0; i < num_ppm_channels; i++)  {
 
@@ -138,10 +138,12 @@ struct PPM_State  {
 	            input->state = 1;
 
 	            TIM_ICInitStructure.TIM_ICPolarity = TIM_ICPolarity_Falling; // reprogram timer to falling
+//	            timer_cc_set_pol(channel->timer, channel->channel_n, 1);
 	        } else  {               // falling edge
 	            input->state = 0;
 	
 	            TIM_ICInitStructure.TIM_ICPolarity = TIM_ICPolarity_Rising; // reprogram timer to raising
+//	            timer_cc_set_pol(channel->timer, channel->channel_n, 0);
 	        }
 	        TIM_ICInit(channel->tim, &TIM_ICInitStructure);
                 
@@ -163,16 +165,14 @@ static inline void pwmInitializeInput(uint8_t ppmsum){
 	for (i = 0; i < num_ppm_channels; i++)   {
             const struct TIM_Channel *channel = &PWM_Channels[i];
 	
-	    // timer_pause ******************************************************************
-	    TIM_Cmd(channel->tim, DISABLE);
-
+            TIM_Cmd(channel->tim, DISABLE);
 
             NVIC_EnableIRQ(channel->tim_irq);
-            NVIC_SetPriority(channel->tim_irq, 0); // highest - bit time is ~10uS only - ~1680 commands
-	
+            NVIC_SetPriority(channel->tim_irq, 0); // highest - bit time is ~10uS only - ~1680 commands	
 
 	    if(last_tim != channel->tim) {
-                timer_attach_all_interrupts(channel->timer, pwmIRQHandler); 
+	        Revo_hal_handler h = { .isr = pwmIRQHandler };
+                timer_attach_all_interrupts(channel->timer, h.h); 
 
                 // timer_reset ******************************************************************
                 channel->tim_clkcmd(channel->tim_clk, ENABLE);

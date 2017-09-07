@@ -163,8 +163,8 @@ private:
     static void rxSetCapture();
     static void rxSetCompare();
     
-    static void txNextBit(TIM_TypeDef *tim);
-    static void rxNextBit(TIM_TypeDef *tim);
+    static void txNextBit(uint32_t v /* TIM_TypeDef *tim */ );
+    static void rxNextBit(uint32_t v /* TIM_TypeDef *tim */ );
     
 };
 

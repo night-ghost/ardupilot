@@ -33,11 +33,11 @@
 #ifndef _PWM_IN_H_
 #define _PWM_IN_H_
 
+#include <hal.h>
 #include "hal_types.h"
 #include <stdbool.h>
 #include <strings.h>
 #include "timer.h"
-#include "hal.h"
 
 typedef void (*rcc_clockcmd)(uint32_t, FunctionalState);
 

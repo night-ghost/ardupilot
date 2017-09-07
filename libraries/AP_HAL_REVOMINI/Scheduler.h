@@ -176,7 +176,7 @@ public:
 
     void     register_delay_callback(AP_HAL::Proc, uint16_t min_time_ms);
     static void  _register_io_process(Handler h, Revo_IO_Flags flags);
-    void         register_io_process(AP_HAL::MemberProc proc) { Revo_handler h = { .mp=proc }; _register_io_process(h.h, IO_PERIODIC); }
+    void          register_io_process(AP_HAL::MemberProc proc) { Revo_handler h = { .mp=proc }; _register_io_process(h.h, IO_PERIODIC); }
 
     void     resume_timer_procs();
 
@@ -376,10 +376,11 @@ private:
 
     /* _timer_isr_event() and _run_timer_procs are static so they can be
      * called from an interrupt. */
-    static void _timer_isr_event(TIM_TypeDef *tim);
+    static void _timer_isr_event(uint32_t v /*TIM_TypeDef *tim */);
+    static void _timer5_ovf(uint32_t v /*TIM_TypeDef *tim */ );
+    
     static void _run_timer_procs(bool called_from_isr);
 
-    static void _timer5_ovf(TIM_TypeDef *tim);
 
     static uint32_t timer5_ovf_cnt;
     

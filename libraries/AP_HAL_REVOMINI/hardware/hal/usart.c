@@ -84,7 +84,7 @@ const usart_dev * const _UART4 = &uart4;
 #endif
 
 #if defined(BOARD_USART5_RX_PIN)
-//static ring_buffer uart5_txrb IN_CCM;
+//static ring_buffer uart5_txrb IN_CCM; - RX-only UART
 static ring_buffer uart5_rxrb IN_CCM;
 static usart_state u5state IN_CCM;
 
@@ -206,7 +206,7 @@ void usart_setup(const usart_dev *dev, uint32_t baudRate, uint16_t wordLength,
     }
 
 
-    /*
+    /* do not enable interrupt at init!
      USART_ITConfig(dev->USARTx, USART_IT_RXNE,  ENABLE);
      USART_ITConfig(dev->USARTx, USART_IT_PE,    ENABLE);
      USART_ITConfig(dev->USARTx, USART_IT_ERR,   ENABLE);

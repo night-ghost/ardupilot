@@ -2,9 +2,6 @@
 
 #include <hal.h>
 
-typedef uint64_t Handler;
-typedef void (*revo_isr_handler)(uint32_t arg);
-
 template<typename T> void ZeroIt(T& value)
 {
     memset(&value,0,sizeof(value));

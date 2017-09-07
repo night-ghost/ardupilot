@@ -137,12 +137,14 @@ Timer usage:
 1
 2 RC-Output
 3 RC-Output
-4
+4 soft_i2c0
 5 micros()
 6 event generation for WFE
 7 scheduler
 8 PPM_IN
-9
-10
-11
+9 soft_i2c1
+10 soft_i2c2
+11 
 12 PPM_IN
+13
+14

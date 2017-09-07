@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <stdbool.h>
@@ -7,6 +6,10 @@
 #include "systick.h"
 #include "Scheduler.h"
 #include "timer.h"
+
+//#define SI2C_DEBUG 1
+
+//#define SI2C_PROF 1
 
 class Soft_I2C {
 public:
@@ -53,8 +56,11 @@ public:
         W_AH,
         
         STOP,
+        STOP2,
         RESTART,
-        // byte read
+        RESTART2, // 2nd stage
+        DUMMY,
+        // byte read after restart
         R_0L,
         R_0H,
         R_1L,
@@ -75,16 +81,24 @@ public:
         R_AH,
     } State;
 
-    Soft_I2C( const gpio_dev *scl_dev, uint8_t scl_bit, const gpio_dev *sda_dev, uint8_t sda_bit);
+#ifdef SI2C_DEBUG
+    typedef struct SI2C_STATE {
+        State state;
+        unsigned int sda  :4;
+        unsigned int f_sda:4;
+    } SI2C_State;
+#endif 
+
+
+
     Soft_I2C();
 
     void init();
-
-    uint8_t writeBuffer( uint8_t addr_, uint8_t reg_, uint8_t len_, const uint8_t *data);
+    void init_hw( const gpio_dev *scl_dev, uint8_t scl_bit, const gpio_dev *sda_dev, uint8_t sda_bit, const timer_dev *tim);
+    
+    uint8_t writeBuffer( uint8_t addr_, uint8_t len_, const uint8_t *data);
     uint8_t read( uint8_t addr_, uint8_t reg, uint8_t len, uint8_t* buf);
     uint8_t transfer(uint8_t  addr, uint8_t  send_len, const uint8_t *send, uint8_t len, uint8_t *buf);
-
-    uint16_t getErrorCounter(void) { return i2cErrorCount; }
 
     bool bus_reset(void);
     
@@ -92,48 +106,48 @@ public:
 
 
 private:
-    static Soft_I2C *inst; // this for statics
+    void tick(); // ISR
 
-    static void _tick(TIM_TypeDef *tim); // ISR
-    void tick(); // 2nd ISR
+    bool    _start(void);
+    uint8_t wait_done();
 
     const gpio_dev *_scl_dev;
     uint8_t         _scl_bit;
     const gpio_dev *_sda_dev;
     uint8_t         _sda_bit;
+    const timer_dev * _timer;
 
     volatile GPIO_TypeDef *scl_port; // for quick direct access to hardware
     uint16_t               scl_pin;
     volatile GPIO_TypeDef *sda_port;
     uint16_t               sda_pin;
 
-    bool _failed;
-    bool done;
-    uint8_t result;
-
-    uint16_t i2cErrorCount = 0;
-
-    bool _Start(void);
-    bool  _Stop(void);
-    bool  _Ack(void);
-    bool  _NoAck(void);
-    bool _WaitAck(void);
-    bool  _SendByte(uint8_t bt);
-    bool _ReceiveByte(uint8_t *bp);
+    volatile bool done;
+    volatile uint8_t result;
 
     volatile State state;
-    State next_state;
-    bool f_sda; // what line we touch
+    bool f_sda;    // what line we touch
     bool wait_scl; // flag - we wait for SCL stretching
-    bool f_read; // flag of mode
-    
+    bool was_restart;
 
-    uint8_t data; //data byte to output / from input
-    
+    uint8_t data;  // data byte to output / from input
+
     const uint8_t *send;
-    uint16_t send_len;
+    uint8_t send_len;
     uint8_t *recv;
-    uint16_t recv_len;
+    uint8_t recv_len;
     uint8_t _addr;
+
+#ifdef SI2C_DEBUG
+    #define SI2C_LOG_SIZE 199
+    static SI2C_State log[SI2C_LOG_SIZE];
+    static uint8_t log_ptr;
+#endif
+
+#ifdef SI2C_PROF
+    static uint64_t full_time;
+    static uint32_t int_count;
+#endif
+
 };
 

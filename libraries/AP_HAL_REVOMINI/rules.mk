@@ -31,8 +31,9 @@ cppSRCS_$(d) += SPIDevice.cpp
 cppSRCS_$(d) += Storage.cpp
 cppSRCS_$(d) += UARTDriver.cpp
 cppSRCS_$(d) += EEPROM.cpp
-cppSRCS_$(d) += i2c_soft.cpp
 cppSRCS_$(d) += UART_SoftDriver.cpp
+#cppSRCS_$(d) += i2c_soft.cpp
+cppSRCS_$(d) += tim_i2c.cpp
 
 cFILES_$(d) := $(cSRCS_$(d):%=$(d)/%)
 cppFILES_$(d) := $(cppSRCS_$(d):%=$(d)/%)

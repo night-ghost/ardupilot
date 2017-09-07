@@ -99,9 +99,10 @@ WARNFLAGS      +=   -Wno-error=unused-label
 OPTFLAGS        = -Os
 OPTFLAGS       += -fsingle-precision-constant -g3 -fno-strict-aliasing -fno-strength-reduce -fomit-frame-pointer -fearly-inlining 
 OPTFLAGS       += -fno-builtin-printf -fno-aggressive-loop-optimizations -fpredictive-commoning
-OPTFLAGS       += -fassociative-math -freciprocal-math -fno-signed-zeros -fno-trapping-math -ffast-math 
+#OPTFLAGS       += -fassociative-math -freciprocal-math -ffast-math 
+OPTFLAGS       += -fno-signed-zeros -fno-trapping-math 
 OPTFLAGS       += -finline-functions-called-once -fearly-inlining -finline-small-functions
-OPTFLAGS       += -fmerge-all-constants -fsingle-precision-constant
+OPTFLAGS       += -fmerge-all-constants 
 
 WARNFLAGSCXX    =   -Wno-reorder
 DEPFLAGS        =   -MD -MT $@

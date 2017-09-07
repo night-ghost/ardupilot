@@ -81,8 +81,14 @@ void SerialDriver::begin(uint32_t baud) {
     rxBitCount = 9;
 
     rxSetCapture(); // wait for start bit
-    timer_attach_interrupt(channel->timer, TIMER_RX_INTERRUPT,     rxNextBit, 1 );
-    timer_attach_interrupt(channel->timer, TIMER_UPDATE_INTERRUPT, txNextBit, 1 ); // also enables interrupt
+    {
+        Revo_handler h = { .isr = rxNextBit };
+        timer_attach_interrupt(channel->timer, TIMER_RX_INTERRUPT,   h.h, 1 );
+    }
+    {
+        Revo_handler h = { .isr = txNextBit };
+        timer_attach_interrupt(channel->timer, TIMER_UPDATE_INTERRUPT, h.h, 1 ); // also enables interrupt
+    }
     // so disable it
     txDisableInterrupts();
     
@@ -213,7 +219,7 @@ size_t SerialDriver::write(const uint8_t *buffer, size_t size)
 #define bitRead(value, bit)            (((value) >> (bit)) & 0x01)
 
 // Transmits next bit. Called by timer update interrupt
-void SerialDriver::txNextBit(TIM_TypeDef *tim) { // ISR
+void SerialDriver::txNextBit(uint32_t v /* TIM_TypeDef *tim */) { // ISR
 
     txSkip= !txSkip;
     
@@ -265,7 +271,7 @@ void SerialDriver::txNextBit(TIM_TypeDef *tim) { // ISR
 
 
 // Receive next bit. Called by timer channel interrupt
-void SerialDriver::rxNextBit(TIM_TypeDef *tim) { // ISR
+void SerialDriver::rxNextBit(uint32_t v /* TIM_TypeDef *tim */) { // ISR
 
     if(!activeRX) { // capture start bit
 

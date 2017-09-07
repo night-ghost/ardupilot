@@ -26,10 +26,9 @@
 
 /**
  * @file   timer.h
- * @author Marti Bolivar <mbolivar@leaflabs.com>
- * @brief  New-style timer interface.
+  based on timer's code from LeafLabs by Marti Bolivar <mbolivar@leaflabs.com>
+ * @brief  timer interface.
  *
- * Replaces old timers.h implementation.
  */
 
 #ifndef _TIMERS_H_
@@ -37,6 +36,7 @@
 
 #include "hal_types.h"
 #include "bitband.h"
+#include "dma.h"
 
 #define BOARD_PWM_MODE TIM_OCMode_PWM1
 
@@ -53,6 +53,8 @@ typedef enum timer_type {
     TIMER_BASIC                 /**< Basic type */
 } timer_type;
 
+
+typedef void (* TimerHandler)(TIM_TypeDef *tim);
 
 
 
@@ -510,31 +512,33 @@ typedef enum timer_oc_mode_flags {
 
 
 
-typedef void (* TimerHandler)(TIM_TypeDef *tim);
 
 typedef struct TIM_DMA {
-    uint8_t dma_stream;
-    uint8_t dma_channel;
-    uint16_t dma_en;
+    dma_stream dma_stream;
+    uint8_t    dma_channel;
 } Tim_dma;
 
 /** Timer device type */
 struct Timer_dev {
     TIM_TypeDef *regs;
     uint32_t clk;
-    TimerHandler *handlers;     /**< User IRQ handlers */
+    Handler *handlers;          // < User IRQ handlers
     uint16_t af;                // GPIO AF number
-    timer_type type;            /**< Timer's type */
-    uint8_t n_handlers;         // number of handlers
-    uint8_t bus;        // APB1 or APB2
-    uint8_t id;
     Tim_dma ch_dma[4];
+    //
+    timer_type         type:3;         // < Timer's type 
+    unsigned int n_handlers:5;         // number of handlers
+    unsigned int        bus:1;         // APB1 or APB2
+    unsigned int         id:5;         // timer's number
+    //
 };
 
-/** Timer device type */
+
 typedef struct Timer_dev timer_dev;
 
+extern const timer_dev timers[];
 
+/*
 extern const timer_dev timer1;
 extern const timer_dev timer2;
 extern const timer_dev timer3;
@@ -543,9 +547,45 @@ extern const timer_dev timer5;
 extern const timer_dev timer6;
 extern const timer_dev timer7;
 extern const timer_dev timer8;
+extern const timer_dev timer9;
+extern const timer_dev timer10;
+extern const timer_dev timer11;
 extern const timer_dev timer12;
+extern const timer_dev timer13;
+extern const timer_dev timer14;
+*/
 
+#define timer1 (timers[0])
+#define timer2 (timers[1])
+#define timer3 (timers[2])
+#define timer4 (timers[3])
+#define timer5 (timers[4])
+#define timer6 (timers[5])
+#define timer7 (timers[6])
+#define timer8 (timers[7])
+#define timer9 (timers[8])
+#define timer10 (timers[9])
+#define timer11 (timers[10])
+#define timer12 (timers[11])
+#define timer13 (timers[12])
+#define timer14 (timers[13])
 
+#define TIMER1  (&timer1)
+#define TIMER2  (&timer2)
+#define TIMER3  (&timer3)
+#define TIMER4  (&timer4)
+#define TIMER5  (&timer5)
+#define TIMER6  (&timer6)
+#define TIMER7  (&timer7)
+#define TIMER8  (&timer8)
+#define TIMER9  (&timer9)
+#define TIMER10 (&timer10)
+#define TIMER11 (&timer11)
+#define TIMER12 (&timer12)
+#define TIMER13 (&timer13)
+#define TIMER14 (&timer14)
+
+/*
 extern  const timer_dev * const TIMER1;
 extern  const timer_dev * const TIMER2;
 extern  const timer_dev * const TIMER3;
@@ -554,8 +594,11 @@ extern  const timer_dev * const TIMER5;
 extern  const timer_dev * const TIMER6;
 extern  const timer_dev * const TIMER7;
 extern  const timer_dev * const TIMER8;
+extern  const timer_dev * const TIMER9;
+extern  const timer_dev * const TIMER10;
+extern  const timer_dev * const TIMER11;
 extern  const timer_dev * const TIMER12;
-
+*/
 
 /*
  * Note: Don't require timer_channel arguments! We want to be able to say
@@ -575,9 +618,9 @@ void timer_foreach(void (*fn)(const timer_dev*));
 
 void pwmOCConfig(const timer_dev *dev, uint8_t channel, uint8_t flags);
 
-void timer_attach_interrupt(const timer_dev *dev, uint8_t interrupt, TimerHandler handler, uint8_t priority);
+void timer_attach_interrupt(const timer_dev *dev, uint8_t interrupt, Handler handler, uint8_t priority);
 void timer_detach_interrupt(const timer_dev *dev, uint8_t interrupt);
-void timer_attach_all_interrupts(const timer_dev *dev,  TimerHandler handler);
+void timer_attach_all_interrupts(const timer_dev *dev,  Handler handler);
 
 uint32_t configTimeBase(const timer_dev *dev , uint16_t period, uint16_t khz);
 
@@ -796,7 +839,7 @@ static inline void timer_dma_disable_req(const timer_dev *dev, uint8_t channel) 
  * @param channel Channel to enable, from 1 to 4.
  */
 static inline void timer_cc_enable(const timer_dev *dev, uint8_t channel) {
-#if 0
+#if 1
     *bb_perip(&(dev->regs->CCER), 4 * (channel - 1)) = 1;
 #else
     switch(channel) {
@@ -825,7 +868,7 @@ static inline void timer_cc_enable(const timer_dev *dev, uint8_t channel) {
  * @see timer_cc_enable()
  */
 static inline void timer_cc_disable(const timer_dev *dev, uint8_t channel) {
-#if 0
+#if 1
     *bb_perip(&(dev->regs->CCER), 4 * (channel - 1)) = 0;
 #else    
     switch(channel){

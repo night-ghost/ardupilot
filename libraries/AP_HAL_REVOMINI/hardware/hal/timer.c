@@ -51,8 +51,25 @@
 #define NR_BAS_HANDLERS                 1
 
 
-TimerHandler tim1_handlers[NR_ADV_HANDLERS] IN_CCM;
-const timer_dev timer1 = {
+Handler tim1_handlers[NR_ADV_HANDLERS] IN_CCM;
+Handler tim2_handlers[NR_GEN_HANDLERS] IN_CCM;
+Handler tim3_handlers[NR_GEN_HANDLERS] IN_CCM;
+Handler tim4_handlers[NR_GEN_HANDLERS] IN_CCM;
+Handler tim5_handlers[NR_GEN_HANDLERS] IN_CCM;
+Handler tim6_handlers[NR_BAS_HANDLERS] IN_CCM;
+Handler tim7_handlers[NR_BAS_HANDLERS] IN_CCM;
+Handler tim8_handlers[NR_ADV_HANDLERS] IN_CCM;
+Handler tim9_handlers[NR_GEN_HANDLERS] IN_CCM;
+Handler tim10_handlers[NR_GEN_HANDLERS] IN_CCM;
+Handler tim11_handlers[NR_GEN_HANDLERS] IN_CCM;
+Handler tim12_handlers[NR_GEN_HANDLERS] IN_CCM;
+Handler tim13_handlers[NR_GEN_HANDLERS] IN_CCM;
+Handler tim14_handlers[NR_GEN_HANDLERS] IN_CCM;
+
+
+const timer_dev timers[] = {
+ { /** Timer 1 device (advanced) */
+
     .regs         = TIM1,
     .clk	  = RCC_APB2Periph_TIM1,
     .handlers     = tim1_handlers,
@@ -61,18 +78,15 @@ const timer_dev timer1 = {
     .n_handlers   = NR_ADV_HANDLERS,
     .bus          = 1,
     .id           = 1,
-    .ch_dma = { // dma per channel: stream, channel 
-        { DMA2_STREAM1, 6, TIM_DMA_CC1 },
-        { DMA2_STREAM2, 6, TIM_DMA_CC2 },
-        { DMA2_STREAM6, 6, TIM_DMA_CC3 },
-        { DMA2_STREAM4, 6, TIM_DMA_CC4 },
-    },
-        
-};
-/** Timer 1 device (advanced) */
+    .ch_dma = { // dma per channel: stream, channel
+        { DMA2_STREAM1, 6 },
+        { DMA2_STREAM2, 6 },
+        { DMA2_STREAM6, 6 },
+        { DMA2_STREAM4, 6 },
+    },        
+ },
 
-TimerHandler tim2_handlers[NR_GEN_HANDLERS] IN_CCM;
-const timer_dev timer2 = {
+ { /** Timer 2 device (general-purpose) */
     .regs         = TIM2,
     .clk    	  = RCC_APB1Periph_TIM2,
     .handlers     = tim2_handlers,
@@ -82,17 +96,15 @@ const timer_dev timer2 = {
     .bus          = 0,
     .id           = 2,
     .ch_dma = { // dma per channel: stream, channel 
-        { DMA1_STREAM5, 3, TIM_DMA_CC1 },
-        { DMA1_STREAM6, 3, TIM_DMA_CC2 },
-        { DMA1_STREAM1, 3, TIM_DMA_CC3 },
-        { DMA1_STREAM7, 6, TIM_DMA_CC4 },
+        { DMA1_STREAM5, 3 },
+        { DMA1_STREAM6, 3 },
+        { DMA1_STREAM1, 3 },
+        { DMA1_STREAM7, 6 },
     },
 
-};/** Timer 2 device (general-purpose) */
+ },
 
-
-TimerHandler tim3_handlers[NR_GEN_HANDLERS] IN_CCM;
-const timer_dev timer3 = {
+ { /** Timer 3 device (general-purpose) */
     .regs         = TIM3,
     .clk	  = RCC_APB1Periph_TIM3,
     .handlers     = tim3_handlers,
@@ -102,16 +114,15 @@ const timer_dev timer3 = {
     .bus          = 0,
     .id           = 3,
     .ch_dma = { // dma per channel: stream, channel 
-        { DMA1_STREAM4, 5, TIM_DMA_CC1 },
-        { DMA1_STREAM5, 5, TIM_DMA_CC1 },
-        { DMA1_STREAM7, 5, TIM_DMA_CC1 },
-        { DMA1_STREAM2, 5, TIM_DMA_CC1 },
+        { DMA1_STREAM4, 5 },
+        { DMA1_STREAM5, 5 },
+        { DMA1_STREAM7, 5 },
+        { DMA1_STREAM2, 5 },
     },
 
-};/** Timer 3 device (general-purpose) */
+ },
 
-TimerHandler tim4_handlers[NR_GEN_HANDLERS] IN_CCM;
-const timer_dev timer4 = {
+ { /** Timer 4 device (general-purpose) */
     .regs         = TIM4,
     .clk       	  = RCC_APB1Periph_TIM4,
     .handlers     = tim4_handlers,
@@ -127,10 +138,9 @@ const timer_dev timer4 = {
         { -1, -1 },
     },
 
-};/** Timer 4 device (general-purpose) */
+ },
 
-TimerHandler tim5_handlers[NR_GEN_HANDLERS] IN_CCM;
-const timer_dev timer5 = {
+ { /** Timer 5 device (general-purpose) */
     .regs         = TIM5,
     .clk          = RCC_APB1Periph_TIM5,
     .handlers     = tim5_handlers,
@@ -145,11 +155,9 @@ const timer_dev timer5 = {
         { DMA1_STREAM0, 6 },
         { DMA1_STREAM1, 6 },
     },
+ },
 
-};/** Timer 5 device (general-purpose) */
-
-TimerHandler tim6_handlers[NR_BAS_HANDLERS] IN_CCM;
-const timer_dev timer6 = {
+ { /** Timer 6 device (basic) */
     .regs         = TIM6,
     .clk          = RCC_APB1Periph_TIM6,
     .handlers     = tim6_handlers,
@@ -158,16 +166,9 @@ const timer_dev timer6 = {
     .n_handlers   = NR_BAS_HANDLERS,
     .bus          = 0,
     .id           = 6,
-    .ch_dma = { // dma per channel: stream, channel 
-        { -1, -1 },
-        { -1, -1 },
-        { -1, -1 },
-        { -1, -1 },
-    },
-};/** Timer 6 device (basic) */
+ },
 
-TimerHandler tim7_handlers[NR_BAS_HANDLERS] IN_CCM;
-const timer_dev timer7 = {
+ { /** Timer 7 device (basic) */
     .regs         = TIM7,
     .clk          = RCC_APB1Periph_TIM7,
     .handlers     = tim7_handlers,
@@ -176,16 +177,9 @@ const timer_dev timer7 = {
     .n_handlers   = NR_BAS_HANDLERS,
     .bus          = 0,
     .id           = 7,
-    .ch_dma = { // dma per channel: stream, channel 
-        { -1, -1 },
-        { -1, -1 },
-        { -1, -1 },
-        { -1, -1 },
-    },
-};/** Timer 7 device (basic) */
+ },
 
-TimerHandler tim8_handlers[NR_ADV_HANDLERS] IN_CCM;
-const timer_dev timer8 = {
+ {  /** Timer 8 device (advanced) */
     .regs         = TIM8,
     .clk          = RCC_APB2Periph_TIM8,
     .handlers     = tim8_handlers,
@@ -200,49 +194,44 @@ const timer_dev timer8 = {
         { DMA2_STREAM4, 7 },
         { DMA2_STREAM7, 7 },
     },
-}; /** Timer 8 device (advanced) */
+ },
 
+// another timers don't has DMA
 
-TimerHandler tim9_handlers[NR_GEN_HANDLERS] IN_CCM;
-const timer_dev timer9 = {
+ {  /** Timer 9 device (general-purpose) */
     .regs         = TIM9,
     .clk          = RCC_APB2Periph_TIM9,
     .handlers     = tim9_handlers,
     .af           = GPIO_AF_TIM9,
     .type         = TIMER_GENERAL,
     .n_handlers   = NR_GEN_HANDLERS,
-    .bus          = 0,
+    .bus          = 1,
     .id           = 9,
-    // another timers don't has DMA
-};
+ },
 
-TimerHandler tim10_handlers[NR_GEN_HANDLERS] IN_CCM;
-const timer_dev timer10 = {
+ { /** Timer 10 device (general-purpose) */
     .regs         = TIM10,
     .clk          = RCC_APB2Periph_TIM10,
     .handlers     = tim10_handlers,
     .af           = GPIO_AF_TIM10,
     .type         = TIMER_GENERAL,
     .n_handlers   = NR_GEN_HANDLERS,
-    .bus          = 0,
+    .bus          = 1,
     .id           = 10,
-};
+ },
 
-TimerHandler tim11_handlers[NR_GEN_HANDLERS] IN_CCM;
-const timer_dev timer11 = {
+ { /** Timer 11 device (general-purpose) */
     .regs         = TIM11,
     .clk          = RCC_APB2Periph_TIM11,
     .handlers     = tim11_handlers,
     .af           = GPIO_AF_TIM11,
     .type         = TIMER_GENERAL,
     .n_handlers   = NR_GEN_HANDLERS,
-    .bus          = 0,
+    .bus          = 1,
     .id           = 11,
-};
+ },
 
-
-TimerHandler tim12_handlers[NR_GEN_HANDLERS] IN_CCM;
-const timer_dev timer12 = {
+ { /** Timer 12 device (general-purpose) */
     .regs         = TIM12,
     .clk          = RCC_APB1Periph_TIM12,
     .handlers     = tim12_handlers,
@@ -251,11 +240,9 @@ const timer_dev timer12 = {
     .n_handlers   = NR_GEN_HANDLERS,
     .bus          = 0,
     .id           = 12,
-}; /** Timer 12 device (general-purpose) */
+ },
 
-
-TimerHandler tim13_handlers[NR_GEN_HANDLERS] IN_CCM;
-const timer_dev timer13 = {
+ { /** Timer 13 device (general-purpose) */
     .regs         = TIM13,
     .clk          = RCC_APB1Periph_TIM13,
     .handlers     = tim13_handlers,
@@ -264,10 +251,9 @@ const timer_dev timer13 = {
     .n_handlers   = NR_GEN_HANDLERS,
     .bus          = 0,
     .id           = 13,
-};
+ },
 
-TimerHandler tim14_handlers[NR_GEN_HANDLERS] IN_CCM;
-const timer_dev timer14 = {
+ { /** Timer 14 device (general-purpose) */
     .regs         = TIM14,
     .clk          = RCC_APB1Periph_TIM14,
     .handlers     = tim14_handlers,
@@ -276,9 +262,11 @@ const timer_dev timer14 = {
     .n_handlers   = NR_GEN_HANDLERS,
     .bus          = 0,
     .id           = 14,
+ }
 };
 
 
+/*
 const timer_dev * const TIMER1 = &timer1;
 const timer_dev * const TIMER2 = &timer2;
 const timer_dev * const TIMER3 = &timer3;
@@ -293,7 +281,7 @@ const timer_dev * const TIMER11 = &timer11;
 const timer_dev * const TIMER12 = &timer12;
 const timer_dev * const TIMER13 = &timer13;
 const timer_dev * const TIMER14 = &timer14;
-
+*/
 
 /*
  * Convenience routines
@@ -324,7 +312,7 @@ void timer_init(const timer_dev *dev) {
  * @param dev Timer to initialize
  */
 void timer_reset(const timer_dev *dev) {
-    memset(dev->handlers, 0, dev->n_handlers * sizeof(TimerHandler));
+    memset(dev->handlers, 0, dev->n_handlers * sizeof(Handler));
 
     if(dev->bus)
     	RCC_APB2PeriphClockCmd(dev->clk, ENABLE);
@@ -366,6 +354,8 @@ uint32_t configTimeBase(const timer_dev *dev, uint16_t period, uint16_t khz)
     TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
     TIM_TypeDef *tim = dev->regs;
 
+    timer_init(dev); // turn it on
+    
 //    timer_reset(dev); - initial init done before
     timer_pause(dev);
 
@@ -380,7 +370,7 @@ uint32_t configTimeBase(const timer_dev *dev, uint16_t period, uint16_t khz)
     TIM_TimeBaseStructure.TIM_Period = (period - 1) & get_timer_mask(dev); // AKA TIMx_ARR
     uint32_t freq = (uint32_t)khz * 1000;
     uint16_t prescaler;
-    uint32_t tf;
+    uint32_t tf; // timer's frequency
 
     if (tim == TIM1 || tim == TIM8 || tim == TIM9 || tim == TIM10 || tim == TIM11) {            // 168MHz
         tf  = SystemCoreClock;
@@ -391,41 +381,22 @@ uint32_t configTimeBase(const timer_dev *dev, uint16_t period, uint16_t khz)
     prescaler = ((tf + freq/4) / freq) - 1; // ==41 for 2MHz
     
     TIM_TimeBaseStructure.TIM_Prescaler = prescaler;
-    freq = tf / prescaler;
+    freq = tf / prescaler; // real timer's frequency
 
     TIM_TimeBaseStructure.TIM_ClockDivision = 0;
     TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
     TIM_TimeBaseInit(tim, &TIM_TimeBaseStructure);
-
-//    uint16_t do_preload = TIM_OCPreload_Enable;
 
     switch (dev->type) {
     case TIMER_ADVANCED:
         dev->regs->BDTR = TIMER_BDTR_MOE | TIMER_BDTR_LOCK_OFF; //  break and dead-time register
         // fall-through
     case TIMER_GENERAL:
-/* per-channel in proper place
-        TIM_SelectOCxM(tim, TIM_Channel_1, BOARD_PWM_MODE);    // set all channels to PWM mode
-        TIM_OC1PreloadConfig(tim, do_preload);
-
-        TIM_SelectOCxM(tim, TIM_Channel_2, BOARD_PWM_MODE);
-        TIM_OC2PreloadConfig(tim, do_preload);
-
-        TIM_SelectOCxM(tim, TIM_Channel_3, BOARD_PWM_MODE);
-        TIM_OC3PreloadConfig(tim, do_preload);
-
-        TIM_SelectOCxM(tim, TIM_Channel_4, BOARD_PWM_MODE);
-        TIM_OC4PreloadConfig(tim, do_preload);
-*/
-        break;
-
     case TIMER_BASIC:
         break;
     }
 
-    timer_set_count(dev,0);
-//    timer_resume(dev); - leave stopped to tune up later
-    
+    timer_set_count(dev,0);    
     return freq;
 }
 
@@ -451,19 +422,19 @@ void pwmOCConfig(const timer_dev *dev, uint8_t channel, uint8_t flags)
     TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
 
     switch (channel) {
-    case 1:
+    case TIMER_CH1:
         TIM_OC1Init(tim, &TIM_OCInitStructure);
         TIM_OC1PreloadConfig(tim, TIM_OCPreload_Enable);
         break;
-    case 2:
+    case TIMER_CH2:
         TIM_OC2Init(tim, &TIM_OCInitStructure);
         TIM_OC2PreloadConfig(tim, TIM_OCPreload_Enable);
         break;
-    case 3:
+    case TIMER_CH3:
         TIM_OC3Init(tim, &TIM_OCInitStructure);
         TIM_OC3PreloadConfig(tim, TIM_OCPreload_Enable);
         break;
-    case 4:
+    case TIMER_CH4:
         TIM_OC4Init(tim, &TIM_OCInitStructure);
         TIM_OC4PreloadConfig(tim, TIM_OCPreload_Enable);
         break;
@@ -477,26 +448,23 @@ static void disable_channel(const timer_dev *dev, uint8_t channel) {
 
 static void pwm_mode(const timer_dev *dev, uint8_t channel) {
     timer_disable_irq(dev, channel);
-//    timer_oc_set_mode(dev, channel, TIMER_OC_MODE_PWM_1, TIMER_OC_PE);
-//pwmOCConfig
-
 
     switch (channel){
-    case 1:
+    case TIMER_CH1:
         TIM_SelectOCxM(dev->regs, TIM_Channel_1, BOARD_PWM_MODE);
         TIM_OC1PreloadConfig(dev->regs, TIM_OCPreload_Enable);
         break;
-    case 2:
+    case TIMER_CH2:
         TIM_SelectOCxM(dev->regs, TIM_Channel_2, BOARD_PWM_MODE);
         TIM_OC2PreloadConfig(dev->regs, TIM_OCPreload_Enable);
         break;
 
-    case 3:
+    case TIMER_CH3:
         TIM_SelectOCxM(dev->regs, TIM_Channel_3, BOARD_PWM_MODE);
         TIM_OC3PreloadConfig(dev->regs, TIM_OCPreload_Enable);
         break;
 
-    case 4:
+    case TIMER_CH4:
         TIM_SelectOCxM(dev->regs, TIM_Channel_4, BOARD_PWM_MODE);
         TIM_OC4PreloadConfig(dev->regs, TIM_OCPreload_Enable);
         break;
@@ -550,14 +518,24 @@ void timer_set_mode(const timer_dev *dev, uint8_t channel, timer_mode mode) {
  * @param fn Function to call on each timer device.
  */
 void timer_foreach(void (*fn)(const timer_dev*)) {
+    uint8_t i;
+    for(i=0; i<(sizeof(timers)/sizeof(timer_dev)); i++){
+        fn(&timers[i]);
+    }
+
+/*
     //fn(TIMER1);
-    fn(TIMER2);
-    fn(TIMER3);
-    fn(TIMER4);
-    fn(TIMER5);
-    fn(TIMER6);
-    fn(TIMER7);
+    fn(TIMER2); // RC_Out
+    fn(TIMER3); // RC_Out
+    fn(TIMER4); // used for software i2c
+    fn(TIMER5); // used for micros()
+    fn(TIMER6); // used for event generation for WFE
+    fn(TIMER7); // used for scheduler
     fn(TIMER8); // used in PWM_IN
+    fn(TIMER9); // used for software i2c
+    fn(TIMER10);// used for software i2c
+    fn(TIMER12); // used in PWM_IN
+*/
 }
 
 /**
@@ -570,7 +548,7 @@ void timer_foreach(void (*fn)(const timer_dev*)) {
  * @see timer_interrupt_id
  * @see timer_channel
  */
-void timer_attach_interrupt(const timer_dev *dev, uint8_t interrupt, TimerHandler handler, uint8_t priority) {
+void timer_attach_interrupt(const timer_dev *dev, uint8_t interrupt, Handler handler, uint8_t priority) {
     if(interrupt>=dev->n_handlers) return;
 
     dev->handlers[interrupt] = handler;
@@ -579,7 +557,7 @@ void timer_attach_interrupt(const timer_dev *dev, uint8_t interrupt, TimerHandle
 }
 
 // attach all timer's interrupts to one handler - for PWM/PPM input
-void timer_attach_all_interrupts(const timer_dev *dev,  TimerHandler handler) {
+void timer_attach_all_interrupts(const timer_dev *dev,  Handler handler) {
     uint16_t i;
     for(i=0; i < dev->n_handlers; i++) {
         dev->handlers[i] = handler;
@@ -600,7 +578,7 @@ void timer_attach_all_interrupts(const timer_dev *dev,  TimerHandler handler) {
 void timer_detach_interrupt(const timer_dev *dev, uint8_t interrupt) {
     timer_disable_irq(dev, interrupt);
     if(interrupt>=dev->n_handlers) return;
-    dev->handlers[interrupt] = NULL;
+    dev->handlers[interrupt] = 0;
 }
 
 /*
@@ -721,10 +699,9 @@ static INLINE  void dispatch_single_irq(const timer_dev *dev,
     uint32_t dsr = dev->regs->DIER & dev->regs->SR & irq_mask;
     if (dsr) {
 
-        TimerHandler handler = (dev->handlers)[iid];
+        Handler handler = (dev->handlers)[iid];
         if (handler) {
-//            revo_call_handler(handler, (uint32_t)dev->regs);
-            handler(dev->regs);
+            revo_call_handler(handler, (uint32_t)dev->regs);
         }
 
         dev->regs->SR &= ~dsr;  // reset IRQ inspite of installed handler! @NG
@@ -735,10 +712,9 @@ static INLINE  void dispatch_single_irq(const timer_dev *dev,
 /* For dispatch routines which service multiple interrupts. */
 static INLINE void handle_irq(const timer_dev *dev, uint32_t dier_sr, uint32_t irq_mask, uint32_t iid) {
     if ((dier_sr) & (irq_mask)) {                                 
-        TimerHandler handler = (dev->handlers)[iid];                
+        Handler handler = (dev->handlers)[iid];                
         if (handler) {                                          
-//            revo_call_handler(handler, (uint32_t)dev->regs);
-            handler(dev->regs);                                          
+            revo_call_handler(handler, (uint32_t)dev->regs);
         }
     }
 }
@@ -946,7 +922,7 @@ static void enable_advanced_irq(const timer_dev *dev, timer_interrupt_id id, uin
  * @see timer_channel
  */
 void timer_enable_irq(const timer_dev *dev, uint8_t interrupt) {
-#if 0
+#if 1
     *bb_perip(&(dev->regs->DIER), interrupt) = 1;
 #else
 	switch(interrupt) {
@@ -988,7 +964,7 @@ void timer_enable_irq(const timer_dev *dev, uint8_t interrupt) {
  * @see timer_channel
  */
 void timer_disable_irq(const timer_dev *dev, uint8_t interrupt) {
-#if 0
+#if 1
     *bb_perip(&(dev->regs->DIER), interrupt) = 0;
 #else
     switch(interrupt) {

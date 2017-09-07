@@ -152,7 +152,7 @@ void boardInit(void);
 
 
 // use soft I2C driver instead hardware
-//#define BOARD_SOFT_I2C
+#define BOARD_SOFT_I2C2
 
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 

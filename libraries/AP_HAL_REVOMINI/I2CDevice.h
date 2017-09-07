@@ -28,7 +28,8 @@
 #include "Semaphores.h"
 
 #include <i2c.h>
-#include "i2c_soft.h"
+//#include "i2c_soft.h"
+#include "tim_i2c.h"
 
 #define MAX_I2C_DEVICES 10
 
@@ -136,6 +137,7 @@ private:
     Soft_I2C s_i2c; // per-bus instances
 
     static REVOMINI::Semaphore _semaphores[3]; // individual for each bus + softI2C
+    static const timer_dev * _timers[3];   // one timer per bus
     
     static REVOMINI::REVOI2CDevice * devices[MAX_I2C_DEVICES]; // links to all created devices
     static uint8_t dev_count;

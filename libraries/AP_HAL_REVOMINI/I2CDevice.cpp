@@ -11,13 +11,19 @@
 
 #include "I2CDevice.h"
 #include <i2c.h>
-#include "i2c_soft.h"
 
 using namespace REVOMINI;
 
 extern const AP_HAL::HAL& hal;
 
 REVOMINI::Semaphore REVOI2CDevice::_semaphores[3]; // 2 HW and 1 SW
+
+const timer_dev * REVOI2CDevice::_timers[3] = { // one timer per bus
+    TIMER4,
+    TIMER9,
+    TIMER10,
+};
+
 bool REVOI2CDevice::lateInitDone=false;
 
 
@@ -28,6 +34,8 @@ uint8_t REVOI2CDevice::dev_count; // number of devices
  I2C_State REVOI2CDevice::log[I2C_LOG_SIZE] IN_CCM;
  uint8_t   REVOI2CDevice::log_ptr=0;
 #endif
+
+
 
 
 void REVOI2CDevice::lateInit(){
@@ -87,9 +95,10 @@ void REVOI2CDevice::init(){
 #endif
 
 #if defined(BOARD_SOFT_I2C) || defined(BOARD_SOFT_I2C1)
-            s_i2c = Soft_I2C( 
+            s_i2c.init_hw( 
                 _I2C1->gpio_port, _I2C1->scl_pin,
-                _I2C1->gpio_port, _I2C1->sda_pin
+                _I2C1->gpio_port, _I2C1->sda_pin,
+                _timers[_bus]
             );
 #else
 	    dev = _I2C1;
@@ -106,9 +115,10 @@ void REVOI2CDevice::init(){
  #endif
 
  #if defined(BOARD_SOFT_I2C) || defined(BOARD_SOFT_I2C2)
-            s_i2c = Soft_I2C( 
+            s_i2c.init_hw( 
                 _I2C2->gpio_port, _I2C2->scl_pin,
-                _I2C2->gpio_port, _I2C2->sda_pin
+                _I2C2->gpio_port, _I2C2->sda_pin,
+                _timers[_bus]
             );
  #else
 	    dev = _I2C2;
@@ -127,16 +137,18 @@ void REVOI2CDevice::init(){
 
 #ifdef BOARD_I2C_FLEXI
             if(hal_param_helper->_flexi_i2c){ // move external I2C to flexi port
-                s_i2c = Soft_I2C( 
+                s_i2c.init_hw( 
                     _I2C2->gpio_port, _I2C2->scl_pin,
-                    _I2C2->gpio_port, _I2C2->sda_pin
+                    _I2C2->gpio_port, _I2C2->sda_pin,
+                    _timers[_bus]
                 );
             } else 
 #endif
             { //                         external I2C on Input port
-                s_i2c = Soft_I2C( 
+                s_i2c.init_hw( 
                     PIN_MAP[BOARD_SOFT_SCL].gpio_device,     PIN_MAP[BOARD_SOFT_SCL].gpio_bit,
-                    PIN_MAP[BOARD_SOFT_SDA].gpio_device,     PIN_MAP[BOARD_SOFT_SDA].gpio_bit
+                    PIN_MAP[BOARD_SOFT_SDA].gpio_device,     PIN_MAP[BOARD_SOFT_SDA].gpio_bit,
+                    _timers[_bus]
                 );
             }        
             break;
@@ -150,7 +162,7 @@ void REVOI2CDevice::init(){
     
     if(_dev) {
 //      i2c_init(_dev, _offs, I2C_400KHz_SPEED);
-//        i2c_init(_dev, _offs, _slow?I2C_100KHz_SPEED:I2C_250KHz_SPEED);
+//        i2c_init(_dev, _offs, _slow?I2C_125KHz_SPEED:I2C_250KHz_SPEED);
 //        i2c_init(_dev, _offs, _slow?I2C_75KHz_SPEED:I2C_250KHz_SPEED);
         i2c_init(_dev, _offs, _slow?I2C_250KHz_SPEED:I2C_400KHz_SPEED);
     }else {
@@ -189,8 +201,8 @@ again:
             if(recv_len) memset(recv, 0, recv_len); // for DEBUG
             
             if(recv_len==0){ // only write
-                //                 uint8_t addr, uint8_t reg, uint8_t len, uint8_t * data)
-                ret=s_i2c.writeBuffer( _address, *send, send_len-1, &send[1] );
+                //                 uint8_t addr, uint8_t len, uint8_t * data)
+                ret=s_i2c.writeBuffer( _address, send_len, send );
             
             }else if(send_len==1){ // only read - send byte is address
                 //            uint8_t addr, uint8_t reg, uint8_t len, uint8_t *buf
@@ -267,7 +279,7 @@ again:
         }
          
 
-        if((_retries-retries) > 0 || ret==I2C_BUS_BERR){ // not reset bus or log error on 1st try, except ArbitrationLost error
+        if((_retries-retries) > 0 || ret==I2C_BUS_ERR){ // not reset bus or log error on 1st try, except ArbitrationLost error
             last_error = ret;   // remember
             if(last_op) last_error+=50; // to distinguish read and write errors
             _lockup_count ++;  

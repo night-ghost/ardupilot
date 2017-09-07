@@ -40,8 +40,7 @@
 #ifndef _DMA_H_
 #define _DMA_H_
 
-#include "hal.h"
-#include "dma_common.h"
+#include "hal_types.h"
 
 #ifdef __cplusplus
 extern "C"{
@@ -64,6 +63,27 @@ typedef struct dma_stream_t {
     __IO uint32_t M1AR;         /**< Stream memory address register 1 */
     __IO uint32_t FCR;           /**< Stream FIFO configuration register */
 } dma_stream_t;
+
+/**
+ * @brief DMA channels
+ *
+ * Notes:
+ * - This is also the dma_tube type for STM32F1.
+ * - Channel 0 is not available on all STM32 series.
+ *
+ * @see dma_tube
+ */
+typedef enum dma_channel {
+    DMA_CH0 = 0,                /**< Channel 0 */
+    DMA_CH1 = 1,                /**< Channel 1 */
+    DMA_CH2 = 2,                /**< Channel 2 */
+    DMA_CH3 = 3,                /**< Channel 3 */
+    DMA_CH4 = 4,                /**< Channel 4 */
+    DMA_CH5 = 5,                /**< Channel 5 */
+    DMA_CH6 = 6,                /**< Channel 6 */
+    DMA_CH7 = 7,                /**< Channel 7 */
+} dma_channel;
+
 /**
  * @brief DMA register map type.
  *

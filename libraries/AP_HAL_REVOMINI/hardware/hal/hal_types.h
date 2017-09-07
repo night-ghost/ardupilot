@@ -9,7 +9,19 @@
 
 
 typedef void (*voidFuncPtr)(void);
+typedef void (*revo_isr_handler)(uint32_t arg);
+
 typedef uint64_t Handler;
+
+
+typedef union Revo_Hal_Handler { // кровь кишки ассемблер :) преобразование функторов в унифицированный вид
+    voidFuncPtr vp;
+    revo_isr_handler isr;
+//  AP_HAL::MemberProc mp;          это С а не С++ поэтому мы не можем объявить поддержку функторов явно, и вынуждены передавать
+    Handler h;      // treat as handle             <-- как 64-битное число
+    uint32_t w[2]; // words, to check. если функтор то старшее - адрес флеша, младшее - адрес в RAM. Если ссылка на функцию то младшее - адрес флеша, старшее 0
+} Revo_hal_handler;
+
 
 #define __attr_flash __attribute__((section (".USER_FLASH")))
 #ifndef __packed
@@ -62,14 +74,6 @@ typedef uint64_t Handler;
 #define ADDRESS_IN_RAM(a) ((uint32_t)(a) >= SRAM1_BASE && (uint32_t)(a) < (uint32_t)(STM32_SRAM_END) )
 #define ADDRESS_IN_CCM(a) ((uint32_t)(a) >= CCMDATARAM_BASE && (uint32_t)(a) < (uint32_t)(STM32_CCM_END) )
 #define ADDRESS_IN_FLASH(a) ((a)>FLASH_BASE && (a)<CCMDATARAM_BASE)
-
-
-union Revo_hal_handler { // кровь кишки ассемблер :) преобразование функторов в унифицированный вид
-    voidFuncPtr vp;
-//  AP_HAL::MemberProc mp;          это С а не С++ поэтому мы не можем объявить поддержку функторов явно, и вынуждены передавать
-    uint64_t h; // treat as handle             <-- как 64-битное число
-    uint32_t w[2]; // words, to check. если функтор то старшее - адрес флеша, младшее - адрес в RAM. Если ссылка на функцию то младшее - адрес флеша, старшее 0
-};
 
 
 

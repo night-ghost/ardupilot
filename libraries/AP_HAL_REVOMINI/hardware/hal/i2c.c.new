@@ -212,7 +212,7 @@ uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uin
     while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_SB & FLAG_MASK) == 0) { // wait for start bit generated
         if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
             dev->I2Cx->SR1 = (uint16_t)(~(I2C_SR1_ARLO | I2C_FLAG_BERR)); // reset them
-            state = I2C_BUS_BERR;
+            state = I2C_BUS_ERR;
             goto err_exit;
         }
         if(sr1 & I2C_FLAG_TIMEOUT & FLAG_MASK) { // bus timeout - time of timeout much large than we use so it is useless, but...
@@ -244,7 +244,7 @@ uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uin
 
         if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
             dev->I2Cx->SR1 = (uint16_t)(~(I2C_SR1_ARLO | I2C_FLAG_BERR)); // reset them
-            state = I2C_BUS_BERR;
+            state = I2C_BUS_ERR;
             goto err_exit;
         }
         if(sr1 & I2C_FLAG_TIMEOUT & FLAG_MASK) { // bus timeout
@@ -264,7 +264,7 @@ uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uin
     while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_TXE & FLAG_MASK)  == 0) { // wait for TX empty
         if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
             dev->I2Cx->SR1 = (uint16_t)(~(I2C_SR1_ARLO | I2C_FLAG_BERR)); // reset them
-            state = I2C_BUS_BERR;
+            state = I2C_BUS_ERR;
             goto err_exit;
         }
         if(sr1 & I2C_FLAG_TIMEOUT & FLAG_MASK) { // bus timeout
@@ -287,7 +287,7 @@ uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uin
         while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_TXE & FLAG_MASK)  == 0) { // wait for TX empty
             if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
                 dev->I2Cx->SR1 = (uint16_t)(~(I2C_SR1_ARLO | I2C_FLAG_BERR)); // reset them
-                state = I2C_BUS_BERR;
+                state = I2C_BUS_ERR;
                 goto err_exit;
             }
             if(sr1 & I2C_FLAG_TIMEOUT & FLAG_MASK) { // bus timeout
@@ -308,7 +308,7 @@ uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uin
             while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_TXE & FLAG_MASK)  == 0) { // wait for TX empty
                 if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
                     dev->I2Cx->SR1 = (uint16_t)(~(I2C_SR1_ARLO | I2C_FLAG_BERR)); // reset them
-                    state = I2C_BUS_BERR;
+                    state = I2C_BUS_ERR;
                     goto err_exit;
                 }
                 if(sr1 & I2C_FLAG_TIMEOUT & FLAG_MASK) { // bus timeout
@@ -330,7 +330,7 @@ uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uin
                 while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_TXE & FLAG_MASK)  == 0) { // wait for TX empty
                     if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
                         dev->I2Cx->SR1 = (uint16_t)(~(I2C_SR1_ARLO | I2C_FLAG_BERR)); // reset them
-                        state = I2C_BUS_BERR;
+                        state = I2C_BUS_ERR;
                         goto err_exit;
                     }
                     if(sr1 & I2C_FLAG_TIMEOUT & FLAG_MASK) { // bus timeout
@@ -498,7 +498,7 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
     while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_SB & FLAG_MASK) == 0) { // wait for start bit generated
         if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
             dev->I2Cx->SR1 = (uint16_t)(~(I2C_SR1_ARLO | I2C_FLAG_BERR)); // reset them
-            state = I2C_BUS_BERR;
+            state = I2C_BUS_ERR;
             goto err_exit;
         }
         if(sr1 & I2C_FLAG_TIMEOUT & FLAG_MASK) { // bus timeout
@@ -526,7 +526,7 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
         }
         if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
             dev->I2Cx->SR1 = (uint16_t)(~(I2C_SR1_ARLO | I2C_FLAG_BERR)); // reset them
-            state = I2C_BUS_BERR;
+            state = I2C_BUS_ERR;
             goto err_exit;
         }
         if(sr1 & I2C_FLAG_TIMEOUT & FLAG_MASK) { // bus timeout
@@ -547,7 +547,7 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
     while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_TXE & FLAG_MASK)  == 0) { // wait for TX empty
         if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
             dev->I2Cx->SR1 = (uint16_t)(~(I2C_SR1_ARLO | I2C_FLAG_BERR)); // reset them
-            state = I2C_BUS_BERR;
+            state = I2C_BUS_ERR;
             goto err_exit;
         }
         if(sr1 & I2C_FLAG_TIMEOUT & FLAG_MASK) { // bus timeout
@@ -568,7 +568,7 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
         while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_TXE & FLAG_MASK) == 0) { // wait for TX empty
             if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
                 dev->I2Cx->SR1 = (uint16_t)(~(I2C_SR1_ARLO | I2C_FLAG_BERR)); // reset them
-                state = I2C_BUS_BERR;
+                state = I2C_BUS_ERR;
                 goto err_exit;
             }
             if(sr1 & I2C_FLAG_TIMEOUT & FLAG_MASK) { // bus timeout
@@ -590,7 +590,7 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
     while( ((sr1=dev->I2Cx->SR1) & I2C_FLAG_SB & FLAG_MASK) == 0) { // wait for Restart generated - bit was Cleared by reading the SR1 register followed by writing the DR register
         if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
             dev->I2Cx->SR1 = (uint16_t)(~(I2C_SR1_ARLO | I2C_FLAG_BERR)); // reset them
-            state = I2C_BUS_BERR;
+            state = I2C_BUS_ERR;
             goto err_exit;
         }
         if(sr1 & I2C_FLAG_TIMEOUT & FLAG_MASK) { // bus timeout
@@ -617,7 +617,7 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
 
         if(sr1 & (I2C_FLAG_ARLO | I2C_FLAG_BERR) & FLAG_MASK) { // arbitration lost or bus error
             dev->I2Cx->SR1 = (uint16_t)(~(I2C_SR1_ARLO | I2C_FLAG_BERR)); // reset them
-            state = I2C_BUS_BERR;
+            state = I2C_BUS_ERR;
             goto err_exit;
         }
         if(sr1 & I2C_FLAG_TIMEOUT & FLAG_MASK) { // bus timeout
