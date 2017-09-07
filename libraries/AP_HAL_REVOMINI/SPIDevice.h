@@ -70,6 +70,8 @@ struct spi_trans {
     uint8_t  recv0;
     uint8_t  recv1;
 };
+
+#define SPI_LOG_SIZE 200
 #endif
 
 class SPIDevice : public AP_HAL::SPIDevice {
@@ -142,8 +144,8 @@ protected:
     bool _initialized;
     void init(void);
 
-    inline void _cs_assert(){                   if(_cs) _cs->write(0); delay_ns100(1); } // Select device and wait a little
-    inline void _cs_release(){  delay_ns100(5); if(_cs) _cs->write(1); } // Deselect device, time from http://datasheetspdf.com/mobile/735133/MPU-6000.html page 19
+    inline void _cs_assert(){                   if(_cs){_cs->write(0); delay_ns100(1);} } // Select device and wait a little
+    inline void _cs_release(){ if(_cs){ delay_ns100(5); _cs->write(1); } } // Deselect device, time from http://datasheetspdf.com/mobile/735133/MPU-6000.html page 19
 
     const spi_pins* dev_to_spi_pins(const spi_dev *dev);
 
@@ -154,14 +156,11 @@ protected:
 
     void dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t btr );
     
-    static bool bus_busy;
-
 #ifdef DEBUG_SPI    
-    static struct spi_trans spi_trans_array[256];
+    static struct spi_trans spi_trans_array[SPI_LOG_SIZE];
     static uint8_t spi_trans_ptr;
 #endif
     Handler _completion_cb;
-    Handler isr_handler;
 };
 
 class SPIDeviceManager : public AP_HAL::SPIDeviceManager {

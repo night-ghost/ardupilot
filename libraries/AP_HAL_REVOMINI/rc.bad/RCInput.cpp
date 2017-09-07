@@ -64,7 +64,7 @@ _parser *REVOMINIRCInput::parsers[] = { // individual parsers on each PPM pin an
 #endif
 }; 
 
-#define PPM_INPUTS (sizeof(parsers) / sizeof(_parser))
+#define PPM_INPUTS (ARRAY_SIZE(parsers))
 
 
 uint8_t           REVOMINIRCInput::_valid_channels; //  = 0;
@@ -107,9 +107,6 @@ used as:
                int     cs
 
 */
-
-
-
 
     is_PPM=true;
 

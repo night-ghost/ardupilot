@@ -13,6 +13,7 @@ static const spi_dev spi1 = {
     .afio     = GPIO_AF_SPI1,
     .irq      = SPI1_IRQn,
     .clock    = RCC_APB2Periph_SPI1,
+    .dma      = { DMA_CR_CH3, DMA2_STREAM2, DMA2_STREAM3 }, // SPI1
 };
 /** SPI device 1 */
 const spi_dev * const _SPI1 = &spi1;
@@ -22,6 +23,8 @@ static const spi_dev spi2 = {
     .afio     = GPIO_AF_SPI2,
     .irq      = SPI2_IRQn,
     .clock    = RCC_APB1Periph_SPI2,
+    .dma      = { DMA_CR_CH0, DMA1_STREAM3, DMA1_STREAM4 }, // SPI2
+
 };
 /** SPI device 2 */
 const spi_dev * const _SPI2 = &spi2;
@@ -31,14 +34,15 @@ static const spi_dev spi3 = {
     .afio     = GPIO_AF_SPI3,
     .irq      = SPI3_IRQn,
     .clock    = RCC_APB1Periph_SPI3,
+    .dma      = { DMA_CR_CH0, DMA1_STREAM2, DMA1_STREAM5 }, // SPI3
+
 };
 /** SPI device 3 */
 const spi_dev * const _SPI3 = &spi3;
 
 
-
 void spi_init(const spi_dev *dev) {
-	SPI_I2S_DeInit(dev->SPIx);
+    SPI_I2S_DeInit(dev->SPIx);
 }
 
 /**

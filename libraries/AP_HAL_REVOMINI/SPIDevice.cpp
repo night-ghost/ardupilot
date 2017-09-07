@@ -57,11 +57,8 @@ static const spi_pins board_spi_pins[] = {
 REVOMINI::Semaphore SPIDevice::_semaphores[4] IN_CCM; // per bus+1
 
 
-bool SPIDevice::bus_busy=false;
-
-
 #ifdef DEBUG_SPI 
-struct spi_trans SPIDevice::spi_trans_array[256]  IN_CCM;
+struct spi_trans SPIDevice::spi_trans_array[SPI_LOG_SIZE]  IN_CCM;
 uint8_t SPIDevice::spi_trans_ptr=0;
 #endif
 
@@ -155,15 +152,10 @@ uint8_t SPIDevice::_transfer(uint8_t data) {
 
 
 bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, uint32_t recv_len){
-    if(bus_busy) {
-        return false;
-    }
     
-    int ret=0;
+    uint8_t ret=0;
     bool was_dma=false;
 
-    bus_busy = true;
-    _cs_assert();
 
     if(_desc.soft) {
         uint16_t rate;
@@ -192,6 +184,7 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
 	    rate = 32;
 	    break;
         }
+        _cs_assert();
 
         dly_time = rate; 
 
@@ -210,21 +203,45 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
         spi_set_speed(_desc.dev, determine_baud_rate(_speed));
 
 #define MIN_DMA_BYTES 16
+        _cs_assert();
 
         if(_desc.dma){
             if(send_len){
-                if((send_len > MIN_DMA_BYTES || _desc.dma>1)  && ADDRESS_IN_RAM(send)){ // long enough and not in CCM
-                    dma_transfer(send, NULL, send_len);
-                    was_dma=true;
-                } else {
+                if((send_len > MIN_DMA_BYTES || _desc.dma>1)){ // long enough 
+                    if(ADDRESS_IN_RAM(send)){   // not in CCM
+                        dma_transfer(send, NULL, send_len);
+                        was_dma=true;
+                    } else {
+                        uint8_t *buf = (uint8_t*) malloc(send_len);
+                        if(buf) {
+                            memmove(buf,send,send_len);
+                            dma_transfer(buf, NULL, send_len);
+                            was_dma=true;
+                            free(buf);
+                        }
+                    }
+                } 
+                
+                if(!was_dma) {
                     spimaster_transfer(_desc.dev, send, send_len, NULL, 0);
                 }
             }
             if(recv_len) {
-                if((recv_len>MIN_DMA_BYTES || _desc.dma>1) && ADDRESS_IN_RAM(recv)) { // long enough and not in CCM
-                    dma_transfer(NULL, recv, recv_len);
-                    was_dma=true;
-                } else {
+                if((recv_len>MIN_DMA_BYTES || _desc.dma>1) ) { // long enough 
+                    if(ADDRESS_IN_RAM(recv)){   //not in CCM
+                        dma_transfer(NULL, recv, recv_len);
+                        was_dma=true;
+                    }else {
+                        uint8_t *buf = (uint8_t*)malloc(recv_len);
+                        if(buf) {
+                            dma_transfer(NULL, buf, recv_len);
+                            memmove(recv,buf,recv_len);
+                            was_dma=true;
+                            free(buf);
+                        }
+                    }
+                } 
+                if(!was_dma) {
                     spimaster_transfer(_desc.dev, NULL, 0, recv, recv_len);
                 }
             }
@@ -234,32 +251,33 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
     }
 
 #ifdef DEBUG_SPI 
-    spi_trans_array[spi_trans_ptr].dev      = _desc.dev;
-    spi_trans_array[spi_trans_ptr].send_len = send_len;
+    struct spi_trans &p = spi_trans_array[spi_trans_ptr];
+
+    p.dev      = _desc.dev;
+    p.send_len = send_len;
     if(send_len)
-      spi_trans_array[spi_trans_ptr].sent = send[0];
-    else spi_trans_array[spi_trans_ptr].sent = 0;
+      p.sent = send[0];
+    else p.sent = 0;
     if(send_len>1)
-      spi_trans_array[spi_trans_ptr].sent1 = send[1];
-    else spi_trans_array[spi_trans_ptr].sent1 = 0;
-    spi_trans_array[spi_trans_ptr].recv_len = recv_len;
+      p.sent1 = send[1];
+    else p.sent1 = 0;
+    p.recv_len = recv_len;
     if(recv_len)
-      spi_trans_array[spi_trans_ptr].recv0 = recv[0];
-    else spi_trans_array[spi_trans_ptr].recv0 = 0;
+      p.recv0 = recv[0];
+    else p.recv0 = 0;
     if(recv_len>1)
-      spi_trans_array[spi_trans_ptr].recv1 = recv[1];
-    else spi_trans_array[spi_trans_ptr].recv1 = 0;
+      p.recv1 = recv[1];
+    else p.recv1 = 0;
     
     spi_trans_ptr++;
+    if(spi_trans_ptr>=SPI_LOG_SIZE) spi_trans_ptr=0;
 #endif
 
-    if(!was_dma){
-        _cs_release();
-    
+    _cs_release();
+
+    if(!was_dma){    
         if(_completion_cb) revo_call_handler(_completion_cb, (uint32_t)&_desc);
     }
-
-    bus_busy = false;
     
     return ret==0;
 
@@ -392,37 +410,22 @@ spi_baud_rate SPIDevice::determine_baud_rate(SPIFrequency freq)
 
 
 // DMA
-
-
-typedef struct SPI_DMA {
-    uint32_t channel;
-    dma_stream stream_rx;    
-    dma_stream stream_tx;
-} Spi_DMA;
-
-static const Spi_DMA spi_dma[] = {
-    { DMA_CR_CH3, DMA2_STREAM2, DMA2_STREAM3 }, // SPI1
-    { DMA_CR_CH0, DMA1_STREAM3, DMA1_STREAM4 }, // SPI2
-    { DMA_CR_CH0, DMA1_STREAM2, DMA1_STREAM5 }, // SPI3
-
-};
-
 static uint32_t rw_workbyte[] = { 0xffff }; // not in stack!
 
 
 void  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t btr)
 {
     DMA_InitTypeDef DMA_InitStructure;
-
     DMA_StructInit(&DMA_InitStructure);
 
-    const Spi_DMA &dp = spi_dma[_desc.bus-1];
+    const Spi_DMA &dp = _desc.dev->dma;
 
     dma_init(dp.stream_rx); dma_init(dp.stream_tx);
 
 //  проверить, не занят ли поток DMA перед использованием
     while(dma_is_stream_enabled(dp.stream_rx) || dma_is_stream_enabled(dp.stream_tx) ) {
         // wait for transfer termination
+        hal_yield(0);
     } 
 
     dma_clear_isr_bits(dp.stream_rx); dma_clear_isr_bits(dp.stream_tx);
@@ -468,7 +471,7 @@ void  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t
     dma_enable(dp.stream_rx); dma_enable(dp.stream_tx);
 
     if(_completion_cb) {// we should call it after completion via interrupt
-        dma_attach_interrupt(dp.stream_rx, isr_handler, DMA_CR_TCIE);
+        dma_attach_interrupt(dp.stream_rx, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SPIDevice::isr, void)), DMA_CR_TCIE);
     }
 
     /* Enable SPI TX/RX request */
@@ -478,40 +481,33 @@ void  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t
         return;
     }
 
-    // need to wait
+    // no callback - need to wait
     uint16_t dly = btr >>2; // 20 MHZ -> ~0.5 uS per byte
    /* Wait until Receive Complete */
     while ( (dma_get_isr_bits(dp.stream_rx) & DMA_FLAG_TCIF) == 0) { 
         if(dly!=0)
-            REVOMINIScheduler::yield(dly); // пока ждем пусть другие работают. на меньших скоростях SPI вызовется несколько раз
+            hal_yield(dly); // пока ждем пусть другие работают. на меньших скоростях SPI вызовется несколько раз
     }
 
-    dma_disable(dp.stream_rx); dma_disable(dp.stream_tx);
-
-    /* Disable SPI RX/TX request */
-    SPI_I2S_DMACmd(_desc.dev->SPIx, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, DISABLE);
-
-    dma_clear_isr_bits(dp.stream_rx); dma_clear_isr_bits(dp.stream_tx);
-    
-    _cs_release();
-
+    isr();  //  disable DMA and release CS    
 }
 
 void SPIDevice::isr(){
-    const Spi_DMA &dp = spi_dma[_desc.bus-1];
+    const Spi_DMA &dp = _desc.dev->dma;
 
     dma_disable(dp.stream_rx); dma_disable(dp.stream_tx);
-
     dma_detach_interrupt(dp.stream_rx);
 
-    /* Disable SPI RX/TX request */
+    // Disable SPI RX/TX request 
     SPI_I2S_DMACmd(_desc.dev->SPIx, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, DISABLE);
     
     dma_clear_isr_bits(dp.stream_rx); dma_clear_isr_bits(dp.stream_tx);
 
-    _cs_release();
     
-    if(_completion_cb) revo_call_handler(_completion_cb, (uint32_t)&_desc);
+    if(_completion_cb) {
+        _cs_release();
+        revo_call_handler(_completion_cb, (uint32_t)&_desc);
+    }
 }
 
 
@@ -529,11 +525,9 @@ void SPIDevice::init(){
         return;
     }
 
-    isr_handler = REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SPIDevice::isr, void));
-
     if(_desc.soft) { //software
     
-        {
+        { // isolate p
             const stm32_pin_info &p = PIN_MAP[pins->sck];
         
             const gpio_dev *sck_dev  = p.gpio_device;
@@ -546,7 +540,7 @@ void SPIDevice::init(){
             sck_pin  = 1<<sck_bit;
         }
 
-        {
+        { // isolate p
             const stm32_pin_info &p = PIN_MAP[pins->mosi];
 
             const gpio_dev *mosi_dev = p.gpio_device;
@@ -557,7 +551,7 @@ void SPIDevice::init(){
             mosi_pin  = 1<<mosi_bit;
         }
 
-        {
+        { // isolate p
             const stm32_pin_info &p = PIN_MAP[pins->miso];
 
             const gpio_dev *miso_dev = p.gpio_device; 

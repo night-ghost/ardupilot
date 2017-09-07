@@ -633,7 +633,6 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
 
     dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP);    /* clear STOP condition - just to touch CR1 */
 
-
 //[ wait for end of address sending
     t = hal_micros();
     while ( ((sr1 = dev->I2Cx->SR1) & I2C_FLAG_ADDR & FLAG_MASK) == 0)  {

@@ -122,6 +122,8 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 }
 
 
+// TODO: all SPI transfers should use register_completion_callback()
+
 void osd_loop() {
     if(osd_need_redraw){ // если была отложенная передача
         osd_need_redraw=false;

@@ -581,8 +581,6 @@ DRESULT sd_write (
 	}
 	deselect();
 
-//        was_write = 1;
-
 	if(count) return RES_ERROR;
 
         uint8_t ret = sd_get_state(); // reset errors

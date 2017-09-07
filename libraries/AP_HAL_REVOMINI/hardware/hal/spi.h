@@ -4,11 +4,18 @@
 
 #include <gpio_hal.h>
 #include <stm32f4xx.h>
+#include <dma.h>
 
 
 /*
  * Devices
  */
+
+typedef struct SPI_DMA {
+    uint32_t channel;
+    dma_stream stream_rx;
+    dma_stream stream_tx;
+} Spi_DMA;
 
 /** SPI device type */
 typedef struct spi_dev {
@@ -16,6 +23,7 @@ typedef struct spi_dev {
     uint8_t afio;
     IRQn_Type irq;
     uint16_t clock;
+    Spi_DMA dma;
 } spi_dev;
 
 extern const spi_dev * const _SPI1;
