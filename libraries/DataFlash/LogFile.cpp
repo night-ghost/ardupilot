@@ -10,6 +10,7 @@
 #include <AP_Motors/AP_Motors.h>
 #include <AC_AttitudeControl/AC_AttitudeControl.h>
 #include <AC_AttitudeControl/AC_PosControl.h>
+#include <AP_RangeFinder/RangeFinder_Backend.h>
 
 #include "DataFlash.h"
 #include "DataFlash_File.h"
@@ -293,13 +294,16 @@ void DataFlash_Class::Log_Write_GPS(const AP_GPS &gps, uint8_t i, uint64_t time_
 // Write an RFND (rangefinder) packet
 void DataFlash_Class::Log_Write_RFND(const RangeFinder &rangefinder)
 {
+    AP_RangeFinder_Backend *s0 = rangefinder.get_backend(0);
+    AP_RangeFinder_Backend *s1 = rangefinder.get_backend(1);
+
     struct log_RFND pkt = {
         LOG_PACKET_HEADER_INIT((uint8_t)(LOG_RFND_MSG)),
         time_us       : AP_HAL::micros64(),
-        dist1         : rangefinder.distance_cm(0),
-        orient1       : rangefinder.get_orientation(0),
-        dist2         : rangefinder.distance_cm(1),
-        orient2       : rangefinder.get_orientation(1)
+        dist1         : s0 ? s0->distance_cm() : (uint16_t)0,
+        orient1       : s0 ? s0->orientation() : ROTATION_NONE,
+        dist2         : s1 ? s1->distance_cm() : (uint16_t)0,
+        orient2       : s1 ? s1->orientation() : ROTATION_NONE,
     };
     WriteBlock(&pkt, sizeof(pkt));
 }
@@ -683,15 +687,15 @@ void DataFlash_Class::Log_Write_POS(AP_AHRS &ahrs)
 }
 
 #if AP_AHRS_NAVEKF_AVAILABLE
-void DataFlash_Class::Log_Write_EKF(AP_AHRS_NavEKF &ahrs, bool optFlowEnabled)
+void DataFlash_Class::Log_Write_EKF(AP_AHRS_NavEKF &ahrs)
 {
     // only log EKF2 if enabled
     if (ahrs.get_NavEKF2().activeCores() > 0) {
-        Log_Write_EKF2(ahrs, optFlowEnabled);
+        Log_Write_EKF2(ahrs);
     }
     // only log EKF3 if enabled
     if (ahrs.get_NavEKF3().activeCores() > 0) {
-        Log_Write_EKF3(ahrs, optFlowEnabled);
+        Log_Write_EKF3(ahrs);
     }
 }
 
@@ -715,7 +719,7 @@ void DataFlash_Class::Log_Write_EKF_Timing(const char *name, uint64_t time_us, c
               (double)timing.delVelDT_max);
 }
 
-void DataFlash_Class::Log_Write_EKF2(AP_AHRS_NavEKF &ahrs, bool optFlowEnabled)
+void DataFlash_Class::Log_Write_EKF2(AP_AHRS_NavEKF &ahrs)
 {
     uint64_t time_us = AP_HAL::micros64();
     // Write first EKF packet
@@ -1057,7 +1061,7 @@ void DataFlash_Class::Log_Write_EKF2(AP_AHRS_NavEKF &ahrs, bool optFlowEnabled)
 }
 
 
-void DataFlash_Class::Log_Write_EKF3(AP_AHRS_NavEKF &ahrs, bool optFlowEnabled)
+void DataFlash_Class::Log_Write_EKF3(AP_AHRS_NavEKF &ahrs)
 {
     uint64_t time_us = AP_HAL::micros64();
 	// Write first EKF packet

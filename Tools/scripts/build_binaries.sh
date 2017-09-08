@@ -170,7 +170,7 @@ copyit() {
     file="$1"
     dir="$2"
     tag="$3"
-    src="${4:-.}"
+    src="$4"
     bname=$(basename $dir)
     tdir=$(dirname $(dirname $(dirname $dir)))/$tag/$bname
     if [ "$tag" = "latest" ]; then
@@ -243,7 +243,7 @@ build_arduplane() {
                 error_count=$((error_count+1))
                 continue
             }
-            copyit ArduPlane-$v.px4 $ddir $tag
+            copyit ArduPlane-$v.px4 $ddir $tag "ArduPlane"
         done
     }
     checkout ArduPlane "latest" "" ""
@@ -327,7 +327,7 @@ build_arducopter() {
                 error_count=$((error_count+1))
                 continue
             }
-            copyit ArduCopter-$v.px4 $ddir $tag
+            copyit ArduCopter-$v.px4 $ddir $tag "ArduCopter"
         done
     done
     checkout ArduCopter "latest" "" ""
@@ -351,7 +351,7 @@ build_rover() {
             continue
         }
         extension=$(board_extension $b)
-        copyit $BUILDROOT/APMrover2.$extension $ddir $tag
+        copyit $BUILDROOT/APMrover2.$extension $ddir $tag "APMrover2"
         touch $binaries/Rover/$tag
     done
     popd
@@ -390,7 +390,7 @@ build_rover() {
                 error_count=$((error_count+1))
                 continue
             }
-            copyit APMrover2-$v.px4 $ddir $tag
+            copyit APMrover2-$v.px4 $ddir $tag "APMrover2"
         done
     }
     checkout APMrover2 "latest" "" ""
@@ -413,7 +413,7 @@ build_antennatracker() {
             continue
         }
         extension=$(board_extension $b)
-        copyit $BUILDROOT/AntennaTracker.$extension $ddir $tag
+        copyit $BUILDROOT/AntennaTracker.$extension $ddir $tag "AntennaTracker"
         touch $binaries/AntennaTracker/$tag
     done
     popd
@@ -455,7 +455,7 @@ build_antennatracker() {
                 error_count=$((error_count+1))
                 continue
             }
-            copyit AntennaTracker-$v.px4 $ddir $tag
+            copyit AntennaTracker-$v.px4 $ddir $tag "AntennaTracker"
         done
     }
     checkout AntennaTracker "latest" "" ""
@@ -494,12 +494,12 @@ build_ardusub() {
                 error_count=$((error_count+1))
                 continue
             }
-            cp -f $BUILDROOT/px4-$v/bin/ArduSub.px4 ArduSub-$v.px4 || {
+            cp -f $BUILDROOT/px4-$v/bin/ardusub.px4 ArduSub-$v.px4 || {
                 echo "Failed build copy of ArduSub PX4 $tag for $v"
                 error_count=$((error_count+1))
                 continue
             }
-            copyit ArduSub-$v.px4 $ddir $tag
+            copyit ArduSub-$v.px4 $ddir $tag "ArduSub"
         done
     }
     checkout ArduSub "latest" "" ""

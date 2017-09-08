@@ -82,6 +82,7 @@
 #include "Parameters.h"
 #include "AP_Arming_Sub.h"
 #include "GCS_Sub.h"
+#include "version.h"
 
 // libraries which are dependent on #defines in defines.h and/or config.h
 #if OPTFLOW == ENABLED
@@ -135,6 +136,19 @@ public:
     void loop() override;
 
 private:
+
+    const AP_FWVersion fwver {
+        major: FW_MAJOR,
+        minor: FW_MINOR,
+        patch: FW_PATCH,
+        fw_type: FW_TYPE,
+#ifndef GIT_VERSION
+        fw_string: THISFIRMWARE
+#else
+        fw_string: THISFIRMWARE " (" GIT_VERSION ")"
+#endif
+    };
+
     // key aircraft parameters passed to multiple libraries
     AP_Vehicle::MultiCopter aparm;
 
@@ -334,6 +348,12 @@ private:
     int32_t quarter_turn_count;
     uint8_t last_turn_state;
 
+    // Input gain
+    float gain;
+
+    // Flag indicating if we are currently using input hold
+    bool input_hold_engaged;
+
     // 3D Location vectors
     // Current location of the Sub (altitude is relative to home)
     Location_Class current_loc;
@@ -490,6 +510,7 @@ private:
     void rpm_update();
 #endif
     void send_temperature(mavlink_channel_t chan);
+    bool send_info(mavlink_channel_t chan);
     void send_pid_tuning(mavlink_channel_t chan);
     void gcs_data_stream_send(void);
     void gcs_check_input(void);
@@ -599,9 +620,6 @@ private:
     void fence_check();
     void fence_send_mavlink_status(mavlink_channel_t chan);
     bool set_mode(control_mode_t mode, mode_reason_t reason);
-    bool gcs_set_mode(uint8_t mode) {
-        return set_mode((control_mode_t)mode, MODE_REASON_GCS_COMMAND);
-    }
     void update_flight_mode();
     void exit_mode(control_mode_t old_control_mode, control_mode_t new_control_mode);
     bool mode_requires_GPS(control_mode_t mode);

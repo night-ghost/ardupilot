@@ -613,7 +613,7 @@ void Replay::set_signal_handlers(void)
 void Replay::write_ekf_logs(void)
 {
     if (!LogReader::in_list("EKF", nottypes)) {
-        _vehicle.dataflash.Log_Write_EKF(_vehicle.ahrs,false);
+        _vehicle.dataflash.Log_Write_EKF(_vehicle.ahrs);
     }
     if (!LogReader::in_list("AHRS2", nottypes)) {
         _vehicle.dataflash.Log_Write_AHRS2(_vehicle.ahrs);
@@ -931,5 +931,9 @@ const struct AP_Param::GroupInfo        GCS_MAVLINK::var_info[] = {
     AP_GROUPEND
 };
 GCS_Dummy _gcs;
+
+// dummy methods to avoid linking with these libraries
+void AP_Camera::send_feedback(mavlink_channel_t) {}
+bool AP_AdvancedFailsafe::gcs_terminate(bool should_terminate) { return false; }
 
 AP_HAL_MAIN_CALLBACKS(&replay);

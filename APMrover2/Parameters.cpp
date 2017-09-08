@@ -19,6 +19,7 @@ const AP_Param::Info Rover::var_info[] = {
     // @Param: SYSID_SW_TYPE
     // @DisplayName: Software Type
     // @Description: This is used by the ground station to recognise the software type (eg ArduPlane vs ArduCopter)
+    // @Values: 0:ArduPlane,4:AntennaTracker,10:Copter,20:Rover,40:ArduSub
     // @User: Advanced
     // @ReadOnly: True
     GSCALAR(software_type,          "SYSID_SW_TYPE",    Parameters::k_software_type),
@@ -30,13 +31,6 @@ const AP_Param::Info Rover::var_info[] = {
     // @Bitmask: 0:ATTITUDE_FAST,1:ATTITUDE_MED,2:GPS,3:PM,4:CTUN,5:NTUN,6:MODE,7:IMU,8:CMD,9:CURRENT,10:COMPASS,11:TECS,12:CAMERA,13:RC,14:RANGEFINDER,15:ARM/DISARM,19:IMU_RAW
     // @User: Advanced
     GSCALAR(log_bitmask,            "LOG_BITMASK",      DEFAULT_LOG_BITMASK),
-
-    // @Param: SYS_NUM_RESETS
-    // @DisplayName: Num Resets
-    // @Description: Number of APM board resets
-    // @ReadOnly: True
-    // @User: Advanced
-    GSCALAR(num_resets,             "SYS_NUM_RESETS",   0),
 
     // @Param: RST_SWITCH_CH
     // @DisplayName: Reset Switch Channel
@@ -64,15 +58,6 @@ const AP_Param::Info Rover::var_info[] = {
     // @Range: 1 255
     // @User: Advanced
     GSCALAR(sysid_my_gcs,           "SYSID_MYGCS",      255),
-
-#if CLI_ENABLED == ENABLED
-    // @Param: CLI_ENABLED
-    // @DisplayName: CLI Enable
-    // @Description: This enables/disables the checking for three carriage returns on telemetry links on startup to enter the diagnostics command line interface
-    // @Values: 0:Disabled,1:Enabled
-    // @User: Advanced
-    GSCALAR(cli_enabled,            "CLI_ENABLED",    0),
-#endif
 
     // @Param: TELEM_DELAY
     // @DisplayName: Telemetry startup delay
@@ -132,33 +117,6 @@ const AP_Param::Info Rover::var_info[] = {
     // @User: Standard
     GSCALAR(speed_turn_gain,    "SPEED_TURN_GAIN",  50),
 
-    // @Param: SPEED_TURN_DIST
-    // @DisplayName: Distance to turn to start reducing speed
-    // @Description: The distance to the next turn at which the rover reduces its target speed by the SPEED_TURN_GAIN
-    // @Units: m
-    // @Range: 0 100
-    // @Increment: 0.1
-    // @User: Standard
-    GSCALAR(speed_turn_dist,    "SPEED_TURN_DIST",  2.0f),
-
-    // @Param: BRAKING_PERCENT
-    // @DisplayName: Percentage braking to apply
-    // @Description: The maximum reverse throttle braking percentage to apply when cornering
-    // @Units: %
-    // @Range: 0 100
-    // @Increment: 1
-    // @User: Standard
-    GSCALAR(braking_percent,    "BRAKING_PERCENT",  0),
-
-    // @Param: BRAKING_SPEEDERR
-    // @DisplayName: Speed error at which to apply braking
-    // @Description: The amount of overspeed error at which to start applying braking
-    // @Units: m/s
-    // @Range: 0 100
-    // @Increment: 1
-    // @User: Standard
-    GSCALAR(braking_speederr,   "BRAKING_SPEEDERR",  3),
-
     // @Param: PIVOT_TURN_ANGLE
     // @DisplayName: Pivot turn angle
     // @Description: Navigation angle threshold in degrees to switch to pivot steering when SKID_STEER_OUT is 1. This allows you to setup a skid steering rover to turn on the spot in auto mode when the angle it needs to turn it greater than this angle. An angle of zero means to disable pivot turning. Note that you will probably also want to set a low value for WP_RADIUS to get neat turns.
@@ -171,27 +129,9 @@ const AP_Param::Info Rover::var_info[] = {
     // @Param: CH7_OPTION
     // @DisplayName: Channel 7 option
     // @Description: What to do use channel 7 for
-    // @Values: 0:Nothing,1:LearnWaypoint
+    // @Values: 0:Nothing,1:SaveWaypoint,2:LearnCruiseSpeed
     // @User: Standard
     GSCALAR(ch7_option,             "CH7_OPTION",          CH7_OPTION),
-
-    // @Param: THR_MIN
-    // @DisplayName: Minimum Throttle
-    // @Description: The minimum throttle setting to which the autopilot will apply. This is mostly useful for rovers with internal combustion motors, to prevent the motor from cutting out in auto mode.
-    // @Units: %
-    // @Range: 0 100
-    // @Increment: 1
-    // @User: Standard
-    GSCALAR(throttle_min,           "THR_MIN",          THROTTLE_MIN),
-
-    // @Param: THR_MAX
-    // @DisplayName: Maximum Throttle
-    // @Description: The maximum throttle setting to which the autopilot will apply. This can be used to prevent overheating a ESC or motor on an electric rover.
-    // @Units: %
-    // @Range: 0 100
-    // @Increment: 1
-    // @User: Standard
-    GSCALAR(throttle_max,           "THR_MAX",          THROTTLE_MAX),
 
     // @Param: CRUISE_THROTTLE
     // @DisplayName: Base throttle percentage in auto
@@ -287,11 +227,11 @@ const AP_Param::Info Rover::var_info[] = {
     // @User: Standard
     GSCALAR(rangefinder_debounce,   "RNGFND_DEBOUNCE",    2),
 
-    // @Param: LEARN_CH
-    // @DisplayName: Learning channel
-    // @Description: RC Channel to use for learning waypoints
+    // @Param: AUX_CH
+    // @DisplayName: Auxiliary switch channel
+    // @Description: RC Channel to use for auxiliary functions including saving waypoints
     // @User: Advanced
-    GSCALAR(learn_channel,    "LEARN_CH",       7),
+    GSCALAR(aux_channel,    "AUX_CH",       7),
 
     // @Param: MODE_CH
     // @DisplayName: Mode channel
@@ -301,45 +241,45 @@ const AP_Param::Info Rover::var_info[] = {
 
     // @Param: MODE1
     // @DisplayName: Mode1
-    // @Values: 0:Manual,2:LEARNING,3:STEERING,4:HOLD,10:Auto,11:RTL,15:Guided
+    // @Values: 0:Manual,3:Steering,4:Hold,10:Auto,11:RTL,15:Guided
     // @User: Standard
     // @Description: Driving mode for switch position 1 (910 to 1230 and above 2049)
-    GSCALAR(mode1,           "MODE1",         MODE_1),
+    GSCALAR(mode1,           "MODE1",         MANUAL),
 
     // @Param: MODE2
     // @DisplayName: Mode2
     // @Description: Driving mode for switch position 2 (1231 to 1360)
-    // @Values: 0:Manual,2:LEARNING,3:STEERING,4:HOLD,10:Auto,11:RTL,15:Guided
+    // @Values: 0:Manual,3:Steering,4:Hold,10:Auto,11:RTL,15:Guided
     // @User: Standard
-    GSCALAR(mode2,           "MODE2",         MODE_2),
+    GSCALAR(mode2,           "MODE2",         MANUAL),
 
     // @Param: MODE3
     // @DisplayName: Mode3
     // @Description: Driving mode for switch position 3 (1361 to 1490)
-    // @Values: 0:Manual,2:LEARNING,3:STEERING,4:HOLD,10:Auto,11:RTL,15:Guided
+    // @Values: 0:Manual,3:Steering,4:Hold,10:Auto,11:RTL,15:Guided
     // @User: Standard
-    GSCALAR(mode3,           "MODE3",         MODE_3),
+    GSCALAR(mode3,           "MODE3",         MANUAL),
 
     // @Param: MODE4
     // @DisplayName: Mode4
     // @Description: Driving mode for switch position 4 (1491 to 1620)
-    // @Values: 0:Manual,2:LEARNING,3:STEERING,4:HOLD,10:Auto,11:RTL,15:Guided
+    // @Values: 0:Manual,3:Steering,4:Hold,10:Auto,11:RTL,15:Guided
     // @User: Standard
-    GSCALAR(mode4,           "MODE4",         MODE_4),
+    GSCALAR(mode4,           "MODE4",         MANUAL),
 
     // @Param: MODE5
     // @DisplayName: Mode5
     // @Description: Driving mode for switch position 5 (1621 to 1749)
-    // @Values: 0:Manual,2:LEARNING,3:STEERING,4:HOLD,10:Auto,11:RTL,15:Guided
+    // @Values: 0:Manual,3:Steering,4:Hold,10:Auto,11:RTL,15:Guided
     // @User: Standard
-    GSCALAR(mode5,           "MODE5",         MODE_5),
+    GSCALAR(mode5,           "MODE5",         MANUAL),
 
     // @Param: MODE6
     // @DisplayName: Mode6
     // @Description: Driving mode for switch position 6 (1750 to 2049)
-    // @Values: 0:Manual,2:LEARNING,3:STEERING,4:HOLD,10:Auto,11:RTL,15:Guided
+    // @Values: 0:Manual,3:Steering,4:Hold,10:Auto,11:RTL,15:Guided
     // @User: Standard
-    GSCALAR(mode6,           "MODE6",         MODE_6),
+    GSCALAR(mode6,           "MODE6",         MANUAL),
 
     // @Param: WP_RADIUS
     // @DisplayName: Waypoint radius
@@ -350,6 +290,15 @@ const AP_Param::Info Rover::var_info[] = {
     // @User: Standard
     GSCALAR(waypoint_radius,        "WP_RADIUS",        2.0f),
 
+    // @Param: WP_OVERSHOOT
+    // @DisplayName: Waypoint overshoot maximum
+    // @Description: Waypoint overshoot maximum in meters.  The vehicle will attempt to stay within this many meters of the track as it completes one waypoint and moves to the next.
+    // @Units: m
+    // @Range: 0 10
+    // @Increment: 0.1
+    // @User: Standard
+    GSCALAR(waypoint_overshoot,     "WP_OVERSHOOT", 2.0f),
+
     // @Param: TURN_MAX_G
     // @DisplayName: Turning maximum G force
     // @Description: The maximum turning acceleration (in units of gravities) that the rover can handle while remaining stable. The navigation code will keep the lateral acceleration below this level to avoid rolling over or slipping the wheels in turns
@@ -358,14 +307,6 @@ const AP_Param::Info Rover::var_info[] = {
     // @Increment: 0.1
     // @User: Standard
     GSCALAR(turn_max_g,             "TURN_MAX_G",      2.0f),
-
-    // @Group: STEER2SRV_
-    // @Path: ../libraries/APM_Control/AP_SteerController.cpp
-    GOBJECT(steerController,        "STEER2SRV_",   AP_SteerController),
-
-    // @Group: SPEED2THR_
-    // @Path: ../libraries/PID/PID.cpp
-    GGROUP(pidSpeedThrottle,        "SPEED2THR_", PID),
 
     // variables not in the g class which contain EEPROM saved variables
 
@@ -472,15 +413,15 @@ const AP_Param::Info Rover::var_info[] = {
     // @Path: ../libraries/AP_GPS/AP_GPS.cpp
     GOBJECT(gps, "GPS_", AP_GPS),
 
-    #if AP_AHRS_NAVEKF_AVAILABLE
-        // @Group: EK2_
-        // @Path: ../libraries/AP_NavEKF2/AP_NavEKF2.cpp
-        GOBJECTN(EKF2, NavEKF2, "EK2_", NavEKF2),
+#if AP_AHRS_NAVEKF_AVAILABLE
+    // @Group: EK2_
+    // @Path: ../libraries/AP_NavEKF2/AP_NavEKF2.cpp
+    GOBJECTN(EKF2, NavEKF2, "EK2_", NavEKF2),
 
-        // @Group: EK3_
-        // @Path: ../libraries/AP_NavEKF3/AP_NavEKF3.cpp
-        GOBJECTN(EKF3, NavEKF3, "EK3_", NavEKF3),
-    #endif
+    // @Group: EK3_
+    // @Path: ../libraries/AP_NavEKF3/AP_NavEKF3.cpp
+    GOBJECTN(EKF3, NavEKF3, "EK3_", NavEKF3),
+#endif
 
     // @Group: MIS_
     // @Path: ../libraries/AP_Mission/AP_Mission.cpp
@@ -550,6 +491,19 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @Path: ../libraries/AP_WheelEncoder/AP_WheelEncoder.cpp
     AP_SUBGROUPINFO(wheel_encoder, "WENC", 9, ParametersG2, AP_WheelEncoder),
 
+    // @Group: ATC
+    // @Path: ../libraries/APM_Control/AR_AttitudeControl.cpp
+    AP_SUBGROUPINFO(attitude_control, "ATC", 10, ParametersG2, AR_AttitudeControl),
+
+    // @Param: TURN_RADIUS
+    // @DisplayName: Turn radius of vehicle
+    // @Description: Turn radius of vehicle in meters while at low speeds.  Lower values produce tighter turns in steering mode
+    // @Units: m
+    // @Range: 0 10
+    // @Increment: 0.1
+    // @User: Standard
+    AP_GROUPINFO("TURN_RADIUS", 11, ParametersG2, turn_radius, 0.9),
+
     AP_GROUPEND
 };
 
@@ -560,7 +514,8 @@ ParametersG2::ParametersG2(void)
     afs(rover.mission, rover.barometer, rover.gps, rover.rcmap),
 #endif
     beacon(rover.serial_manager),
-    motors(rover.ServoRelayEvents)
+    motors(rover.ServoRelayEvents),
+    attitude_control(rover.ahrs)
 {
     AP_Param::setup_object_defaults(this, var_info);
 }
@@ -589,29 +544,32 @@ const AP_Param::ConversionInfo conversion_table[] = {
     { Parameters::k_param_serial0_baud,       0,      AP_PARAM_INT16, "SERIAL0_BAUD" },
     { Parameters::k_param_serial1_baud,       0,      AP_PARAM_INT16, "SERIAL1_BAUD" },
     { Parameters::k_param_serial2_baud,       0,      AP_PARAM_INT16, "SERIAL2_BAUD" },
+    { Parameters::k_param_throttle_min_old,   0,      AP_PARAM_INT8,  "MOT_THR_MIN" },
+    { Parameters::k_param_throttle_max_old,   0,      AP_PARAM_INT8,  "MOT_THR_MAX" },
 };
 
 void Rover::load_parameters(void)
 {
     if (!AP_Param::check_var_info()) {
-        cliSerial->printf("Bad var table\n");
+        hal.console->printf("Bad var table\n");
         AP_HAL::panic("Bad var table");
     }
 
     if (!g.format_version.load() ||
          g.format_version != Parameters::k_format_version) {
         // erase all parameters
-        cliSerial->printf("Firmware change: erasing EEPROM...\n");
+        hal.console->printf("Firmware change: erasing EEPROM...\n");
         AP_Param::erase_all();
 
         // save the current format version
         g.format_version.set_and_save(Parameters::k_format_version);
-        cliSerial->printf("done.\n");
+        hal.console->printf("done.\n");
     }
 
     const uint32_t before = micros();
     // Load all auto-loaded EEPROM variables
     AP_Param::load_all();
+    AP_Param::convert_old_parameters(&conversion_table[0], ARRAY_SIZE(conversion_table));
 
     AP_Param::set_frame_type_flags(AP_PARAM_FRAME_ROVER);
 
@@ -627,7 +585,7 @@ void Rover::load_parameters(void)
                                       Parameters::k_param_rc_13_old, Parameters::k_param_rc_14_old };
     const uint16_t old_aux_chan_mask = 0x3FFA;
     SRV_Channels::upgrade_parameters(old_rc_keys, old_aux_chan_mask, &rcmap);
-    cliSerial->printf("load_all took %uus\n", micros() - before);
+    hal.console->printf("load_all took %uus\n", micros() - before);
     // set a more reasonable default NAVL1_PERIOD for rovers
     L1_controller.set_default_period(NAVL1_PERIOD);
 }

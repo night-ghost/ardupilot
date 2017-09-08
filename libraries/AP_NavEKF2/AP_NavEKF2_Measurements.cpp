@@ -6,6 +6,7 @@
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_Vehicle/AP_Vehicle.h>
 #include <GCS_MAVLink/GCS.h>
+#include <AP_RangeFinder/RangeFinder_Backend.h>
 
 #include <stdio.h>
 
@@ -39,13 +40,17 @@ void NavEKF2_core::readRangeFinder(void)
         // use data from two range finders if available
 
         for (uint8_t sensorIndex = 0; sensorIndex <= 1; sensorIndex++) {
-            if ((frontend->_rng.get_orientation(sensorIndex) == ROTATION_PITCH_270) && (frontend->_rng.status(sensorIndex) == RangeFinder::RangeFinder_Good)) {
+            AP_RangeFinder_Backend *sensor = frontend->_rng.get_backend(sensorIndex);
+            if (sensor == nullptr) {
+                continue;
+            }
+            if ((sensor->orientation() == ROTATION_PITCH_270) && (sensor->status() == RangeFinder::RangeFinder_Good)) {
                 rngMeasIndex[sensorIndex] ++;
                 if (rngMeasIndex[sensorIndex] > 2) {
                     rngMeasIndex[sensorIndex] = 0;
                 }
                 storedRngMeasTime_ms[sensorIndex][rngMeasIndex[sensorIndex]] = imuSampleTime_ms - 25;
-                storedRngMeas[sensorIndex][rngMeasIndex[sensorIndex]] = frontend->_rng.distance_cm(sensorIndex) * 0.01f;
+                storedRngMeas[sensorIndex][rngMeasIndex[sensorIndex]] = sensor->distance_cm() * 0.01f;
             }
 
             // check for three fresh samples
@@ -470,8 +475,8 @@ void NavEKF2_core::readGpsData()
                 gpsNoiseScaler = 2.0f;
             }
 
-            // Check if GPS can output vertical velocity and set GPS fusion mode accordingly
-            if (_ahrs->get_gps().have_vertical_velocity() && frontend->_fusionModeGPS == 0) {
+            // Check if GPS can output vertical velocity, if it is allowed to be used, and set GPS fusion mode accordingly
+            if (_ahrs->get_gps().have_vertical_velocity() && frontend->_fusionModeGPS == 0 && !frontend->inhibitGpsVertVelUse) {
                 useGpsVertVel = true;
             } else {
                 useGpsVertVel = false;

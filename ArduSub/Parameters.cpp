@@ -31,6 +31,7 @@ const AP_Param::Info Sub::var_info[] = {
     // @Param: SURFACE_DEPTH
     // @DisplayName: Depth reading at surface
     // @Description: The depth the external pressure sensor will read when the vehicle is considered at the surface (in centimeters)
+    // @Units: cm
     // @Range: -100 0
     // @User: Standard
     GSCALAR(surface_depth, "SURFACE_DEPTH", SURFACE_DEPTH_DEFAULT),
@@ -60,7 +61,6 @@ const AP_Param::Info Sub::var_info[] = {
     // @Param: SYSID_MYGCS
     // @DisplayName: My ground station number
     // @Description: Allows restricting radio overrides to only come from my ground station
-    // @Values: 255:Mission Planner and DroidPlanner, 252: AP Planner 2
     // @User: Advanced
     GSCALAR(sysid_my_gcs,   "SYSID_MYGCS",     255),
 
@@ -178,7 +178,7 @@ const AP_Param::Info Sub::var_info[] = {
     // @Units: s
     // @Range: 0.1 3.0
     // @User: Standard
-    GSCALAR(failsafe_pilot_input_timeout, "FS_PILOT_TIMEOUT", 1.0f),
+    GSCALAR(failsafe_pilot_input_timeout, "FS_PILOT_TIMEOUT", 3.0f),
 
     // @Param: XTRACK_ANG_LIM
     // @DisplayName: Crosstrack correction angle limit
@@ -197,7 +197,7 @@ const AP_Param::Info Sub::var_info[] = {
     // @Param: WP_YAW_BEHAVIOR
     // @DisplayName: Yaw behaviour during missions
     // @Description: Determines how the autopilot controls the yaw during missions and RTL
-    // @Values: 0:Never change yaw, 1:Face next waypoint, 2:Face next waypoint except RTL, 3:Face along GPS course
+    // @Values: 0:Never change yaw, 1:Face next waypoint, 2:Face next waypoint except RTL, 3:Face along GPS course, 4:Correct crosstrack error
     // @User: Standard
     GSCALAR(wp_yaw_behavior,  "WP_YAW_BEHAVIOR",    WP_YAW_BEHAVIOR_DEFAULT),
 
@@ -808,18 +808,15 @@ void Sub::load_parameters(void)
     convert_old_parameters();
 
     AP_Param::set_default_by_name("BRD_SAFETYENABLE", 0);
-    AP_Param::set_default_by_name("GND_EXT_BUS", 1);
     AP_Param::set_default_by_name("ARMING_CHECK",
-            AP_Arming::ARMING_CHECK_BARO |
-            AP_Arming::ARMING_CHECK_COMPASS |
-            AP_Arming::ARMING_CHECK_INS |
             AP_Arming::ARMING_CHECK_RC |
             AP_Arming::ARMING_CHECK_VOLTAGE |
-            AP_Arming::ARMING_CHECK_BATTERY |
-            AP_Arming::ARMING_CHECK_LOGGING);
+            AP_Arming::ARMING_CHECK_BATTERY);
     AP_Param::set_default_by_name("CIRCLE_RATE", 2.0f);
     AP_Param::set_default_by_name("ATC_ACCEL_Y_MAX", 110000.0f);
     AP_Param::set_default_by_name("RC3_TRIM", 1100);
+    AP_Param::set_default_by_name("COMPASS_OFS_MAX", 1000);
+    AP_Param::set_default_by_name("INS_GYR_CAL", 0);
 }
 
 void Sub::convert_old_parameters(void)

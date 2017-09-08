@@ -21,7 +21,7 @@ const AP_HAL::HAL& hal = AP_HAL::get_HAL();
   constructor for main Copter class
  */
 Copter::Copter(void) :
-    DataFlash{FIRMWARE_STRING, g.log_bitmask},
+    DataFlash{fwver.fw_string, g.log_bitmask},
     flight_modes(&g.flight_mode1),
     mission(ahrs, 
             FUNCTOR_BIND_MEMBER(&Copter::start_command, bool, const AP_Mission::Mission_Command &),
@@ -99,7 +99,7 @@ Copter::Copter(void) :
 #endif
 #if FRAME_CONFIG == HELI_FRAME
     // ToDo: Input Manager is only used by Heli for 3.3, but will be used by all frames for 3.4
-    input_manager(MAIN_LOOP_RATE),
+    input_manager(),
 #endif
     in_mavlink_delay(false),
     gcs_out_of_time(false),

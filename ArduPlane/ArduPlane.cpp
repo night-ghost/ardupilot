@@ -96,8 +96,6 @@ void Plane::stats_update(void)
 
 void Plane::setup() 
 {
-    cliSerial = hal.console;
-
     // load the default values of variables listed in var_info[]
     AP_Param::setup_sketch_defaults();
 
@@ -609,7 +607,7 @@ void Plane::update_flight_mode(void)
             quadplane.guided_update();
             break;
         }
-        // no break
+        FALLTHROUGH;
 
     case RTL:
     case LOITER:
@@ -837,7 +835,8 @@ void Plane::update_navigation()
         if (radius > 0) {
             loiter.direction = (g.rtl_radius < 0) ? -1 : 1;
         }
-        // no break, fall through to LOITER
+        // fall through to LOITER
+        FALLTHROUGH;
 
     case LOITER:
     case AVOID_ADSB:

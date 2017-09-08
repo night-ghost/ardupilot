@@ -357,6 +357,55 @@ void NOINLINE Sub::send_temperature(mavlink_channel_t chan)
         celsius.temperature() * 100);
 }
 
+bool NOINLINE Sub::send_info(mavlink_channel_t chan)
+{
+    // Just do this all at once, hopefully the hard-wire telemetry requirement means this is ok
+    // Name is char[10]
+    CHECK_PAYLOAD_SIZE2(NAMED_VALUE_FLOAT);
+    mavlink_msg_named_value_float_send(
+            chan,
+            AP_HAL::millis(),
+            "CamTilt",
+            1 - (SRV_Channels::get_output_norm(SRV_Channel::k_mount_tilt) / 2.0f + 0.5f));
+
+    CHECK_PAYLOAD_SIZE2(NAMED_VALUE_FLOAT);
+    mavlink_msg_named_value_float_send(
+            chan,
+            AP_HAL::millis(),
+            "TetherTrn",
+            quarter_turn_count/4);
+
+    CHECK_PAYLOAD_SIZE2(NAMED_VALUE_FLOAT);
+    mavlink_msg_named_value_float_send(
+            chan,
+            AP_HAL::millis(),
+            "Lights1",
+            SRV_Channels::get_output_norm(SRV_Channel::k_rcin9) / 2.0f + 0.5f);
+
+    CHECK_PAYLOAD_SIZE2(NAMED_VALUE_FLOAT);
+    mavlink_msg_named_value_float_send(
+            chan,
+            AP_HAL::millis(),
+            "Lights2",
+            SRV_Channels::get_output_norm(SRV_Channel::k_rcin10) / 2.0f + 0.5f);
+
+    CHECK_PAYLOAD_SIZE2(NAMED_VALUE_FLOAT);
+    mavlink_msg_named_value_float_send(
+            chan,
+            AP_HAL::millis(),
+            "PilotGain",
+            gain);
+
+    CHECK_PAYLOAD_SIZE2(NAMED_VALUE_FLOAT);
+    mavlink_msg_named_value_float_send(
+            chan,
+            AP_HAL::millis(),
+            "InputHold",
+            input_hold_engaged);
+
+    return true;
+}
+
 /*
   send PID tuning message
  */
@@ -438,10 +487,16 @@ bool GCS_MAVLINK_Sub::try_send_message(enum ap_message id)
     }
 
     switch (id) {
+
+    case MSG_NAMED_FLOAT:
+        sub.send_info(chan);
+        break;
+
     case MSG_HEARTBEAT:
         CHECK_PAYLOAD_SIZE(HEARTBEAT);
         last_heartbeat_time = AP_HAL::millis();
         sub.send_heartbeat(chan);
+        sub.send_info(chan);
         break;
 
     case MSG_EXTENDED_STATUS1:
@@ -453,11 +508,6 @@ bool GCS_MAVLINK_Sub::try_send_message(enum ap_message id)
             CHECK_PAYLOAD_SIZE(POWER_STATUS);
             send_power_status();
         }
-        break;
-
-    case MSG_EXTENDED_STATUS2:
-        CHECK_PAYLOAD_SIZE(MEMINFO);
-        send_meminfo();
         break;
 
     case MSG_ATTITUDE:
@@ -478,15 +528,6 @@ bool GCS_MAVLINK_Sub::try_send_message(enum ap_message id)
     case MSG_NAV_CONTROLLER_OUTPUT:
         CHECK_PAYLOAD_SIZE(NAV_CONTROLLER_OUTPUT);
         sub.send_nav_controller_output(chan);
-        break;
-
-    case MSG_GPS_RAW:
-        send_gps_raw(sub.gps);
-        break;
-
-    case MSG_SYSTEM_TIME:
-        CHECK_PAYLOAD_SIZE(SYSTEM_TIME);
-        send_system_time(sub.gps);
         break;
 
     case MSG_RADIO_IN:
@@ -540,13 +581,6 @@ bool GCS_MAVLINK_Sub::try_send_message(enum ap_message id)
 #if AP_TERRAIN_AVAILABLE && AC_TERRAIN
         CHECK_PAYLOAD_SIZE(TERRAIN_REQUEST);
         sub.terrain.send_request(chan);
-#endif
-        break;
-
-    case MSG_CAMERA_FEEDBACK:
-#if CAMERA == ENABLED
-        CHECK_PAYLOAD_SIZE(CAMERA_FEEDBACK);
-        sub.camera.send_feedback(chan);
 #endif
         break;
 
@@ -738,8 +772,12 @@ GCS_MAVLINK_Sub::data_stream_send(void)
         send_message(MSG_EXTENDED_STATUS2);
         send_message(MSG_CURRENT_WAYPOINT);
         send_message(MSG_GPS_RAW);
+        send_message(MSG_GPS_RTK);
+        send_message(MSG_GPS2_RAW);
+        send_message(MSG_GPS2_RTK);
         send_message(MSG_NAV_CONTROLLER_OUTPUT);
         send_message(MSG_LIMITS_STATUS);
+        send_message(MSG_NAMED_FLOAT);
     }
 
     if (sub.gcs_out_of_time) {
@@ -845,27 +883,6 @@ void GCS_MAVLINK_Sub::handleMessage(mavlink_message_t* msg)
         }
         sub.failsafe.last_heartbeat_ms = AP_HAL::millis();
         sub.pmTest1++;
-        break;
-    }
-
-    case MAVLINK_MSG_ID_SET_MODE: {     // MAV ID: 11
-        handle_set_mode(msg, FUNCTOR_BIND(&sub, &Sub::gcs_set_mode, bool, uint8_t));
-        break;
-    }
-
-    case MAVLINK_MSG_ID_PARAM_REQUEST_LIST: {       // MAV ID: 21
-        // mark the firmware version in the tlog
-        send_text(MAV_SEVERITY_INFO, FIRMWARE_STRING);
-
-#if defined(PX4_GIT_VERSION) && defined(NUTTX_GIT_VERSION)
-        send_text(MAV_SEVERITY_INFO, "PX4: " PX4_GIT_VERSION " NuttX: " NUTTX_GIT_VERSION);
-#endif
-        handle_param_request_list(msg);
-        break;
-    }
-
-    case MAVLINK_MSG_ID_PARAM_SET: {   // 23
-        handle_param_set(msg, &sub.DataFlash);
         break;
     }
 
@@ -1045,13 +1062,6 @@ void GCS_MAVLINK_Sub::handleMessage(mavlink_message_t* msg)
             }
             break;
 
-        case MAV_CMD_DO_FLIGHTTERMINATION:
-            if (packet.param1 > 0.5f) {
-                sub.init_disarm_motors();
-                result = MAV_RESULT_ACCEPTED;
-            }
-            break;
-
         case MAV_CMD_DO_SET_ROI:
             // param1 : regional of interest mode (not supported)
             // param2 : mission index/ target id (not supported)
@@ -1097,7 +1107,7 @@ void GCS_MAVLINK_Sub::handleMessage(mavlink_message_t* msg)
                     result = MAV_RESULT_FAILED;
                 }
             } else if (is_equal(packet.param3,1.0f)) {
-                if (!sub.sensor_health.depth || sub.motors.armed() || sub.barometer.get_pressure() > 110000) {
+                if (!sub.sensor_health.depth || sub.motors.armed()) {
                     result = MAV_RESULT_FAILED;
                 } else {
                     sub.init_barometer(true);
@@ -1233,32 +1243,6 @@ void GCS_MAVLINK_Sub::handleMessage(mavlink_message_t* msg)
             }
             break;
 #endif
-
-        case MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES: {
-            if (is_equal(packet.param1,1.0f)) {
-                send_autopilot_version(FIRMWARE_VERSION);
-                result = MAV_RESULT_ACCEPTED;
-            }
-            break;
-        }
-
-        case MAV_CMD_DO_SEND_BANNER: {
-            result = MAV_RESULT_ACCEPTED;
-
-            send_text(MAV_SEVERITY_INFO, FIRMWARE_STRING);
-
-#if defined(PX4_GIT_VERSION) && defined(NUTTX_GIT_VERSION)
-            send_text(MAV_SEVERITY_INFO, "PX4: " PX4_GIT_VERSION " NuttX: " NUTTX_GIT_VERSION);
-#endif
-
-            // send system ID if we can
-            char sysid[40];
-            if (hal.util->get_system_id(sysid)) {
-                send_text(MAV_SEVERITY_INFO, sysid);
-            }
-
-            break;
-        }
 
         default:
             result = handle_command_long_message(packet);
@@ -1455,10 +1439,6 @@ void GCS_MAVLINK_Sub::handleMessage(mavlink_message_t* msg)
         break;
     }
 
-    case MAVLINK_MSG_ID_SERIAL_CONTROL:
-        handle_serial_control(msg, sub.gps);
-        break;
-
 #if AC_FENCE == ENABLED
         // send or receive fence points with GCS
     case MAVLINK_MSG_ID_FENCE_POINT:            // MAV ID: 160
@@ -1483,15 +1463,6 @@ void GCS_MAVLINK_Sub::handleMessage(mavlink_message_t* msg)
 #if AP_TERRAIN_AVAILABLE && AC_TERRAIN
         sub.terrain.handle_data(chan, msg);
 #endif
-        break;
-
-    case MAVLINK_MSG_ID_AUTOPILOT_VERSION_REQUEST:
-        send_autopilot_version(FIRMWARE_VERSION);
-        break;
-
-    case MAVLINK_MSG_ID_LED_CONTROL:
-        // send message to Notify
-        AP_Notify::handle_led_control(msg);
         break;
 
     case MAVLINK_MSG_ID_SET_HOME_POSITION: {
@@ -1626,3 +1597,24 @@ AP_Rally *GCS_MAVLINK_Sub::get_rally() const
     return nullptr;
 #endif
 }
+
+MAV_RESULT GCS_MAVLINK_Sub::handle_flight_termination(const mavlink_command_long_t &packet) {
+    if (packet.param1 > 0.5f) {
+        sub.init_disarm_motors();
+        return MAV_RESULT_ACCEPTED;
+    }
+    return MAV_RESULT_FAILED;
+}
+
+bool GCS_MAVLINK_Sub::set_mode(uint8_t mode)
+{
+    return sub.set_mode((control_mode_t)mode, MODE_REASON_GCS_COMMAND);
+}
+
+const AP_FWVersion &GCS_MAVLINK_Sub::get_fwver() const
+{
+    return sub.fwver;
+}
+
+// dummy method to avoid linking AFS
+bool AP_AdvancedFailsafe::gcs_terminate(bool should_terminate) { return false; }

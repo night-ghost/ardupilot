@@ -445,11 +445,6 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
         send_power_status();
         break;
 
-    case MSG_EXTENDED_STATUS2:
-        CHECK_PAYLOAD_SIZE(MEMINFO);
-        send_meminfo();
-        break;
-
     case MSG_ATTITUDE:
         CHECK_PAYLOAD_SIZE(ATTITUDE);
         plane.send_attitude(chan);
@@ -477,16 +472,6 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
             CHECK_PAYLOAD_SIZE(POSITION_TARGET_GLOBAL_INT);
             plane.send_position_target_global_int(chan);
         }
-        break;
-
-    case MSG_GPS_RAW:
-        CHECK_PAYLOAD_SIZE(GPS_RAW_INT);
-        send_gps_raw(plane.gps);
-        break;
-
-    case MSG_SYSTEM_TIME:
-        CHECK_PAYLOAD_SIZE(SYSTEM_TIME);
-        send_system_time(plane.gps);
         break;
 
     case MSG_SERVO_OUT:
@@ -562,13 +547,6 @@ bool GCS_MAVLINK_Plane::try_send_message(enum ap_message id)
 #if AP_TERRAIN_AVAILABLE
         CHECK_PAYLOAD_SIZE(TERRAIN_REQUEST);
         plane.terrain.send_request(chan);
-#endif
-        break;
-
-    case MSG_CAMERA_FEEDBACK:
-#if CAMERA == ENABLED
-        CHECK_PAYLOAD_SIZE(CAMERA_FEEDBACK);
-        plane.camera.send_feedback(chan);
 #endif
         break;
 
@@ -790,6 +768,9 @@ GCS_MAVLINK_Plane::data_stream_send(void)
         send_message(MSG_EXTENDED_STATUS2);
         send_message(MSG_CURRENT_WAYPOINT);
         send_message(MSG_GPS_RAW);
+        send_message(MSG_GPS_RTK);
+        send_message(MSG_GPS2_RAW);
+        send_message(MSG_GPS2_RTK);
         send_message(MSG_NAV_CONTROLLER_OUTPUT);
         send_message(MSG_FENCE_STATUS);
         send_message(MSG_POSITION_TARGET_GLOBAL_INT);
@@ -1291,14 +1272,7 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
             }
             break;
 
-        case MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES: {
-            if (is_equal(packet.param1,1.0f)) {
-                send_autopilot_version(FIRMWARE_VERSION);
-                result = MAV_RESULT_ACCEPTED;
-            }
-            break;
-
-        case MAV_CMD_DO_SET_HOME:
+        case MAV_CMD_DO_SET_HOME: {
             // param1 : use current (1=use current location, 0=use specified location)
             // param5 : latitude
             // param6 : longitude
@@ -1416,24 +1390,6 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         break;
     }
 
-    case MAVLINK_MSG_ID_SET_MODE:
-    {
-        handle_set_mode(msg, FUNCTOR_BIND(&plane, &Plane::mavlink_set_mode, bool, uint8_t));
-        break;
-    }
-
-    case MAVLINK_MSG_ID_PARAM_REQUEST_LIST:
-    {
-        // mark the firmware version in the tlog
-        send_text(MAV_SEVERITY_INFO, FIRMWARE_STRING);
-
-#if defined(PX4_GIT_VERSION) && defined(NUTTX_GIT_VERSION)
-        send_text(MAV_SEVERITY_INFO, "PX4: " PX4_GIT_VERSION " NuttX: " NUTTX_GIT_VERSION);
-#endif
-        handle_param_request_list(msg);
-        break;
-    }
-
 #if GEOFENCE_ENABLED == ENABLED
     // receive a fence point from GCS and store in EEPROM
     case MAVLINK_MSG_ID_FENCE_POINT: {
@@ -1468,12 +1424,6 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         break;
     }
 #endif // GEOFENCE_ENABLED
-
-    case MAVLINK_MSG_ID_PARAM_SET:
-    {
-        handle_param_set(msg, &plane.DataFlash);
-        break;
-    }
 
     case MAVLINK_MSG_ID_GIMBAL_REPORT:
     {
@@ -1608,10 +1558,6 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
         break;
     }
 
-    case MAVLINK_MSG_ID_SERIAL_CONTROL:
-        handle_serial_control(msg, plane.gps);
-        break;
-
     case MAVLINK_MSG_ID_DISTANCE_SENSOR:
         plane.rangefinder.handle_msg(msg);
         break;
@@ -1621,20 +1567,6 @@ void GCS_MAVLINK_Plane::handleMessage(mavlink_message_t* msg)
 #if AP_TERRAIN_AVAILABLE
         plane.terrain.handle_data(chan, msg);
 #endif
-        break;
-
-    case MAVLINK_MSG_ID_AUTOPILOT_VERSION_REQUEST:
-        send_autopilot_version(FIRMWARE_VERSION);
-        break;
-
-    case MAVLINK_MSG_ID_LED_CONTROL:
-        // send message to Notify
-        AP_Notify::handle_led_control(msg);
-        break;
-
-    case MAVLINK_MSG_ID_PLAY_TUNE:
-        // send message to Notify
-        AP_Notify::handle_play_tune(msg);
         break;
 
     case MAVLINK_MSG_ID_SET_ATTITUDE_TARGET:
@@ -1919,7 +1851,48 @@ AP_ServoRelayEvents *GCS_MAVLINK_Plane::get_servorelayevents() const
     return &plane.ServoRelayEvents;
 }
 
+AP_AdvancedFailsafe *GCS_MAVLINK_Plane::get_advanced_failsafe() const
+{
+    return &plane.afs;
+}
+
 AP_Rally *GCS_MAVLINK_Plane::get_rally() const
 {
     return &plane.rally;
+}
+
+/*
+  set_mode() wrapper for MAVLink SET_MODE
+ */
+bool GCS_MAVLINK_Plane::set_mode(const uint8_t mode)
+{
+    switch (mode) {
+    case MANUAL:
+    case CIRCLE:
+    case STABILIZE:
+    case TRAINING:
+    case ACRO:
+    case FLY_BY_WIRE_A:
+    case AUTOTUNE:
+    case FLY_BY_WIRE_B:
+    case CRUISE:
+    case AVOID_ADSB:
+    case GUIDED:
+    case AUTO:
+    case RTL:
+    case LOITER:
+    case QSTABILIZE:
+    case QHOVER:
+    case QLOITER:
+    case QLAND:
+    case QRTL:
+        plane.set_mode((enum FlightMode)mode, MODE_REASON_GCS_COMMAND);
+        return true;
+    }
+    return false;
+}
+
+const AP_FWVersion &GCS_MAVLINK_Plane::get_fwver() const
+{
+    return plane.fwver;
 }

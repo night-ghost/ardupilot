@@ -21,6 +21,7 @@ const AP_Param::Info Plane::var_info[] = {
     // @Param: SYSID_SW_TYPE
     // @DisplayName: Software Type
     // @Description: This is used by the ground station to recognise the software type (eg ArduPlane vs ArduCopter)
+    // @Values: 0:ArduPlane,4:AntennaTracker,10:Copter,20:Rover,40:ArduSub
     // @User: Advanced
     // @ReadOnly: True
     GSCALAR(software_type,          "SYSID_SW_TYPE",  Parameters::k_software_type),
@@ -38,15 +39,6 @@ const AP_Param::Info Plane::var_info[] = {
     // @Range: 1 255
     // @User: Advanced
     GSCALAR(sysid_my_gcs,           "SYSID_MYGCS",    255),
-
-#if CLI_ENABLED == ENABLED
-    // @Param: CLI_ENABLED
-    // @DisplayName: CLI Enable
-    // @Description: This enables/disables the checking for three carriage returns on telemetry links on startup to enter the diagnostics command line interface
-    // @Values: 0:Disabled,1:Enabled
-    // @User: Advanced
-    GSCALAR(cli_enabled,            "CLI_ENABLED",    0),
-#endif
 
     // @Group: SERIAL
     // @Path: ../libraries/AP_SerialManager/AP_SerialManager.cpp
@@ -230,7 +222,8 @@ const AP_Param::Info Plane::var_info[] = {
 
     // @Param: USE_REV_THRUST
     // @DisplayName: Bitmask for when to allow negative reverse thrust
-    // @Description: Typically THR_MIN will be clipped to zero unless reverse thrust is available. Since you may not want negative thrust available at all times this bitmask allows THR_MIN to go below 0 while executing certain auto-mission commands.
+    // @Description: This controls when to use reverse thrust. If set to zero then reverse thrust is never used. If set to a non-zero value then the bits correspond to flight stages where reverse thrust may be used. Note that reverse thrust is only ever auto-enabled in auto-throttle modes. In modes where throttle control is pilot controlled the ability to do reverse thrust is controlled by throttle stick input. The most commonly used value for USE_REV_THRUST is 2, which means AUTO_LAND only. That enables reverse thrust in the landing stage of AUTO mode. Another common choice is 1, which means to use reverse thrust in all auto flight stages.
+    // @Values: 0:Never,1:AutoAlways,2:AutoLanding
     // @Bitmask: 0:AUTO_ALWAYS,1:AUTO_LAND,2:AUTO_LOITER_TO_ALT,3:AUTO_LOITER_ALL,4:AUTO_WAYPOINTS,5:LOITER,6:RTL,7:CIRCLE,8:CRUISE,9:FBWB,10:GUIDED
     // @User: Advanced
     GSCALAR(use_reverse_thrust,     "USE_REV_THRUST",  USE_REVERSE_THRUST_AUTO_LAND_APPROACH),
@@ -892,13 +885,6 @@ const AP_Param::Info Plane::var_info[] = {
     // @User: Standard
     GSCALAR(rtl_autoland,         "RTL_AUTOLAND",   0),
 
-    // @Param: RC_TRIM_AT_START
-    // @DisplayName: RC Trims auto set at start.
-    // @Description: Automatically set roll/pitch trim from Tx at ground start. This makes the assumption that the RC transmitter has not been altered since trims were last captured.
-    // @Values: 0:Disable,1:Enable
-    // @User: Standard
-    GSCALAR(trim_rc_at_start,     "TRIM_RC_AT_START",    0), 
-
     // @Param: CRASH_ACC_THRESH
     // @DisplayName: Crash Deceleration Threshold
     // @Description: X-Axis deceleration threshold to notify the crash detector that there was a possible impact which helps disarm the motor quickly after a crash. This value should be much higher than normal negative x-axis forces during normal flight, check flight log files to determine the average IMU.x values for your aircraft and motor type. Higher value means less sensative (triggers on higher impact). For electric planes that don't vibrate much during fight a value of 25 is good (that's about 2.5G). For petrol/nitro planes you'll want a higher value. Set to 0 to disable the collision detector.
@@ -1196,6 +1182,15 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("MANUAL_RCMASK", 10, ParametersG2, manual_rc_mask, 0),
     
+    // @Param: HOME_RESET_ALT
+    // @DisplayName: Home reset altitude threshold
+    // @Description: When the aircraft is within this altitude of the home waypoint, while disarmed it will automatically update the home position. Set to 0 to continously reset it.
+    // @Values: -1:Never reset,0:Always reset
+    // @Range: -1 127
+    // @Units: m
+    // @User: Advanced
+    AP_GROUPINFO("HOME_RESET_ALT", 11, ParametersG2, home_reset_threshold, 0),
+
     AP_GROUPEND
 };
 
@@ -1278,19 +1273,19 @@ const AP_Param::ConversionInfo conversion_table[] = {
 void Plane::load_parameters(void)
 {
     if (!AP_Param::check_var_info()) {
-        cliSerial->printf("Bad parameter table\n");
+        hal.console->printf("Bad parameter table\n");
         AP_HAL::panic("Bad parameter table");
     }
     if (!g.format_version.load() ||
         g.format_version != Parameters::k_format_version) {
 
         // erase all parameters
-        cliSerial->printf("Firmware change: erasing EEPROM...\n");
+        hal.console->printf("Firmware change: erasing EEPROM...\n");
         AP_Param::erase_all();
 
         // save the current format version
         g.format_version.set_and_save(Parameters::k_format_version);
-        cliSerial->printf("done.\n");
+        hal.console->printf("done.\n");
     }
 
     uint32_t before = micros();
@@ -1324,7 +1319,7 @@ void Plane::load_parameters(void)
 
     AP_Param::set_frame_type_flags(AP_PARAM_FRAME_PLANE);
 
-    cliSerial->printf("load_all took %uus\n", (unsigned)(micros() - before));
+    hal.console->printf("load_all took %uus\n", (unsigned)(micros() - before));
 }
 
 /*
@@ -1357,7 +1352,7 @@ void Plane::convert_mixers(void)
         chan4->get_function() == SRV_Channel::k_rudder &&
         !chan2->function_configured() &&
         !chan4->function_configured()) {
-        cliSerial->printf("Converting vtail_output %u\n", vtail_output.get());
+        hal.console->printf("Converting vtail_output %u\n", vtail_output.get());
         switch (vtail_output) {
         case MIXING_UPUP:
         case MIXING_UPUP_SWP:
@@ -1393,7 +1388,7 @@ void Plane::convert_mixers(void)
         chan2->get_function() == SRV_Channel::k_elevator &&
         !chan1->function_configured() &&
         !chan2->function_configured()) {
-        cliSerial->printf("convert elevon_output %u\n", elevon_output.get());
+        hal.console->printf("convert elevon_output %u\n", elevon_output.get());
         switch (elevon_output) {
         case MIXING_UPUP:
         case MIXING_UPUP_SWP:

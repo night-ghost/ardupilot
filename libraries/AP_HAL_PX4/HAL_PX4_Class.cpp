@@ -58,7 +58,7 @@ static PX4::SPIDeviceManager spi_mgr_instance;
 #define UARTC_DEFAULT_DEVICE "/dev/ttyS1"
 #define UARTD_DEFAULT_DEVICE "/dev/ttyS2"
 #define UARTE_DEFAULT_DEVICE "/dev/ttyS6"
-#define UARTF_DEFAULT_DEVICE "/dev/null"
+#define UARTF_DEFAULT_DEVICE "/dev/ttyS5"
 #elif defined(CONFIG_ARCH_BOARD_PX4FMU_V4) || defined(CONFIG_ARCH_BOARD_PX4FMU_V4PRO)
 #define UARTA_DEFAULT_DEVICE "/dev/ttyACM0"
 #define UARTB_DEFAULT_DEVICE "/dev/ttyS3"
@@ -220,6 +220,7 @@ static void usage(void)
     printf("\t-d2 DEVICE         set second terminal device (default %s)\n", UARTC_DEFAULT_DEVICE);
     printf("\t-d3 DEVICE         set 3rd terminal device (default %s)\n", UARTD_DEFAULT_DEVICE);
     printf("\t-d4 DEVICE         set 2nd GPS device (default %s)\n", UARTE_DEFAULT_DEVICE);
+    printf("\t-d5 DEVICE         set uartF (default %s)\n", UARTF_DEFAULT_DEVICE);
     printf("\n");
 }
 
@@ -231,6 +232,7 @@ void HAL_PX4::run(int argc, char * const argv[], Callbacks* callbacks) const
     const char *deviceC = UARTC_DEFAULT_DEVICE;
     const char *deviceD = UARTD_DEFAULT_DEVICE;
     const char *deviceE = UARTE_DEFAULT_DEVICE;
+    const char *deviceF = UARTF_DEFAULT_DEVICE;
 
     if (argc < 1) {
         printf("%s: missing command (try '%s start')", 
@@ -254,8 +256,10 @@ void HAL_PX4::run(int argc, char * const argv[], Callbacks* callbacks) const
             uartCDriver.set_device_path(deviceC);
             uartDDriver.set_device_path(deviceD);
             uartEDriver.set_device_path(deviceE);
-            printf("Starting %s uartA=%s uartC=%s uartD=%s uartE=%s\n", 
-                   SKETCHNAME, deviceA, deviceC, deviceD, deviceE);
+            uartFDriver.set_device_path(deviceF);
+
+            printf("Starting %s uartA=%s uartC=%s uartD=%s uartE=%s uartF=%s\n",
+                   SKETCHNAME, deviceA, deviceC, deviceD, deviceE, deviceF);
 
             _px4_thread_should_exit = false;
             daemon_task = px4_task_spawn_cmd(SKETCHNAME,
@@ -322,6 +326,17 @@ void HAL_PX4::run(int argc, char * const argv[], Callbacks* callbacks) const
                 deviceE = strdup(argv[i+1]);
             } else {
                 printf("missing parameter to -d4 DEVICE\n");
+                usage();
+                exit(1);
+            }
+        }
+
+        if (strcmp(argv[i], "-d5") == 0) {
+            // set uartF
+            if (argc > i + 1) {
+                deviceF = strdup(argv[i+1]);
+            } else {
+                printf("missing parameter to -d5 DEVICE\n");
                 usage();
                 exit(1);
             }

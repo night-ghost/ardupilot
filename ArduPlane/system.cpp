@@ -8,61 +8,6 @@
 *
 *****************************************************************************/
 
-#if CLI_ENABLED == ENABLED
-
-// This is the help function
-int8_t Plane::main_menu_help(uint8_t argc, const Menu::arg *argv)
-{
-    cliSerial->printf("Commands:\n"
-                         "  logs        log readback/setup mode\n"
-                         "  setup       setup mode\n"
-                         "  test        test mode\n"
-                         "  reboot      reboot to flight mode\n"
-                         "\n");
-    return(0);
-}
-
-// Command/function table for the top-level menu.
-static const struct Menu::command main_menu_commands[] = {
-//   command		function called
-//   =======        ===============
-    {"logs",        MENU_FUNC(process_logs)},
-    {"setup",       MENU_FUNC(setup_mode)},
-    {"test",        MENU_FUNC(test_mode)},
-    {"reboot",      MENU_FUNC(reboot_board)},
-    {"help",        MENU_FUNC(main_menu_help)},
-};
-
-// Create the top-level menu object.
-MENU(main_menu, THISFIRMWARE, main_menu_commands);
-
-int8_t Plane::reboot_board(uint8_t argc, const Menu::arg *argv)
-{
-    hal.scheduler->reboot(false);
-    return 0;
-}
-
-// the user wants the CLI. It never exits
-void Plane::run_cli(AP_HAL::UARTDriver *port)
-{
-    // disable the failsafe code in the CLI
-    hal.scheduler->register_timer_failsafe(nullptr,1);
-
-    // disable the mavlink delay callback
-    hal.scheduler->register_delay_callback(nullptr, 5);
-
-    cliSerial = port;
-    Menu::set_port(port);
-    port->set_blocking_writes(true);
-
-    while (1) {
-        main_menu.run();
-    }
-}
-
-#endif // CLI_ENABLED
-
-
 static void mavlink_delay_cb_static()
 {
     plane.mavlink_delay_cb();
@@ -78,9 +23,10 @@ void Plane::init_ardupilot()
     // initialise serial port
     serial_manager.init_console();
 
-    cliSerial->printf("\n\nInit " FIRMWARE_STRING
-                         "\n\nFree RAM: %u\n",
-                      (unsigned)hal.util->available_memory());
+    hal.console->printf("\n\nInit %s"
+                        "\n\nFree RAM: %u\n",
+                        fwver.fw_string,
+                        (unsigned)hal.util->available_memory());
 
 
     //
@@ -127,13 +73,6 @@ void Plane::init_ardupilot()
     gcs().chan(0).setup_uart(serial_manager, AP_SerialManager::SerialProtocol_MAVLink, 0);
 
 
-    // specify callback function for CLI menu system
-#if CLI_ENABLED == ENABLED
-    if (g.cli_enabled) {
-        gcs().set_run_cli_func(FUNCTOR_BIND_MEMBER(&Plane::run_cli, void, AP_HAL::UARTDriver *));
-    }
-#endif
-
     // Register mavlink_delay_cb, which will run anytime you have
     // more than 5ms remaining in your call to hal.scheduler->delay
     hal.scheduler->register_delay_callback(mavlink_delay_cb_static, 5);
@@ -159,7 +98,7 @@ void Plane::init_ardupilot()
     // used to detect in-flight resets
     g.num_resets.set_and_save(g.num_resets+1);
 
-    // init baro before we start the GCS, so that the CLI baro test works
+    // init baro
     barometer.init();
 
     // initialise rangefinder
@@ -176,7 +115,7 @@ void Plane::init_ardupilot()
     // setup frsky
 #if FRSKY_TELEM_ENABLED == ENABLED
     // setup frsky, and pass a number of parameters to the library
-    frsky_telemetry.init(serial_manager, FIRMWARE_STRING,
+    frsky_telemetry.init(serial_manager, fwver.fw_string,
                          MAV_TYPE_FIXED_WING,
                          &g.fs_batt_voltage, &g.fs_batt_mah);
 #endif
@@ -196,7 +135,7 @@ void Plane::init_ardupilot()
     }
 #endif
         if (!compass_ok) {
-            cliSerial->printf("Compass initialisation failed!\n");
+            hal.console->printf("Compass initialisation failed!\n");
             g.compass_enabled = false;
         } else {
             ahrs.set_compass(&compass);
@@ -234,10 +173,6 @@ void Plane::init_ardupilot()
      *  the RC library being initialised.
      */
     hal.scheduler->register_timer_failsafe(failsafe_check_static, 1000);
-
-#if CLI_ENABLED == ENABLED
-    gcs().handle_interactive_setup();
-#endif // CLI_ENABLED
 
     init_capabilities();
 
@@ -289,12 +224,6 @@ void Plane::startup_ground(void)
     //------------------------
     //
     startup_INS_ground();
-
-    // read the radio to set trims
-    // ---------------------------
-    if (g.trim_rc_at_start != 0) {
-        trim_radio();
-    }
 
     // Save the settings for in-air restart
     // ------------------------------------
@@ -528,37 +457,6 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
     steerController.reset_I();    
 }
 
-/*
-  set_mode() wrapper for MAVLink SET_MODE
- */
-bool Plane::mavlink_set_mode(uint8_t mode)
-{
-    switch (mode) {
-    case MANUAL:
-    case CIRCLE:
-    case STABILIZE:
-    case TRAINING:
-    case ACRO:
-    case FLY_BY_WIRE_A:
-    case AUTOTUNE:
-    case FLY_BY_WIRE_B:
-    case CRUISE:
-    case AVOID_ADSB:
-    case GUIDED:
-    case AUTO:
-    case RTL:
-    case LOITER:
-    case QSTABILIZE:
-    case QHOVER:
-    case QLOITER:
-    case QLAND:
-    case QRTL:
-        set_mode((enum FlightMode)mode, MODE_REASON_GCS_COMMAND);
-        return true;
-    }
-    return false;
-}
-
 // exit_mode - perform any cleanup required when leaving a flight mode
 void Plane::exit_mode(enum FlightMode mode)
 {
@@ -686,72 +584,6 @@ void Plane::resetPerfData(void)
 }
 
 
-void Plane::print_flight_mode(AP_HAL::BetterStream *port, uint8_t mode)
-{
-    switch (mode) {
-    case MANUAL:
-        port->printf("Manual");
-        break;
-    case CIRCLE:
-        port->printf("Circle");
-        break;
-    case STABILIZE:
-        port->printf("Stabilize");
-        break;
-    case TRAINING:
-        port->printf("Training");
-        break;
-    case ACRO:
-        port->printf("ACRO");
-        break;
-    case FLY_BY_WIRE_A:
-        port->printf("FBW_A");
-        break;
-    case AUTOTUNE:
-        port->printf("AUTOTUNE");
-        break;
-    case FLY_BY_WIRE_B:
-        port->printf("FBW_B");
-        break;
-    case CRUISE:
-        port->printf("CRUISE");
-        break;
-    case AUTO:
-        port->printf("AUTO");
-        break;
-    case RTL:
-        port->printf("RTL");
-        break;
-    case LOITER:
-        port->printf("Loiter");
-        break;
-    case AVOID_ADSB:
-        port->printf("AVOID_ADSB");
-        break;
-    case GUIDED:
-        port->printf("Guided");
-        break;
-    case QSTABILIZE:
-        port->printf("QStabilize");
-        break;
-    case QHOVER:
-        port->printf("QHover");
-        break;
-    case QLOITER:
-        port->printf("QLoiter");
-        break;
-    case QLAND:
-        port->printf("QLand");
-        break;
-    case QRTL:
-        port->printf("QRTL");
-        break;
-    default:
-        port->printf("Mode(%u)", (unsigned)mode);
-        break;
-    }
-}
-
 // sets notify object flight mode information
 void Plane::notify_flight_mode(enum FlightMode mode)
 {
@@ -824,13 +656,6 @@ void Plane::notify_flight_mode(enum FlightMode mode)
         break;
     }
 }
-
-#if CLI_ENABLED == ENABLED
-void Plane::print_comma(void)
-{
-    cliSerial->printf(",");
-}
-#endif
 
 /*
   should we log a message type now?

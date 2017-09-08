@@ -4,6 +4,8 @@
 #include <GCS_MAVLink/GCS_MAVLink.h>  // for MAV_SEVERITY
 #include "defines.h"
 
+#define MODE_NEXT_HEADING_UNKNOWN   99999.0f    // used to indicate to set_desired_location method that next leg's heading is unknown
+
 class Mode
 {
 public:
@@ -62,7 +64,9 @@ public:
     virtual float get_distance_to_destination() const { return 0.0f; }
 
     // set desired location and speed (used in RTL, Guided, Auto)
-    virtual void set_desired_location(const struct Location& destination);
+    //   next_leg_bearing_cd should be heading to the following waypoint (used to slow the vehicle in order to make the turn)
+    virtual void set_desired_location(const struct Location& destination, float next_leg_bearing_cd = MODE_NEXT_HEADING_UNKNOWN);
+
     // true if vehicle has reached desired location. defaults to true because this is normally used by missions and we do not want the mission to become stuck
     virtual bool reached_destination() { return true; }
 
@@ -92,10 +96,19 @@ protected:
 
     // calculates the amount of throttle that should be output based
     // on things like proximity to corners and current speed
-    virtual void calc_throttle(float target_speed, bool reversed = false);
+    virtual void calc_throttle(float target_speed, bool nudge_allowed = true);
 
-    // calculate pilot input to nudge throttle up or down
-    int16_t calc_throttle_nudge();
+    // performs a controlled stop. returns true once vehicle has stopped
+    bool stop_vehicle();
+
+    // estimate maximum vehicle speed (in m/s)
+    float calc_speed_max(float cruise_speed, float cruise_throttle);
+
+    // calculate pilot input to nudge speed up or down
+    //  target_speed should be in meters/sec
+    //  cruise_speed is vehicle's cruising speed, cruise_throttle is the throttle (from -1 to +1) that achieves the cruising speed
+    //  return value is a new speed (in m/s) which up to the projected maximum speed based on the cruise speed and cruise throttle
+    float calc_speed_nudge(float target_speed, float cruise_speed, float cruise_throttle);
 
     // calculated a reduced speed(in m/s) based on yaw error and lateral acceleration and/or distance to a waypoint
     // should be called after calc_lateral_acceleration and before calc_throttle
@@ -109,6 +122,8 @@ protected:
     class RC_Channel *&channel_steer;
     class RC_Channel *&channel_throttle;
     class AP_Mission &mission;
+    class AR_AttitudeControl &attitude_control;
+
 
     // private members for waypoint navigation
     Location _origin;           // origin Location (vehicle will travel from the origin to the destination)
@@ -118,6 +133,7 @@ protected:
     float _desired_yaw_cd;      // desired yaw in centi-degrees
     float _yaw_error_cd;        // error between desired yaw and actual yaw in centi-degrees
     float _desired_speed;       // desired speed in m/s
+    float _desired_speed_final; // desired speed in m/s when we reach the destination
     float _speed_error;         // ground speed error in m/s
 };
 
@@ -130,7 +146,7 @@ public:
 
     // methods that affect movement of the vehicle in this mode
     void update() override;
-    void calc_throttle(float target_speed, bool reversed = false);
+    void calc_throttle(float target_speed, bool nudge_allowed = true);
 
     // attributes of the mode
     bool is_autopilot_mode() const override { return true; }
@@ -141,7 +157,7 @@ public:
 
     // set desired location, heading and speed
     // set stay_active_at_dest if the vehicle should attempt to maintain it's position at the destination (mostly for boats)
-    void set_desired_location(const struct Location& destination, bool stay_active_at_dest);
+    void set_desired_location(const struct Location& destination, float next_leg_bearing_cd = MODE_NEXT_HEADING_UNKNOWN, bool stay_active_at_dest = false);
     bool reached_destination() override;
 
     // heading and speed control
@@ -191,7 +207,7 @@ public:
     float get_distance_to_destination() const override;
 
     // set desired location, heading and speed
-    void set_desired_location(const struct Location& destination) override;
+    void set_desired_location(const struct Location& destination);
     void set_desired_heading_and_speed(float yaw_angle_cd, float target_speed) override;
 
     // set desired heading-delta, turn-rate and speed
@@ -246,17 +262,6 @@ public:
     // attributes for mavlink system status reporting
     bool has_manual_input() const override { return true; }
     bool attitude_stabilized() const override { return false; }
-};
-
-
-class ModeLearning : public ModeManual
-{
-public:
-
-    uint32_t mode_number() const override { return LEARNING; }
-
-    // attributes for mavlink system status reporting
-    bool has_manual_input() const override { return true; }
 };
 
 

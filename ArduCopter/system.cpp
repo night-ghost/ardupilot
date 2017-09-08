@@ -8,66 +8,6 @@
 *
 *****************************************************************************/
 
-#if CLI_ENABLED == ENABLED
-
-// This is the help function
-int8_t Copter::main_menu_help(uint8_t argc, const Menu::arg *argv)
-{
-    cliSerial->printf("Commands:\n"
-                         "  logs\n"
-                         "  setup\n"
-                         "  test\n"
-                         "  reboot\n"
-                         "\n");
-    return(0);
-}
-
-// Command/function table for the top-level menu.
-const struct Menu::command main_menu_commands[] = {
-//   command		function called
-//   =======        ===============
-    {"logs",                MENU_FUNC(process_logs)},
-    {"setup",               MENU_FUNC(setup_mode)},
-    {"test",                MENU_FUNC(test_mode)},
-    {"reboot",              MENU_FUNC(reboot_board)},
-    {"help",                MENU_FUNC(main_menu_help)},
-};
-
-// Create the top-level menu object.
-MENU(main_menu, THISFIRMWARE, main_menu_commands);
-
-int8_t Copter::reboot_board(uint8_t argc, const Menu::arg *argv)
-{
-    hal.scheduler->reboot(false);
-    return 0;
-}
-
-// the user wants the CLI. It never exits
-void Copter::run_cli(AP_HAL::UARTDriver *port)
-{
-    cliSerial = port;
-    Menu::set_port(port);
-    port->set_blocking_writes(true);
-
-    // disable the mavlink delay callback
-    hal.scheduler->register_delay_callback(nullptr, 5);
-
-    // disable main_loop failsafe
-    failsafe_disable();
-
-    // cut the engines
-    if(motors->armed()) {
-        motors->armed(false);
-        motors->output();
-    }
-
-    while (1) {
-        main_menu.run();
-    }
-}
-
-#endif // CLI_ENABLED
-
 static void mavlink_delay_cb_static()
 {
     copter.mavlink_delay_cb();
@@ -96,9 +36,10 @@ void Copter::init_ardupilot()
     // init vehicle capabilties
     init_capabilities();
 
-    cliSerial->printf("\n\nInit " FIRMWARE_STRING
-                         "\n\nFree RAM: %u\n",
-                      (unsigned)hal.util->available_memory());
+    hal.console->printf("\n\nInit %s"
+                        "\n\nFree RAM: %u\n",
+                        fwver.fw_string,
+                        (unsigned)hal.util->available_memory());
 
     //
     // Report firmware version code expect on console (check of actual EEPROM format version is done in load_parameters function)
@@ -122,13 +63,6 @@ void Copter::init_ardupilot()
     // setup first port early to allow BoardConfig to report errors
     gcs().chan(0).setup_uart(serial_manager, AP_SerialManager::SerialProtocol_MAVLink, 0);
 
-
-#if CLI_ENABLED == ENABLED
-    // specify callback function for CLI menu system
-    if (g.cli_enabled) {
-        gcs().set_run_cli_func(FUNCTOR_BIND_MEMBER(&Copter::run_cli, void, AP_HAL::UARTDriver *));
-    }
-#endif
 
     // Register mavlink_delay_cb, which will run anytime you have
     // more than 5ms remaining in your call to hal.scheduler->delay
@@ -167,7 +101,7 @@ void Copter::init_ardupilot()
 #if FRSKY_TELEM_ENABLED == ENABLED
     // setup frsky, and pass a number of parameters to the library
     char firmware_buf[50];
-    snprintf(firmware_buf, sizeof(firmware_buf), FIRMWARE_STRING " %s", get_frame_string());
+    snprintf(firmware_buf, sizeof(firmware_buf), "%s %s", fwver.fw_string, get_frame_string());
     frsky_telemetry.init(serial_manager, firmware_buf,
                          get_frame_mav_type(),
                          &g.fs_batt_voltage, &g.fs_batt_mah, &ap.value);
@@ -184,7 +118,10 @@ void Copter::init_ardupilot()
     // trad heli specific initialisation
     heli_init();
 #endif
-    
+#if FRAME_CONFIG == HELI_FRAME
+    input_manager.set_loop_rate(scheduler.get_loop_rate_hz());
+#endif
+
     init_rc_in();               // sets up rc channels from radio
 
     // default frame class to match firmware if possible
@@ -257,10 +194,6 @@ void Copter::init_ardupilot()
     USERHOOK_INIT
 #endif
 
-#if CLI_ENABLED == ENABLED
-    gcs().handle_interactive_setup();
-#endif // CLI_ENABLED
-
 #if HIL_MODE != HIL_MODE_DISABLED
     while (barometer.get_last_update() == 0) {
         // the barometer begins updating when we get the first
@@ -321,15 +254,14 @@ void Copter::init_ardupilot()
     ins.set_log_raw_bit(MASK_LOG_IMU_RAW);
 
     // enable output to motors
-    arming.pre_arm_rc_checks(true);
-    if (ap.pre_arm_rc_check) {
+    if (arming.rc_calibration_checks(true)) {
         enable_motor_output();
     }
 
     // disable safety if requested
     BoardConfig.init_safety();
 
-    cliSerial->printf("\nReady to FLY ");
+    hal.console->printf("\nReady to FLY ");
 
     // flag that initialisation has completed
     ap.initialised = true;
@@ -587,36 +519,36 @@ void Copter::allocate_motors(void)
         case AP_Motors::MOTOR_FRAME_OCTAQUAD:
         case AP_Motors::MOTOR_FRAME_DODECAHEXA:
         default:
-            motors = new AP_MotorsMatrix(MAIN_LOOP_RATE);
+            motors = new AP_MotorsMatrix(copter.scheduler.get_loop_rate_hz());
             motors_var_info = AP_MotorsMatrix::var_info;
             break;
         case AP_Motors::MOTOR_FRAME_TRI:
-            motors = new AP_MotorsTri(MAIN_LOOP_RATE);
+            motors = new AP_MotorsTri(copter.scheduler.get_loop_rate_hz());
             motors_var_info = AP_MotorsTri::var_info;
             AP_Param::set_frame_type_flags(AP_PARAM_FRAME_TRICOPTER);
             break;
         case AP_Motors::MOTOR_FRAME_SINGLE:
-            motors = new AP_MotorsSingle(MAIN_LOOP_RATE);
+            motors = new AP_MotorsSingle(copter.scheduler.get_loop_rate_hz());
             motors_var_info = AP_MotorsSingle::var_info;
             break;
         case AP_Motors::MOTOR_FRAME_COAX:
-            motors = new AP_MotorsCoax(MAIN_LOOP_RATE);
+            motors = new AP_MotorsCoax(copter.scheduler.get_loop_rate_hz());
             motors_var_info = AP_MotorsCoax::var_info;
             break;
         case AP_Motors::MOTOR_FRAME_TAILSITTER:
-            motors = new AP_MotorsTailsitter(MAIN_LOOP_RATE);
+            motors = new AP_MotorsTailsitter(copter.scheduler.get_loop_rate_hz());
             motors_var_info = AP_MotorsTailsitter::var_info;
             break;
 #else // FRAME_CONFIG == HELI_FRAME
         case AP_Motors::MOTOR_FRAME_HELI_DUAL:
-            motors = new AP_MotorsHeli_Dual(MAIN_LOOP_RATE);
+            motors = new AP_MotorsHeli_Dual(copter.scheduler.get_loop_rate_hz());
             motors_var_info = AP_MotorsHeli_Dual::var_info;
             AP_Param::set_frame_type_flags(AP_PARAM_FRAME_HELI);
             break;
             
         case AP_Motors::MOTOR_FRAME_HELI:
         default:
-            motors = new AP_MotorsHeli_Single(MAIN_LOOP_RATE);
+            motors = new AP_MotorsHeli_Single(copter.scheduler.get_loop_rate_hz());
             motors_var_info = AP_MotorsHeli_Single::var_info;
             AP_Param::set_frame_type_flags(AP_PARAM_FRAME_HELI);
             break;

@@ -16,7 +16,6 @@ int16_t yTrim = 0;
 int16_t video_switch = 1100;
 int16_t x_last, y_last, z_last;
 uint16_t buttons_prev;
-float gain;
 
 // Servo control output channels
 // TODO: Allow selecting output channels
@@ -319,11 +318,12 @@ void Sub::handle_jsbutton_press(uint8_t button, bool shift, bool held)
     case JSButton::button_function_t::k_trim_pitch_dec:
         pitchTrim = constrain_float(pitchTrim-10,-200,200);
         break;
-    case JSButton::button_function_t::k_input_hold_toggle:
+    case JSButton::button_function_t::k_input_hold_set:
         if (!held) {
             zTrim = z_last-500;
             xTrim = x_last;
             yTrim = y_last;
+            input_hold_engaged = abs(zTrim) > 20 || abs(xTrim) > 20 || abs(yTrim) > 20;
             gcs().send_text(MAV_SEVERITY_INFO,"#Input Hold Set");
         }
         break;
@@ -539,7 +539,7 @@ void Sub::default_js_buttons()
         {JSButton::button_function_t::k_arm,                    JSButton::button_function_t::k_none},
         {JSButton::button_function_t::k_mount_center,           JSButton::button_function_t::k_none},
 
-        {JSButton::button_function_t::k_input_hold_toggle,      JSButton::button_function_t::k_none},
+        {JSButton::button_function_t::k_input_hold_set,         JSButton::button_function_t::k_none},
         {JSButton::button_function_t::k_mount_tilt_down,        JSButton::button_function_t::k_none},
         {JSButton::button_function_t::k_mount_tilt_up,          JSButton::button_function_t::k_none},
         {JSButton::button_function_t::k_gain_inc,               JSButton::button_function_t::k_trim_pitch_dec},
@@ -566,8 +566,6 @@ void Sub::set_neutral_controls()
     for (uint8_t i = 6; i < 11; i++) {
         channels[i] = 0xffff;
     }
-
-    channels[4] = 0xffff; // Leave mode switch where it was
 
     hal.rcin->set_overrides(channels, 10);
 }

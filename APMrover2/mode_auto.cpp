@@ -9,9 +9,8 @@ bool ModeAuto::_enter()
         return false;
     }
 
-    // init controllers and location target
-    g.pidSpeedThrottle.reset_I();
-    set_desired_location(rover.current_loc, false);
+    // init location target
+    set_desired_location(rover.current_loc);
 
     // other initialisation
     auto_triggered = false;
@@ -52,11 +51,10 @@ void ModeAuto::update()
                 // continue driving towards destination
                 calc_lateral_acceleration(active_at_destination ? rover.current_loc : _origin, _destination, _reversed);
                 calc_nav_steer(_reversed);
-                calc_throttle(calc_reduced_speed_for_turn_or_distance(_desired_speed), _reversed);
+                calc_throttle(calc_reduced_speed_for_turn_or_distance(_reversed ? -_desired_speed : _desired_speed), true);
             } else {
                 // we have reached the destination so stop
-                g2.motors.set_throttle(g.throttle_min.get());
-                g2.motors.set_steering(0.0f);
+                stop_vehicle();
                 lateral_acceleration = 0.0f;
             }
             break;
@@ -66,14 +64,14 @@ void ModeAuto::update()
         {
             if (!_reached_heading) {
                 // run steering and throttle controllers
-                const float yaw_error_cd = wrap_180_cd(_desired_yaw_cd - ahrs.yaw_sensor);
-                g2.motors.set_steering(rover.steerController.get_steering_out_angle_error(yaw_error_cd));
-                calc_throttle(_desired_speed);
+                const float yaw_error = wrap_PI(radians((_desired_yaw_cd - ahrs.yaw_sensor) * 0.01f));
+                const float steering_out = attitude_control.get_steering_out_angle_error(yaw_error, g2.motors.have_skid_steering(), g2.motors.limit.steer_left, g2.motors.limit.steer_right);
+                g2.motors.set_steering(steering_out * 4500.0f);
+                calc_throttle(_desired_speed, true);
                 // check if we have reached target
-                _reached_heading = (fabsf(yaw_error_cd) < 500);
+                _reached_heading = (fabsf(yaw_error) < radians(5));
             } else {
-                g2.motors.set_throttle(g.throttle_min.get());
-                g2.motors.set_steering(0.0f);
+                stop_vehicle();
             }
             break;
         }
@@ -81,10 +79,10 @@ void ModeAuto::update()
 }
 
 // set desired location to drive to
-void ModeAuto::set_desired_location(const struct Location& destination, bool stay_active_at_dest)
+void ModeAuto::set_desired_location(const struct Location& destination, float next_leg_bearing_cd, bool stay_active_at_dest)
 {
     // call parent
-    Mode::set_desired_location(destination);
+    Mode::set_desired_location(destination, next_leg_bearing_cd);
 
     _submode = Auto_WP;
     _stay_active_at_dest = stay_active_at_dest;
@@ -174,16 +172,12 @@ bool ModeAuto::check_trigger(void)
     return false;
 }
 
-void ModeAuto::calc_throttle(float target_speed, bool reversed)
+void ModeAuto::calc_throttle(float target_speed, bool nudge_allowed)
 {
     // If not autostarting set the throttle to minimum
     if (!check_trigger()) {
-        g2.motors.set_throttle(g.throttle_min.get());
-        // Stop rotation in case of loitering and skid steering
-        if (g2.motors.have_skid_steering()) {
-            g2.motors.set_steering(0.0f);
-        }
+        stop_vehicle();
         return;
     }
-    Mode::calc_throttle(target_speed, reversed);
+    Mode::calc_throttle(target_speed, nudge_allowed);
 }

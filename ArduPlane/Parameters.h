@@ -134,8 +134,8 @@ public:
         k_param_override_channel,
         k_param_stall_prevention,
         k_param_optflow,
-        k_param_cli_enabled,
-        k_param_trim_rc_at_start,
+        k_param_cli_enabled_old, // unused - CLI removed
+        k_param_trim_rc_at_start, // unused
         k_param_hil_mode,
         k_param_land_disarm_delay,  // unused - moved to AP_Landing
         k_param_glide_slope_threshold,
@@ -361,15 +361,11 @@ public:
     AP_Int16 sysid_this_mav;
     AP_Int16 sysid_my_gcs;
     AP_Int8 telem_delay;
-#if CLI_ENABLED == ENABLED
-    AP_Int8 cli_enabled;
-#endif
 
     AP_Float hil_err_limit;
 
     AP_Int8  rtl_autoland;
 
-    AP_Int8  trim_rc_at_start;
     AP_Int8  crash_accel_threshold;
 
     // Feed-forward gains
@@ -545,6 +541,10 @@ public:
 
     // mask of channels to do manual pass-thru for
     AP_Int32 manual_rc_mask;
+
+    // home reset altitude threshold
+    AP_Int8 home_reset_threshold;
+
 };
 
 extern const AP_Param::Info var_info[];

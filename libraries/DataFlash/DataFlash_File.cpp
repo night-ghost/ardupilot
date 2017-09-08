@@ -80,7 +80,9 @@ DataFlash_File::DataFlash_File(DataFlash_Class &front,
     _perf_fsync(hal.util->perf_alloc(AP_HAL::Util::PC_ELAPSED, "DF_fsync")),
     _perf_errors(hal.util->perf_alloc(AP_HAL::Util::PC_COUNT, "DF_errors")),
     _perf_overruns(hal.util->perf_alloc(AP_HAL::Util::PC_COUNT, "DF_overruns"))
-{}
+{
+    df_stats_clear();
+}
 
 
 void DataFlash_File::Init()
@@ -174,7 +176,6 @@ bool DataFlash_File::log_exists(const uint16_t lognum) const
 {
     char *filename = _log_file_name(lognum);
     if (filename == nullptr) {
-        // internal_error();
         return false; // ?!
     }
     bool ret = file_exists(filename);
@@ -197,6 +198,7 @@ void DataFlash_File::periodic_1Hz(const uint32_t now)
         _write_fd = -1;
         _initialised = false;
     }
+    df_stats_log();
 }
 
 void DataFlash_File::periodic_fullrate(const uint32_t now)
@@ -223,11 +225,11 @@ bool DataFlash_File::CardInserted(void) const
 int64_t DataFlash_File::disk_space_avail()
 {
 #if !DATAFLASH_FILE_MINIMAL
-    struct statfs stats;
-    if (statfs(_log_directory, &stats) < 0) {
+    struct statfs _stats;
+    if (statfs(_log_directory, &_stats) < 0) {
         return -1;
     }
-    return (((int64_t)stats.f_bavail) * stats.f_bsize);
+    return (((int64_t)_stats.f_bavail) * _stats.f_bsize);
 #else
     // return a fake disk space size
     return 100*1000*1000UL;
@@ -240,11 +242,11 @@ int64_t DataFlash_File::disk_space_avail()
 int64_t DataFlash_File::disk_space()
 {
 #if !DATAFLASH_FILE_MINIMAL
-    struct statfs stats;
-    if (statfs(_log_directory, &stats) < 0) {
+    struct statfs _stats;
+    if (statfs(_log_directory, &_stats) < 0) {
         return -1;
     }
-    return (((int64_t)stats.f_blocks) * stats.f_bsize);
+    return (((int64_t)_stats.f_blocks) * _stats.f_bsize);
 #else
     // return fake disk space size
     return 200*1000*1000UL;
@@ -290,7 +292,7 @@ uint16_t DataFlash_File::find_oldest_log()
     // doing a *lot* of asprintf()s and stat()s
     DIR *d = opendir(_log_directory);
     if (d == nullptr) {
-        // internal_error();
+        internal_error();
         return 0;
     }
 
@@ -353,7 +355,7 @@ void DataFlash_File::Prep_MinSpace()
     do {
         float avail = avail_space_percent();
         if (is_equal(avail, -1.0f)) {
-            // internal_error()
+            internal_error();
             break;
         }
         if (avail >= min_avail_space_percent) {
@@ -361,12 +363,12 @@ void DataFlash_File::Prep_MinSpace()
         }
         if (count++ > MAX_LOG_FILES+10) {
             // *way* too many deletions going on here.  Possible internal error.
-            // internal_error();
+            internal_error();
             break;
         }
         char *filename_to_remove = _log_file_name(log_to_remove);
         if (filename_to_remove == nullptr) {
-            // internal_error();
+            internal_error();
             break;
         }
         if (file_exists(filename_to_remove)) {
@@ -380,7 +382,7 @@ void DataFlash_File::Prep_MinSpace()
                     // sequence of files...  however, there may be still
                     // files out there, so keep going.
                 } else {
-                    // internal_error();
+                    internal_error();
                     break;
                 }
             } else {
@@ -574,6 +576,7 @@ bool DataFlash_File::_WritePrioritisedBlock(const void *pBuffer, uint16_t size, 
     }
 
     _writebuf.write((uint8_t*)pBuffer, size);
+    df_stats_gather(size);
     semaphore->give();
     return true;
 }
@@ -1213,5 +1216,46 @@ void DataFlash_File::vehicle_was_disarmed()
         stop_logging();
     }
 }
+
+void DataFlash_File::Log_Write_DataFlash_Stats_File(const struct df_stats &_stats)
+{
+    struct log_DSF pkt = {
+        LOG_PACKET_HEADER_INIT(LOG_DF_FILE_STATS),
+        time_us         : AP_HAL::micros64(),
+        dropped         : _dropped,
+        internal_errors : _internal_errors,
+        blocks          : _stats.blocks,
+        bytes           : _stats.bytes,
+        buf_space_min   : _stats.buf_space_min,
+        buf_space_max   : _stats.buf_space_max,
+        buf_space_avg   : (_stats.blocks) ? (_stats.buf_space_sigma / _stats.blocks) : 0,
+
+    };
+    WriteBlock(&pkt, sizeof(pkt));
+}
+
+void DataFlash_File::df_stats_gather(const uint16_t bytes_written) {
+    const uint32_t space_remaining = _writebuf.space();
+    if (space_remaining < stats.buf_space_min) {
+        stats.buf_space_min = space_remaining;
+    }
+    if (space_remaining > stats.buf_space_max) {
+        stats.buf_space_max = space_remaining;
+    }
+    stats.buf_space_sigma += space_remaining;
+    stats.bytes += bytes_written;
+    stats.blocks++;
+}
+
+void DataFlash_File::df_stats_clear() {
+    memset(&stats, '\0', sizeof(stats));
+    stats.buf_space_min = -1;
+}
+
+void DataFlash_File::df_stats_log() {
+    Log_Write_DataFlash_Stats_File(stats);
+    df_stats_clear();
+}
+
 
 #endif // HAL_OS_POSIX_IO

@@ -1,5 +1,14 @@
 #include "GCS.h"
 
+const AP_FWVersion fwver
+{
+    major: 3,
+    minor: 1,
+    patch: 4,
+    fw_type: FIRMWARE_VERSION_TYPE_DEV,
+    fw_string: "Dummy GCS"
+};
+
 /*
  *  GCS backend used for many examples and tools
  */
@@ -20,8 +29,10 @@ protected:
     AP_GPS *get_gps() const override { return nullptr; };
     AP_Camera *get_camera() const override { return nullptr; };
     AP_ServoRelayEvents *get_servorelayevents() const override { return nullptr; }
+    const AP_FWVersion &get_fwver() const override { return fwver; }
 
     uint8_t sysid_my_gcs() const override { return 1; }
+    bool set_mode(uint8_t mode) override { return false; };
 
 };
 
@@ -37,8 +48,6 @@ class GCS_Dummy : public GCS
     uint8_t num_gcs() const override { return 1; }
     GCS_MAVLINK_Dummy &chan(const uint8_t ofs) override { return dummy_backend; }
     const GCS_MAVLINK_Dummy &chan(const uint8_t ofs) const override { return dummy_backend; };
-    bool cli_enabled() const override { return false; }
-    AP_HAL::BetterStream*  cliSerial() { return nullptr; }
 
     void send_statustext(MAV_SEVERITY severity, uint8_t dest_bitmask, const char *text) { hal.console->printf("TOGCS: %s\n", text); }
 };

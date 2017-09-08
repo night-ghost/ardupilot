@@ -98,9 +98,23 @@ def drive_mission(mavproxy, mav, filename):
     print("Mission OK")
     return True
 
+def do_get_banner(mavproxy, mav):
+    mavproxy.send("long DO_SEND_BANNER 1\n")
+    mavproxy.expect("APM:Rover")
+    return True;
+
+def do_get_autopilot_capabilities(mavproxy, mav):
+    mavproxy.send("long REQUEST_AUTOPILOT_CAPABILITIES 1\n")
+    m = mav.recv_match(type='AUTOPILOT_VERSION', blocking=True, timeout=10)
+    if m is None:
+        print("AUTOPILOT_VERSION not received")
+        return False
+    print("AUTOPILOT_VERSION received")
+    return True;
+
 vinfo = vehicleinfo.VehicleInfo()
 
-def drive_APMrover2(binary, viewerip=None, use_map=False, valgrind=False, gdb=False, frame=None, params=None):
+def drive_APMrover2(binary, viewerip=None, use_map=False, valgrind=False, gdb=False, frame=None, params=None, gdbserver=False, speedup=10):
     """Drive APMrover2 in SITL.
 
     you can pass viewerip as an IP address to optionally send fg and
@@ -118,7 +132,7 @@ def drive_APMrover2(binary, viewerip=None, use_map=False, valgrind=False, gdb=Fa
         options += ' --map'
 
     home = "%f,%f,%u,%u" % (HOME.lat, HOME.lng, HOME.alt, HOME.heading)
-    sitl = util.start_SITL(binary, wipe=True, model=frame, home=home, speedup=10)
+    sitl = util.start_SITL(binary, wipe=True, model=frame, home=home, speedup=speedup)
     mavproxy = util.start_MAVProxy_SITL('APMrover2', options=options)
 
     print("WAITING FOR PARAMETERS")
@@ -140,7 +154,7 @@ def drive_APMrover2(binary, viewerip=None, use_map=False, valgrind=False, gdb=Fa
     util.pexpect_close(mavproxy)
     util.pexpect_close(sitl)
 
-    sitl = util.start_SITL(binary, model='rover', home=home, speedup=10, valgrind=valgrind, gdb=gdb)
+    sitl = util.start_SITL(binary, model='rover', home=home, speedup=speedup, valgrind=valgrind, gdb=gdb, gdbserver=gdbserver)
     mavproxy = util.start_MAVProxy_SITL('APMrover2', options=options)
     mavproxy.expect('Telemetry log: (\S+)')
     logfile = mavproxy.match.group(1)
@@ -202,6 +216,15 @@ def drive_APMrover2(binary, viewerip=None, use_map=False, valgrind=False, gdb=Fa
 #        if not drive_RTL(mavproxy, mav):
 #            print("Failed RTL")
 #            failed = True
+
+        # do not move this to be the first test.  MAVProxy's dedupe
+        # function may bite you.
+        print("Getting banner")
+        if not do_get_banner(mavproxy, mav):
+            failed = True
+        print("Getting autopilot capabilities")
+        if not do_get_autopilot_capabilities(mavproxy, mav):
+            failed = True
     except pexpect.TIMEOUT as e:
         print("Failed with timeout")
         failed = True

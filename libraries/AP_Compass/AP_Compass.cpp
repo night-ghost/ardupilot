@@ -595,13 +595,25 @@ void Compass::_detect_backends(void)
                                                                         both_i2c_external, ROTATION_NONE),
                      AP_Compass_AK09916::name, true);
         
-        // lis3mdl
-        ADD_BACKEND(DRIVER_LIS3MDL, AP_Compass_LIS3MDL::probe(*this, hal.i2c_mgr->get_device(1, HAL_COMPASS_LIS3MDL_I2C_ADDR),
-                                                              true, ROTATION_YAW_90),
-                    AP_Compass_LIS3MDL::name, true);
+        // lis3mdl on bus 0 with default address
         ADD_BACKEND(DRIVER_LIS3MDL, AP_Compass_LIS3MDL::probe(*this, hal.i2c_mgr->get_device(0, HAL_COMPASS_LIS3MDL_I2C_ADDR),
                                                               both_i2c_external, both_i2c_external?ROTATION_YAW_90:ROTATION_NONE),
                     AP_Compass_LIS3MDL::name, both_i2c_external);
+
+        // lis3mdl on bus 0 with alternate address
+        ADD_BACKEND(DRIVER_LIS3MDL, AP_Compass_LIS3MDL::probe(*this, hal.i2c_mgr->get_device(0, HAL_COMPASS_LIS3MDL_I2C_ADDR2),
+                                                              both_i2c_external, both_i2c_external?ROTATION_YAW_90:ROTATION_NONE),
+                    AP_Compass_LIS3MDL::name, both_i2c_external);
+
+        // external lis3mdl on bus 1 with default address
+        ADD_BACKEND(DRIVER_LIS3MDL, AP_Compass_LIS3MDL::probe(*this, hal.i2c_mgr->get_device(1, HAL_COMPASS_LIS3MDL_I2C_ADDR),
+                                                              true, ROTATION_YAW_90),
+                    AP_Compass_LIS3MDL::name, true);
+
+        // external lis3mdl on bus 1 with alternate address
+        ADD_BACKEND(DRIVER_LIS3MDL, AP_Compass_LIS3MDL::probe(*this, hal.i2c_mgr->get_device(1, HAL_COMPASS_LIS3MDL_I2C_ADDR2),
+                                                              true, ROTATION_YAW_90),
+                    AP_Compass_LIS3MDL::name, true);
         
         // AK09916
         ADD_BACKEND(DRIVER_AK09916, AP_Compass_AK09916::probe(*this, hal.i2c_mgr->get_device(1, HAL_COMPASS_AK09916_I2C_ADDR),
@@ -830,8 +842,9 @@ Compass::read(void)
         // call read on each of the backend. This call updates field[i]
         _backends[i]->read();
     }
+    uint32_t time = AP_HAL::millis();
     for (uint8_t i=0; i < COMPASS_MAX_INSTANCES; i++) {
-        _state[i].healthy = (AP_HAL::millis() - _state[i].last_update_ms < 500);
+        _state[i].healthy = (time - _state[i].last_update_ms < 500);
     }
     return healthy();
 }
