@@ -7,6 +7,10 @@
 #include "stm32.h"
 #include "util.h"
 
+#ifdef __cplusplus
+  extern "C" {
+#endif
+
 
 typedef void (*voidFuncPtr)(void);
 typedef void (*revo_isr_handler)(uint32_t arg);
@@ -21,6 +25,12 @@ typedef union Revo_Hal_Handler { // кровь кишки ассемблер :) 
     Handler h;      // treat as handle             <-- как 64-битное число
     uint32_t w[2]; // words, to check. если функтор то старшее - адрес флеша, младшее - адрес в RAM. Если ссылка на функцию то младшее - адрес флеша, старшее 0
 } Revo_hal_handler;
+
+extern void revo_call_handler(uint64_t hh, uint32_t arg);
+
+#ifdef __cplusplus
+  }
+#endif
 
 
 #define __attr_flash __attribute__((section (".USER_FLASH")))
