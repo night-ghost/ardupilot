@@ -83,9 +83,10 @@ public:
 
 #ifdef SI2C_DEBUG
     typedef struct SI2C_STATE {
+        uint32_t time;
         State state;
-        unsigned int sda  :4;
-        unsigned int f_sda:4;
+        unsigned int sda;
+        unsigned int f_sda;
     } SI2C_State;
 #endif 
 
@@ -124,7 +125,6 @@ private:
 
     volatile bool done;
     volatile uint8_t result;
-
     volatile State state;
     bool f_sda;    // what line we touch
     bool wait_scl; // flag - we wait for SCL stretching
@@ -133,15 +133,15 @@ private:
     uint8_t data;  // data byte to output / from input
 
     const uint8_t *send;
-    uint8_t send_len;
-    uint8_t *recv;
-    uint8_t recv_len;
-    uint8_t _addr;
+    uint8_t        send_len;
+    uint8_t       *recv;
+    uint8_t        recv_len;
+    uint8_t        _addr;
 
 #ifdef SI2C_DEBUG
     #define SI2C_LOG_SIZE 199
     static SI2C_State log[SI2C_LOG_SIZE];
-    static uint8_t log_ptr;
+    static uint16_t log_ptr;
 #endif
 
 #ifdef SI2C_PROF

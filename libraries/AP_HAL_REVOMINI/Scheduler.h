@@ -25,13 +25,19 @@
 #define REVOMINI_SCHEDULER_MAX_IO_PROCS 10
 #define REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS 32
 
-#define SHED_FREQ 8000 // in Hz
+#define USE_ISR_SCHED 0
+
+#if USE_ISR_SCHED
+ #define SHED_FREQ 8000 // in Hz - we don't use it for tasks anymore
+#else
+ #define SHED_FREQ 1000 // in Hz
+#endif
 
 
 
 #define MAIN_STACK_SIZE  8192U    // measured use of stack is only 1K - but it grows up to 4K when using FatFs
 #define DEFAULT_STACK_SIZE  8192U // Default tasks stack size and stack max - io_thread can do work with filesystem
-#define SLOW_TASK_STACK 2048U // small stack for sensors
+#define SLOW_TASK_STACK 1024U     // small stack for sensors
 #define STACK_MAX  65536U
 
 
@@ -78,6 +84,7 @@ union Revo_cb { // кровь кишки ассемблер :) преобраз�
 };
 #pragma pack(pop)
 
+#if USE_ISR_SCHED
 typedef struct RevoTimer {
     uint32_t period;            // interval in uS
     uint32_t last_run;          // last run time
@@ -86,12 +93,14 @@ typedef struct RevoTimer {
     REVOMINI::Semaphore *sem;
     revo_cb_type mode;
 
-#ifdef SHED_PROF
+ #ifdef SHED_PROF
     uint32_t micros;    // max exec time
     uint32_t count;     // number of calls
     uint64_t fulltime;  // full consumed time to calc mean
-#endif
+ #endif
 } revo_timer;
+#endif
+
 
 #ifdef SHED_DEBUG
 typedef struct RevoSchedLog {
@@ -168,8 +177,8 @@ public:
     void     delay_microseconds(uint16_t us) { _delay_microseconds(us); }
     void     delay_microseconds_boost(uint16_t us) override { _delay_microseconds_boost(us); }
     
-    inline   uint32_t millis() { yield(50);   return _millis(); } // this allows to run io_proc without calls to delay()
-    inline   uint32_t micros() {    return _micros(); }
+    inline   uint32_t millis() { yield(0);   return _millis(); } // this allows to run io_proc without calls to delay()
+    inline   uint32_t micros() { yield(0);   return _micros(); }
     
     void     register_timer_process(AP_HAL::MemberProc proc) { _register_timer_process(proc, 1000); }
     inline void  suspend_timer_procs(){     _timer_suspended = true; }
@@ -393,10 +402,11 @@ private:
     static Revo_IO _io_proc[REVOMINI_SCHEDULER_MAX_IO_PROCS];
     static uint8_t _num_io_proc;
 
+#if USE_ISR_SCHED
     static revo_timer _timers[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS];
     static uint8_t    _num_timers;
-
     static void _run_timers(void);
+#endif
     static void _run_io(void);
 
     void _print_stats();
@@ -418,8 +428,6 @@ private:
 #endif
 
 #ifdef MTASK_PROF
-    static uint64_t yield_time;
-    static uint32_t yield_count;
     static uint32_t max_wfe_time;
 
  #ifdef SHED_DEBUG

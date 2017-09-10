@@ -18,10 +18,10 @@ extern const AP_HAL::HAL& hal;
 
 REVOMINI::Semaphore REVOI2CDevice::_semaphores[3]; // 2 HW and 1 SW
 
-const timer_dev * REVOI2CDevice::_timers[3] = { // one timer per bus
-    TIMER4,
+const timer_dev * REVOI2CDevice::_timers[3] = { // one timer per bus for all devices
     TIMER9,
     TIMER10,
+    TIMER4,
 };
 
 bool REVOI2CDevice::lateInitDone=false;
@@ -198,33 +198,35 @@ again:
 
     if(!_dev){ // no hardware so use soft I2C
             
-            if(recv_len) memset(recv, 0, recv_len); // for DEBUG
+        if(recv_len) memset(recv, 0, recv_len); // for DEBUG
             
-            if(recv_len==0){ // only write
-                //                 uint8_t addr, uint8_t len, uint8_t * data)
-                ret=s_i2c.writeBuffer( _address, send_len, send );
+        if(recv_len==0){ // only write
+            //                 uint8_t addr, uint8_t len, uint8_t * data)
+            ret=s_i2c.writeBuffer( _address, send_len, send );
             
-            }else if(send_len==1){ // only read - send byte is address
-                //            uint8_t addr, uint8_t reg, uint8_t len, uint8_t *buf
-                ret=s_i2c.read(_address, *send, recv_len, recv);                
-            } else {
-                ret=s_i2c.transfer(_address, send_len, send, recv_len, recv);
-            }
+        }else if(send_len==1){ // only read - send byte is address
+            //            uint8_t addr, uint8_t reg, uint8_t len, uint8_t *buf
+            ret=s_i2c.read(_address, *send, recv_len, recv);                
+        } else {
+            ret=s_i2c.transfer(_address, send_len, send, recv_len, recv);
+        }
             
-            if(ret == I2C_NO_DEVICE) 
-                return false;
+        if(ret == I2C_NO_DEVICE) 
+            return false;
 
-            if(ret == I2C_OK) 
-                return true;
+        if(ret == I2C_OK) 
+            return true;
 
+        if((_retries-retries) > 0) { // don't reset and count for fixed at 2nd try errors
             _lockup_count ++;          
             last_error = ret;  
               
             if(!s_i2c.bus_reset()) return false;    
+        }
 
-            if(retries--) goto again;
+        if(retries--) goto again;
 
-            return false;
+        return false;
     } // software I2C
 
         

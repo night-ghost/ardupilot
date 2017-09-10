@@ -94,28 +94,6 @@ const gpio_dev * gpio_get_gpio_dev(uint8_t port)
 {
     // Check the parameters 
     if(port <= sizeof(_gpios) / sizeof(gpio_dev*) ) {
-
-/*
-	gpio_dev *dev;
-	 
-	switch(port) {
-		case 0: dev = _GPIOA;
-				break;
-		case 1: dev = _GPIOB;
-				break;
-		case 2: dev = _GPIOC;
-				break;
-		case 3: dev = _GPIOD;
-				break;
-		case 4: dev = _GPIOE;
-				break;
-		default:
-			assert_param(0);
-			//errno_r = EINVAL;
-			dev = NULL;
-	}		
-	return dev;
-*/
 	return _gpios[port];
     } else
 	return NULL;
@@ -136,7 +114,8 @@ void gpio_set_mode(const gpio_dev* const dev, uint8_t pin, gpio_pin_mode mode)
   
     /* Configure the pin */
     GPIO_StructInit(&config);
-    config.GPIO_Speed = GPIO_Speed_50MHz;
+//    config.GPIO_Speed = GPIO_Speed_50MHz;
+    config.GPIO_Speed = GPIO_Speed_2MHz;
 	
     switch(mode) {
 	case GPIO_OUTPUT_PP:

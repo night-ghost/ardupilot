@@ -28,7 +28,6 @@
 #include "Semaphores.h"
 
 #include <i2c.h>
-//#include "i2c_soft.h"
 #include "tim_i2c.h"
 
 #define MAX_I2C_DEVICES 10

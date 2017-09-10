@@ -103,6 +103,7 @@ static inline void afio_init(void)
  */
 void gpio_set_af_mode(const gpio_dev* const dev, uint8_t pin, uint8_t mode);
 
+
 /**
  * Get the gpio device from port number
  */

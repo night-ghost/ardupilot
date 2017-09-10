@@ -23,6 +23,7 @@
 #define I2C_NO_DEVICE   1
 #define I2C_ERROR       2
 #define I2C_BUS_BUSY    2
+#define I2C_ERR_WRITE   6
 #define I2C_NO_REGISTER 8 // 8 Acknolege Failed - not "no device"! this happens when we try to read non-existent register from chip
 #define I2C_BUS_ERR     99
 #define I2C_ERR_STOP    98

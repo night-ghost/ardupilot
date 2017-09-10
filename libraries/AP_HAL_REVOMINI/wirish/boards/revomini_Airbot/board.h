@@ -93,9 +93,6 @@ void boardInit(void);
 //#define BOARD_I2C_BUS_EXT 1  // external I2C
 #define BOARD_I2C_BUS_SLOW  1 // slow down bus with this number
 
-
-//#define BOARD_BARO_DEFAULT HAL_BARO_MS5611_I2C
-
 #define HAL_BARO_MS5611_I2C_BUS         BOARD_I2C_BUS_INT
 #define HAL_BARO_MS5611_I2C_ADDR        (0x77)
 
@@ -166,9 +163,9 @@ void boardInit(void);
 #define SERVO_PIN_5 48 // PA1
 #define SERVO_PIN_6 22 // PA8
 
-//#define HAL_CONSOLE USB_Driver // console on USB
-#define HAL_CONSOLE uart1Driver // console on radio
-#define HAL_CONSOLE_PORT 1
+#define HAL_CONSOLE USB_Driver // console on USB
+//#define HAL_CONSOLE uart1Driver // console on radio
+#define HAL_CONSOLE_PORT 0
 
 
 /*

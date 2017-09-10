@@ -511,6 +511,9 @@ typedef enum timer_oc_mode_flags {
 } timer_oc_mode_flags;
 
 
+typedef struct TimerState {
+    volatile uint8_t busy;
+} timerState;
 
 
 typedef struct TIM_DMA {
@@ -525,6 +528,7 @@ struct Timer_dev {
     Handler *handlers;          // < User IRQ handlers
     uint16_t af;                // GPIO AF number
     Tim_dma ch_dma[4];
+    timerState *state;
     //
     timer_type         type:3;         // < Timer's type 
     unsigned int n_handlers:5;         // number of handlers

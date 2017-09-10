@@ -66,8 +66,8 @@ it requires 16326 cycles to receive 6 bytes (with addressing and restart)
 #pragma GCC optimize ("O2")
 
 #include <AP_HAL/AP_HAL.h>
-
 #include "tim_i2c.h"
+#include <stdio.h>
 #include <i2c.h>
 
 // Software I2C driver
@@ -90,11 +90,11 @@ extern const AP_HAL::HAL& hal;
 
 #ifdef SI2C_DEBUG
  Soft_I2C::SI2C_State Soft_I2C::log[SI2C_LOG_SIZE];
- uint8_t              Soft_I2C::log_ptr=0;
+ uint16_t             Soft_I2C::log_ptr;
 #endif
 
 #ifdef SI2C_PROF
-    uint64_t Soft_I2C::full_time;
+    uint64_t Soft_I2C::full_time IN_CCM;
 #endif
 
 static void delay_10us(){
@@ -116,14 +116,18 @@ void Soft_I2C::init_hw( const gpio_dev *scl_dev, uint8_t scl_bit, const gpio_dev
     _sda_dev=sda_dev;
     _sda_bit=sda_bit;
     
+
+    gpio_set_mode(_scl_dev, _scl_bit, GPIO_OUTPUT_OD_PU);
+    gpio_set_mode(_sda_dev, _sda_bit, GPIO_OUTPUT_OD_PU);
+        
+    gpio_set_speed(_scl_dev, _scl_bit, GPIO_Speed_2MHz); // low speed to prevent glitches
+    gpio_set_speed(_sda_dev, _sda_bit, GPIO_Speed_2MHz);
+
     sda_port = sda_dev->GPIOx;
     sda_pin  = 1<<sda_bit;
 
     scl_port = scl_dev->GPIOx;
     scl_pin  = 1<<scl_bit;
-
-    gpio_set_mode(_scl_dev, _scl_bit, GPIO_OUTPUT_OD_PU);
-    gpio_set_mode(_sda_dev, _sda_bit, GPIO_OUTPUT_OD_PU);    
     
     _timer = tim;
 }
@@ -150,14 +154,15 @@ void Soft_I2C::tick() { // ISR
     f_sda = !f_sda;
 
 #ifdef SI2C_DEBUG
-     SI2C_State &sp = log[log_ptr]; // remember last operation
+    SI2C_State &sp = log[log_ptr]; // remember last operation
+    
+    sp.time  = hal_micros();
+    sp.state = state;
+    sp.f_sda = f_sda;
+    sp.sda   = SDA_read;
 
-     sp.state = state;
-     sp.f_sda = f_sda;
-     sp.sda   = SDA_read;
-
-     if(log_ptr<SI2C_LOG_SIZE-1) log_ptr++;
-//     else                        log_ptr=0;
+    log_ptr++;
+    if(log_ptr>=SI2C_LOG_SIZE) log_ptr=0;
 #endif
 
     if(f_sda) { // time to write/read data
@@ -201,7 +206,7 @@ void Soft_I2C::tick() { // ISR
             
         case  W_AH: // ACK for write byte - read on high level of SCL
             if(SDA_read){ // nack;
-                 result = I2C_ERROR;
+                 result = I2C_ERR_WRITE;
                  done    = true;
                  timer_pause(_timer);
             } else {
@@ -405,6 +410,11 @@ void Soft_I2C::tick() { // ISR
 
 bool Soft_I2C::_start(void)
 {
+    while(_timer->state->busy)  {
+        hal_yield(0);
+
+    }
+
     SDA_H;            // just in case
     SCL_H;
     
@@ -414,13 +424,15 @@ bool Soft_I2C::_start(void)
     state = DUMMY;// to skip interrupt on init
     f_sda = true;  // will be SCL phase
 
+    _timer->state->busy = true;
+
 #define SI2C_PERIOD 2 // time between interrups in uS
 
 // timers are per bus so re-init timer before use
     uint32_t freq = configTimeBase(_timer, 0, 10000);       //10MHz
     Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&Soft_I2C::tick, void) };
     timer_attach_interrupt(_timer, TIMER_UPDATE_INTERRUPT, h.h, 2); // high priority
-    timer_set_reload(_timer, SI2C_PERIOD * freq / 1000000);             // period to generate 2uS requests - 500kHz interrupts /4 = 125kHz I2C. 
+    timer_set_reload(_timer, SI2C_PERIOD * freq / 1000000);         // period to generate 2uS requests - 500kHz interrupts /4 = 125kHz I2C. 
                                                                 //  I hope that there will be a time between interrupts :)
 
     state  = START;
@@ -441,8 +453,8 @@ bool Soft_I2C::_start(void)
 
     data = _addr << 1 | I2C_Direction_Transmitter; // generate address to send
 
-    timer_generate_update(_timer);
     timer_resume(_timer); // all another in interrupt
+    timer_generate_update(_timer);
 
     return true;
 }
@@ -453,19 +465,42 @@ uint8_t Soft_I2C::wait_done(){
     uint32_t t = hal_micros();
 
     while(!done) {
-        if(hal_micros() - t > I2C_TIMEOUT) {
+        uint32_t dt = hal_micros() - t;
+        
+        if(dt > I2C_TIMEOUT) {
             timer_pause(_timer);
+            if(state==STOP2) break; // all fine
+            
+            if(SDA_read) { // low SDA first
+                if(SCL_read) { // at low SCL
+                    SCL_L;
+                    hal_delay_microseconds(2);
+                }
+                SDA_L;
+                hal_delay_microseconds(2);
+            }
             SCL_H;
-            delay_10us();       // STOP on bus
+            hal_delay_microseconds(2);
             SDA_H;
-            result = I2C_ERROR;
+            if(state>=STOP) break; // data received
+            result = I2C_ERR_TIMEOUT;
             break;
         }
         hal_yield(0);
+        timer_resume(_timer); // just for case
     }
-    
+
     timer_detach_interrupt(_timer, TIMER_UPDATE_INTERRUPT);
-    return result;
+
+    _timer->state->busy = false;
+
+#if 1
+    if(result<I2C_ERROR || result == I2C_ERR_TIMEOUT)   return result;
+    
+    hal_delay_microseconds(2);
+    printf("\ni2c error on timer %lx\n",(uint32_t)_timer);
+#endif
+    return result;    
 }
 
 uint8_t  Soft_I2C::writeBuffer( uint8_t addr, uint8_t len, const uint8_t *buf)

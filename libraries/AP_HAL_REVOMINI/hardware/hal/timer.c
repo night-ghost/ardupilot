@@ -51,21 +51,22 @@
 #define NR_BAS_HANDLERS                 1
 
 
-Handler tim1_handlers[NR_ADV_HANDLERS] IN_CCM;
-Handler tim2_handlers[NR_GEN_HANDLERS] IN_CCM;
-Handler tim3_handlers[NR_GEN_HANDLERS] IN_CCM;
-Handler tim4_handlers[NR_GEN_HANDLERS] IN_CCM;
-Handler tim5_handlers[NR_GEN_HANDLERS] IN_CCM;
-Handler tim6_handlers[NR_BAS_HANDLERS] IN_CCM;
-Handler tim7_handlers[NR_BAS_HANDLERS] IN_CCM;
-Handler tim8_handlers[NR_ADV_HANDLERS] IN_CCM;
-Handler tim9_handlers[NR_GEN_HANDLERS] IN_CCM;
-Handler tim10_handlers[NR_GEN_HANDLERS] IN_CCM;
-Handler tim11_handlers[NR_GEN_HANDLERS] IN_CCM;
-Handler tim12_handlers[NR_GEN_HANDLERS] IN_CCM;
-Handler tim13_handlers[NR_GEN_HANDLERS] IN_CCM;
-Handler tim14_handlers[NR_GEN_HANDLERS] IN_CCM;
+static Handler tim1_handlers[NR_ADV_HANDLERS] IN_CCM;
+static Handler tim2_handlers[NR_GEN_HANDLERS] IN_CCM;
+static Handler tim3_handlers[NR_GEN_HANDLERS] IN_CCM;
+static Handler tim4_handlers[NR_GEN_HANDLERS] IN_CCM;
+static Handler tim5_handlers[NR_GEN_HANDLERS] IN_CCM;
+static Handler tim6_handlers[NR_BAS_HANDLERS] IN_CCM;
+static Handler tim7_handlers[NR_BAS_HANDLERS] IN_CCM;
+static Handler tim8_handlers[NR_ADV_HANDLERS] IN_CCM;
+static Handler tim9_handlers[NR_GEN_HANDLERS] IN_CCM;
+static Handler tim10_handlers[NR_GEN_HANDLERS] IN_CCM;
+static Handler tim11_handlers[NR_GEN_HANDLERS] IN_CCM;
+static Handler tim12_handlers[NR_GEN_HANDLERS] IN_CCM;
+static Handler tim13_handlers[NR_GEN_HANDLERS] IN_CCM;
+static Handler tim14_handlers[NR_GEN_HANDLERS] IN_CCM;
 
+static timerState timer_state[14] IN_CCM;
 
 const timer_dev timers[] = {
  { /** Timer 1 device (advanced) */
@@ -78,6 +79,7 @@ const timer_dev timers[] = {
     .n_handlers   = NR_ADV_HANDLERS,
     .bus          = 1,
     .id           = 1,
+    .state        = &timer_state[0],
     .ch_dma = { // dma per channel: stream, channel
         { DMA2_STREAM1, 6 },
         { DMA2_STREAM2, 6 },
@@ -95,6 +97,7 @@ const timer_dev timers[] = {
     .n_handlers   = NR_GEN_HANDLERS,
     .bus          = 0,
     .id           = 2,
+    .state        = &timer_state[1],
     .ch_dma = { // dma per channel: stream, channel 
         { DMA1_STREAM5, 3 },
         { DMA1_STREAM6, 3 },
@@ -113,6 +116,7 @@ const timer_dev timers[] = {
     .n_handlers   = NR_GEN_HANDLERS,
     .bus          = 0,
     .id           = 3,
+    .state        = &timer_state[2],
     .ch_dma = { // dma per channel: stream, channel 
         { DMA1_STREAM4, 5 },
         { DMA1_STREAM5, 5 },
@@ -131,6 +135,7 @@ const timer_dev timers[] = {
     .n_handlers   = NR_GEN_HANDLERS,
     .bus          = 0,
     .id           = 4,
+    .state        = &timer_state[3],
     .ch_dma = { // dma per channel: stream, channel 
         { DMA1_STREAM0, 2 },
         { DMA1_STREAM3, 2 },
@@ -149,6 +154,7 @@ const timer_dev timers[] = {
     .n_handlers   = NR_GEN_HANDLERS,
     .bus          = 0,
     .id           = 5,
+    .state        = &timer_state[4],
     .ch_dma = { // dma per channel: stream, channel 
         { DMA1_STREAM2, 6 },
         { DMA1_STREAM4, 6 },
@@ -166,6 +172,7 @@ const timer_dev timers[] = {
     .n_handlers   = NR_BAS_HANDLERS,
     .bus          = 0,
     .id           = 6,
+    .state        = &timer_state[5],
  },
 
  { /** Timer 7 device (basic) */
@@ -177,6 +184,7 @@ const timer_dev timers[] = {
     .n_handlers   = NR_BAS_HANDLERS,
     .bus          = 0,
     .id           = 7,
+    .state        = &timer_state[6],
  },
 
  {  /** Timer 8 device (advanced) */
@@ -188,6 +196,7 @@ const timer_dev timers[] = {
     .n_handlers   = NR_ADV_HANDLERS,
     .bus          = 1,
     .id           = 8,
+    .state        = &timer_state[7],
     .ch_dma = { // dma per channel: stream, channel 
         { DMA2_STREAM2, 7 },
         { DMA2_STREAM3, 7 },
@@ -207,6 +216,7 @@ const timer_dev timers[] = {
     .n_handlers   = NR_GEN_HANDLERS,
     .bus          = 1,
     .id           = 9,
+    .state        = &timer_state[8],
  },
 
  { /** Timer 10 device (general-purpose) */
@@ -218,6 +228,7 @@ const timer_dev timers[] = {
     .n_handlers   = NR_GEN_HANDLERS,
     .bus          = 1,
     .id           = 10,
+    .state        = &timer_state[9],
  },
 
  { /** Timer 11 device (general-purpose) */
@@ -229,6 +240,7 @@ const timer_dev timers[] = {
     .n_handlers   = NR_GEN_HANDLERS,
     .bus          = 1,
     .id           = 11,
+    .state        = &timer_state[10],
  },
 
  { /** Timer 12 device (general-purpose) */
@@ -240,6 +252,7 @@ const timer_dev timers[] = {
     .n_handlers   = NR_GEN_HANDLERS,
     .bus          = 0,
     .id           = 12,
+    .state        = &timer_state[11],
  },
 
  { /** Timer 13 device (general-purpose) */
@@ -251,6 +264,7 @@ const timer_dev timers[] = {
     .n_handlers   = NR_GEN_HANDLERS,
     .bus          = 0,
     .id           = 13,
+    .state        = &timer_state[12],
  },
 
  { /** Timer 14 device (general-purpose) */
@@ -262,26 +276,10 @@ const timer_dev timers[] = {
     .n_handlers   = NR_GEN_HANDLERS,
     .bus          = 0,
     .id           = 14,
+    .state        = &timer_state[13],
  }
 };
 
-
-/*
-const timer_dev * const TIMER1 = &timer1;
-const timer_dev * const TIMER2 = &timer2;
-const timer_dev * const TIMER3 = &timer3;
-const timer_dev * const TIMER4 = &timer4;
-const timer_dev * const TIMER5 = &timer5;
-const timer_dev * const TIMER6 = &timer6;
-const timer_dev * const TIMER7 = &timer7;
-const timer_dev * const TIMER8 = &timer8;
-const timer_dev * const TIMER9 = &timer9;
-const timer_dev * const TIMER10 = &timer10;
-const timer_dev * const TIMER11 = &timer11;
-const timer_dev * const TIMER12 = &timer12;
-const timer_dev * const TIMER13 = &timer13;
-const timer_dev * const TIMER14 = &timer14;
-*/
 
 /*
  * Convenience routines
@@ -313,6 +311,7 @@ void timer_init(const timer_dev *dev) {
  */
 void timer_reset(const timer_dev *dev) {
     memset(dev->handlers, 0, dev->n_handlers * sizeof(Handler));
+    dev->state->busy=false;
 
     if(dev->bus)
     	RCC_APB2PeriphClockCmd(dev->clk, ENABLE);

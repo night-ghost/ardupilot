@@ -80,6 +80,7 @@ void i2c_lowLevel_deinit(const i2c_dev *dev){
     /*!< GPIO configuration */
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
     GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz; // low speed to prevent glitches
 
     /*!< Configure I2C pins: SCL */
     GPIO_InitStructure.GPIO_Pin = BIT(dev->scl_pin);
