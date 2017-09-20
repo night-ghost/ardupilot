@@ -524,11 +524,7 @@ void AP_InertialSensor_Revo::accumulate()
  */
 bool AP_InertialSensor_Revo::_data_ready()
 {
-    if (_drdy_pin) {
-        return _drdy_pin->read() != 0;
-    }
-    uint8_t status = _register_read(MPUREG_INT_STATUS);
-    return (status & BIT_RAW_RDY_INT) != 0;
+    return _drdy_pin->read() != 0;
 }
 
 /*
@@ -551,7 +547,6 @@ void AP_InertialSensor_Revo::_ioc(){ // io completion
     if(write_ptr == read_ptr) { // buffer overflow
         debug("MPU buffer overflow!");    
     }
-//    _register_read(MPUREG_INT_STATUS); // reset IRQ
 }
 
 /*
