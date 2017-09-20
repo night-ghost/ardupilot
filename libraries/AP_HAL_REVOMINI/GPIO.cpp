@@ -29,7 +29,7 @@ void REVOMINIGPIO::_pinMode(uint8_t pin, uint8_t mode)
     gpio_pin_mode outputMode;
     bool pwm = false;
 
-    switch(mode) {
+    switch(mode) { // modes defined to be compatible so no transcode required
     case OUTPUT:
     case OUTPUT_OPEN_DRAIN:
     case INPUT:
@@ -105,8 +105,7 @@ void REVOMINIGPIO::toggle(uint8_t pin)
 
 
 /* Interrupt interface: */
-// TODO - add ability to attach not only C functions but class methods too
-bool REVOMINIGPIO::_attach_interrupt(uint8_t pin, uint64_t p, uint8_t mode, uint8_t priority)
+bool REVOMINIGPIO::_attach_interrupt(uint8_t pin, Handler p, uint8_t mode, uint8_t priority)
 {
     if ( (pin >= BOARD_NR_GPIO_PINS) || !p) return false;
 
@@ -160,5 +159,6 @@ void REVOMINIDigitalSource::mode(uint8_t md)
     }
 
     gpio_set_mode(_device, _bit, outputMode);
+    gpio_set_speed(_device, _bit, GPIO_Speed_100MHz); // to use as CS
 }
 

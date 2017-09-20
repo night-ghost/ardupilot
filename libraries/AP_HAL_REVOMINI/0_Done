@@ -118,7 +118,7 @@
 interrupts priorities:
 0 PWM input
 1 soft_uart 
-2 micros() Timer5 / timer_i2C
+2 micros() Timer5 / timer_i2C / MPU DataReady
 3 usb
 4 uart
 5 gpio pin

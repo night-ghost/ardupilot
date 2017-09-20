@@ -83,7 +83,7 @@ public:
     inline bool set_speed(enum AP_HAL::Device::Speed speed) override { return true; };
 
     /* See AP_HAL::Device::get_semaphore() */
-    inline AP_HAL::Semaphore *get_semaphore() override { return &_semaphores[_bus]; } // numbers from 0
+    inline REVOMINI::Semaphore *get_semaphore() override { return &_semaphores[_bus]; } // numbers from 0
 
     /* See AP_HAL::Device::register_periodic_callback() */
     inline AP_HAL::Device::PeriodicHandle register_periodic_callback(
@@ -106,6 +106,17 @@ public:
     }
     
     inline bool unregister_callback(PeriodicHandle h) override  { return REVOMINIScheduler::unregister_timer_task(h); }
+
+    void register_completion_callback(Handler h);
+
+    inline void register_completion_callback(AP_HAL::MemberProc proc){
+        Revo_handler r = { .mp=proc };
+        register_completion_callback(r.h);
+    }
+    inline void register_completion_callback(AP_HAL::Proc proc){
+        Revo_handler r = { .hp=proc };
+        register_completion_callback(r.h);
+    }
 
     inline uint32_t get_error_count() {return _lockup_count; }
     inline uint8_t get_last_error() {return last_error; }
@@ -136,11 +147,13 @@ private:
     Soft_I2C s_i2c; // per-bus instances
 
     static REVOMINI::Semaphore _semaphores[3]; // individual for each bus + softI2C
-    static const timer_dev * _timers[3];   // one timer per bus
+    static const timer_dev *   _timers[3];   // one timer per bus
     
     static REVOMINI::REVOI2CDevice * devices[MAX_I2C_DEVICES]; // links to all created devices
     static uint8_t dev_count;
     static bool lateInitDone;
+    
+    Handler _completion_cb;
 
     void _do_bus_reset();
     

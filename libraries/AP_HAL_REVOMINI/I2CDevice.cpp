@@ -53,14 +53,13 @@ REVOI2CDevice::REVOI2CDevice(uint8_t bus, uint8_t address)
         , _failed(false)
         , need_reset(false)
         , _dev(NULL)
-    {
+{
 
 
-
-        // store link to created devices
-        if(dev_count<MAX_I2C_DEVICES){
-            devices[dev_count++] = this; // links to all created devices
-        }                    
+    // store link to created devices
+    if(dev_count<MAX_I2C_DEVICES){
+        devices[dev_count++] = this; // links to all created devices
+    }                    
 }
 
 REVOI2CDevice::~REVOI2CDevice() { 
@@ -69,8 +68,6 @@ REVOI2CDevice::~REVOI2CDevice() {
             devices[i] = NULL;
         }
     }
-    
-
 }
 
 
@@ -129,7 +126,7 @@ void REVOI2CDevice::init(){
 
 #endif
 
-#if defined( BOARD_SOFT_SCL) && defined(BOARD_SOFT_SDA)
+#if defined(BOARD_SOFT_SCL) && defined(BOARD_SOFT_SDA)
     case 2:         // this bus can use only soft I2C driver
 #if defined(BOARD_I2C_BUS_SLOW) && BOARD_I2C_BUS_SLOW==2
             _slow=true;
@@ -161,7 +158,6 @@ void REVOI2CDevice::init(){
 
     
     if(_dev) {
-//      i2c_init(_dev, _offs, I2C_400KHz_SPEED);
 //        i2c_init(_dev, _offs, _slow?I2C_125KHz_SPEED:I2C_250KHz_SPEED);
 //        i2c_init(_dev, _offs, _slow?I2C_75KHz_SPEED:I2C_250KHz_SPEED);
         i2c_init(_dev, _offs, _slow?I2C_250KHz_SPEED:I2C_400KHz_SPEED);
@@ -176,6 +172,17 @@ void REVOI2CDevice::init(){
     _initialized=true;
 }
 
+
+
+void REVOI2CDevice::register_completion_callback(Handler h) { 
+    if(_completion_cb) {// IOC from last call still not called - some error occured so bus reset needed
+        _completion_cb=0;
+        _do_bus_reset();
+    }
+    
+    _completion_cb=h;
+}
+    
 
 
 
@@ -201,11 +208,8 @@ again:
         if(recv_len) memset(recv, 0, recv_len); // for DEBUG
             
         if(recv_len==0){ // only write
-            //                 uint8_t addr, uint8_t len, uint8_t * data)
-            ret=s_i2c.writeBuffer( _address, send_len, send );
-            
+            ret=s_i2c.writeBuffer( _address, send_len, send );            
         }else if(send_len==1){ // only read - send byte is address
-            //            uint8_t addr, uint8_t reg, uint8_t len, uint8_t *buf
             ret=s_i2c.read(_address, *send, recv_len, recv);                
         } else {
             ret=s_i2c.transfer(_address, send_len, send, recv_len, recv);
@@ -229,6 +233,14 @@ again:
         return false;
     } // software I2C
 
+
+    uint32_t t = hal_micros();
+    while(_dev->state->ioc){ //       wait for previous transfer finished
+        if(hal_micros() - t > 1000) return false;
+        hal_yield(0);
+    }
+    
+    _dev->state->ioc = _completion_cb; // we got bus so now set handler
         
 // Hardware
     if(recv_len==0) { // only write
@@ -237,7 +249,15 @@ again:
     } else {
         last_op=0;
         ret = i2c_read(_dev,  _address, send, send_len, recv, recv_len);
+        
+        /* in i2c isr handler
+        if(_completion_cb) {
+            revo_call_handler(_completion_cb, (uint32_t)&_desc);
+            _completion_cb=0; // only once
+        }
+        */
     }
+
 
 #ifdef I2C_DEBUG
      I2C_State &sp = log[log_ptr]; // remember last operation
@@ -256,6 +276,8 @@ again:
 #endif
 
     if(ret == I2C_OK) return true;
+
+    if(ret == I2C_PENDING) return true; // DMA transfer with callback
 
     if(ret == I2C_ERR_STOP || ret == I2C_STOP_BERR || ret == I2C_STOP_BUSY) { // bus or another errors on Stop, or bus busy after Stop.
                                                                             //   Data is good but bus reset required

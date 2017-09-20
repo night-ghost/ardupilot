@@ -114,10 +114,11 @@ bool AP_HAL::Device::check_next_register(void)
                     //hal.console->printf("MPU reg %d want %x read %x \n", _checked.regs[i].regnum, _checked.regs[i].value, v );
                 }
             }
-            
+/*            
             if(err_count == _checked.n_set){ // all bad
                 volatile int zz=0;
             }
+*/
         }
         
         return false;

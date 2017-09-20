@@ -14,6 +14,8 @@ public:
     bool give();
     bool take(uint32_t timeout_ms);
     inline bool take_nonblocking() {       return _take_nonblocking(); }
+
+    inline void *get_owner(){ return _task; }
     
     static inline bool get_error(){ bool t=_error; _error=false; return t; }
 
@@ -26,6 +28,7 @@ protected:
     bool _take_nonblocking();
 
     volatile bool _taken;
+    void * _task; // owner
 
     static bool _error;
 

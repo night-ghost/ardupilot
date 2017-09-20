@@ -19,7 +19,7 @@
 #include <spi.h>
 #include <boards.h>
 
-#pragma GCC optimize ("O0")
+//#pragma GCC optimize ("O0")
 #include "SPIDevice.h"
 #include "GPIO.h"
 //#pragma GCC pop_options
@@ -54,8 +54,9 @@ static const spi_pins board_spi_pins[] = {
 };
 
 
-REVOMINI::Semaphore SPIDevice::_semaphores[4] IN_CCM; // per bus+1
-
+REVOMINI::Semaphore SPIDevice::_semaphores[MAX_BUS_NUM] IN_CCM; // per bus
+void *              SPIDevice::owner[MAX_BUS_NUM] IN_CCM;
+uint8_t             SPIDevice::buffer[MAX_BUS_NUM][SPI_BUFFER_SIZE];
 
 #ifdef DEBUG_SPI 
 struct spi_trans SPIDevice::spi_trans_array[SPI_LOG_SIZE]  IN_CCM;
@@ -63,7 +64,7 @@ uint8_t SPIDevice::spi_trans_ptr=0;
 #endif
 
 
-
+#ifdef BOARD_SOFTWARE_SPI
 
 #define SCK_H       {sck_port->BSRRL = sck_pin; }
 #define SCK_L       {sck_port->BSRRH = sck_pin; }
@@ -84,13 +85,9 @@ static          uint16_t      miso_pin;
 
 static uint16_t dly_time;
 
-
 static void dly_spi() {
     delay_ns100(dly_time);
 };
-
-
-#pragma GCC optimize ("O0")
 
 
 uint8_t SPIDevice::_transfer_s(uint8_t bt) {
@@ -115,14 +112,26 @@ uint8_t SPIDevice::_transfer_s(uint8_t bt) {
 
     return bt;
 }
+#endif
+
+static uint8_t  byte_time;
+
+void SPIDevice::register_completion_callback(Handler h) { 
+    if(_completion_cb){ // IOC from last call still not called
+        // TODO: ???
+    }
+    _completion_cb = h; 
+}
 
 
 
 uint8_t SPIDevice::transfer(uint8_t out){
-
+#ifdef BOARD_SOFTWARE_SPI
     if(_desc.soft) {
         return _transfer_s(out);
-    } else {
+    } else 
+#endif
+    {
         return _transfer(out);
     }
     
@@ -133,16 +142,12 @@ uint8_t SPIDevice::_transfer(uint8_t data) {
     uint8_t buf[1];
 
     //write 1byte
-    //spi_tx(_desc.dev, &data, 1);
     spi_tx_reg(_desc.dev, data); //    _desc.dev->SPIx->DR = data;
 
     //read one byte
     while (!spi_is_rx_nonempty(_desc.dev)) {    // надо дожидаться окончания передачи.
         if(!spi_is_busy(_desc.dev) ) break;
     }
-    
-//    while (!spi_is_tx_empty(_desc.dev));
-//    while (!spi_is_busy(_desc.dev))  ;
     
     buf[0] = (uint8_t)spi_rx_reg(_desc.dev);
     return buf[0];
@@ -156,7 +161,18 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
     uint8_t ret=0;
     bool was_dma=false;
 
+// differrent devices on bus requires different modes
+    if(owner[_desc.bus-1] != this) { // bus was in use by another driver so need reinit
+        _initialized=false;
+    }
+    
+    if(!_initialized){
+        init();
+        if(!_initialized) return false;
+        owner[_desc.bus-1] = this; // Got it!
+    }
 
+#ifdef BOARD_SOFTWARE_SPI
     if(_desc.soft) {
         uint16_t rate;
 
@@ -199,50 +215,65 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
                 recv[i] = _transfer_s(0);
             }
         }
-    } else {
+    } else 
+#endif
+    {
+    
+        uint32_t t = hal_micros();
+        while(_desc.dev->state->busy){ //       wait for previous transfer finished
+            if(hal_micros() - t > 1000) return false;
+            hal_yield(0);
+        }
+        
         spi_set_speed(_desc.dev, determine_baud_rate(_speed));
+        _desc.dev->state->busy = true; // we got bus for bus
 
-#define MIN_DMA_BYTES 16
+#define MIN_DMA_BYTES 3 // write to 2-byte register not uses DMA
+
         _cs_assert();
 
         if(_desc.dma){
             if(send_len){
-                if((send_len > MIN_DMA_BYTES || _desc.dma>1)){ // long enough 
+                if((send_len >= MIN_DMA_BYTES || _desc.dma>1)){ // long enough 
+                    _desc.dev->state->len=0;
+
                     if(ADDRESS_IN_RAM(send)){   // not in CCM
-                        dma_transfer(send, NULL, send_len);
+                        ret=dma_transfer(send, NULL, send_len);
                         was_dma=true;
                     } else {
-                        uint8_t *buf = (uint8_t*) malloc(send_len);
-                        if(buf) {
+                        if(send_len<=SPI_BUFFER_SIZE){
+                            uint8_t *buf = &buffer[_desc.bus-1][0];
                             memmove(buf,send,send_len);
-                            dma_transfer(buf, NULL, send_len);
+                            ret=dma_transfer(buf, NULL, send_len);
                             was_dma=true;
-                            free(buf);
                         }
                     }
                 } 
                 
                 if(!was_dma) {
-                    spimaster_transfer(_desc.dev, send, send_len, NULL, 0);
+                    ret=spimaster_transfer(_desc.dev, send, send_len, NULL, 0);
                 }
             }
             if(recv_len) {
-                if((recv_len>MIN_DMA_BYTES || _desc.dma>1) ) { // long enough 
+                if((recv_len>=MIN_DMA_BYTES || _desc.dma>1) ) { // long enough 
                     if(ADDRESS_IN_RAM(recv)){   //not in CCM
-                        dma_transfer(NULL, recv, recv_len);
+                        _desc.dev->state->len=0;
+                        ret=dma_transfer(NULL, recv, recv_len);
                         was_dma=true;
                     }else {
-                        uint8_t *buf = (uint8_t*)malloc(recv_len);
-                        if(buf) {
-                            dma_transfer(NULL, buf, recv_len);
-                            memmove(recv,buf,recv_len);
+                        if(send_len<=SPI_BUFFER_SIZE){
+                            uint8_t *buf = &buffer[_desc.bus-1][0];
+                            
+                            _desc.dev->state->len=recv_len;
+                            _desc.dev->state->dst=recv;
+                            
+                            ret=dma_transfer(NULL, buf, recv_len); 
                             was_dma=true;
-                            free(buf);
                         }
                     }
                 } 
                 if(!was_dma) {
-                    spimaster_transfer(_desc.dev, NULL, 0, recv, recv_len);
+                    ret=spimaster_transfer(_desc.dev, NULL, 0, recv, recv_len);
                 }
             }
         } else {
@@ -273,12 +304,18 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
     if(spi_trans_ptr>=SPI_LOG_SIZE) spi_trans_ptr=0;
 #endif
 
-    _cs_release();
 
-    if(!was_dma){    
-        if(_completion_cb) revo_call_handler(_completion_cb, (uint32_t)&_desc);
+    if(was_dma){    
+        // nothing to do - all in ISR
+    } else {
+        _cs_release();
+        _desc.dev->state->busy=false;
+        if(_completion_cb) {
+            revo_call_handler(_completion_cb, (uint32_t)&_desc);
+            _completion_cb=0;
+        }
+//        hal_yield(0);
     }
-    
     return ret==0;
 
 }
@@ -289,15 +326,25 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
 
 bool SPIDevice::transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t len) {
 
+    if(owner[_desc.bus-1] != this) { // bus was in use by another driver so need reinit
+        _initialized=false;
+        init();
+        if(!_initialized) return false;
+        owner[_desc.bus-1] = this; // Got it!
+    }
+
     _cs_assert();
 
+#ifdef BOARD_SOFTWARE_SPI
     if(_desc.soft) {
         if (send != NULL && recv !=NULL && len) {
             for (uint16_t i = 0; i < len; i++) {
                 recv[i] = _transfer_s(send[i]);
             }    
         } 
-    } else {
+    } else 
+#endif
+    {
         spi_set_speed(_desc.dev, determine_baud_rate(_speed)); //- on cs_assert()
         
         if(_desc.dma && (send==NULL || ADDRESS_IN_RAM(send)) && (recv==NULL || ADDRESS_IN_RAM(recv)) ) {
@@ -314,8 +361,6 @@ bool SPIDevice::transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t
     return true;
 }
 
-
-#pragma GCC optimize ("O2")
 
 AP_HAL::OwnPtr<REVOMINI::SPIDevice>
 SPIDeviceManager::_get_device(const char *name)
@@ -342,6 +387,7 @@ SPIDeviceManager::_get_device(const char *name)
 SPIDevice::SPIDevice(const SPIDesc &device_desc)
     : _desc(device_desc)
     , _initialized(false)
+    , _completion_cb(0)
 
 {
     if(_desc.cs_pin < BOARD_NR_GPIO_PINS) {
@@ -362,8 +408,8 @@ const spi_pins* SPIDevice::dev_to_spi_pins(const spi_dev *dev) {
     else if (dev->SPIx == SPI3)
         return &board_spi_pins[2];
     else {
-          assert_param(0);
-          return NULL;
+        assert_param(0);
+        return NULL;
     }
 }
 
@@ -375,33 +421,43 @@ spi_baud_rate SPIDevice::determine_baud_rate(SPIFrequency freq)
 	switch(freq) {
 	case SPI_36MHZ:
 		rate = SPI_BAUD_PCLK_DIV_2;
+		byte_time = 1; // time in 0.25uS units
 		break;
 	case SPI_18MHZ:
 		rate = SPI_BAUD_PCLK_DIV_4;
+		byte_time = 2;
 		break;
 	case SPI_9MHZ:
 		rate = SPI_BAUD_PCLK_DIV_8;
+		byte_time = 4;
 		break;
 	case SPI_4_5MHZ:
 		rate = SPI_BAUD_PCLK_DIV_16;
+		byte_time = 8;
 		break;
 	case SPI_2_25MHZ:
 		rate = SPI_BAUD_PCLK_DIV_32;
+		byte_time = 16;
 		break;
 	case SPI_1_125MHZ:
 		rate = SPI_BAUD_PCLK_DIV_64;
+		byte_time = 32;
 		break;
 	case SPI_562_500KHZ:
 		rate = SPI_BAUD_PCLK_DIV_128;
+		byte_time = 64;
 		break;
 	case SPI_281_250KHZ:
 		rate = SPI_BAUD_PCLK_DIV_256;
+		byte_time = 128;
 		break;
 	case SPI_140_625KHZ:
 		rate = SPI_BAUD_PCLK_DIV_256;
+		byte_time = 255;
 		break;
 	default:
 		rate = SPI_BAUD_PCLK_DIV_32;
+		byte_time = 16;
 		break;
 	}
 	return rate;
@@ -413,20 +469,21 @@ spi_baud_rate SPIDevice::determine_baud_rate(SPIFrequency freq)
 static uint32_t rw_workbyte[] = { 0xffff }; // not in stack!
 
 
-void  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t btr)
+uint8_t  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t btr)
 {
     DMA_InitTypeDef DMA_InitStructure;
     DMA_StructInit(&DMA_InitStructure);
 
     const Spi_DMA &dp = _desc.dev->dma;
 
-    dma_init(dp.stream_rx); dma_init(dp.stream_tx);
 
 //  проверить, не занят ли поток DMA перед использованием
     while(dma_is_stream_enabled(dp.stream_rx) || dma_is_stream_enabled(dp.stream_tx) ) {
         // wait for transfer termination
         hal_yield(0);
     } 
+
+    dma_init(dp.stream_rx); dma_init(dp.stream_tx);
 
     dma_clear_isr_bits(dp.stream_rx); dma_clear_isr_bits(dp.stream_tx);
 
@@ -478,18 +535,23 @@ void  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t
     SPI_I2S_DMACmd(_desc.dev->SPIx, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, ENABLE);
 
     if(_completion_cb) {// we should call it after completion via interrupt
-        return;
+        return 0;
     }
 
     // no callback - need to wait
-    uint16_t dly = btr >>2; // 20 MHZ -> ~0.5 uS per byte
-   /* Wait until Receive Complete */
+    uint16_t dly = btr * byte_time / 4; // time in 0.25uS
+    /* Wait until Receive Complete */
+   
+#define MAX_SPI_TIME 900// in uS
+
+    uint32_t t=hal_micros();
     while ( (dma_get_isr_bits(dp.stream_rx) & DMA_FLAG_TCIF) == 0) { 
-        if(dly!=0)
-            hal_yield(dly); // пока ждем пусть другие работают. на меньших скоростях SPI вызовется несколько раз
+        if(hal_micros()-t > MAX_SPI_TIME) return 1; // timeout
+        if(dly!=0)   hal_yield(dly); // пока ждем пусть другие работают. 
     }
 
-    isr();  //  disable DMA and release CS    
+    isr();  //  disable DMA 
+    return 0; // OK
 }
 
 void SPIDevice::isr(){
@@ -500,13 +562,19 @@ void SPIDevice::isr(){
 
     // Disable SPI RX/TX request 
     SPI_I2S_DMACmd(_desc.dev->SPIx, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, DISABLE);
-    
+
     dma_clear_isr_bits(dp.stream_rx); dma_clear_isr_bits(dp.stream_tx);
 
-    
+    _cs_release(); // free bus
+
+    if(_desc.dev->state->len) {
+        memmove(_desc.dev->state->dst, &buffer[_desc.bus-1][0], _desc.dev->state->len);
+    }
+    _desc.dev->state->busy=false; // reset 
+
     if(_completion_cb) {
-        _cs_release();
         revo_call_handler(_completion_cb, (uint32_t)&_desc);
+        _completion_cb=0; // only once
     }
 }
 
@@ -525,6 +593,7 @@ void SPIDevice::init(){
         return;
     }
 
+#ifdef BOARD_SOFTWARE_SPI
     if(_desc.soft) { //software
     
         { // isolate p
@@ -567,16 +636,19 @@ void SPIDevice::init(){
             miso_pin  = 1<<miso_bit;
         }
 
-    } else { /// hardware
+    } else 
+#endif
+    { /// hardware
         spi_init(_desc.dev); // disable device
 
         const stm32_pin_info &miso = PIN_MAP[pins->miso];
         spi_gpio_master_cfg(_desc.dev,
-                    miso.gpio_device, PIN_MAP[pins->sck].gpio_bit,
-                    miso.gpio_bit,    PIN_MAP[pins->mosi].gpio_bit);
+                        miso.gpio_device, PIN_MAP[pins->sck].gpio_bit,
+                        miso.gpio_bit,    PIN_MAP[pins->mosi].gpio_bit);
 
 
-        spi_master_enable(_desc.dev, determine_baud_rate(_desc.lowspeed), _desc.mode, MSBFIRST);         
+
+        spi_master_enable(_desc.dev, determine_baud_rate(_desc.lowspeed), _desc.mode, MSBFIRST);          
     }
     _initialized=true;
 
@@ -586,9 +658,11 @@ void SPIDevice::init(){
 bool SPIDevice::set_speed(AP_HAL::Device::Speed speed)
 {
 
-    if(!_initialized) {
+    if(owner[_desc.bus-1] != this) { // bus was in use by another driver so need reinit
+        _initialized=false;
         init();
         if(!_initialized) return false;
+        owner[_desc.bus-1] = this; // Got it!
     }
 
     switch (speed) {

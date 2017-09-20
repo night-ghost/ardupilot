@@ -290,7 +290,32 @@ uint32_t USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
       retval |= DCD_OTG_ISR(pdev);
     }   
 #endif    
-  }
+  }  // not device mode - don't do anything BUGBUGBUG!!! We MUST clear all available sources of interrupt or program will hang
+   else { //[ @NG
+#define USB_OTG_GAHBCFG_GINT_Pos                 (0U)                          
+#define USB_OTG_GAHBCFG_GINT_Msk                 (0x1U << USB_OTG_GAHBCFG_GINT_Pos) /*!< 0x00000001 */
+#define USB_OTG_GAHBCFG_GINT                     USB_OTG_GAHBCFG_GINT_Msk      /*!< Global interrupt mask */
+        *(__IO uint32_t *)(&pdev->regs.GREGS->GAHBCFG) &= USB_OTG_GAHBCFG_GINT; // disable global interrupt - from F4 Arduino
+        
+     /* Clear ALL interrupts */
+        USB_OTG_WRITE_REG32(&pdev->regs.GREGS->GINTSTS, 0xffffffff);
+/*
+        USB_OTG_WRITE_REG32(&pdev->regs.GREGS->GOTGINT, 0xffffffff);
+
+        USB_OTG_WRITE_REG32(&pdev->regs.DREGS->DAINT, 0xffffffff);
+        USB_OTG_WRITE_REG32(&pdev->regs.DREGS->DEACHINT, 0xffffffff);
+
+        USB_OTG_WRITE_REG32(&pdev->regs.HREGS->HFIR, 0xffffffff);
+    
+        uint8_t i;
+        for(i=0;i<USB_OTG_MAX_TX_FIFOS; i++){
+            USB_OTG_WRITE_REG32(&pdev->regs.INEP_REGS[i]->DIEPINT, 0xffffffff);
+            USB_OTG_WRITE_REG32(&pdev->regs.OUTEP_REGS[i]->DOEPINT, 0xffffffff);
+            USB_OTG_WRITE_REG32(&pdev->regs.HC_REGS[i]->HCINT, 0xffffffff);
+        }
+*/    
+   } //]
+  
   return retval;
 }
 

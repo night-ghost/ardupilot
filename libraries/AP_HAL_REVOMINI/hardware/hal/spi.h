@@ -17,13 +17,20 @@ typedef struct SPI_DMA {
     dma_stream stream_tx;
 } Spi_DMA;
 
+typedef struct SPI_state {
+    uint8_t *dst;
+    uint16_t len;
+    bool     busy;
+} spi_state;
+
 /** SPI device type */
 typedef struct spi_dev {
     SPI_TypeDef* SPIx;          
-    uint8_t afio;
-    IRQn_Type irq;
-    uint16_t clock;
-    Spi_DMA dma;
+    uint8_t      afio;
+    IRQn_Type    irq;
+    uint16_t     clock;
+    Spi_DMA      dma;
+    spi_state *  state;
 } spi_dev;
 
 extern const spi_dev * const _SPI1;

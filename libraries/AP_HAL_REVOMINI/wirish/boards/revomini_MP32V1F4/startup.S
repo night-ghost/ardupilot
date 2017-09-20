@@ -149,19 +149,19 @@ g_pfnVectors:
   .word  SysTick_Handler
   
   /* External Interrupts */
-  .word     WWDG_IRQHandler                   /* Window WatchDog              */                                        
-  .word     PVD_IRQHandler                    /* PVD through EXTI Line detection */                        
-  .word     TAMP_STAMP_IRQHandler             /* Tamper and TimeStamps through the EXTI line */            
-  .word     RTC_WKUP_IRQHandler               /* RTC Wakeup through the EXTI line */                      
-  .word     FLASH_IRQHandler                  /* FLASH                        */                                          
-  .word     RCC_IRQHandler                    /* RCC                          */                                            
-  .word     EXTI0_IRQHandler                  /* EXTI Line0                   */                        
-  .word     EXTI1_IRQHandler                  /* EXTI Line1                   */                          
-  .word     EXTI2_IRQHandler                  /* EXTI Line2                   */                          
-  .word     EXTI3_IRQHandler                  /* EXTI Line3                   */                          
-  .word     EXTI4_IRQHandler                  /* EXTI Line4                   */                          
-  .word     DMA1_Stream0_IRQHandler           /* DMA1 Stream 0                */                  
-  .word     DMA1_Stream1_IRQHandler           /* DMA1 Stream 1                */                   
+  .word     WWDG_IRQHandler                   /*0 Window WatchDog              */                                        
+  .word     PVD_IRQHandler                    /*1 PVD through EXTI Line detection */                        
+  .word     TAMP_STAMP_IRQHandler             /*2 Tamper and TimeStamps through the EXTI line */            
+  .word     RTC_WKUP_IRQHandler               /*3 RTC Wakeup through the EXTI line */                      
+  .word     FLASH_IRQHandler                  /*4 FLASH                        */                                          
+  .word     RCC_IRQHandler                    /*5 RCC                          */                                            
+  .word     EXTI0_IRQHandler                  /*6 EXTI Line0                   */                        
+  .word     EXTI1_IRQHandler                  /*7 EXTI Line1                   */                          
+  .word     EXTI2_IRQHandler                  /*8 EXTI Line2                   */                          
+  .word     EXTI3_IRQHandler                  /*9 EXTI Line3                   */                          
+  .word     EXTI4_IRQHandler                  /*a EXTI Line4                   */                          
+  .word     DMA1_Stream0_IRQHandler           /*b DMA1 Stream 0                */                  
+  .word     DMA1_Stream1_IRQHandler           /*c DMA1 Stream 1                */                   
   .word     DMA1_Stream2_IRQHandler           /* DMA1 Stream 2                */                   
   .word     DMA1_Stream3_IRQHandler           /* DMA1 Stream 3                */                   
   .word     DMA1_Stream4_IRQHandler           /* DMA1 Stream 4                */                   

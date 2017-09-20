@@ -11,18 +11,28 @@
  * These only allow for 50MHZ max output speeds; if you want slower,
  * use direct register access.
  */
+ 
+/*
+    we should define modes to be compatible with HAL_GPIO_ defines from HAL.h
+#define HAL_GPIO_INPUT  0
+#define HAL_GPIO_OUTPUT 1
+#define HAL_GPIO_ALT    2
+
+*/
+ 
 typedef enum gpio_pin_mode {
-    GPIO_OUTPUT_PP, 		/**< Output push-pull. */
-    GPIO_OUTPUT_OD, 		/**< Output open-drain. */
-    GPIO_AF_OUTPUT_PP, 		/**< Alternate function output push-pull. */
-    GPIO_AF_OUTPUT_OD, 		/**< Alternate function output open drain. */
-    GPIO_INPUT_ANALOG, 		/**< Analog input. */
     GPIO_INPUT_FLOATING, 	/**< Input floating. */
-    GPIO_INPUT_PD, 			/**< Input pull-down. */
-    GPIO_INPUT_PU, 			/**< Input pull-up. */
-    GPIO_OUTPUT_OD_PU, 		/**< Output open-drain with pullUp */
-    GPIO_AF_OUTPUT_OD_PU, 	/**< Alternate function output open drain with pullup */
+    GPIO_OUTPUT_PP, 		/**< Output push-pull. */
+    GPIO_AF_OUTPUT_PP, 		/**< Alternate function output push-pull. */
+// more complex modes
+    GPIO_INPUT_ANALOG, 		/**< Analog input. */
+    GPIO_INPUT_PD, 		/**< Input pull-down. */
+    GPIO_INPUT_PU, 		/**< Input pull-up. */
     /* GPIO_INPUT_PU treated as a special case, for ODR twiddling */
+    GPIO_OUTPUT_OD, 		/**< Output open-drain. */
+    GPIO_OUTPUT_OD_PU, 		/**< Output open-drain with pullUp */
+    GPIO_AF_OUTPUT_OD, 		/**< Alternate function output open drain. */
+    GPIO_AF_OUTPUT_OD_PU, 	/**< Alternate function output open drain with pullup */
     GPIO_PIN_MODE_LAST
 } gpio_pin_mode;
 

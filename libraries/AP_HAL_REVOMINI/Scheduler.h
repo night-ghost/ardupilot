@@ -138,8 +138,9 @@ public:
         Handler handle;         //!< loop() in Revo_handler - to allow to change task, call via revo_call_handler
         jmp_buf context;        //!< Task context
         const uint8_t* stack;   //!< Task stack
-        uint16_t id;            // id of task
-        bool active;            // tas not ended
+        uint8_t id;             // id of task
+        bool active;            // task not ended
+        bool forced;            // task owns semaphore which needed to high-priority task
         uint32_t ttw;           // time to work
         uint32_t t_yield;       // time of yield
         uint32_t start;         // microseconds of timeslice start
@@ -150,11 +151,11 @@ public:
         uint32_t def_ttw;       // default TTW - not as hard as period
         uint32_t time_start;    // start time of task
 #ifdef MTASK_PROF
-        uint32_t ticks; // ticks of CPU to calculate context switch time
         uint64_t time;  // full time
         uint32_t max_time; //  maximal execution time of task - to show
         uint32_t maxt_addr; // address of end of max-time code
         uint32_t count;     // call count to calc mean
+        uint32_t sched_error; // delay on task start
 #endif
         uint32_t guard; // stack guard
     };
@@ -281,9 +282,11 @@ public:
   static void set_task_period(void *h, uint32_t period);
   static void set_task_semaphore(void *h, REVOMINI::Semaphore *sem);
   static void set_task_ttw(void *h, uint32_t ttw);
+  static inline void set_task_forced(void *_task) { if(_task) { ((task_t*)_task)->forced = true; } } 
   
   static void stop_task(void * h);
   static task_t* get_empty_task();
+  static inline void * get_current_task() { return s_running; }
 
   /**               
    * Context switch to next task in run queue.
@@ -300,7 +303,7 @@ public:
 //}
 
 
-    static void register_IMU_handler(AP_HAL::MemberProc proc) {
+    static inline void register_IMU_handler(AP_HAL::MemberProc proc) {
         Revo_handler h = { .mp=proc };
         REVOMINIGPIO::_attach_interrupt(BOARD_MPU6000_DRDY_PIN, h.h, RISING, 11);
     }

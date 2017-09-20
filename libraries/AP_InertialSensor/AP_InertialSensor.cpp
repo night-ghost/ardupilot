@@ -22,6 +22,8 @@
 #include "AP_InertialSensor_QURT.h"
 #include "AP_InertialSensor_SITL.h"
 #include "AP_InertialSensor_qflight.h"
+#include "AP_InertialSensor_Revo.h"
+
 
 /* Define INS_TIMING_DEBUG to track down scheduling issues with the main loop.
  * Output is on the debug console. */
@@ -687,6 +689,9 @@ AP_InertialSensor::detect_backends(void)
     _add_backend(AP_InertialSensor_SITL::detect(*this));
 #elif HAL_INS_DEFAULT == HAL_INS_HIL
     _add_backend(AP_InertialSensor_HIL::detect(*this));
+#elif CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
+    _add_backend(AP_InertialSensor_Revo::probe(*this, hal.spi->get_device(HAL_INS_MPU60x0_NAME), HAL_INS_DEFAULT_ROTATION));
+
 #elif HAL_INS_DEFAULT == HAL_INS_MPU60XX_SPI && defined(HAL_INS_DEFAULT_ROTATION)
     _add_backend(AP_InertialSensor_Invensense::probe(*this, hal.spi->get_device(HAL_INS_MPU60x0_NAME),
                                                   HAL_INS_DEFAULT_ROTATION));

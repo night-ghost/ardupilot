@@ -105,6 +105,8 @@ void usb_default_attr(usb_attr_t *attr);
 int usb_configure(usb_attr_t * attr);
 void usb_setParams(usb_attr_t * attr);
 
+void USB_OTG_BSP_DisableInterrupt();
+
 void USB_OTG_BSP_mDelay (const uint32_t msec);
 
 extern uint8_t is_usb_connected(usb_attr_t *attr);

@@ -39,9 +39,6 @@ void USBDriver::begin(uint32_t baud) {
 }
 
 
-
-/* REVOMINI implementations of Stream virtual methods */
-
 uint32_t USBDriver::available() { 
     uint32_t v = usb_data_available();
     if(!v) REVOMINIScheduler::yield(); // если нет данных то переключим задачу насильно, все равно делать нечего
@@ -58,24 +55,6 @@ int16_t USBDriver::read() {
 }
 
 size_t USBDriver::write(uint8_t c) {
-
-/*
-    size_t n=1;
-
-    if(_usb_present && is_usb_opened()){
-        uint16_t tr=3; // 3 попытки
-        while(tr) {
-            n = usb_putc(c);
-            if(n==0) {
-                REVOMINIScheduler::yield(); // пока ожидаем - пусть другие работают
-                if(!_blocking || REVOMINIScheduler::_in_timerprocess()) tr--; // при неблокированном выводе уменьшим счетчик попыток
-            } else break; // успешно отправили
-        }        
-        return n;
-    } 
-    return 1;
-*/
-
     return write(&c,1);
 }
 
@@ -87,7 +66,6 @@ size_t USBDriver::write(const uint8_t *buffer, size_t size)
 
     if(_usb_present && is_usb_opened()){
         while (size) {
-//                n += write(*buffer++); we got 1-byte USB packets which are very slow
             uint8_t k=usb_write((uint8_t *)buffer, size);
             size-=k;
             n+=k;
@@ -95,9 +73,11 @@ size_t USBDriver::write(const uint8_t *buffer, size_t size)
             
             if(!_blocking && REVOMINIScheduler::_millis() - t > 300 ){        // время ожидания превысило 300мс - что-то пошло не так...
                 reset_usb_opened();
-                return size;
+                return n;
+            } 
+            if(k==0) {
+                REVOMINIScheduler::yield(); // пока ожидаем - пусть другие работают
             }
-            REVOMINIScheduler::yield(); // пока ожидаем - пусть другие работают
         }
         return n;
     }

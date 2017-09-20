@@ -486,7 +486,8 @@ uint8_t Soft_I2C::wait_done(){
             result = I2C_ERR_TIMEOUT;
             break;
         }
-        hal_yield(0);
+#define SI2C_BIT_TIME 8
+        hal_yield(SI2C_BIT_TIME * 8 * (send_len+recv_len)+1);
         timer_resume(_timer); // just for case
     }
 
@@ -494,7 +495,8 @@ uint8_t Soft_I2C::wait_done(){
 
     _timer->state->busy = false;
 
-#if 1
+#if 0 // to set breakpoint on error
+
     if(result<I2C_ERROR || result == I2C_ERR_TIMEOUT)   return result;
     
     hal_delay_microseconds(2);

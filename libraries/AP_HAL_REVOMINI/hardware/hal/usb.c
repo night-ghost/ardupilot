@@ -305,33 +305,35 @@ void USB_OTG_BSP_Init(USB_OTG_CORE_HANDLE *pdev){
 
 int usb_periphcfg(FunctionalState state)
 {
-	if (state == ENABLE) {
+    USB_OTG_BSP_DisableInterrupt(); // disable IRQ
+    
+    if (state == ENABLE) {
 
-		RCC_AHB1PeriphClockCmd( RCC_AHB1Periph_GPIOA , ENABLE); // USB on GPIO_A
+	RCC_AHB1PeriphClockCmd( RCC_AHB1Periph_GPIOA , ENABLE); // USB on GPIO_A
 
-		/* Configure USB D-/D+ (DM/DP) pins */
-		GPIO_InitTypeDef GPIO_InitStructure;
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11 | GPIO_Pin_12;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-		GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-		GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-		GPIO_Init(GPIOA, &GPIO_InitStructure);
+	/* Configure USB D-/D+ (DM/DP) pins */
+	GPIO_InitTypeDef GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11 | GPIO_Pin_12; // sometimes touching of GPIO_Pin_12 causes interrupt which will not be served
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
 
-		GPIO_PinAFConfig(GPIOA, GPIO_PinSource11, GPIO_AF_OTG1_FS);
-		GPIO_PinAFConfig(GPIOA, GPIO_PinSource12, GPIO_AF_OTG1_FS);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource11, GPIO_AF_OTG1_FS);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource12, GPIO_AF_OTG1_FS);
 
-		RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
-		RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_OTG_FS, ENABLE) ;
-	} else {
-		gpio_set_mode(DM_PIN_PORT, DM_PIN_PIN, GPIO_INPUT_FLOATING);
-		gpio_set_mode(DP_PIN_PORT, DP_PIN_PIN, GPIO_INPUT_FLOATING);
-		// we should not disable sysfg clock..
-	}
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+	RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_OTG_FS, ENABLE) ;
+    } else {
+	gpio_set_mode(DM_PIN_PORT, DM_PIN_PIN, GPIO_INPUT_FLOATING);
+	gpio_set_mode(DP_PIN_PORT, DP_PIN_PIN, GPIO_INPUT_FLOATING);
+	// we should not disable sysfg clock..
+    }
  
-	RCC_AHB2PeriphClockCmd(USB_CLOCK, state);
+    RCC_AHB2PeriphClockCmd(USB_CLOCK, state);
 	
-	return 1;
+    return 1;
 }
 
 /*--------------------------- usb_configure -------------------------------*/
@@ -399,6 +401,17 @@ void USB_OTG_BSP_EnableInterrupt(USB_OTG_CORE_HANDLE *pdev)
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = preempt_prio;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = sub_prio;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_Init(&NVIC_InitStructure);
+
+}
+
+void USB_OTG_BSP_DisableInterrupt()
+{
+	NVIC_InitTypeDef NVIC_InitStructure;
+	NVIC_InitStructure.NVIC_IRQChannel = OTG_FS_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = DISABLE;
 	NVIC_Init(&NVIC_InitStructure);
 
 }

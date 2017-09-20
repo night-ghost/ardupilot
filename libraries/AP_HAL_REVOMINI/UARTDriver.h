@@ -16,7 +16,6 @@ class REVOMINI::REVOMINIUARTDriver : public AP_HAL::UARTDriver  {
 public:
     REVOMINIUARTDriver(const struct usart_dev *usart);
 
-    /* implementations of UARTDriver virtual methods */
     void begin(uint32_t b);
     inline void begin(uint32_t b, uint16_t rxS, uint16_t txS) {   begin(b); }
     inline void end() {  usart_disable(_usart_device); _initialized=false; }

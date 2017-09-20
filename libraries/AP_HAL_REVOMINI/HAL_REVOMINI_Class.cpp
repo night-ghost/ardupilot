@@ -237,6 +237,8 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
 }
 
 
+#if USE_WAYBACK == ENABLED && defined(WAYBACK_DEBUG)
+
 #define SERIAL_BUFSIZE 128
 
 static AP_HAL::UARTDriver* uart;
@@ -263,8 +265,11 @@ static void getSerialLine(char *cp ){      // получение строки
     }
 
 }
+#endif
 
 static bool lateInitDone=false;
+
+void usb_mass_mal_USBdisconnect();
 
 void usb_mass_mal_USBdisconnect(){ 
     HAL_REVOMINI::state.sd_busy=false;

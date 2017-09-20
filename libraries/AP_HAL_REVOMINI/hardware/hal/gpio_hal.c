@@ -114,8 +114,7 @@ void gpio_set_mode(const gpio_dev* const dev, uint8_t pin, gpio_pin_mode mode)
   
     /* Configure the pin */
     GPIO_StructInit(&config);
-//    config.GPIO_Speed = GPIO_Speed_50MHz;
-    config.GPIO_Speed = GPIO_Speed_2MHz;
+    config.GPIO_Speed = GPIO_Speed_2MHz; // low noise by default
 	
     switch(mode) {
 	case GPIO_OUTPUT_PP:

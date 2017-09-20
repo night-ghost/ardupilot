@@ -22,9 +22,11 @@
 #include "Semaphores.h"
 #include "Scheduler.h"
 #include <dma.h>
+#include <spi.h>
 
 namespace REVOMINI {
 
+#define MAX_BUS_NUM 3
 
 typedef enum SPIFrequency {
     SPI_18MHZ       = 0, /**< 18 MHz */
@@ -94,19 +96,17 @@ public:
     bool transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t len) override;
 
     /* See AP_HAL::Device::get_semaphore() */
-    inline AP_HAL::Semaphore *get_semaphore() { return &_semaphores[_desc.bus - 1]; } // numbers from 1
+    inline REVOMINI::Semaphore *get_semaphore() { uint8_t n = _desc.bus - 1; if(n<MAX_BUS_NUM) return &_semaphores[n]; else return NULL; } // numbers from 1
 
     /* See AP_HAL::Device::register_periodic_callback() */
-    inline AP_HAL::Device::PeriodicHandle register_periodic_callback(
-        uint32_t period_usec, AP_HAL::Device::PeriodicCb proc) override
+    inline AP_HAL::Device::PeriodicHandle register_periodic_callback(uint32_t period_usec, AP_HAL::Device::PeriodicCb proc) override
     {
-        return REVOMINIScheduler::register_timer_task(period_usec, proc, &_semaphores[_desc.bus - 1] );
+        return REVOMINIScheduler::register_timer_task(period_usec, proc, get_semaphore() );
     }
 
-    inline AP_HAL::Device::PeriodicHandle register_periodic_callback(
-        uint32_t period_usec, PeriodicCbBool proc)
+    inline AP_HAL::Device::PeriodicHandle register_periodic_callback( uint32_t period_usec, PeriodicCbBool proc)
     {
-        return REVOMINIScheduler::register_timer_task(period_usec, proc, &_semaphores[_desc.bus - 1] );
+        return REVOMINIScheduler::register_timer_task(period_usec, proc, get_semaphore() );
     }
 
 
@@ -117,9 +117,7 @@ public:
 
     inline bool unregister_callback(PeriodicHandle h) { return REVOMINIScheduler::unregister_timer_task(h); }
 
-
-    // 
-    inline void register_completion_callback(Handler h) { _completion_cb = h; }
+    void register_completion_callback(Handler h);
     
     inline void register_completion_callback(AP_HAL::MemberProc proc){
         Revo_handler r = { .mp=proc };
@@ -139,7 +137,10 @@ protected:
     AP_HAL::DigitalSource *_cs;
     SPIFrequency _speed;
 
-    static REVOMINI::Semaphore _semaphores[4]; // per bus +1
+    static REVOMINI::Semaphore _semaphores[MAX_BUS_NUM]; // per bus 
+    static void * owner[MAX_BUS_NUM];
+#define SPI_BUFFER_SIZE 512
+    static uint8_t buffer[MAX_BUS_NUM][SPI_BUFFER_SIZE];
 
     bool _initialized;
     void init(void);
@@ -154,7 +155,7 @@ protected:
     uint8_t _transfer_s(uint8_t bt);
     uint8_t _transfer(uint8_t data);
 
-    void dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t btr );
+    uint8_t dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t btr );
     
 #ifdef DEBUG_SPI    
     static struct spi_trans spi_trans_array[SPI_LOG_SIZE];

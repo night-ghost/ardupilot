@@ -8,12 +8,17 @@
  * SPI devices
  */
 
+static spi_state spi1_state;
+static spi_state spi2_state;
+static spi_state spi3_state;
+
 static const spi_dev spi1 = {
     .SPIx     = SPI1,
     .afio     = GPIO_AF_SPI1,
     .irq      = SPI1_IRQn,
     .clock    = RCC_APB2Periph_SPI1,
     .dma      = { DMA_CR_CH3, DMA2_STREAM2, DMA2_STREAM3 }, // SPI1
+    .state    = &spi1_state,
 };
 /** SPI device 1 */
 const spi_dev * const _SPI1 = &spi1;
@@ -24,7 +29,7 @@ static const spi_dev spi2 = {
     .irq      = SPI2_IRQn,
     .clock    = RCC_APB1Periph_SPI2,
     .dma      = { DMA_CR_CH0, DMA1_STREAM3, DMA1_STREAM4 }, // SPI2
-
+    .state    = &spi2_state,
 };
 /** SPI device 2 */
 const spi_dev * const _SPI2 = &spi2;
@@ -35,7 +40,7 @@ static const spi_dev spi3 = {
     .irq      = SPI3_IRQn,
     .clock    = RCC_APB1Periph_SPI3,
     .dma      = { DMA_CR_CH0, DMA1_STREAM2, DMA1_STREAM5 }, // SPI3
-
+    .state    = &spi3_state,
 };
 /** SPI device 3 */
 const spi_dev * const _SPI3 = &spi3;
@@ -99,6 +104,8 @@ void spi_gpio_slave_cfg(const spi_dev *dev,
  */
 void spi_reconfigure(const spi_dev *dev, uint8_t ismaster, uint16_t baudPrescaler, uint16_t bitorder, uint8_t mode) {
     SPI_InitTypeDef  SPI_InitStructure;	
+
+    memset(dev->state, 0, sizeof(spi_state));    
     
     spi_irq_disable(dev, SPI_INTERRUPTS_ALL);
     SPI_I2S_DeInit(dev->SPIx);
@@ -107,12 +114,12 @@ void spi_reconfigure(const spi_dev *dev, uint8_t ismaster, uint16_t baudPrescale
 
     /* Enable the SPI clock */
     if (dev->SPIx == SPI1)
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);  
+        RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
     else if (dev->SPIx == SPI2)
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
+        RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
     else
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
-	
+        RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
+                	
     /* SPI configuration */
     SPI_StructInit(&SPI_InitStructure);
     SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
@@ -155,9 +162,13 @@ void spi_reconfigure(const spi_dev *dev, uint8_t ismaster, uint16_t baudPrescale
 	
     SPI_Init(dev->SPIx, &SPI_InitStructure);
 
-    spi_peripheral_enable(dev);
+    SPI_Cmd(dev->SPIx, ENABLE);
         
-    while (SPI_I2S_GetFlagStatus(dev->SPIx, SPI_I2S_FLAG_TXE) == RESET);
+    uint32_t dly=1000;
+    while (SPI_I2S_GetFlagStatus(dev->SPIx, SPI_I2S_FLAG_TXE) == RESET) {
+        dly--;
+        if(dly==0) break;
+    }
         
     (void) dev->SPIx->DR; 
 }
@@ -174,31 +185,6 @@ void spi_set_speed(const spi_dev *dev, uint16_t baudPrescaler) {
     SPI_Cmd(dev->SPIx, ENABLE);
 }
 
-/**
- * @brief Configure and enable a SPI device as a bus slave.
- *
- * The device's peripheral will be disabled before being reconfigured.
- *
- */
-inline void spi_slave_enable(const spi_dev *dev,
-                      spi_mode mode,
-                      uint16_t bitorder)
-{
-    spi_reconfigure(dev, 0, 0, bitorder, mode);
-
-
-    // Enable the Rx buffer not empty interrupt 
-    spi_irq_enable(dev, SPI_I2S_IT_RXNE);
-	
-    NVIC_InitTypeDef NVIC_InitStructure;
-  
-    /* Configure the SPI interrupt priority */
-    NVIC_InitStructure.NVIC_IRQChannel = dev->irq;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
-}
 
 
 // Transmit command and/or receive result in bidirectional master mode
@@ -232,14 +218,13 @@ int spimaster_transfer(const spi_dev *dev,
 	// Transfer command data out
 
 	while (txcount--){
-	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_TXE));
+	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_TXE)); // just for case
 
 	    uint8_t bt=*txbuf++;
-	    if(txc_in==1 && txcount==0 && rxcount) bt |= 0x80;
 	    
 	    dev->SPIx->DR = bt;
 	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE));
-	    tmp= dev->SPIx->DR;
+	    (void) dev->SPIx->DR;
 	}
 
         if(txc_in && rxcount) delay_ns100(5);
@@ -253,9 +238,13 @@ int spimaster_transfer(const spi_dev *dev,
 	}
 
 	// Wait until the transfer is complete - to not disable CS too early 
-	while (dev->SPIx->SR & SPI_I2S_FLAG_BSY); // but datasheet prohibits this usage
-        tmp = 0;
+	uint32_t dly=3000;
+	while (dev->SPIx->SR & SPI_I2S_FLAG_BSY){ // but datasheet prohibits this usage
+            dly--;
+            if(dly==0) break;
+	}
 
+        tmp = 0;
 	return tmp;
 }
 
@@ -263,13 +252,8 @@ int spimaster_transfer(const spi_dev *dev,
 
 uint32_t spi_tx(const spi_dev *dev, const void *buf, uint16_t len) {
     uint16_t txed = 0;
-//    uint8_t byte_frame = (spi_dff(dev) == SPI_DataSize_8b);
     while ( (txed < len) && spi_is_tx_empty(dev) ) {
-//        if (byte_frame) {
             dev->SPIx->DR = ((const uint8_t*)buf)[txed++];
-//        } else {
-//            dev->SPIx->DR = ((const uint16_t*)buf)[txed++];
-//        }
     }
     return txed;
 }

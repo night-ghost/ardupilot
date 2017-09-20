@@ -28,7 +28,7 @@
 extern const AP_HAL::HAL& hal;
 
 static uint8_t buffer[2][DF_PAGE_SIZE];
-
+static uint8_t cmd[4];
 
 AP_HAL::OwnPtr<AP_HAL::SPIDevice> DataFlash_Revo::_spi = nullptr;
 AP_HAL::Semaphore                *DataFlash_Revo::_spi_sem = nullptr;
@@ -279,7 +279,7 @@ bool DataFlash_Revo::NeedErase(void)
     StartRead(1);
     if(version == DF_LOGGING_FORMAT) return false;
     
-    hal.console->printf("Need to erase: version is %lx required %lx\n", version, DF_LOGGING_FORMAT);
+    printf("Need to erase: version is %lx required %lx\n", version, DF_LOGGING_FORMAT);
         
     return true;
 }
@@ -585,13 +585,12 @@ void DataFlash_Revo::PageToBuffer(unsigned char BufferNum, uint16_t pageNum)
 
     if (!cs_assert()) return;
 
-    uint8_t cmd[4];
     cmd[0] = JEDEC_READ_DATA;
     cmd[1] = (PageAdr >> 16) & 0xff;
     cmd[2] = (PageAdr >>  8) & 0xff;
     cmd[3] = (PageAdr >>  0) & 0xff;
 
-    _spi->transfer(cmd, sizeof(cmd), NULL, 0);
+    _spi->transfer(cmd, 4, NULL, 0);
 
     _spi->transfer(NULL,0, buffer[BufferNum], DF_PAGE_SIZE);
     
@@ -606,13 +605,12 @@ void DataFlash_Revo::BufferToPage (unsigned char BufferNum, uint16_t pageNum, un
     
     if (!cs_assert()) return;
 
-    uint8_t cmd[4];
     cmd[0] = JEDEC_PAGE_WRITE;
     cmd[1] = (PageAdr >> 16) & 0xff;
     cmd[2] = (PageAdr >>  8) & 0xff;
     cmd[3] = (PageAdr >>  0) & 0xff;
 
-    _spi->transfer(cmd, sizeof(cmd),NULL, 0);
+    _spi->transfer(cmd, 4,NULL, 0);
 
     _spi->transfer(buffer[BufferNum], DF_PAGE_SIZE, NULL, 0);
 
@@ -663,7 +661,6 @@ void DataFlash_Revo::PageErase (uint16_t pageNum)
 
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
-    uint8_t cmd[4];
     cmd[0] = erase_cmd;
     cmd[1] = (PageAdr >> 16) & 0xff;
     cmd[2] = (PageAdr >>  8) & 0xff;
@@ -673,7 +670,7 @@ void DataFlash_Revo::PageErase (uint16_t pageNum)
     
     if (!cs_assert()) return;
 
-    _spi->transfer(cmd, sizeof(cmd), NULL, 0);
+    _spi->transfer(cmd, 4, NULL, 0);
         
     cs_release();
 }
@@ -682,14 +679,13 @@ void DataFlash_Revo::PageErase (uint16_t pageNum)
 void DataFlash_Revo::ChipErase()
 {
 
-    uint8_t cmd[1];
     cmd[0] = JEDEC_BULK_ERASE;
 
     Flash_Jedec_WriteEnable();
     
     if (!cs_assert()) return;
 
-    _spi->transfer(cmd, sizeof(cmd), NULL, 0);
+    _spi->transfer(cmd, 1, NULL, 0);
         
     cs_release();
 }
@@ -1027,7 +1023,7 @@ void DataFlash_Revo::LogReadProcess(uint16_t log_num,
 {
     uint8_t log_step = 0;
     uint16_t page = start_page;
-    bool first_entry = true;
+//    bool first_entry = true;
 
     if (df_BufferIdx != 0) {
         FinishWrite();
@@ -1058,7 +1054,7 @@ void DataFlash_Revo::LogReadProcess(uint16_t log_num,
 
 	case 2:
 		log_step = 0;
-                first_entry = false;
+//                first_entry = false;
                 _print_log_entry(data, print_mode, port);
                 break;
 	}

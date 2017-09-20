@@ -83,9 +83,6 @@ void REVOMINIUARTDriver::flush() {
 }
 
 
-
-/* REVOMINI implementations of Stream virtual methods */
-
 uint32_t REVOMINIUARTDriver::available() {
     if (!_initialized) {
         return 0;
@@ -97,12 +94,11 @@ uint32_t REVOMINIUARTDriver::available() {
 }
 
 int16_t REVOMINIUARTDriver::read() {
-    if (available() <= 0)
+    if (available()== 0)
         return -1;
     return usart_getc(_usart_device);
 }
 
-/* REVOMINI implementations of Print virtual methods */
 size_t REVOMINIUARTDriver::write(uint8_t c) {
 
     if (!_initialized) { 
@@ -113,7 +109,7 @@ size_t REVOMINIUARTDriver::write(uint8_t c) {
     uint16_t tr=3; // 3 попытки
     while(tr) {
         n = usart_putc(_usart_device, c);
-        if(n==0) {
+        if(n==0) { // no place for character
             REVOMINIScheduler::yield(); // пока ожидаем - пусть другие работают
             if(!_blocking || REVOMINIScheduler::_in_timerprocess() ) tr--; // при неблокированном выводе уменьшим счетчик попыток
         } else break; // успешно отправили

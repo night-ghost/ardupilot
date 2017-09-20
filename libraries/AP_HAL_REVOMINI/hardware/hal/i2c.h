@@ -30,19 +30,26 @@
 #define I2C_STOP_BERR   97
 #define I2C_STOP_BUSY   96
 #define I2C_ERR_TIMEOUT 95
+#define I2C_DMA_BUSY    103
+#define I2C_PENDING     255
 
 
+#define DMA_BUFSIZE 8 // we read just 6 bytes from compass
+    
 typedef struct I2C_DMA {
     uint32_t channel;
     dma_stream stream_rx;
     dma_stream stream_tx;
 } I2C_dma;
 
-/*
-typedef struct i2c_state {
-    bool active;
+
+typedef struct I2c_state {
+    Handler  ioc;
+    uint8_t *dst;
+    uint16_t len;
+    uint8_t  buff[DMA_BUFSIZE];
 } i2c_state;
-*/
+
 
 
 /**
@@ -59,7 +66,7 @@ typedef struct i2c_dev {
     IRQn_Type er_nvic_line;  /* Error IRQ number */        
     I2C_dma dma;
     voidFuncPtr dma_isr;
-//    i2c_state *state;
+    i2c_state *state;
 } i2c_dev;
 
 #ifdef __cplusplus
@@ -72,6 +79,8 @@ void i2c_deinit(const i2c_dev *dev);
 
 uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint8_t txlen);
 uint32_t i2c_read (const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint8_t txlen, uint8_t *rx_buff, uint8_t rxlen);
+
+static inline void i2c_set_ioc(const i2c_dev *dev, Handler h) { dev->state->ioc=h; }
 
 void i2c_lowLevel_deinit(const i2c_dev *dev);
 

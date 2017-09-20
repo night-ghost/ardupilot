@@ -10,7 +10,8 @@
 
 static void i2c1_isr_handler();
 static void i2c2_isr_handler();
-
+static i2c_state i2c1_state; // not in CCM - DMA buffer!
+static i2c_state i2c2_state;
 
 static const i2c_dev i2c_dev1 = {
     .I2Cx         = I2C1,
@@ -23,6 +24,7 @@ static const i2c_dev i2c_dev1 = {
     .er_nvic_line = I2C1_ER_IRQn,
     .dma          = { DMA_CR_CH1, DMA1_STREAM0, DMA1_STREAM6 }, // I2C1
     .dma_isr      = i2c1_isr_handler,
+    .state        = &i2c1_state,
 };
 /** I2C1 device */
 const i2c_dev* const _I2C1 = &i2c_dev1;
@@ -39,6 +41,7 @@ static const i2c_dev i2c_dev2 = {
     .er_nvic_line = I2C2_ER_IRQn,
     .dma          = { DMA_CR_CH7, DMA1_STREAM3 /* intersects with spi2_tx */ , DMA1_STREAM7 }, // I2C2
     .dma_isr      = i2c2_isr_handler,
+    .state        = &i2c2_state,
 };
 
 /** I2C2 device */
@@ -92,11 +95,11 @@ void i2c_lowLevel_deinit(const i2c_dev *dev){
 }
 
 /**
- * @brief  Initializes peripherals used by the I2C EEPROM driver.
- * @param  None
- * @retval None
+ * @brief  Initializes peripherals used by the I2C driver.
  */
 static inline void i2c_lowLevel_init(const i2c_dev *dev)  {
+    memset(dev->state,0,sizeof(i2c_state));
+
     GPIO_InitTypeDef GPIO_InitStructure;
 //    NVIC_InitTypeDef NVIC_InitStructure;
 
@@ -110,6 +113,7 @@ static inline void i2c_lowLevel_init(const i2c_dev *dev)  {
     /* Enable the GPIOs for the SCL/SDA Pins */
     RCC_AHB1PeriphClockCmd(dev->gpio_port->clk, ENABLE);
 
+    memset(dev->state,0,sizeof(i2c_state));
 
 // common configuration
     /* common GPIO configuration */
@@ -133,14 +137,12 @@ static inline void i2c_lowLevel_init(const i2c_dev *dev)  {
 
 void i2c_init(const i2c_dev *dev, uint16_t address, uint32_t speed)
 {
-    I2C_InitTypeDef I2C_InitStructure;
 
-    i2c_lowLevel_init(dev);
-
+    i2c_lowLevel_init(dev); // init GPIO hardware
 
     i2c_bit_time = 1000000l / speed;
 
-    /* I2C configuration */
+    I2C_InitTypeDef I2C_InitStructure;     /* I2C configuration */
     I2C_StructInit(&I2C_InitStructure);
 
     I2C_InitStructure.I2C_Mode                = I2C_Mode_I2C;
@@ -162,7 +164,7 @@ void i2c_init(const i2c_dev *dev, uint16_t address, uint32_t speed)
 }
 
 /**
- * @brief  DeInitializes peripherals used by the I2C EEPROM driver.
+ * @brief  DeInitializes peripherals used by the I2C driver.
  * @param  None
  * @retval None
  */
@@ -173,22 +175,24 @@ void i2c_deinit(const i2c_dev *dev)
 
 
 
-#define DMA_BUFSIZE 16 // we read just 6 bytes from compass
-
-static uint8_t dma_buffer[DMA_BUFSIZE];
-
 /* Send a buffer to the i2c port */
 uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint8_t len)
 {
 
-//    uint16_t sent = 0;
     const uint8_t *buffer = tx_buff;
 
     uint32_t state = I2C_ERROR;
     uint16_t sr1;
+
+    uint32_t t = hal_micros();
+    while(dev->state->ioc){ //       wait for previous transfer finished
+        if(hal_micros() - t > I2C_TIMEOUT) return I2C_DMA_BUSY;
+        I2C_Yield(0); 
+    }
+
     
     /*!< While the bus is busy */
-    uint32_t t = hal_micros();
+    t = hal_micros();
     while ((dev->I2Cx->SR2 & (I2C_FLAG_BUSY>>16) & FLAG_MASK) != 0) {
 	if (hal_micros() - t > I2C_TIMEOUT)
 	    return state; // 2 - bus busy
@@ -197,7 +201,6 @@ uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uin
     }
 
     state++;
-
 
 
     // Bus got!  enable Acknowledge for our operation
@@ -418,6 +421,11 @@ static void i2c_isr_handler(const i2c_dev *dev){
 
         dev->I2Cx->CR1 |= I2C_CR1_STOP;     /* Send STOP condition */
         // transfer done!
+        dma_detach_interrupt(dev->dma.stream_rx);    
+        
+        if(dev->state->len){    // we need to memmove
+            memmove(dev->state->dst, dev->state->buff, dev->state->len);
+        }
     }
     
 /*
@@ -425,6 +433,10 @@ static void i2c_isr_handler(const i2c_dev *dev){
     }
 
 */
+    if(dev->state->ioc){    // io completion
+        revo_call_handler(dev->state->ioc,(uint32_t)dev);
+        dev->state->ioc=0; // only once
+    }
 }
 
 static void i2c1_isr_handler(){
@@ -439,10 +451,11 @@ static void i2c2_isr_handler(){
 uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint8_t txlen, uint8_t *rx_buff, uint8_t rxlen)
 {
 
-    uint8_t *buffer8 = rx_buff;
+    
+    uint8_t *dma_rx;
     
     uint32_t state=I2C_ERROR; 
-    bool dma_mode = /* (addr != HAL_BARO_MS5611_I2C_ADDR) && */ (rxlen < DMA_BUFSIZE) ; // MS5611 refuses to work in DMA mode
+    bool dma_mode = (rxlen < DMA_BUFSIZE);
 
     uint16_t sr1;
     uint32_t t;
@@ -451,28 +464,35 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
     dma_stream rx_stream = dev->dma.stream_rx;
 
     if(dma_mode) {
-
         //  проверить, не занят ли поток DMA перед использованием
         t = hal_micros();
         while(dma_is_stream_enabled(rx_stream) /* || dma_is_stream_enabled(dp.stream_tx) we don't use TX */  ) {
             // wait for transfer termination
             if (hal_micros() - t > I2C_TIMEOUT) {
                 dma_disable(rx_stream);  // something went wrong so let it get stopped
-                return 103; // DMA stream busy
+                return I2C_DMA_BUSY; // DMA stream busy
             }
             I2C_Yield(0); 
         }
 
-        // init DMA beforehand
+        if(ADDRESS_IN_RAM(rx_buff)){
+            dma_rx = rx_buff;
+            dev->state->len=0; // clear need to memmove            
+        } else {
+            dma_rx = dev->state->buff;
+            dev->state->len=rxlen; // need to memmove
+            dev->state->dst=rx_buff;
+        }
+
+        // init DMA beforehand    
+        dma_init(rx_stream); 
+        dma_clear_isr_bits(rx_stream); 
+
         DMA_InitTypeDef DMA_InitStructure;
         DMA_StructInit(&DMA_InitStructure);
     
-        dma_init(rx_stream); 
-    
-        dma_clear_isr_bits(rx_stream); 
-    
         DMA_InitStructure.DMA_Channel               = dev->dma.channel;
-        DMA_InitStructure.DMA_Memory0BaseAddr       = (uint32_t)dma_buffer;
+        DMA_InitStructure.DMA_Memory0BaseAddr       = (uint32_t)dma_rx;
         DMA_InitStructure.DMA_BufferSize            = rxlen;
         DMA_InitStructure.DMA_PeripheralBaseAddr    = (uint32_t)(&(dev->I2Cx->DR));
         DMA_InitStructure.DMA_PeripheralDataSize    = DMA_PeripheralDataSize_Byte;
@@ -489,9 +509,9 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
         
         dma_init_transfer(rx_stream, &DMA_InitStructure);
 
-        dma_attach_interrupt(rx_stream, (Handler)dev->dma_isr, DMA_CR_TCIE);
+        dma_attach_interrupt(rx_stream, (Handler)dev->dma_isr, DMA_CR_TCIE); // isr is VoidFuncPrt
 
-        dma_enable(rx_stream);
+        dma_enable(rx_stream);        
     } // DMA mode
 
     // While the bus is busy
@@ -682,6 +702,8 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
 
         /* Clear ADDR bit by reading SR1 then SR2 register (SR1 has already been read) */
         (void) dev->I2Cx->SR2;
+
+        if(dev->state->ioc) return I2C_PENDING;
                 
         t = hal_micros();
         // need to wait until DMA transfer complete */
@@ -690,6 +712,7 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
                 dev->I2Cx->CR2 &= ~(I2C_CR2_LAST | I2C_CR2_DMAEN); // Disable I2C DMA request 
                 dma_disable(rx_stream);
                 dma_clear_isr_bits(rx_stream); 
+                dma_detach_interrupt(rx_stream);
                 state = 100; // 100 DMA error
                 goto err_exit;
             }
@@ -697,11 +720,6 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
         }
 
         //** DMA disabled and stop generated in ISR
-            
-        dma_detach_interrupt(rx_stream);
-
-        memmove(rx_buff, dma_buffer, rxlen); // move to destination
-
     } else { // not DMA
 
 //------------
@@ -731,7 +749,7 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
             state++;
 
 	    /*!< Read the byte received  */
-	    *buffer8 = (uint8_t)(dev->I2Cx->DR);
+	    *rx_buff = (uint8_t)(dev->I2Cx->DR);
 
         } else if (rxlen==2) { // 2 byte reads - by hands, special case
 
@@ -768,7 +786,7 @@ For 2-byte reception:
 
             state++;
 
-	    *buffer8++ = (uint8_t)(dev->I2Cx->DR);	/*!< Read the 1st byte received  */
+	    *rx_buff++ = (uint8_t)(dev->I2Cx->DR);	/*!< Read the 1st byte received  */
 
 	    dev->I2Cx->CR1 |= I2C_CR1_STOP;                 /* Send STOP condition */
 
@@ -787,7 +805,7 @@ For 2-byte reception:
 
             state++;
 	
-            *buffer8 = (uint8_t)(dev->I2Cx->DR);    /*!< Read the 2nd byte received  */
+            *rx_buff = (uint8_t)(dev->I2Cx->DR);    /*!< Read the 2nd byte received  */
 
         } else { // More than 2 Byte Master Reception procedure 
     
@@ -815,7 +833,7 @@ For 2-byte reception:
 	        state++; 
 
 	        /*!< Read the byte received  */
-	        *buffer8++ = (uint8_t)(dev->I2Cx->DR);
+	        *rx_buff++ = (uint8_t)(dev->I2Cx->DR);
 	        rxlen -= 1; // 1 byte done
 	    
 	    
