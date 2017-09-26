@@ -121,6 +121,8 @@ void SPIDevice::register_completion_callback(Handler h) {
         // TODO: ???
     }
     _completion_cb = h; 
+    
+    REVOMINIScheduler::set_task_ioc(h!=0);
 }
 
 

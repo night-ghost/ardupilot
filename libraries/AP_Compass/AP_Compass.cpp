@@ -26,6 +26,7 @@
 #include "AP_Compass_UAVCAN.h"
 #endif
 #include "AP_Compass_MMC3416.h"
+#include "AP_Compass_Revo.h"
 #include "AP_Compass.h"
 
 extern AP_HAL::HAL& hal;
@@ -743,6 +744,17 @@ void Compass::_detect_backends(void)
                 AP_Compass_AK8963::name, false);
     ADD_BACKEND(DRIVER_HMC5883, AP_Compass_HMC5843::probe(*this, hal.i2c_mgr->get_device(HAL_COMPASS_HMC5843_I2C_BUS, HAL_COMPASS_HMC5843_I2C_ADDR), true),
                  AP_Compass_HMC5843::name, true);
+#elif CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI && defined(HAL_COMPASS_HMC5843_I2C_BUS)
+ #ifndef HAL_COMPASS_HMC5843_ROTATION
+  #define HAL_COMPASS_HMC5843_ROTATION ROTATION_NONE
+ #endif
+    ADD_BACKEND(DRIVER_HMC5883, AP_Compass_Revo::probe(*this, hal.i2c_mgr->get_device(HAL_COMPASS_HMC5843_I2C_BUS,     HAL_COMPASS_HMC5843_I2C_ADDR),false, HAL_COMPASS_HMC5843_ROTATION),
+                 AP_Compass_HMC5843::name, false);
+ #ifdef HAL_COMPASS_HMC5843_I2C_EXT_BUS
+    ADD_BACKEND(DRIVER_HMC5883, AP_Compass_Revo::probe(*this, hal.i2c_mgr->get_device(HAL_COMPASS_HMC5843_I2C_EXT_BUS, HAL_COMPASS_HMC5843_I2C_ADDR),true),
+                 AP_Compass_HMC5843::name, true);
+ #endif
+
 #elif HAL_COMPASS_DEFAULT == HAL_COMPASS_AK8963_MPU9250
     ADD_BACKEND(DRIVER_AK8963, AP_Compass_AK8963::probe_mpu9250(*this, 0),
                 AP_Compass_AK8963::name, false);

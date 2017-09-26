@@ -19,6 +19,8 @@ public:
     
     static inline bool get_error(){ bool t=_error; _error=false; return t; }
 
+    void lock(bool f);
+
 #ifdef SEM_PROF 
     static uint64_t sem_time;    
 #endif

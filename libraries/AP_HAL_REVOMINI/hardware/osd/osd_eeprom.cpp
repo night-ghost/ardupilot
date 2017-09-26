@@ -60,7 +60,7 @@ void OSD_EEPROM::write(uint16_t addr, uint8_t val){
 // 1st copy all data to RAM
 //         uint8_t data[EEPROM_SIZE]; //this executes in task so stack is very limited!
         uint8_t *data = (uint8_t *)malloc(EEPROM_SIZE);
-
+        if(data==NULL) goto done; // no memory
     
         for(uint16_t i=0;i<EEPROM_SIZE; i++){
             data[i] = read(i);

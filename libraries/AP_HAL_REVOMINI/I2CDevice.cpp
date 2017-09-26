@@ -175,12 +175,14 @@ void REVOI2CDevice::init(){
 
 
 void REVOI2CDevice::register_completion_callback(Handler h) { 
-    if(_completion_cb) {// IOC from last call still not called - some error occured so bus reset needed
+    if(h && _completion_cb) {// IOC from last call still not called - some error occured so bus reset needed
         _completion_cb=0;
         _do_bus_reset();
     }
     
     _completion_cb=h;
+
+    REVOMINIScheduler::set_task_ioc(h!=0);
 }
     
 
@@ -233,6 +235,7 @@ again:
         return false;
     } // software I2C
 
+// Hardware
 
     uint32_t t = hal_micros();
     while(_dev->state->ioc){ //       wait for previous transfer finished
@@ -242,20 +245,12 @@ again:
     
     _dev->state->ioc = _completion_cb; // we got bus so now set handler
         
-// Hardware
     if(recv_len==0) { // only write
         last_op=1;
         ret = i2c_write(_dev, _address, send, send_len);
     } else {
         last_op=0;
         ret = i2c_read(_dev,  _address, send, send_len, recv, recv_len);
-        
-        /* in i2c isr handler
-        if(_completion_cb) {
-            revo_call_handler(_completion_cb, (uint32_t)&_desc);
-            _completion_cb=0; // only once
-        }
-        */
     }
 
 
@@ -275,9 +270,16 @@ again:
      else                       log_ptr=0;
 #endif
 
-    if(ret == I2C_OK) return true;
 
     if(ret == I2C_PENDING) return true; // DMA transfer with callback
+
+    if(ret == I2C_OK) return true;
+
+// something went wrong and completion callback never will be called, so release bus semaphore
+    if(_completion_cb)  {
+        _completion_cb = 0;     // to prevent 2nd bus reset
+        register_completion_callback((Handler)0);
+    }
 
     if(ret == I2C_ERR_STOP || ret == I2C_STOP_BERR || ret == I2C_STOP_BUSY) { // bus or another errors on Stop, or bus busy after Stop.
                                                                             //   Data is good but bus reset required

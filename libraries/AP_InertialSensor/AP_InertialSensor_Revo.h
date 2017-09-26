@@ -24,6 +24,17 @@
 #include "AP_InertialSensor_Backend.h"
 #include "AuxiliaryBus.h"
 
+typedef struct MPU_Item {
+    uint64_t time;
+    uint16_t ax;
+    uint16_t ay;
+    uint16_t az;
+    uint16_t temp;
+    uint16_t gx;
+    uint16_t gy;
+    uint16_t gz;
+} mpu_item;
+    
 class AP_Invensense_AuxiliaryBus;
 
 class AP_InertialSensor_Revo : public AP_InertialSensor_Backend
@@ -127,7 +138,8 @@ private:
     uint8_t _last_stat_user_ctrl;    
 
     // buffer for fifo read
-    uint8_t *_fifo_buffer;
+    uint8_t *_fifo_buffer; 
+
 
     /*
       accumulators for fast sampling

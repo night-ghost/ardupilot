@@ -80,9 +80,17 @@ FLASH_IRQHandler:
 __default_exc:
     ldr r3, [sp, #24]           @ PC of exception - if access to wrong address
     ldr r1, [sp, #20]           @ LR of exception - if call to wrong address
+
+    ldr r2, BFAR                @ for debug
+    ldr r2, CFSR
+    ldr r2, HFSR
+    ldr r2, DFSR
+    ldr r2, AFSR
+    ldr r2, SHCSR
+
     mov r12, r1
     ldr r2, NVIC_CCR            @ Enable returning to thread mode even if there are
-    mov r1 ,#1                  @ pending exceptions. See flag NONEBASETHRDENA.
+    mov r1 ,#1                  @ pending exceptions. See flag NONEBASETHRDENA - http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0337e/Cihcbadd.html
     str r1, [r2]
     cpsid i                     @ Disable global interrupts
     ldr r2, SYSTICK_CSR         @ Disable systick handler
@@ -101,6 +109,7 @@ __default_exc:
     push {r2}                   @ R2 - LR
     push {r3}                   @ R1 - PC of exception
     push {r0}                   @ R0 - exception code
+
     ldr r1, EXC_RETURN          @ Return to thread mode
     mov lr, r1
     bx lr                       @ Exception exit
@@ -112,3 +121,9 @@ TARGET_PC:     .word __error
 NVIC_CCR:      .word 0xE000ED14    @ NVIC configuration control register
 SYSTICK_CSR:   .word 0xE000E010    @ Systick control register
 
+BFAR:          .word 0xE000ED38
+CFSR:          .word 0xE000ED28
+HFSR:          .word 0xE000ED2C
+DFSR:          .word 0xE000ED30
+AFSR:          .word 0xE000ED3C
+SHCSR:         .word 0xE000ED24

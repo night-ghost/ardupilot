@@ -39,6 +39,7 @@
 #if HAL_WITH_UAVCAN
 #include "AP_Baro_UAVCAN.h"
 #endif
+#include "AP_Baro_Revo.h"
 
 #define C_TO_KELVIN 273.15f
 // Gas Constant is from Aerodynamics for Engineering Students, Third Edition, E.L.Houghton and N.B.Carruthers
@@ -446,6 +447,8 @@ void AP_Baro::init(void)
 #elif HAL_BARO_DEFAULT == HAL_BARO_HIL
     drivers[0] = new AP_Baro_HIL(*this);
     _num_drivers = 1;
+#elif CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI && defined(HAL_BARO_MS5611_I2C_BUS)
+    ADD_BACKEND(AP_Baro_Revo::probe(*this, std::move(hal.i2c_mgr->get_device(HAL_BARO_MS5611_I2C_BUS, HAL_BARO_MS5611_I2C_ADDR))));
 #elif HAL_BARO_DEFAULT == HAL_BARO_BMP085
     drivers[0] = new AP_Baro_BMP085(*this,
         std::move(hal.i2c_mgr->get_device(HAL_BARO_BMP085_BUS, HAL_BARO_BMP085_I2C_ADDR)));

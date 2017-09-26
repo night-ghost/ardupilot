@@ -477,20 +477,20 @@ void AP_InertialSensor_Revo::start()
     set_accel_orientation(_accel_instance, _rotation);
 
     // allocate fifo buffer
-    _fifo_buffer = (uint8_t *)hal.util->dma_allocate(MPU_FIFO_BUFFER_LEN * MPU_SAMPLE_SIZE);
+    _fifo_buffer = (uint8_t *)(hal.util->dma_allocate((MPU_FIFO_BUFFER_LEN+1) * MPU_SAMPLE_SIZE));
     if (_fifo_buffer == nullptr) {
         AP_HAL::panic("Invensense: Unable to allocate FIFO buffer");
     }
 
-    //REVOMINIScheduler::register_IMU_handler(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_isr, void));
     REVOMINIGPIO::_attach_interrupt(INVENSENSE_DRDY_PIN, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_isr, void)), RISING, 2);
 
     _register_read(MPUREG_INT_STATUS); // reset interrupt request
 
+// DON'T request scheduling in timers interrupt - because data already readed
     // start the timer process to read samples
-    _dev->register_periodic_callback(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void));
-    
-    
+//    _dev->register_periodic_callback(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)); - we don't require semaphore so use sheduler's API
+    REVOMINIScheduler::register_timer_task(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL);
+
 }
 
 
@@ -529,15 +529,16 @@ bool AP_InertialSensor_Revo::_data_ready()
 
 /*
     ISR procedure for data read. Ring buffer don't needs to use semaphores for data access
+    
+    also we don't own a bus semaphore and can't guarantee that bus is free. But in Revo MPU uses personal SPI bus so it is ABSOLUTELY free :)
 */
 void AP_InertialSensor_Revo::_isr(){
-    uint8_t *data = _fifo_buffer + MPU_SAMPLE_SIZE * write_ptr;
+     uint8_t *data = _fifo_buffer + MPU_SAMPLE_SIZE * write_ptr;
+//    _fifo_buffer[write_ptr].time = REVOMINIScheduler::_micros64();
 
-    REVOMINI::SPIDevice *rd = (REVOMINI::SPIDevice *)(_dev.get()); // to use non-virtual functions directly
-    rd->register_completion_callback(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_ioc, void)); // IO completion interrupt
+    _dev->register_completion_callback(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_ioc, void)); // IO completion interrupt
     
     _block_read(MPUREG_ACCEL_XOUT_H, data, MPU_SAMPLE_SIZE); // start SPI transfer 
-
 }
 
 void AP_InertialSensor_Revo::_ioc(){ // io completion
@@ -545,8 +546,13 @@ void AP_InertialSensor_Revo::_ioc(){ // io completion
         write_ptr=0;                         // ring
     }
     if(write_ptr == read_ptr) { // buffer overflow
-        debug("MPU buffer overflow!");    
+//        debug("MPU buffer overflow!");    
+        REVOMINIScheduler::MPU_buffer_overflow(); // count them
     }
+
+// we should release the bus semaphore if we use them 
+//    _dev->register_completion_callback(NULL); // allow to bus driver to release bus semaphore
+//    _dev->get_semaphore()->give();            // release
 }
 
 /*
@@ -677,29 +683,36 @@ bool AP_InertialSensor_Revo::_accumulate_fast_sampling(uint8_t *samples, uint8_t
 void AP_InertialSensor_Revo::_read_fifo()
 {
 
-    if(read_ptr == write_ptr) nodata_count++;
+    if(read_ptr == write_ptr) nodata_count++; 
     if(nodata_count > MAX_NODATA_COUNT) { // something went wrong - data stream stopped
         _start(); // try to restart MPU        
         nodata_count=0;
     }
 
     while(read_ptr != write_ptr) { // there are samples
-    
-    
-        uint8_t *rx = _fifo_buffer + MPU_SAMPLE_SIZE * read_ptr;
+//        uint64_t time = _fifo_buffer[read_ptr++].time; // we can get exact time
+//        uint8_t *rx = (uint8_t *)(&_fifo_buffer[read_ptr++].ax);  // calculate address and move to next item
+        uint8_t *rx = _fifo_buffer + MPU_SAMPLE_SIZE * read_ptr++;  // calculate address and move to next item
+        if(read_ptr >= MPU_FIFO_BUFFER_LEN) { // move write pointer
+            read_ptr=0;                       // ring
+        }
+
 
 
         if (_fast_sampling) {
             if (!_accumulate_fast_sampling(rx, 1)) {
 //                debug("stop at %u of %u", n_samples, bytes_read/MPU_SAMPLE_SIZE);
-                break;
+                // break;  don't break before all items in queue will be readed
+                nodata_count++; // but calculate this cases. If we get some errors sequentally then MPU will be restarted
+                continue;
             }
         } else {
             if (!_accumulate(rx, 1)) {
-                break;
+                // break; don't break before all items in queue will be readed
+                nodata_count++;
+                continue;
             }
         }
-        read_ptr++; // next item
         nodata_count=0;
     }
 }

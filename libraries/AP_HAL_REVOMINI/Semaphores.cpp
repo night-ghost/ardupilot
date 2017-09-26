@@ -17,11 +17,14 @@ uint64_t Semaphore::sem_time=0;
 #endif
 
 // Constructor
-Semaphore::Semaphore() : _taken(false) {}
+Semaphore::Semaphore()
+    : _taken(false) 
+{}
 
 
 bool Semaphore::give() {
     bool result = false;
+
     if (_taken) {
         _taken = false;
         _task = NULL;
@@ -29,6 +32,7 @@ bool Semaphore::give() {
     }
     return result;
 }
+
 
 bool Semaphore::take(uint32_t timeout_ms) {
     if (REVOMINIScheduler::_in_timerprocess()) {
@@ -65,12 +69,12 @@ bool Semaphore::_take_from_mainloop(uint32_t timeout_ms) {
     uint32_t dt = timeout_ms*1000; // timeout time
 
     do {
+        REVOMINIScheduler::set_task_forced(_task); // set hight priority for task which owns semaphore
         hal_yield(0); // no max task time - this is more useful  // REVOMINIScheduler::_delay_microseconds(10);
         if (_take_nonblocking()) {
             ret= true;
             break;
         }
-        REVOMINIScheduler::set_task_forced(_task); // set hight priority for task which owns semaphore
     } while(timeout_ms == HAL_SEMAPHORE_BLOCK_FOREVER ||  (REVOMINIScheduler::_micros() - t) < dt);
 
 #ifdef SEM_PROF 
@@ -81,12 +85,11 @@ bool Semaphore::_take_from_mainloop(uint32_t timeout_ms) {
 }
 
 bool Semaphore::_take_nonblocking() {
-
     noInterrupts();
     if (!_taken) {
         _taken = true;
-        _task = REVOMINIScheduler::get_current_task();// remember task which owns semaphore 
         interrupts();
+        _task = REVOMINIScheduler::get_current_task();// remember task which owns semaphore 
         return true;
     }
     interrupts();

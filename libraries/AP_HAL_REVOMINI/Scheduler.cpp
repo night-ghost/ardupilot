@@ -27,7 +27,7 @@ using namespace REVOMINI;
 extern const AP_HAL::HAL& hal;
 
 
-AP_HAL::Proc REVOMINIScheduler::_failsafe = NULL;
+AP_HAL::Proc  REVOMINIScheduler::_failsafe = NULL;
 volatile bool REVOMINIScheduler::_timer_suspended = false;
 volatile bool REVOMINIScheduler::_timer_event_missed = false;
 volatile bool REVOMINIScheduler::_in_timer_proc = false;
@@ -98,13 +98,14 @@ uint32_t REVOMINIScheduler::max_stack_pc IN_CCM ;
 bool REVOMINIScheduler::disable_stack_check=false;
 
 bool REVOMINIScheduler::_in_io_proc IN_CCM =0;
-
+bool REVOMINIScheduler::new_api_flag IN_CCM=0;
+uint32_t REVOMINIScheduler::MPU_overflow_cnt IN_CCM;
 
 REVOMINIScheduler::REVOMINIScheduler()
 {
 
-    s_running = &s_main; //  CCM don't initialized! - Reference running task
-    s_top = MAIN_STACK_SIZE;                       // Initial top stack for task allocation
+    s_running = &s_main;         //  CCM don't initialized! - Reference running task
+    s_top = MAIN_STACK_SIZE;     // Initial top stack for task allocation
 
     memset(&s_main, 0, sizeof(s_main));
 
@@ -113,7 +114,7 @@ REVOMINIScheduler::REVOMINIScheduler()
     s_main.next = &s_main,
     s_main.prev = &s_main,
 //    s_main.active = true,
-    s_main.handle = h.h;
+    s_main.handle = h.h;        // to not 0
     s_main.guard = STACK_GUARD;
 
 }
@@ -123,7 +124,7 @@ bool REVOMINIScheduler::is_main_task() { return s_running == &s_main; }
 void REVOMINIScheduler::init()
 {
     if(in_interrupt()){ // some interrupt caused restart at ISR level        
-        AP_HAL::panic("HAL initialization on ISR level=0x%x", SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk);
+        AP_HAL::panic("HAL initialization on ISR level=0x%x", (uint8_t)(SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk));
     }
 
 #if USE_ISR_SCHED
@@ -136,6 +137,9 @@ void REVOMINIScheduler::init()
     CLEAR_BIT(SCB->SCR, ((uint32_t)SCB_SCR_SLEEPDEEP_Msk)); //we don't need deep sleep
     SET_BIT(  SCB->SCR, ((uint32_t)SCB_SCR_SEVONPEND_Msk)); //we need Event on each interrupt
 
+/*[ DEBUG
+    SCnSCB->ACTLR |= SCnSCB_ACTLR_DISDEFWBUF_Msk; // disable imprecise exceptions
+//]*/
     timer_foreach(timer_reset); // timer_reset(dev) moved out from configTimeBase so reset by hands
 
     {
@@ -524,11 +528,9 @@ void REVOMINIScheduler::_print_stats(){
             hal.console->printf("\nISR time %5.2f max %5.2f", (isr_time/10.0/(float)us_ticks)/t, max_isr_time/(float)us_ticks );
             max_isr_time=0;
 #endif
-#if 0
-            hal.console->printf("\nIMU times: mean %5.2f max %5ld", (float)_IMU_fulltime/_IMU_count, _IMU_maxtime );
-            _IMU_maxtime=0;
-#endif
             hal.console->printf("\nmax delay() error= %ld wfe time = %ld\n", max_delay_err, max_wfe_time );
+            hal.console->printf("MPU overflows: %ld\n", MPU_overflow_cnt);
+
             max_delay_err=0;
             max_wfe_time=0;
         } break;
@@ -629,10 +631,14 @@ bool REVOMINIScheduler::_set_10s_flag(){
 AP_HAL::Device::PeriodicHandle REVOMINIScheduler::_register_timer_task(uint32_t period_us, Handler proc, REVOMINI::Semaphore *sem, revo_cb_type mode){
 
 #if USE_ISR_SCHED    
-    if(period_us > 8000) { // slow tasks will runs at individual IO tasks
+//    if(period_us > 8000) { 
+    if(new_api_flag){ // new IO_Completion api allows to not wait in interrupt so can be scheduled in timers interrupt
+        new_api_flag=false;
+    } else {
 #else
     {
 #endif
+        // slow tasks will runs at individual IO tasks
         void *task = _start_task(proc, SLOW_TASK_STACK);
         if(task){
             set_task_period(task, period_us);
@@ -916,17 +922,22 @@ void * REVOMINIScheduler::init_task(Handler handler, const uint8_t* stack)
         uint32_t t;
         while (1) {
             if(task.handle) {
-                if(task.sem) {// if task requires a semaphore - try to take
+                if(task.sem && !task.in_ioc) {// if task requires a semaphore - try to take
                     if(!task.sem->take_nonblocking()) {
-                        set_task_forced(task.sem->get_owner());  // hiest priority to semaphore's owner
-                        yield(0);
-                        continue;
+                        void *own = task.sem->get_owner();
+                        if( (uint32_t)own != (uint32_t)(&task) ) { // some another task owns
+                            set_task_forced(own);  // hiest priority to semaphore's owner
+                            yield(0);
+                            continue;
+                        } else {
+                            // if we owns semaphore then something went wrong and simply ignore it
+                        }
                     }
                 }
                 task.active=true;        
                 task.time_start=_micros();
                 revo_call_handler(task.handle, 0); 
-                if(task.sem) task.sem->give(); // give semaphore when task finished
+                if(task.sem && !task.in_ioc) task.sem->give(); // give semaphore when task finished
                 task.active=false;
 
                 t = _micros()-task.time_start; // execution time
@@ -1026,7 +1037,7 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
       ( s_running->id==0 && ttw && ttw < 5) || // don't mess into delays less than 5uS from main task - 840 steps
       in_interrupt() ) { // don't switch privileged context
 #ifdef USE_WFE
-        __WFE();
+        if(ttw) __WFE();
 #endif
         return;
     }
@@ -1135,13 +1146,15 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
                 if( (now-s_running->time_start)  <   s_running->period) continue;
 
             } else { // проверим задачи без строгого периода на допустимость либо обычный тайм слайс
-                // task has a ttw  and time since that moment still less than ttw - skip task
-                if(s_running->ttw && (now-s_running->t_yield) < s_running->ttw) continue;
 
                 if(s_running->forced) { // task with forced priority
                     s_running->forced=false; //reset it ASAP
                     break; 
                 }
+
+                // task has a ttw  and time since that moment still less than ttw - skip task
+                if(s_running->ttw && (now-s_running->t_yield) < s_running->ttw) continue;
+
 /*
                 if(me->period && me->active) {// yield() called by high-priority tasks
                     if(ttw) {
@@ -1163,9 +1176,9 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
                     }
 
                     if(loop_count==0) { // first loop we tries to select only high-priority tasks
-#define HIGH_TIMESLICE_TIME 5 // не вызывать высокоприоритетную задачу, вызвавшую yield() меньше 10uS назад
-#define MID_TIMESLICE_TIME  50 // не вызывать основную задачу, вызвавшую yield() меньше 50uS назад                    
-#define LOW_TIMESLICE_TIME 200 // не вызывать фоновую задачу, вызвавшую yield() меньше 200uS назад                    
+#define HIGH_TIMESLICE_TIME 2 // не вызывать высокоприоритетную задачу, вызвавшую yield() меньше этого времени назад
+#define MID_TIMESLICE_TIME  5 // не вызывать основную задачу, вызвавшую yield() меньше этого времени назад                    
+#define LOW_TIMESLICE_TIME 10 // не вызывать фоновую задачу, вызвавшую yield() меньше этого времени назад                    
 
                         dt=LOW_TIMESLICE_TIME;
                         if(s_running->period)
@@ -1320,9 +1333,6 @@ void REVOMINIScheduler::PendSV_Handler(){ // isr at lowest priority to do all IO
                     uint32_t t = _micros();
 #endif
                     revo_call_handler(io.handler,i); // unified way to call handlers
-
-                    if(io.sem) io.sem->give(); // give back ASAP
-
 #ifdef SHED_PROF
                     t = _micros() - t;
                     io.time += t;

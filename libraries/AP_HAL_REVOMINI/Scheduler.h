@@ -25,7 +25,7 @@
 #define REVOMINI_SCHEDULER_MAX_IO_PROCS 10
 #define REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS 32
 
-#define USE_ISR_SCHED 0
+#define USE_ISR_SCHED 1
 
 #if USE_ISR_SCHED
  #define SHED_FREQ 8000 // in Hz - we don't use it for tasks anymore
@@ -37,7 +37,7 @@
 
 #define MAIN_STACK_SIZE  8192U    // measured use of stack is only 1K - but it grows up to 4K when using FatFs
 #define DEFAULT_STACK_SIZE  8192U // Default tasks stack size and stack max - io_thread can do work with filesystem
-#define SLOW_TASK_STACK 1024U     // small stack for sensors
+#define SLOW_TASK_STACK 1536U     // small stack for sensors
 #define STACK_MAX  65536U
 
 
@@ -141,6 +141,7 @@ public:
         uint8_t id;             // id of task
         bool active;            // task not ended
         bool forced;            // task owns semaphore which needed to high-priority task
+        bool in_ioc;
         uint32_t ttw;           // time to work
         uint32_t t_yield;       // time of yield
         uint32_t start;         // microseconds of timeslice start
@@ -163,7 +164,7 @@ public:
     typedef struct IO_COMPLETION {
         Handler handler;
         REVOMINI::Semaphore *sem;
-        bool request;
+        bool request; 
 #ifdef SHED_PROF
         uint64_t time;
         uint32_t count;
@@ -239,10 +240,8 @@ public:
     void                  loop();      // to add ability to print out scheduler's stats in main thread
 
 
-//    static void _do_io_process();
-
 //    bool                  _run_1khz_procs();
-    static inline bool in_interrupt(){ return (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) || (__get_BASEPRI()); }
+    static inline bool in_interrupt(){ return (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) /* || (__get_BASEPRI()) */; }
 
 
 //{ this functions do a cooperative multitask and inspired by Arduino-Scheduler (Mikael Patel)
@@ -287,6 +286,8 @@ public:
   static void stop_task(void * h);
   static task_t* get_empty_task();
   static inline void * get_current_task() { return s_running; }
+
+  static inline void set_task_ioc(bool v) { s_running->in_ioc=v; }
 
   /**               
    * Context switch to next task in run queue.
@@ -348,6 +349,10 @@ public:
     }
         
     static inline void setEmergencyHandler(voidFuncPtr handler) { boardEmergencyHandler = handler; }
+
+    static inline void i_know_new_api() { new_api_flag=true; }
+    
+    static inline void MPU_buffer_overflow(){ MPU_overflow_cnt++; } 
 
 protected:
 
@@ -451,6 +456,8 @@ private:
     static uint8_t num_io_completion;
     static bool _in_io_proc;
 
+    static bool new_api_flag;
+    static uint32_t MPU_overflow_cnt;
 };
 
 void revo_call_handler(uint64_t h, uint32_t arg);

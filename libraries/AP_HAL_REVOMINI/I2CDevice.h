@@ -142,6 +142,8 @@ private:
     bool     _slow;
     bool     _failed;
     bool     need_reset;
+    
+//    AP_HAL::Device::PeriodicHandle h_timer; // handler to task to acces it later
 
     const i2c_dev *_dev;
     Soft_I2C s_i2c; // per-bus instances

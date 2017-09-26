@@ -251,7 +251,6 @@ void AP_Compass_HMC5843::_timer()
         return; 
     }
 
-    uint32_t tnow = AP_HAL::micros();    
     bool result = _read_sample();
 
 //    if(!_setup_sampling_mode() )
@@ -346,6 +345,8 @@ bool AP_Compass_HMC5843::_setup_sampling_mode()
     }
 
 //[ autodetect compass type
+    hal.scheduler->delay_microseconds(2);
+
     uint8_t ma;
     
     if(!_bus->register_read(HMC5843_REG_CONFIG_A, &ma)) return false;
@@ -358,6 +359,7 @@ bool AP_Compass_HMC5843::_setup_sampling_mode()
         gain = HMC5843_GAIN_1_50_GA;
         _type = HMC5843;
     } else { // can't detect compass type
+        hal.console->printf("can't detect HMC5843 type! RegA=%x\n", ma);
         return false;
     }
 
