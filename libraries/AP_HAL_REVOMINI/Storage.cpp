@@ -61,31 +61,13 @@ REVOMINIStorage::REVOMINIStorage()
 {}
 
 
-//TODO: cache data in RAM?
-//#define EEPROM_CACHED
+//we have a lot of unused CCM memory so cache data in RAM
+#define EEPROM_CACHED
 
 #if defined(EEPROM_CACHED)
-
-
 static uint8_t eeprom_buffer[BOARD_STORAGE_SIZE] IN_CCM;
-
 #endif
 
-void REVOMINIStorage::init()
-{
-    eeprom.init(pageBase1, pageBase0, pageSize);
-#if defined(EEPROM_CACHED)
-    uint16_t i;
-    for(i=0; i<BOARD_STORAGE_SIZE;i+=2){ // read out all data to RAM buffer
-        error_parse( eeprom.read(i >> 1, &eeprom_buffer[i]));
-    }
-#endif
-}
-
-/*void REVOMINIStorage::format_eeprom(void) {  
-    eeprom.format(); 
-}
-*/
 
 static void error_parse(uint16_t status){
     switch(status) {
@@ -110,6 +92,23 @@ static void error_parse(uint16_t status){
     default:
         break; // all OK
     }
+}
+
+
+void REVOMINIStorage::init()
+{
+    eeprom.init(pageBase1, pageBase0, pageSize);
+#if defined(EEPROM_CACHED)
+    uint16_t i;
+    for(i=0; i<BOARD_STORAGE_SIZE;i+=2){ // read out all data to RAM buffer
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align" // yes I know
+
+        error_parse( eeprom.read(i >> 1, (uint16_t *)&eeprom_buffer[i]));
+#pragma GCC diagnostic pop
+    }
+#endif
 }
 
 uint8_t REVOMINIStorage::read_byte(uint16_t loc){

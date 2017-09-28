@@ -142,7 +142,8 @@ public:
         uint8_t priority;       // priority of task
         bool active;            // task not ended
         bool forced;            // task owns semaphore which needed to high-priority task
-        bool in_ioc;
+        bool in_ioc;            // task starts IO_Completion so don't release bus semaphore
+        bool has_semaphore;     // task has a semaphore so let it run until gives it
         uint32_t ttw;           // time to work
         uint32_t t_yield;       // time of yield
         uint32_t start;         // microseconds of timeslice start
@@ -290,6 +291,7 @@ public:
   static inline void * get_current_task() { return s_running; }
 
   static inline void set_task_ioc(bool v) { s_running->in_ioc=v; }
+  static inline void task_has_semaphore(bool v) { s_running->has_semaphore=v; }
 
   /**               
    * Context switch to next task in run queue.

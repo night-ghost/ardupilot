@@ -105,6 +105,7 @@ private:
     
     bool _initialised:1;
     bool _force_external:1;
+    void * task_handle;
 
 };
 

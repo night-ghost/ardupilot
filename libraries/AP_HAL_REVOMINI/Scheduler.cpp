@@ -630,7 +630,7 @@ bool REVOMINIScheduler::_set_10s_flag(){
 [    common realization of all Device.PeriodicCallback;
 */
 AP_HAL::Device::PeriodicHandle REVOMINIScheduler::_register_timer_task(uint32_t period_us, Handler proc, REVOMINI::Semaphore *sem, revo_cb_type mode){
-
+#if 0
 #if USE_ISR_SCHED    
 //    if(period_us > 8000) { 
     if(new_api_flag){ // new IO_Completion api allows to not wait in interrupt so can be scheduled in timers interrupt
@@ -647,7 +647,7 @@ AP_HAL::Device::PeriodicHandle REVOMINIScheduler::_register_timer_task(uint32_t 
         }
         return (AP_HAL::Device::PeriodicHandle)task;
     }
-    
+#endif
 #if USE_ISR_SCHED
     uint8_t i;
     for (i = 0; i < _num_timers; i++) {
@@ -1028,6 +1028,8 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
     asm volatile ("mov %0, lr\n\t"  : "=rm" (ret) );
 
 #endif
+    if(s_running->has_semaphore) return; // dont switch out from task that owns a semaphore
+
     uint32_t loop_count=0;
 
 #ifdef SHED_DEBUG

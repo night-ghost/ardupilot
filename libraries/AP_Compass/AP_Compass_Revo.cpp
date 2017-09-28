@@ -217,7 +217,7 @@ bool AP_Compass_Revo::init()
         set_external(_compass_instance, true);
     }
 
-    REVOMINIScheduler::register_timer_task(1000, FUNCTOR_BIND_MEMBER(&AP_Compass_Revo::_read_fifo, void), NULL);
+    task_handle = REVOMINIScheduler::register_timer_task(1000, FUNCTOR_BIND_MEMBER(&AP_Compass_Revo::_read_fifo, void), NULL);
 
     REVOMINIScheduler::i_know_new_api(); // request scheduling in timers interrupt
     // read from sensor at 75Hz
@@ -329,6 +329,7 @@ void AP_Compass_Revo::_ioc() // transfer complete
     }
     REVOMINI::REVOI2CDevice *rd = (REVOMINI::REVOI2CDevice *)(_bus->get_device()); // to use non-virtual functions directly
     rd->register_completion_callback((Handler)NULL);                               // allow the bus driver to release the bus semaphore
+    _bus->get_semaphore()->give(); // release bus semaphore
 
     _take_sample(); // next sample
     
@@ -339,12 +340,13 @@ void AP_Compass_Revo::_ioc() // transfer complete
         sp.ry=ry;
         sp.rz=rz;
         
-//        _calc_sample(rx,ry,rz); // moved out to not calculate in interrupt
+//        _calc_sample(rx,ry,rz); // moved out to not wait & calculate in interrupt
     }
 
     in_progress=false;
 
-    _bus->get_semaphore()->give(); // release bus semaphore
+    
+    REVOMINIScheduler::set_task_forced(task_handle); // force read out to run
 }
 
 

@@ -157,5 +157,6 @@ private:
     volatile uint16_t write_ptr; // changed in interrupt
     uint16_t nodata_count;
     void * task_handle;
+    float accel_len;
 };
 

@@ -280,6 +280,7 @@ AP_InertialSensor_Revo::AP_InertialSensor_Revo(AP_InertialSensor &imu,
     , _rotation(rotation)
     , _dev(std::move(dev))
     , nodata_count(0)
+    , accel_len(0)
 {
 }
 
@@ -585,6 +586,7 @@ bool AP_InertialSensor_Revo::_accumulate(uint8_t *samples, uint8_t n_samples)
 //            _fifo_reset();
             return false; // just skip this sample
         }
+        
         float temp = t2 * temp_sensitivity + temp_zero;
         
         gyro = Vector3f(int16_val(data, 5),
@@ -594,6 +596,18 @@ bool AP_InertialSensor_Revo::_accumulate(uint8_t *samples, uint8_t n_samples)
 
         _rotate_and_correct_accel(_accel_instance, accel);
         _rotate_and_correct_gyro(_gyro_instance, gyro);
+
+        float len = accel.length();
+        if(is_zero(accel_len)) {
+            accel_len=len;
+        } else {
+            if((accel_len-len)/(accel_len+len)*100 > 20) { // difference more than 40% from mean value
+                debug("accel len reset: mean %f got %f", accel_len, len );
+                return false;
+            }
+#define FILTER_KOEF 0.1
+            accel_len = accel_len * (1-FILTER_KOEF) + len*FILTER_KOEF; // complimentary filter 1/10
+        }
 
         _notify_new_accel_raw_sample(_accel_instance, accel, 0, fsync_set);
         _notify_new_gyro_raw_sample(_gyro_instance, gyro);

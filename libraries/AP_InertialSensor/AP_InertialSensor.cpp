@@ -689,7 +689,7 @@ AP_InertialSensor::detect_backends(void)
     _add_backend(AP_InertialSensor_SITL::detect(*this));
 #elif HAL_INS_DEFAULT == HAL_INS_HIL
     _add_backend(AP_InertialSensor_HIL::detect(*this));
-#elif CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI 
+#elif CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI && 0
 // personal driver working via interrupts
     _add_backend(AP_InertialSensor_Revo::probe(*this, hal.spi->get_device(HAL_INS_MPU60x0_NAME), HAL_INS_DEFAULT_ROTATION));
 

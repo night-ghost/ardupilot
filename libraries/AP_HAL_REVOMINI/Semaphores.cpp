@@ -28,6 +28,7 @@ bool Semaphore::give() {
     if (_taken) {
         _taken = false;
         REVOMINIScheduler::clear_task_forced(NULL);  // reset priority for task which released semaphore
+        REVOMINIScheduler::task_has_semaphore(false);
         _task = NULL;
         result=true;
     }
@@ -61,6 +62,7 @@ bool Semaphore::_take_from_mainloop(uint32_t timeout_ms) {
     
     /* Try to take immediately */
     if (_take_nonblocking()) {
+        REVOMINIScheduler::task_has_semaphore(true);
         return true;
     } 
 
@@ -74,6 +76,7 @@ bool Semaphore::_take_from_mainloop(uint32_t timeout_ms) {
         hal_yield(0); // no max task time - this is more useful  // REVOMINIScheduler::_delay_microseconds(10);
         if (_take_nonblocking()) {
             ret= true;
+            REVOMINIScheduler::task_has_semaphore(true);
             break;
         }
     } while(timeout_ms == HAL_SEMAPHORE_BLOCK_FOREVER ||  (REVOMINIScheduler::_micros() - t) < dt);
