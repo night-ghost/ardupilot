@@ -95,6 +95,7 @@ extern const struct TIM_Channel PWM_Channels[];
 void pwmInit(bool ppmsum);
 
 bool getPPM_Pulse(Pulse *p, uint8_t ch);
+uint16_t getPPM_count(uint8_t ch);
 
 static inline void pwm_setHandler(Handler handler, uint8_t ch){
     PPM_Inputs[ch].handler = handler;

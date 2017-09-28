@@ -253,7 +253,7 @@ extern const AP_HAL::HAL& hal;
 
 #define MPU_SAMPLE_SIZE 14
 #define MPU_FIFO_DOWNSAMPLE_COUNT 8
-#define MPU_FIFO_BUFFER_LEN 36// 16  - will be ~512 bytes
+#define MPU_FIFO_BUFFER_LEN 512// ms of samples
 
 #define int16_val(v, idx) ((int16_t)(((uint16_t)v[2*idx] << 8) | v[2*idx+1]))
 #define uint16_val(v, idx)(((uint16_t)v[2*idx] << 8) | v[2*idx+1])
@@ -489,7 +489,7 @@ void AP_InertialSensor_Revo::start()
 // DON'T request scheduling in timers interrupt - because data already readed
     // start the timer process to read samples
 //    _dev->register_periodic_callback(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)); - we don't require semaphore so use sheduler's API
-    REVOMINIScheduler::register_timer_task(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL);
+    task_handle = REVOMINIScheduler::register_timer_task(500, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL);
 
 }
 
@@ -542,16 +542,20 @@ void AP_InertialSensor_Revo::_isr(){
 }
 
 void AP_InertialSensor_Revo::_ioc(){ // io completion
+    uint16_t old_wp = write_ptr;
     if(write_ptr++ >= MPU_FIFO_BUFFER_LEN) { // move write pointer
         write_ptr=0;                         // ring
     }
     if(write_ptr == read_ptr) { // buffer overflow
 //        debug("MPU buffer overflow!");    
         REVOMINIScheduler::MPU_buffer_overflow(); // count them
+        write_ptr=old_wp; // not overwrite, just skip last data
     }
 
+    REVOMINIScheduler::set_task_forced(task_handle);
+
+    _dev->register_completion_callback(NULL); // inform that IOC finished
 // we should release the bus semaphore if we use them 
-//    _dev->register_completion_callback(NULL); // allow to bus driver to release bus semaphore
 //    _dev->get_semaphore()->give();            // release
 }
 
@@ -560,7 +564,7 @@ void AP_InertialSensor_Revo::_ioc(){ // io completion
  */
 void AP_InertialSensor_Revo::_poll_data()
 {
-    _read_fifo();
+    _read_fifo(0);
 }
 
 bool AP_InertialSensor_Revo::_accumulate(uint8_t *samples, uint8_t n_samples)
@@ -680,13 +684,14 @@ bool AP_InertialSensor_Revo::_accumulate_fast_sampling(uint8_t *samples, uint8_t
 
 #define MAX_NODATA_COUNT 5
 
-void AP_InertialSensor_Revo::_read_fifo()
+void AP_InertialSensor_Revo::_read_fifo(uint8_t count)
 {
 
     if(read_ptr == write_ptr) nodata_count++; 
     if(nodata_count > MAX_NODATA_COUNT) { // something went wrong - data stream stopped
         _start(); // try to restart MPU        
         nodata_count=0;
+        REVOMINIScheduler::MPU_restarted(); // count them
     }
 
     while(read_ptr != write_ptr) { // there are samples
@@ -712,6 +717,9 @@ void AP_InertialSensor_Revo::_read_fifo()
                 nodata_count++;
                 continue;
             }
+        }
+        if(count) { 
+            if(--count==0) return;
         }
         nodata_count=0;
     }

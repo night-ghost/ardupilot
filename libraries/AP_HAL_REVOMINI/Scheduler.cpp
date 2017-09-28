@@ -16,6 +16,7 @@
 #include <AP_Notify/AP_Notify.h>
 #include <AP_Math/AP_Math.h>
 
+#include "RCInput.h"
 #include <systick.h>
 
 #include "GPIO.h"
@@ -100,6 +101,7 @@ bool REVOMINIScheduler::disable_stack_check=false;
 bool REVOMINIScheduler::_in_io_proc IN_CCM =0;
 bool REVOMINIScheduler::new_api_flag IN_CCM=0;
 uint32_t REVOMINIScheduler::MPU_overflow_cnt IN_CCM;
+uint32_t REVOMINIScheduler::MPU_restart_cnt IN_CCM;
 
 REVOMINIScheduler::REVOMINIScheduler()
 {
@@ -109,11 +111,11 @@ REVOMINIScheduler::REVOMINIScheduler()
 
     memset(&s_main, 0, sizeof(s_main));
 
-    Revo_handler h = { .vp=loc_ret };
+    Revo_handler h = { .vp=loc_ret }; // to not 0
 
-    s_main.next = &s_main,
-    s_main.prev = &s_main,
-//    s_main.active = true,
+    s_main.next = &s_main;
+    s_main.prev = &s_main;
+    s_main.priority = 100;
     s_main.handle = h.h;        // to not 0
     s_main.guard = STACK_GUARD;
 
@@ -520,24 +522,23 @@ void REVOMINIScheduler::_print_stats(){
             if(is_zero(shed_eff)) shed_eff = eff;
             else              shed_eff = shed_eff*(1 - 1/Kf) + eff*(1/Kf);
 
-            hal.console->printf("\nSched stats:\n  %% of full time: %5.2f  Efficiency %5.3f max loop time %ld \n", (task_time/10.0)/t /* in percent*/ , shed_eff, max_loop_time );
-            hal.console->printf("delay times: in main %5.2f including in semaphore %5.2f  in timer %5.2f",         (delay_time/10.0)/t, (Semaphore::sem_time/10.0)/t,  (delay_int_time/10.0)/t);
+            printf("\nSched stats:\n  %% of full time: %5.2f  Efficiency %5.3f max loop time %ld \n", (task_time/10.0)/t /* in percent*/ , shed_eff, max_loop_time );
+            printf("delay times: in main %5.2f including in semaphore %5.2f  in timer %5.2f",         (delay_time/10.0)/t, (Semaphore::sem_time/10.0)/t,  (delay_int_time/10.0)/t);
             max_loop_time=0;
 
 #ifdef ISR_PROF
-            hal.console->printf("\nISR time %5.2f max %5.2f", (isr_time/10.0/(float)us_ticks)/t, max_isr_time/(float)us_ticks );
+            printf("\nISR time %5.2f max %5.2f", (isr_time/10.0/(float)us_ticks)/t, max_isr_time/(float)us_ticks );
             max_isr_time=0;
 #endif
-            hal.console->printf("\nmax delay() error= %ld wfe time = %ld\n", max_delay_err, max_wfe_time );
-            hal.console->printf("MPU overflows: %ld\n", MPU_overflow_cnt);
-
-            max_delay_err=0;
-            max_wfe_time=0;
+            printf("\nmax delay() error= %ld wfe time = %ld\n", max_delay_err, max_wfe_time ); max_delay_err=0; max_wfe_time=0;
+            printf("MPU overflows: %ld restarts %ld\n", MPU_overflow_cnt, MPU_restart_cnt); MPU_overflow_cnt=0; MPU_restart_cnt=0;
+            printf("PPM max buffer size: %d\n", REVOMINIRCInput::max_num_pulses); REVOMINIRCInput::max_num_pulses=0;
+                        
         } break;
 
         case 1:{
  #if USE_ISR_SCHED
-            hal.console->printf("\nTask times:\n");
+            printf("\nTask times:\n");
 
             for(int i=0; i< _num_timers; i++) {
                 if(_timers[i].proc){    // task not cancelled?
@@ -569,12 +570,12 @@ void REVOMINIScheduler::_print_stats(){
 
         case 3: {
             uint8_t n = REVOI2CDevice::get_dev_count();
-            hal.console->printf("\nI2C stats\n");
+            printf("\nI2C stats\n");
     
             for(uint8_t i=0; i<n; i++){
                 REVOI2CDevice * d = REVOI2CDevice::get_device(i);
                 if(d){
-                    hal.console->printf("bus %d addr %x errors %ld last error=%d\n",d->get_bus(), d->get_addr(), d->get_error_count(), d->get_last_error());   
+                    printf("bus %d addr %x errors %ld last error=%d\n",d->get_bus(), d->get_addr(), d->get_error_count(), d->get_last_error());   
                 }
             }
             }break;
@@ -584,28 +585,28 @@ void REVOMINIScheduler::_print_stats(){
             uint32_t bottom=(uint32_t)&_sdata;
             
             // 48K after boot 72K while logging on
-            hal.console->printf("\nMemory used: %ldk:\n",(heap_ptr-bottom)/1024);
-            hal.console->printf("Free stack: %ldk:\n",(lowest_stack - (uint32_t)&_eccm)/1024);
-            hal.console->printf("Main stack use: %ldk at %lx\n",((uint32_t)&_sccm + 0x10000 /* 64K CCM */ - main_stack)/1024, max_stack_pc);
+            printf("\nMemory used: %ldk:\n",(heap_ptr-bottom)/1024);
+            printf("Free stack: %ldk:\n",(lowest_stack - (uint32_t)&_eccm)/1024);
+            printf("Main stack use: %ldk at %lx\n",((uint32_t)&_sccm + 0x10000 /* 64K CCM */ - main_stack)/1024, max_stack_pc);
 
             } break;
         
         case 5: {
-            hal.console->printf("\nIO completion time=%9.1fms (%7.3f%%)\n", ioc_time/1000.0,  ioc_time/1000.0/t*100);
+            printf("\nIO completion time=%9.1fms (%7.3f%%)\n", ioc_time/1000.0,  ioc_time/1000.0/t*100);
             uint64_t iot=0;
             for(uint8_t i=0; i<num_io_completion; i++){
                 struct IO_COMPLETION &io = io_completion[i];
                 
                 if(io.handler) {
                     if(io.count){
-                        hal.console->printf("task %llx time %9.1fms (%7.3f%%) mean %7.3fuS\n", io.handler,  io.time/1000.0, 100.0 * io.time / t / 1000, (float)io.time/io.count);
+                        printf("task %llx time %9.1fms (%7.3f%%) mean %7.3fuS\n", io.handler,  io.time/1000.0, 100.0 * io.time / t / 1000, (float)io.time/io.count);
                         
                         iot+=io.time;
                     }
                 }    
             }
             if(ioc_time)
-                hal.console->printf("IO completion effectiveness=%7.3f%%\n",  100.0 * iot/ioc_time);
+                printf("IO completion effectiveness=%7.3f%%\n",  100.0 * iot/ioc_time);
         
             }break;
             
@@ -871,7 +872,7 @@ uint32_t REVOMINIScheduler::fill_task(task_t &tp){
     tp.id = ++task_n; // counter
 //    tp.active = true;
     tp.ttw = 1;       // delay after 1st enter
-//    tp.max_delay=0;   // max execution time
+    tp.priority=255; // lowest by default
 
 #ifdef MTASK_PROF
     tp.start=_micros(); 
@@ -938,6 +939,7 @@ void * REVOMINIScheduler::init_task(Handler handler, const uint8_t* stack)
                 task.time_start=_micros();
                 revo_call_handler(task.handle, 0); 
                 if(task.sem && !task.in_ioc) task.sem->give(); // give semaphore when task finished
+                task.forced=false; // reset priority
                 task.active=false;
 
                 t = _micros()-task.time_start; // execution time
@@ -992,6 +994,7 @@ void REVOMINIScheduler::set_task_period(void *h, uint32_t period){
     
     task->period = period;
     task->start  = _micros();
+    task->priority = 50; // high priority for periodic tasks
 }
 
 // default TTW
@@ -1042,13 +1045,14 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
         return;
     }
 
+    task_t *task=NULL;
+
     disable_stack_check = true;
 #ifdef MTASK_PROF
     uint32_t slTime;
 #endif
     { // isolate 'me' - task that calls yield()
         task_t *me = s_running;
-    
 
 // if yield() called with a time, then task don't want to run all this time so exclude it from time sliceing
         uint32_t t =  _micros();
@@ -1099,45 +1103,22 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
         while(true) { // lets try to find task to switch to
             s_running = s_running->next; // Next task in run queue will continue
 
-//#ifdef SHED_DEBUG
             if(!(ADDRESS_IN_RAM(s_running) || ADDRESS_IN_CCM(s_running )) ){
                 AP_HAL::panic("PANIC: s_rinning spoiled in process %d\n", me->id);
             }
-//#endif
             uint32_t now= _micros(); // renew each loop
 
             if(s_running == me) {  // 'me' is the task that calls yield(), so full loop - there is no job.
                 loop_count++;
-/*
-                // если задача вызвала yield а за заданное время задержки так и не нашлось кого выполнить - то просто вернемся
-                // TODO это излишне, в таком случае оно просто должно выбрать себя для выполнения
-                if(ttw && (now-t >=ttw)) {
- #ifdef SHED_DEBUG
-                    slTime = now - slTime;
-                    revo_sched_log &lp = logbuf[sched_log_ptr];
-                    lp.start = now;
-                    lp.sleep = slTime;
-                    lp.task_id=me->id;
-                    lp.loop_count=loop_count;
-                    lp.ttw_skip_count=ttw_skip_count;
-                    ZeroIt(logbuf[next_log_ptr(sched_log_ptr)]); // clear next
- #endif
-                    return;
-                }
-*/
+
+                if(task) break; // we have task to run
+
 #ifdef USE_WFE
                 if(loop_count>1) __WFE(); //  Timer6 makes events each uS to not spoil microsecond delays
- #ifdef SHED_DEBUG
-                uint32_t wfe_time = _micros() - now;
-                if(wfe_time > max_wfe_time){
-                    max_wfe_time = wfe_time;
-                }
- #endif
 #endif    
             }
             
-            if(!s_running->handle) continue; // skip finished tasks                
-            
+            if(!s_running->handle) continue; // skip finished tasks
             
             // если для задачи установлен период выполнения и она в самом начале - проверим 
             if(s_running->period && !s_running->active){
@@ -1148,55 +1129,45 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
             } else { // проверим задачи без строгого периода на допустимость либо обычный тайм слайс
 
                 if(s_running->forced) { // task with forced priority
-                    s_running->forced=false; //reset it ASAP
+                    task = s_running; // run it ASAP
                     break; 
                 }
 
                 // task has a ttw  and time since that moment still less than ttw - skip task
                 if(s_running->ttw && (now-s_running->t_yield) < s_running->ttw) continue;
-
-/*
-                if(me->period && me->active) {// yield() called by high-priority tasks
-                    if(ttw) {
-                        if(!s_running->period && s_running->max_delay > ttw ) continue; //not execute tasks which spoils delay time
-                    } else {
-                        if(!s_running->period && s_running->id!=0) continue; // only high-priority tasks or main task
-                    }
-                    
-                } else { // others
-*/            
-                       //     main task always    not periodic           task max execution time more than we have - but not for periodic drivers which have high priority
-                    if(ttw && s_running->id!=0 && !s_running->period && s_running->max_delay > ttw ) { 
-                        s_running->max_delay --; //  понемногу уменьшаем дабы совсем не выключить
+                
+                
+                //     main task always    not periodic           task max execution time more than we have - but not for periodic drivers which have high priority
+                if(ttw && s_running->id!=0 && !s_running->period && s_running->max_delay > ttw ) { 
+                    s_running->max_delay --; //  понемногу уменьшаем дабы совсем не выключить
 #ifdef SHED_DEBUG
-                        ttw_skip_count++;
+                    ttw_skip_count++;
 #endif
 
-                        continue;
-                    }
+                    continue;
+                }
 
-                    if(loop_count==0) { // first loop we tries to select only high-priority tasks
-#define HIGH_TIMESLICE_TIME 2 // не вызывать высокоприоритетную задачу, вызвавшую yield() меньше этого времени назад
+                if(loop_count==0) { // first loop we tries to select only high-priority tasks
+#define HIGH_TIMESLICE_TIME  1 // не вызывать приориитетную задачу, вызвавшую yield() меньше этого времени назад                    
 #define MID_TIMESLICE_TIME  5 // не вызывать основную задачу, вызвавшую yield() меньше этого времени назад                    
 #define LOW_TIMESLICE_TIME 10 // не вызывать фоновую задачу, вызвавшую yield() меньше этого времени назад                    
 
-                        dt=LOW_TIMESLICE_TIME;
-                        if(s_running->period)
-                                 dt=HIGH_TIMESLICE_TIME;
-                        if(s_running->id==0)
-                                 dt=MID_TIMESLICE_TIME;
+                    dt=LOW_TIMESLICE_TIME;
+                    if(s_running->period)  dt=HIGH_TIMESLICE_TIME;
+                    if(s_running->id==0)   dt=MID_TIMESLICE_TIME;
                                 
 
-                        if(loop_count<2 && now - s_running->t_yield < dt) continue; // some time between calls to the same task if there are anothers
-                    }
-                    // on 2nd loop we selects any available task
+                    if(now - s_running->t_yield < dt) continue; // some time between calls to the same task if there are anothers
+                }
+                // on 2nd loop we selects any available task
 
-//                }
             }
-                        
-            break; // we found task to run
+            if(!task || s_running->priority < task->priority){ // select the most priority task
+                task = s_running;
+            }
         }
 
+        s_running = task; // selected task to run
 
         // вроде бы выбрали задачу для переключения. 
         //   проверим отсутствие переполнения стека. Если это основной процесс то всегда, если это дочерние процессы то только если 

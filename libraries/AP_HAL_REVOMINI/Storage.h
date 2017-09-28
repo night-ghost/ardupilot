@@ -26,20 +26,14 @@ class REVOMINI::REVOMINIStorage : public AP_HAL::Storage
 public:
   REVOMINIStorage();
   void init();
-  uint8_t  read_byte(uint16_t loc);
-  uint16_t read_word(uint16_t loc);
-  inline uint32_t read_dword(uint16_t loc){
-            uint32_t value;
-            read_block(&value, loc, sizeof(value));
-            return value;
-    }
   void     read_block(void *dst, uint16_t src, size_t n);
+  void write_block(uint16_t dst, const void* src, size_t n);
+
+// just for us
+  uint8_t  read_byte(uint16_t loc);
 
   void write_byte(uint16_t loc, uint8_t value);
-  void write_word(uint16_t loc, uint16_t value);
-  inline void write_dword(uint16_t loc, uint32_t value) {  write_block(loc, &value, sizeof(value)); }
-  void write_block(uint16_t dst, const void* src, size_t n);
-  void format_eeprom(void);
+//  void format_eeprom(void);
 };
 
 #endif // __AP_HAL_REVOMINI_STORAGE_H__

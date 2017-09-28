@@ -27,6 +27,7 @@ bool Semaphore::give() {
 
     if (_taken) {
         _taken = false;
+        REVOMINIScheduler::clear_task_forced(NULL);  // reset priority for task which released semaphore
         _task = NULL;
         result=true;
     }

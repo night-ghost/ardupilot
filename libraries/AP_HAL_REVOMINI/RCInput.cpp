@@ -40,14 +40,13 @@ DSM    GND     rx  en
 
 extern const AP_HAL::HAL& hal;
 /*
-static const uint8_t input_channels[]={ 
+input_channels:
     4,  // PB14 T12/1 - PPM
     5,  // PB15 T12/2 - PPM2
     12, // PC6  T8/1  - 6_tx 
     13, // PC7  T8/2  - 6_rx 
     14, // PC8  T8/3  - Soft_scl / soft_TX
     15, // PC9  T8/4  - Soft_sda / soft_RX
-};
 */
 
 _parser *REVOMINIRCInput::parsers[] = { // individual parsers on each PPM pin and DSM/SBUS USART
@@ -67,17 +66,18 @@ _parser *REVOMINIRCInput::parsers[] = { // individual parsers on each PPM pin an
 #define PPM_INPUTS (ARRAY_SIZE(parsers))
 
 
-uint8_t           REVOMINIRCInput::_valid_channels; //  = 0;
+uint8_t           REVOMINIRCInput::_valid_channels IN_CCM; //  = 0;
 uint64_t          REVOMINIRCInput::_last_read IN_CCM; // = 0;
 
 
 uint16_t REVOMINIRCInput::_override[REVOMINI_RC_INPUT_NUM_CHANNELS] IN_CCM;
 bool REVOMINIRCInput::_override_valid;
 
-bool REVOMINIRCInput::is_PPM = true;
+bool REVOMINIRCInput::is_PPM IN_CCM;
 
-uint8_t REVOMINIRCInput::_last_read_from=0;
+uint8_t REVOMINIRCInput::_last_read_from IN_CCM;
 
+uint16_t REVOMINIRCInput::max_num_pulses IN_CCM;
 
 /* constrain captured pulse to be between min and max pulsewidth. */
 static inline uint16_t constrain_pulse(uint16_t p) {
@@ -96,8 +96,6 @@ void REVOMINIRCInput::init() {
 
     memset((void *)&_override[0],   0, sizeof(_override));
 
-
-
 /* OPLINK AIR port pinout
 1       2       3       4       5       6       7
                PD2     PA15                
@@ -109,11 +107,12 @@ used as:
 */
 
     is_PPM=true;
+    _last_read_from=0;
+    max_num_pulses=0;
 
     clear_overrides();
 
     pwmInit(is_PPM); // PPM sum mode
-
 
     for(uint8_t i=0; i<PPM_INPUTS;i++) {
         parsers[i]->init(i);

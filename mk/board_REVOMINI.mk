@@ -94,12 +94,12 @@ WARNFLAGS      +=   -Wno-error=unused-variable -Wno-error=reorder -Wno-error=flo
 WARNFLAGS      +=   -Wno-error=pmf-conversions -Wno-error=missing-declarations -Wno-error=unused-function -Werror=format-security -Werror=array-bounds
 WARNFLAGS      +=   -Wno-error=unused-label
 
-#OPTFLAGS        = -O0
 #OPTFLAGS        = -Og
 OPTFLAGS        = -Os
-OPTFLAGS       += -fsingle-precision-constant -g3 -fno-strict-aliasing -fno-strength-reduce -fomit-frame-pointer -fearly-inlining 
+OPTFLAGS       += -fsingle-precision-constant -g3 -fno-strict-aliasing -fno-strength-reduce -fomit-frame-pointer
 OPTFLAGS       += -fno-builtin-printf -fno-aggressive-loop-optimizations -fpredictive-commoning
-#OPTFLAGS       += -fassociative-math -freciprocal-math -ffast-math 
+OPTFLAGS       += -fassociative-math
+# -freciprocal-math -ffast-math - cause EKF errors
 OPTFLAGS       += -fno-signed-zeros -fno-trapping-math 
 OPTFLAGS       += -finline-functions-called-once -fearly-inlining -finline-small-functions
 OPTFLAGS       += -fmerge-all-constants 

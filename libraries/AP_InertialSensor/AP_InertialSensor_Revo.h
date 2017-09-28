@@ -88,7 +88,7 @@ private:
     void _fifo_reset();
 
     /* Read samples from FIFO (FIFO enabled) */
-    void _read_fifo();
+    void _read_fifo(uint8_t count);
 
     /* Check if there's data available by either reading DRDY pin or register */
     bool _data_ready();
@@ -153,8 +153,9 @@ private:
         LowPassFilterVector3f gyro_filter{8000, 188};
     } _accum;
     
-    uint8_t read_ptr;
-    volatile uint8_t write_ptr; // changed in interrupt
+    uint16_t read_ptr;
+    volatile uint16_t write_ptr; // changed in interrupt
     uint16_t nodata_count;
+    void * task_handle;
 };
 

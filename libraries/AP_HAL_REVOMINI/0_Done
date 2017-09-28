@@ -105,6 +105,7 @@
 * new SoftI2C driver uses timer and works in interrupts
 * added support for SUMD and non-inverted SBUS via PPM pins
 * added support for SUMD via UARTs
+* MPU not uses FIFO - data readed out via interrupts
 * ...
 * a lot of minor enhancements
 
@@ -149,3 +150,4 @@ Timer usage:
 12 PPM_IN
 13
 14
+

@@ -2,6 +2,7 @@
 #define __EEPROM_H
 
 #include "stm32f4xx_flash.h"
+#include <stdio.h>
 
 /* Page status definitions */
 #define EEPROM_ERASED			((uint16_t)0xFFFF)	/* PAGE is empty */

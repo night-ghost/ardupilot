@@ -60,14 +60,32 @@ static EEPROMClass eeprom;
 REVOMINIStorage::REVOMINIStorage()
 {}
 
+
+//TODO: cache data in RAM?
+//#define EEPROM_CACHED
+
+#if defined(EEPROM_CACHED)
+
+
+static uint8_t eeprom_buffer[BOARD_STORAGE_SIZE] IN_CCM;
+
+#endif
+
 void REVOMINIStorage::init()
 {
     eeprom.init(pageBase1, pageBase0, pageSize);
+#if defined(EEPROM_CACHED)
+    uint16_t i;
+    for(i=0; i<BOARD_STORAGE_SIZE;i+=2){ // read out all data to RAM buffer
+        error_parse( eeprom.read(i >> 1, &eeprom_buffer[i]));
+    }
+#endif
 }
 
-void REVOMINIStorage::format_eeprom(void) {  
+/*void REVOMINIStorage::format_eeprom(void) {  
     eeprom.format(); 
 }
+*/
 
 static void error_parse(uint16_t status){
     switch(status) {
@@ -96,6 +114,9 @@ static void error_parse(uint16_t status){
 
 uint8_t REVOMINIStorage::read_byte(uint16_t loc){
 
+#if defined(EEPROM_CACHED)
+    return eeprom_buffer[loc];
+#else
     // 'bytes' are packed 2 per word
     // Read existing dataword and use upper or lower byte
 
@@ -106,20 +127,14 @@ uint8_t REVOMINIStorage::read_byte(uint16_t loc){
 	return data >> 8; // Odd, upper byte
     else
 	return data & 0xff; // Even lower byte
-}
-
-uint16_t REVOMINIStorage::read_word(uint16_t loc){
-    uint16_t value;
-    if(loc & 1) { // from odd address
-        read_block(&value, loc, sizeof(value));
-    } else { // from even address - as word
-        error_parse( eeprom.read(loc >> 1, &value));
-    }
-    return value;
+#endif
 }
 
 
 void REVOMINIStorage::read_block(void* dst, uint16_t loc, size_t n) {
+#if defined(EEPROM_CACHED)
+    memmove(dst, &eeprom_buffer[loc], n);
+#else
     // Treat as a block of bytes
     uint8_t *ptr_b=(uint8_t *)dst;
     
@@ -143,10 +158,15 @@ void REVOMINIStorage::read_block(void* dst, uint16_t loc, size_t n) {
         ptr_b=(uint8_t *)ptr_w;
         *ptr_b = read_byte(loc);
     }    
+#endif
 }
 
 void REVOMINIStorage::write_byte(uint16_t loc, uint8_t value)
 {
+#if defined(EEPROM_CACHED)
+    if(eeprom_buffer[loc]==value) return;
+    eeprom_buffer[loc]=value;
+#endif
     // 'bytes' are packed 2 per word
     // Read existing data word and change upper or lower byte
     uint16_t data;
@@ -159,18 +179,13 @@ void REVOMINIStorage::write_byte(uint16_t loc, uint8_t value)
     error_parse(eeprom.write(loc >> 1, data));
 }
 
-void REVOMINIStorage::write_word(uint16_t loc, uint16_t value)
-{
-    if(loc & 1)
-        write_block(loc, &value, sizeof(value));        // по нечетному адресу как обычно
-    else
-        error_parse(eeprom.write(loc >> 1, value));     // по четному сразу словом
-}
-
-
 
 void REVOMINIStorage::write_block(uint16_t loc, const void* src, size_t n)
 {
+#if defined(EEPROM_CACHED)
+    memmove(&eeprom_buffer[loc], src, n);
+#endif
+
     uint8_t *ptr_b = (uint8_t *)src;     // Treat as a block of bytes
     if(loc & 1){
         write_byte(loc++, *ptr_b++);      // odd byte

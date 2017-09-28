@@ -257,3 +257,8 @@ bool getPPM_Pulse(Pulse *p, uint8_t ch) {
     *p = pb_remove(bp);
     return true;
 }
+
+uint16_t getPPM_count(uint8_t ch){
+    volatile pulse_buffer *bp = &PPM_Inputs[ch].pulses;
+    return pb_full_count(bp);
+}

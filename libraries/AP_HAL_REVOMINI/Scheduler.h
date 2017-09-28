@@ -139,6 +139,7 @@ public:
         jmp_buf context;        //!< Task context
         const uint8_t* stack;   //!< Task stack
         uint8_t id;             // id of task
+        uint8_t priority;       // priority of task
         bool active;            // task not ended
         bool forced;            // task owns semaphore which needed to high-priority task
         bool in_ioc;
@@ -281,7 +282,8 @@ public:
   static void set_task_period(void *h, uint32_t period);
   static void set_task_semaphore(void *h, REVOMINI::Semaphore *sem);
   static void set_task_ttw(void *h, uint32_t ttw);
-  static inline void set_task_forced(void *_task) { if(_task) { ((task_t*)_task)->forced = true; } } 
+  static inline void set_task_forced(void *_task) {   if(!_task) _task=(void *)s_running;  ((task_t*)_task)->forced = true;  } 
+  static inline void clear_task_forced(void *_task) { if(!_task) _task=(void *)s_running;  ((task_t*)_task)->forced = false;  } 
   
   static void stop_task(void * h);
   static task_t* get_empty_task();
@@ -353,6 +355,7 @@ public:
     static inline void i_know_new_api() { new_api_flag=true; }
     
     static inline void MPU_buffer_overflow(){ MPU_overflow_cnt++; } 
+    static inline void MPU_restarted() {      MPU_restart_cnt++; }
 
 protected:
 
@@ -458,6 +461,7 @@ private:
 
     static bool new_api_flag;
     static uint32_t MPU_overflow_cnt;
+    static uint32_t MPU_restart_cnt;
 };
 
 void revo_call_handler(uint64_t h, uint32_t arg);

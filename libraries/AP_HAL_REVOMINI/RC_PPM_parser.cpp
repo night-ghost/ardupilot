@@ -51,6 +51,10 @@ void PPM_parser::parse_pulses(void){
     if(_ch==0) return; // not initialized
 
     Pulse p;
+//[ statistics to tune memory usage
+    uint16_t np = getPPM_count(_ch);
+    if(np>REVOMINIRCInput::max_num_pulses) REVOMINIRCInput::max_num_pulses=np;
+//]
 
     while( getPPM_Pulse(&p, _ch-1)){
 // addHist(p.length);
