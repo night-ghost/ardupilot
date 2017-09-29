@@ -85,10 +85,9 @@ private:
     void _start();    // used for start and restart
 
     void _set_filter_register(void);
-    void _fifo_reset();
 
-    /* Read samples from FIFO (FIFO enabled) */
-    void _read_fifo(uint8_t count);
+    /* Read samples from FIFO in RAM */
+    void _read_fifo();
 
     /* Check if there's data available by either reading DRDY pin or register */
     bool _data_ready();
@@ -158,5 +157,6 @@ private:
     uint16_t nodata_count;
     void * task_handle;
     float accel_len;
+    uint32_t last_sample;
 };
 

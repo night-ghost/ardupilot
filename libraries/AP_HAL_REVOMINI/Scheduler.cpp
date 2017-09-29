@@ -36,6 +36,8 @@ volatile bool REVOMINIScheduler::_in_timer_proc = false;
 #if USE_ISR_SCHED
 revo_timer REVOMINIScheduler::_timers[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS] IN_CCM;
 uint8_t    REVOMINIScheduler::_num_timers = 0;
+revo_tick  REVOMINIScheduler::_ticks[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS] IN_CCM;
+uint8_t    REVOMINIScheduler::_num_ticks = 0;
 #endif
 
 Revo_IO    REVOMINIScheduler::_io_proc[REVOMINI_SCHEDULER_MAX_IO_PROCS] IN_CCM;
@@ -50,6 +52,7 @@ uint32_t REVOMINIScheduler::timer5_ovf_cnt=0;
 
 bool REVOMINIScheduler::_initialized=false;
 
+Handler REVOMINIScheduler::on_disarm_handler IN_CCM;
 
 static void loc_ret(){}
 
@@ -81,6 +84,10 @@ uint32_t REVOMINIScheduler::max_loop_time IN_CCM =0;
 uint64_t REVOMINIScheduler::ioc_time IN_CCM =0;
 uint64_t REVOMINIScheduler::sleep_time IN_CCM =0;
 uint32_t REVOMINIScheduler::max_delay_err=0;
+
+uint32_t REVOMINIScheduler::tick_micros IN_CCM;    // max exec time
+uint32_t REVOMINIScheduler::tick_count IN_CCM;     // number of calls
+uint64_t REVOMINIScheduler::tick_fulltime IN_CCM;  // full consumed time to calc mean
 #endif
 
 
@@ -131,6 +138,7 @@ void REVOMINIScheduler::init()
 
 #if USE_ISR_SCHED
     memset(_timers,       0, sizeof(_timers) );
+    memset(_ticks,        0, sizeof(_ticks) );
 #endif
     memset(_io_proc,      0, sizeof(_io_proc) );
     memset(io_completion, 0, sizeof(io_completion) );
@@ -542,10 +550,11 @@ void REVOMINIScheduler::_print_stats(){
 
             for(int i=0; i< _num_timers; i++) {
                 if(_timers[i].proc){    // task not cancelled?
-                    hal.console->printf("shed task 0x%llX tim %8.1f int %5.3f%% tot %6.4f%% mean time %5.1f max time %ld\n", _timers[i].proc, _timers[i].fulltime/1000.0, _timers[i].fulltime*100.0 / task_time, (_timers[i].fulltime / 10.0) / t, (float)_timers[i].fulltime/_timers[i].count, _timers[i].micros );
+                    printf("shed task 0x%llX tim %8.1f int %5.3f%% tot %6.4f%% mean time %5.1f max time %ld\n", _timers[i].proc, _timers[i].fulltime/1000.0, _timers[i].fulltime*100.0 / task_time, (_timers[i].fulltime / 10.0) / t, (float)_timers[i].fulltime/_timers[i].count, _timers[i].micros );
                     _timers[i].micros = 0; // reset max time
                 }
             }
+            printf("tick tasks tim %8.1f int %5.3f%% tot %6.4f%% mean time %5.1f max time %ld\n",  tick_fulltime/1000.0, tick_fulltime*100.0 / task_time, (tick_fulltime / 10.0) / t, (float)tick_fulltime/tick_count, tick_micros ); tick_micros=0;
  #endif
 #endif
     
@@ -630,7 +639,7 @@ bool REVOMINIScheduler::_set_10s_flag(){
 [    common realization of all Device.PeriodicCallback;
 */
 AP_HAL::Device::PeriodicHandle REVOMINIScheduler::_register_timer_task(uint32_t period_us, Handler proc, REVOMINI::Semaphore *sem, revo_cb_type mode){
-#if 0
+#if 1
 #if USE_ISR_SCHED    
 //    if(period_us > 8000) { 
     if(new_api_flag){ // new IO_Completion api allows to not wait in interrupt so can be scheduled in timers interrupt
@@ -676,6 +685,7 @@ store:
         rt.period = period_us;
         rt.last_run = _micros(); // now
         rt.sem  = sem;
+        rt.sem2 = NULL; // no check semaphore
         rt.mode = mode;
  #ifdef SHED_PROF
         rt.count = 0;
@@ -718,6 +728,11 @@ bool REVOMINIScheduler::unregister_timer_task(AP_HAL::Device::PeriodicHandle h)
     return true;
 }
 
+void REVOMINIScheduler::set_checked_semaphore(AP_HAL::Device::PeriodicHandle h, REVOMINI::Semaphore *sem){
+    revo_timer *p = (revo_timer *)h;
+    p->sem2 = sem;
+}
+
 void REVOMINIScheduler::reschedule_proc(uint64_t proc){
     for (uint8_t i = 0; i < _num_timers; i++) {
         revo_timer &tim = _timers[i];
@@ -725,6 +740,34 @@ void REVOMINIScheduler::reschedule_proc(uint64_t proc){
             tim.last_run    -= tim.period; // move back
             return;
         }
+    }
+}
+
+/*revo_tick  REVOMINIScheduler::_ticks[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS] IN_CCM;
+uint8_t    REVOMINIScheduler::_num_ticks = 0;
+*/
+void REVOMINIScheduler::do_at_next_tick(Handler proc, REVOMINI::Semaphore *sem){
+    uint8_t i;
+    for (i = 0; i < _num_ticks; i++) {
+        if ( _ticks[i].proc == 0L /* free slot */ ) goto store;        
+    }
+
+    if (_num_ticks < REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS) {
+        /* this write to _ticks[] can be outside the critical section
+         * because that memory won't be used until _num_ticks is
+         * incremented or where proc is NULL. */
+     
+        i = _num_ticks;
+
+        _ticks[i].proc = 0L; // clear proc - this entry will be skipped
+        _num_ticks++; // now nulled proc guards us
+store:        
+        revo_tick &rt=_ticks[i];
+        rt.sem  = sem;
+        noInterrupts();    // 64-bits should be 
+        rt.proc = proc;    //     last one, not interferes - guard is over
+        interrupts();
+//        return (AP_HAL::Device::PeriodicHandle)&rt;
     }
 }
 
@@ -746,8 +789,8 @@ void REVOMINIScheduler::_run_timers(){
     last_run = now;
 
     bool is_error = Semaphore::get_error(); // reset error before tasks
-
-    for(int i = 0; i<_num_timers; i++){
+    uint8_t i;
+    for(i = 0; i<_num_timers; i++){
         revo_timer &tim = _timers[i];
         
         if(tim.proc){    // task not cancelled?
@@ -758,6 +801,10 @@ void REVOMINIScheduler::_run_timers(){
 */
             if( (now - tim.last_run) > tim.period) { // time to run?
                 uint8_t ret=1;  // OK by default
+                if(tim.sem2){
+                    if(!tim.sem2->take_nonblocking()) continue; // semaphore busy? go out, will try next tick
+                    tim.sem2->give();   // give back ASAP
+                }
 
                 if(tim.sem && !tim.sem->take_nonblocking()) { // semaphore active? take!
                     // can't get semaphore, just do nothing - will try next time
@@ -804,6 +851,35 @@ void REVOMINIScheduler::_run_timers(){
             }
         }
     }
+    for (i = 0; i < _num_ticks; i++) {
+        revo_tick &ti = _ticks[i];
+        if ( ti.proc ) {
+            if(ti.sem) {
+                if(!ti.sem->take_nonblocking())  // semaphore active? take!
+                    continue; // can't take - semaphore busy, go out
+                ti.sem->give(); //  give back ASAP! task will take it itself. we in interrupt so no one can catch it
+            }
+            Handler h = ti.proc;
+            ti.proc=0;           // clear before call
+#ifdef SHED_PROF
+            uint32_t t = _micros();
+#endif          
+            revo_call_handler(h,0);
+#ifdef SHED_PROF
+            t = _micros() - t;               // work time
+
+            if(tick_micros < t)
+                tick_micros   =  t;      // max time
+            tick_count     += 1;          // number of calls
+            tick_fulltime  += t;          // full time, mean time = full / count
+            job_t += t;                  // time of all jobs
+#endif        
+
+        }
+    }
+
+
+
 
 
     full_t = _micros() - full_t;         // full time of scheduler
@@ -927,7 +1003,6 @@ void * REVOMINIScheduler::init_task(Handler handler, const uint8_t* stack)
                     if(!task.sem->take_nonblocking()) {
                         void *own = task.sem->get_owner();
                         if( (uint32_t)own != (uint32_t)(&task) ) { // some another task owns
-                            set_task_forced(own);  // hiest priority to semaphore's owner
                             yield(0);
                             continue;
                         } else {
@@ -939,8 +1014,8 @@ void * REVOMINIScheduler::init_task(Handler handler, const uint8_t* stack)
                 task.time_start=_micros();
                 revo_call_handler(task.handle, 0); 
                 if(task.sem && !task.in_ioc) task.sem->give(); // give semaphore when task finished
-                task.forced=false; // reset priority
                 task.active=false;
+                task.has_semaphore=0; // task is over so glitch
 
                 t = _micros()-task.time_start; // execution time
                 if(task.def_ttw && task.def_ttw > t) t = task.def_ttw - t; // time to wait
@@ -1129,11 +1204,6 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
                 if( (now-s_running->time_start)  <   s_running->period) continue;
 
             } else { // проверим задачи без строгого периода на допустимость либо обычный тайм слайс
-
-                if(s_running->forced) { // task with forced priority
-                    task = s_running; // run it ASAP
-                    break; 
-                }
 
                 // task has a ttw  and time since that moment still less than ttw - skip task
                 if(s_running->ttw && (now-s_running->t_yield) < s_running->ttw) continue;

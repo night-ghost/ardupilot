@@ -90,7 +90,8 @@ typedef struct RevoTimer {
     uint32_t last_run;          // last run time
 //    union Revo_cb proc; // can't declare - got error "use of deleted function 'RevoTimer::RevoTimer()"
     Handler proc;          //AP_HAL::Device::PeriodicCb proc and AP_HAL::MemberProc mp together
-    REVOMINI::Semaphore *sem;
+    REVOMINI::Semaphore *sem; // semaphore to get
+    REVOMINI::Semaphore *sem2;// semaphore to check
     revo_cb_type mode;
 
  #ifdef SHED_PROF
@@ -99,8 +100,13 @@ typedef struct RevoTimer {
     uint64_t fulltime;  // full consumed time to calc mean
  #endif
 } revo_timer;
-#endif
 
+typedef struct RevoTick {
+//    union Revo_cb proc; // can't declare - got error "use of deleted function 'RevoTimer::RevoTimer()"
+    Handler proc;          //AP_HAL::Device::PeriodicCb proc and AP_HAL::MemberProc mp together
+    REVOMINI::Semaphore *sem;
+} revo_tick;
+#endif
 
 #ifdef SHED_DEBUG
 typedef struct RevoSchedLog {
@@ -141,9 +147,8 @@ public:
         uint8_t id;             // id of task
         uint8_t priority;       // priority of task
         bool active;            // task not ended
-        bool forced;            // task owns semaphore which needed to high-priority task
         bool in_ioc;            // task starts IO_Completion so don't release bus semaphore
-        bool has_semaphore;     // task has a semaphore so let it run until gives it
+        uint8_t has_semaphore;  // count how many times task has a semaphore so let it run until gives it
         uint32_t ttw;           // time to work
         uint32_t t_yield;       // time of yield
         uint32_t start;         // microseconds of timeslice start
@@ -224,6 +229,14 @@ public:
         return _register_timer_task(period_us, r.h, sem, CB_PERIODICBOOL);
     }
 
+    static void set_checked_semaphore(AP_HAL::Device::PeriodicHandle h, REVOMINI::Semaphore *sem);
+    
+
+/*
+    try to get a semaphore and call handler on success
+*/
+    static void do_at_next_tick(Handler h, REVOMINI::Semaphore *sem);
+
     static void _delay(uint16_t ms);
     static void _delay_microseconds(uint16_t us);
     static void _delay_microseconds_boost(uint16_t us);
@@ -283,15 +296,13 @@ public:
   static void set_task_period(void *h, uint32_t period);
   static void set_task_semaphore(void *h, REVOMINI::Semaphore *sem);
   static void set_task_ttw(void *h, uint32_t ttw);
-  static inline void set_task_forced(void *_task) {   if(!_task) _task=(void *)s_running;  ((task_t*)_task)->forced = true;  } 
-  static inline void clear_task_forced(void *_task) { if(!_task) _task=(void *)s_running;  ((task_t*)_task)->forced = false;  } 
   
   static void stop_task(void * h);
   static task_t* get_empty_task();
   static inline void * get_current_task() { return s_running; }
 
   static inline void set_task_ioc(bool v) { s_running->in_ioc=v; }
-  static inline void task_has_semaphore(bool v) { s_running->has_semaphore=v; }
+  static inline void task_has_semaphore(bool v) { if(v) s_running->has_semaphore++; else s_running->has_semaphore--; }
 
   /**               
    * Context switch to next task in run queue.
@@ -351,6 +362,10 @@ public:
         Revo_handler h = { .mp = proc };
         return h.h;
     }
+    static inline Handler get_handler(AP_HAL::Proc proc){
+        Revo_handler h = { .hp = proc };
+        return h.h;
+    }
         
     static inline void setEmergencyHandler(voidFuncPtr handler) { boardEmergencyHandler = handler; }
 
@@ -358,6 +373,9 @@ public:
     
     static inline void MPU_buffer_overflow(){ MPU_overflow_cnt++; } 
     static inline void MPU_restarted() {      MPU_restart_cnt++; }
+    
+    static inline void arming_state_changed(bool v){ if(!v && on_disarm_handler) revo_call_handler(on_disarm_handler, 0); }
+    static inline void register_on_disarm(Handler h){ on_disarm_handler=h; }
 
 protected:
 
@@ -419,6 +437,9 @@ private:
     static revo_timer _timers[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS];
     static uint8_t    _num_timers;
     static void _run_timers(void);
+    
+    static revo_tick _ticks[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS];
+    static uint8_t   _num_ticks;
 #endif
     static void _run_io(void);
 
@@ -438,6 +459,12 @@ private:
     static uint64_t ioc_time;
     static uint64_t sleep_time;
     static uint32_t max_delay_err;
+
+
+    static uint32_t tick_micros;    // max exec time
+    static uint32_t tick_count;     // number of calls
+    static uint64_t tick_fulltime;  // full consumed time to calc mean
+
 #endif
 
 #ifdef MTASK_PROF
@@ -464,8 +491,9 @@ private:
     static bool new_api_flag;
     static uint32_t MPU_overflow_cnt;
     static uint32_t MPU_restart_cnt;
+    static Handler on_disarm_handler;
 };
 
-void revo_call_handler(uint64_t h, uint32_t arg);
+void revo_call_handler(Handler h, uint32_t arg);
 
 #endif // __AP_HAL_REVOMINI_SCHEDULER_H__

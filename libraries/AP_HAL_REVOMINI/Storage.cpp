@@ -34,6 +34,7 @@
 #include <string.h>
 #include "Storage.h"
 #include "EEPROM.h"
+#include "Scheduler.h"
 
 using namespace REVOMINI;
 
@@ -56,6 +57,8 @@ const uint32_t pageBase1 = 0x0800c000; // Page3
 // or use 3 sectors for EEPROM as wear leveling
 
 static EEPROMClass eeprom;
+bool REVOMINIStorage::write_deferred IN_CCM;
+
 
 REVOMINIStorage::REVOMINIStorage()
 {}
@@ -68,8 +71,12 @@ REVOMINIStorage::REVOMINIStorage()
 static uint8_t eeprom_buffer[BOARD_STORAGE_SIZE] IN_CCM;
 #endif
 
+void REVOMINIStorage::late_init(bool defer) { 
+    write_deferred = defer; 
+    REVOMINIScheduler::register_on_disarm( REVOMINIScheduler::get_handler(do_on_disarm) ); 
+}
 
-static void error_parse(uint16_t status){
+void REVOMINIStorage::error_parse(uint16_t status){
     switch(status) {
     case EEPROM_NO_VALID_PAGE: // несмотря на неоднократные попытки, EEPROM не работает, а должен
         AP_HAL::panic("EEPROM Error: no valid page\r\n");
@@ -116,6 +123,12 @@ uint8_t REVOMINIStorage::read_byte(uint16_t loc){
 #if defined(EEPROM_CACHED)
     return eeprom_buffer[loc];
 #else
+    return _read_byte(loc);
+#endif
+}
+
+uint8_t REVOMINIStorage::_read_byte(uint16_t loc){
+
     // 'bytes' are packed 2 per word
     // Read existing dataword and use upper or lower byte
 
@@ -126,8 +139,8 @@ uint8_t REVOMINIStorage::read_byte(uint16_t loc){
 	return data >> 8; // Odd, upper byte
     else
 	return data & 0xff; // Even lower byte
-#endif
 }
+
 
 
 void REVOMINIStorage::read_block(void* dst, uint16_t loc, size_t n) {
@@ -165,7 +178,15 @@ void REVOMINIStorage::write_byte(uint16_t loc, uint8_t value)
 #if defined(EEPROM_CACHED)
     if(eeprom_buffer[loc]==value) return;
     eeprom_buffer[loc]=value;
+
+    if(write_deferred && hal.util->get_soft_armed()) return; // no changes in EEPROM, just in memory
+
 #endif
+    _write_byte(loc,value);    
+}
+
+void REVOMINIStorage::_write_byte(uint16_t loc, uint8_t value)
+{
     // 'bytes' are packed 2 per word
     // Read existing data word and change upper or lower byte
     uint16_t data;
@@ -183,11 +204,14 @@ void REVOMINIStorage::write_block(uint16_t loc, const void* src, size_t n)
 {
 #if defined(EEPROM_CACHED)
     memmove(&eeprom_buffer[loc], src, n);
+
+    if(write_deferred && hal.util->get_soft_armed()) return; // no changes in EEPROM, just in memory
+
 #endif
 
     uint8_t *ptr_b = (uint8_t *)src;     // Treat as a block of bytes
     if(loc & 1){
-        write_byte(loc++, *ptr_b++);      // odd byte
+        _write_byte(loc++, *ptr_b++);      // odd byte
         n--;
     }
 
@@ -203,7 +227,23 @@ void REVOMINIStorage::write_block(uint16_t loc, const void* src, size_t n)
 
     if(n){ // the last one
         ptr_b=(uint8_t *)ptr_w;
-        write_byte(loc, *ptr_b);      // odd byte
+        _write_byte(loc, *ptr_b);      // odd byte
+    }
+}
+
+void REVOMINIStorage::do_on_disarm(){ // save changes to EEPROM
+    uint16_t i;
+    for(i=0; i<BOARD_STORAGE_SIZE; i+=2){
+        uint16_t data;
+        error_parse(eeprom.read(i >> 1, &data));
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align"
+        uint16_t b_data = *((uint16_t *)&eeprom_buffer[i]);
+#pragma GCC diagnostic pop
+        
+        if(b_data!=data){
+            error_parse(eeprom.write(i >> 1, b_data));
+        }
     }
 }
 

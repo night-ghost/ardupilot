@@ -106,6 +106,7 @@
 * added support for SUMD and non-inverted SBUS via PPM pins
 * added support for SUMD via UARTs
 * MPU not uses FIFO - data readed out via interrupts
+* added parametr allowing to defer EEPROM save up to disarm
 * ...
 * a lot of minor enhancements
 
@@ -126,7 +127,7 @@ interrupts priorities:
 6
 7
 8
-9 dma
+9 dma IO complete
 a
 b scheduler - Timer7
 c

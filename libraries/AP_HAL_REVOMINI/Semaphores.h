@@ -13,7 +13,7 @@ public:
     Semaphore();
     bool give();
     bool take(uint32_t timeout_ms);
-    inline bool take_nonblocking() {       return _take_nonblocking(); }
+    bool take_nonblocking();
 
     inline void *get_owner(){ return _task; }
     

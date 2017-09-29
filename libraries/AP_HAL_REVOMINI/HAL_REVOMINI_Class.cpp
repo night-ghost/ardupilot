@@ -282,6 +282,7 @@ void HAL_REVOMINI::lateInit() {
     
     lateInitDone=true;
 
+
     uint32_t sig = board_get_rtc_register(RTC_CONSOLE_REG);
     uint8_t port = hal_param_helper->_console_uart;
 
@@ -477,6 +478,8 @@ done:
     }
 #endif
     REVOI2CDevice::lateInit();
+
+    REVOMINIStorage::late_init(hal_param_helper->_eeprom_deferred); 
     
     uint8_t flags=0;
 #ifdef BOARD_SBUS_UART1    

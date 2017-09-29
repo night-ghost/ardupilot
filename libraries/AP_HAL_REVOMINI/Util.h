@@ -17,6 +17,13 @@ public:
     REVOMINIUtil(): gps_shift(0) {}
 
     bool run_debug_shell(AP_HAL::BetterStream *stream) { return false; }
+
+    void set_soft_armed(const bool b) { 
+        if(soft_armed != b){ 
+            soft_armed = b;
+            REVOMINIScheduler::arming_state_changed(b); 
+        }
+    }
     
     uint64_t get_system_clock_ms() const {
         int32_t offs=  hal_param_helper->_time_offset * 3600 * 1000; // in ms

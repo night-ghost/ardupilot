@@ -343,10 +343,7 @@ void AP_Compass_Revo::_ioc() // transfer complete
 //        _calc_sample(rx,ry,rz); // moved out to not wait & calculate in interrupt
     }
 
-    in_progress=false;
-
-    
-    REVOMINIScheduler::set_task_forced(task_handle); // force read out to run
+    in_progress=false;    
 }
 
 
