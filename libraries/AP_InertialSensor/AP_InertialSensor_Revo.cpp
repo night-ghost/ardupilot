@@ -718,7 +718,8 @@ void AP_InertialSensor_Revo::_read_fifo()
 
     uint32_t t=REVOMINIScheduler::_micros();
     uint16_t count=0;
-
+    uint32_t dt=0;
+    
     while(read_ptr != write_ptr) { // there are samples
         last_sample=now;
 //        uint64_t time = _fifo_buffer[read_ptr++].time; // we can get exact time
@@ -744,12 +745,15 @@ void AP_InertialSensor_Revo::_read_fifo()
             }
         }
         count++;
-        uint32_t dt=REVOMINIScheduler::_micros() - t ;
-        if(dt > 500) break; // next time
-        if(count>100) break;
+        dt=REVOMINIScheduler::_micros() - t ;
+//        if(dt > 500) break; // next time
+        if(count>4) { // next time
+            REVOMINIScheduler::do_at_next_tick(REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)), (REVOMINI::Semaphore *)_sem);    
+            break;
+        }
     }
 
-        
+    REVOMINIScheduler::MPU_stats(count,dt);
 }
 
 /*

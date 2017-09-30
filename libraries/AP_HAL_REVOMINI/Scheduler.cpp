@@ -109,6 +109,8 @@ bool REVOMINIScheduler::_in_io_proc IN_CCM =0;
 bool REVOMINIScheduler::new_api_flag IN_CCM=0;
 uint32_t REVOMINIScheduler::MPU_overflow_cnt IN_CCM;
 uint32_t REVOMINIScheduler::MPU_restart_cnt IN_CCM;
+uint32_t REVOMINIScheduler::MPU_count IN_CCM;
+uint32_t REVOMINIScheduler::MPU_Time IN_CCM;
 
 REVOMINIScheduler::REVOMINIScheduler()
 {
@@ -539,7 +541,9 @@ void REVOMINIScheduler::_print_stats(){
             max_isr_time=0;
 #endif
             printf("\nmax delay() error= %ld wfe time = %ld\n", max_delay_err, max_wfe_time ); max_delay_err=0; max_wfe_time=0;
-            printf("MPU overflows: %ld restarts %ld\n", MPU_overflow_cnt, MPU_restart_cnt); MPU_overflow_cnt=0; MPU_restart_cnt=0;
+            printf("MPU overflows: %ld restarts %ld max samples %ld time %ld\n", MPU_overflow_cnt, MPU_restart_cnt, MPU_count, MPU_Time); MPU_overflow_cnt=0; MPU_restart_cnt=0; MPU_count=0; MPU_Time=0;
+            
+
             printf("PPM max buffer size: %d\n", REVOMINIRCInput::max_num_pulses); REVOMINIRCInput::max_num_pulses=0;
                         
         } break;

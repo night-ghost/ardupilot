@@ -302,7 +302,12 @@ public:
   static inline void * get_current_task() { return s_running; }
 
   static inline void set_task_ioc(bool v) { s_running->in_ioc=v; }
-  static inline void task_has_semaphore(bool v) { if(v) s_running->has_semaphore++; else s_running->has_semaphore--; }
+  static inline void task_has_semaphore(bool v) { 
+    noInterrupts();
+    if(v) s_running->has_semaphore++; 
+    else  if(s_running->has_semaphore) s_running->has_semaphore--; 
+    interrupts();
+  }
 
   /**               
    * Context switch to next task in run queue.
@@ -373,6 +378,12 @@ public:
     
     static inline void MPU_buffer_overflow(){ MPU_overflow_cnt++; } 
     static inline void MPU_restarted() {      MPU_restart_cnt++; }
+    static inline void MPU_stats(uint16_t count, uint32_t time) {
+        if(count>MPU_count) {
+            MPU_count=count;
+            MPU_Time=time;
+        }
+    }
     
     static inline void arming_state_changed(bool v){ if(!v && on_disarm_handler) revo_call_handler(on_disarm_handler, 0); }
     static inline void register_on_disarm(Handler h){ on_disarm_handler=h; }
@@ -491,6 +502,10 @@ private:
     static bool new_api_flag;
     static uint32_t MPU_overflow_cnt;
     static uint32_t MPU_restart_cnt;
+    static uint32_t MPU_count;
+    static uint32_t MPU_Time;
+    
+    
     static Handler on_disarm_handler;
 };
 
