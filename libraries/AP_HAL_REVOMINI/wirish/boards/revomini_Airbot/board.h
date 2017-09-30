@@ -246,6 +246,12 @@ void boardInit(void);
     // @User: Advanced
     AP_GROUPINFO("RC_INPUT",     9, AP_Param_Helper, _rc_input, 0)
 
+    // @Param: AIBAO_FS
+    // @DisplayName: Support FailSafe for Walkera Aibao RC
+    // @Description: Allows to translate of  Walkera Aibao RC FailSafe to Ardupilot's failsafe
+    // @Values: 0: not translate, 1:translate
+    // @User: Advanced
+    AP_GROUPINFO("AIBAO_FS",     7, AP_Param_Helper, _aibao_fs, 0)
 */
 
 #ifdef USB_MASSSTORAGE
@@ -263,7 +269,8 @@ void boardInit(void);
     AP_GROUPINFO("TIME_OFFSET",  10, AP_Param_Helper, _time_offset, 0), \
     AP_GROUPINFO("CONSOLE_UART", 11, AP_Param_Helper, _console_uart, HAL_CONSOLE_PORT), \
     AP_GROUPINFO("EE_DEFERRED",  12, AP_Param_Helper, _eeprom_deferred, 0), \
-    AP_GROUPINFO("RC_INPUT",     13, AP_Param_Helper, _rc_input, 0)
+    AP_GROUPINFO("RC_INPUT",     13, AP_Param_Helper, _rc_input, 0), \
+    AP_GROUPINFO("AIBAO_FS",     14, AP_Param_Helper, _aibao_fs, 0)
 
 #else
 
@@ -279,7 +286,8 @@ void boardInit(void);
     AP_GROUPINFO("TIME_OFFSET",  9, AP_Param_Helper, _time_offset, 0), \
     AP_GROUPINFO("CONSOLE_UART", 10, AP_Param_Helper, _console_uart, HAL_CONSOLE_PORT), \
     AP_GROUPINFO("EE_DEFERRED",  11, AP_Param_Helper, _eeprom_deferred, 0), \
-    AP_GROUPINFO("RC_INPUT",     12, AP_Param_Helper, _rc_input, 0)
+    AP_GROUPINFO("RC_INPUT",     12, AP_Param_Helper, _rc_input, 0), \
+    AP_GROUPINFO("AIBAO_FS",     14, AP_Param_Helper, _aibao_fs, 0)
 
 #endif
 
@@ -298,7 +306,8 @@ void boardInit(void);
     AP_Int8 _time_offset; \
     AP_Int8 _console_uart; \
     AP_Int8 _eeprom_deferred; \
-    AP_Int8 _rc_input;
+    AP_Int8 _rc_input; \
+    AP_Int8 _aibao_fs;
 
 #define WAYBACK_DEBUG
 

@@ -242,12 +242,14 @@ uint16_t REVOMINIRCInput::read(uint8_t ch)
             data = 900;
         }
 
+        if(hal_param_helper->_aibao_fs) {
 /*
  Receiver-DEVO-RX719-for-Walkera-Aibao
  failsafe: mode below 1000 and throttle at 1500
 */            
-        if(last_4 < 1000 && data >1300)
-            data = 900;
+            if(last_4 < 1000 && data >1300)
+                data = 900;
+        }
 
     }
     return data;

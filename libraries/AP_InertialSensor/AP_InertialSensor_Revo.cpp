@@ -490,11 +490,11 @@ void AP_InertialSensor_Revo::start()
 // DON'T request scheduling in timers interrupt - because data already readed
     // start the timer process to read samples
 //    _dev->register_periodic_callback(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)); - we don't require semaphore so use sheduler's API
-    REVOMINIScheduler::i_know_new_api(); // request scheduling in timers interrupt
-    task_handle = REVOMINIScheduler::register_timer_task(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL);
+//    REVOMINIScheduler::i_know_new_api(); // request scheduling in timers interrupt
+//    task_handle = REVOMINIScheduler::register_timer_task(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL);
 
 // this semaphore shoud be free on task call
-    REVOMINIScheduler::set_checked_semaphore(task_handle,(REVOMINI::Semaphore *)_sem);
+//    REVOMINIScheduler::set_checked_semaphore(task_handle,(REVOMINI::Semaphore *)_sem);
 
 }
 
@@ -713,17 +713,17 @@ void AP_InertialSensor_Revo::_read_fifo()
             last_sample=now;
             REVOMINIScheduler::MPU_restarted(); // count them
         }
+        return;
     }
 
+    last_sample=now;
 
     uint32_t t=REVOMINIScheduler::_micros();
     uint16_t count=0;
     uint32_t dt=0;
     
     while(read_ptr != write_ptr) { // there are samples
-        last_sample=now;
 //        uint64_t time = _fifo_buffer[read_ptr++].time; // we can get exact time
-//        uint8_t *rx = (uint8_t *)(&_fifo_buffer[read_ptr++].ax);  // calculate address and move to next item
         uint8_t *rx = _fifo_buffer + MPU_SAMPLE_SIZE * read_ptr++;  // calculate address and move to next item
         if(read_ptr >= MPU_FIFO_BUFFER_LEN) { // move write pointer
             read_ptr=0;                       // ring
@@ -734,20 +734,17 @@ void AP_InertialSensor_Revo::_read_fifo()
             if (!_accumulate_fast_sampling(rx, 1)) {
 //                debug("stop at %u of %u", n_samples, bytes_read/MPU_SAMPLE_SIZE);
                 // break;  don't break before all items in queue will be readed
-                nodata_count++; // but calculate this cases. If we get some errors sequentally then MPU will be restarted
                 continue;
             }
         } else {
             if (!_accumulate(rx, 1)) {
                 // break; don't break before all items in queue will be readed
-                nodata_count++;
                 continue;
             }
         }
         count++;
         dt=REVOMINIScheduler::_micros() - t ;
-//        if(dt > 500) break; // next time
-        if(count>4) { // next time
+        if(count>=4) { // not more than 4 points at a time, all another next time
             REVOMINIScheduler::do_at_next_tick(REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)), (REVOMINI::Semaphore *)_sem);    
             break;
         }
