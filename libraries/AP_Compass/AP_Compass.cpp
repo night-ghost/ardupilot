@@ -744,7 +744,7 @@ void Compass::_detect_backends(void)
                 AP_Compass_AK8963::name, false);
     ADD_BACKEND(DRIVER_HMC5883, AP_Compass_HMC5843::probe(*this, hal.i2c_mgr->get_device(HAL_COMPASS_HMC5843_I2C_BUS, HAL_COMPASS_HMC5843_I2C_ADDR), true),
                  AP_Compass_HMC5843::name, true);
-#elif CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI && defined(HAL_COMPASS_HMC5843_I2C_BUS) 
+#elif CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI && defined(HAL_COMPASS_HMC5843_I2C_BUS) && 0
  #ifndef HAL_COMPASS_HMC5843_ROTATION
   #define HAL_COMPASS_HMC5843_ROTATION ROTATION_NONE
  #endif

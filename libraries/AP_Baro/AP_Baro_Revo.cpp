@@ -291,6 +291,7 @@ void AP_Baro_Revo::_timer(void)
         _dev->transfer(&next_cmd, 1, nullptr, 0);       // send the same command
         _sem->give();   // and release semaphore
         _dev->register_completion_callback(NULL); // allow the bus driver to release the bus semaphore
+        in_progress=false;
         return;
     }
 
