@@ -111,6 +111,10 @@
 * a lot of minor enhancements
 
 
+Warning!!!
+EEPROM emulation in Flash cause periodic program hunging on time of sector erase! So to allow auto-save parameters
+like MOT_THST_HOVER - MOT_HOVER_LEARN to be 2 you should defer parameter writing (Param HAL_EE_DEFER)
+
 --------
 расклад времени
 25.7 опрос датчиков, из них 7.7% ожидание
@@ -121,7 +125,7 @@ interrupts priorities:
 0 PWM input
 1 soft_uart 
 2 micros() Timer5 / timer_i2C / MPU DataReady
-3 usb
+3 
 4 uart
 5 gpio pin
 6
@@ -129,11 +133,11 @@ interrupts priorities:
 8
 9 dma IO complete
 a
-b scheduler - Timer7
+b usb
 c
-d
+d io_completion
 e
-f io_completion
+f scheduler - Timer7 
 
 Timer usage:
 

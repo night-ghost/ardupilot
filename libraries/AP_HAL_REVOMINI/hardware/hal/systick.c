@@ -111,7 +111,8 @@ void __attribute__((noreturn)) error_throb(uint32_t num){
 
 
 // new common exception code
-
+// TODO: we have task switching so if fault occures in task we can just remove task
+//
 void __attribute__((noreturn)) __error(uint32_t num, uint32_t pc, uint32_t lr)
 {
         /* Turn off peripheral interrupts */

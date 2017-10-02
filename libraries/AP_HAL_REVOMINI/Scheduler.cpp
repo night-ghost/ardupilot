@@ -33,12 +33,10 @@ volatile bool REVOMINIScheduler::_timer_suspended = false;
 volatile bool REVOMINIScheduler::_timer_event_missed = false;
 volatile bool REVOMINIScheduler::_in_timer_proc = false;
 
-#if USE_ISR_SCHED
 revo_timer REVOMINIScheduler::_timers[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS] IN_CCM;
 uint8_t    REVOMINIScheduler::_num_timers = 0;
 revo_tick  REVOMINIScheduler::_ticks[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS] IN_CCM;
 uint8_t    REVOMINIScheduler::_num_ticks = 0;
-#endif
 
 Revo_IO    REVOMINIScheduler::_io_proc[REVOMINI_SCHEDULER_MAX_IO_PROCS] IN_CCM;
 uint8_t    REVOMINIScheduler::_num_io_proc=0;
@@ -138,10 +136,8 @@ void REVOMINIScheduler::init()
         AP_HAL::panic("HAL initialization on ISR level=0x%x", (uint8_t)(SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk));
     }
 
-#if USE_ISR_SCHED
     memset(_timers,       0, sizeof(_timers) );
     memset(_ticks,        0, sizeof(_ticks) );
-#endif
     memset(_io_proc,      0, sizeof(_io_proc) );
     memset(io_completion, 0, sizeof(io_completion) );
     
@@ -159,7 +155,7 @@ void REVOMINIScheduler::init()
                 // dev    period   freq, kHz
         configTimeBase(TIMER7, period, 2000);       //2MHz 0.5us ticks
         Revo_handler h = { .isr = _timer_isr_event };
-        timer_attach_interrupt(TIMER7, TIMER_UPDATE_INTERRUPT, h.h , 11); // low priority - only PendSV and USB are lower
+        timer_attach_interrupt(TIMER7, TIMER_UPDATE_INTERRUPT, h.h , 0xf); // lowest priority
         timer_resume(TIMER7);
     }
 
@@ -368,12 +364,10 @@ void REVOMINIScheduler::_register_io_process(Handler h, Revo_IO_Flags flags)
 void REVOMINIScheduler::resume_timer_procs()
 {
     _timer_suspended = false;
-#if USE_ISR_SCHED
     if (_timer_event_missed == true) {
         _run_timer_procs(false);        // TODO here code executes on main thread, not in interrupt level!
         _timer_event_missed = false;
     }
-#endif
 }
 
 void REVOMINIScheduler::check_stack(uint32_t sp) { // check for stack usage
@@ -408,13 +402,12 @@ void REVOMINIScheduler::_run_timer_procs(bool called_from_isr) {
     }
     _in_timer_proc = true;
 
-#if USE_ISR_SCHED
     if (!_timer_suspended) {
         _run_timers(); 
     } else if (called_from_isr) {
         _timer_event_missed = true;
     }
-#endif
+
     // and the failsafe, if one is setted 
     if (_failsafe) {
         static uint32_t last_failsafe=0;
@@ -549,7 +542,7 @@ void REVOMINIScheduler::_print_stats(){
         } break;
 
         case 1:{
- #if USE_ISR_SCHED
+
             printf("\nTask times:\n");
 
             for(int i=0; i< _num_timers; i++) {
@@ -559,7 +552,7 @@ void REVOMINIScheduler::_print_stats(){
                 }
             }
             printf("tick tasks tim %8.1f int %5.3f%% tot %6.4f%% mean time %5.1f max time %ld\n",  tick_fulltime/1000.0, tick_fulltime*100.0 / task_time, (tick_fulltime / 10.0) / t, (float)tick_fulltime/tick_count, tick_micros ); tick_micros=0;
- #endif
+
 #endif
     
             }break;
@@ -644,14 +637,10 @@ bool REVOMINIScheduler::_set_10s_flag(){
 */
 AP_HAL::Device::PeriodicHandle REVOMINIScheduler::_register_timer_task(uint32_t period_us, Handler proc, REVOMINI::Semaphore *sem, revo_cb_type mode){
 #if 1
-#if USE_ISR_SCHED    
 //    if(period_us > 8000) { 
     if(new_api_flag){ // new IO_Completion api allows to not wait in interrupt so can be scheduled in timers interrupt
         new_api_flag=false;
     } else {
-#else
-    {
-#endif
         // slow tasks will runs at individual IO tasks
         void *task = _start_task(proc, SLOW_TASK_STACK);
         if(task){
@@ -661,7 +650,6 @@ AP_HAL::Device::PeriodicHandle REVOMINIScheduler::_register_timer_task(uint32_t 
         return (AP_HAL::Device::PeriodicHandle)task;
     }
 #endif
-#if USE_ISR_SCHED
     uint8_t i;
     for (i = 0; i < _num_timers; i++) {
         if ( _timers[i].proc == 0L /* free slot */ ) {
@@ -703,11 +691,9 @@ store:
     }
 
     return NULL;
-#endif
 }
 
 
-#if USE_ISR_SCHED
 bool REVOMINIScheduler::adjust_timer_task(AP_HAL::Device::PeriodicHandle h, uint32_t period_us)
 {
 #pragma GCC diagnostic push
@@ -754,6 +740,7 @@ void REVOMINIScheduler::do_at_next_tick(Handler proc, REVOMINI::Semaphore *sem){
     uint8_t i;
     for (i = 0; i < _num_ticks; i++) {
         if ( _ticks[i].proc == 0L /* free slot */ ) goto store;        
+        else if( _ticks[i].proc ==proc) return;  // already is
     }
 
     if (_num_ticks < REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS) {
@@ -906,28 +893,6 @@ void REVOMINIScheduler::_run_timers(){
 }
 #pragma GCC diagnostic pop
 
-#else // all scheduled procs via tasks
-
-
-bool REVOMINIScheduler::adjust_timer_task(AP_HAL::Device::PeriodicHandle h, uint32_t period_us)
-{
-    set_task_period((void *)h, period_us);    
-    return true;
-}
-
-bool REVOMINIScheduler::unregister_timer_task(AP_HAL::Device::PeriodicHandle h)
-{
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-align"
-    task_t *task = (task_t *)h;
-#pragma GCC diagnostic pop
-    task->handle = 0;
-    return true;
-}
-
-void REVOMINIScheduler::reschedule_proc(uint64_t proc){}
-#endif
-
 // ]
 
 
@@ -1026,7 +991,7 @@ void * REVOMINIScheduler::init_task(Handler handler, const uint8_t* stack)
                 else                                 t = 0;
             } else t=0;
             yield(t);        // in case that function not uses delay();
-        }
+        }// endless loop
     }
     // caller returns
 //  return &task; GCC optimizes out so returns 0
@@ -1052,6 +1017,8 @@ void * NOINLINE REVOMINIScheduler::_start_task(Handler handle, size_t stackSize)
         // Allocate stack(s) and check if main stack top should be set
         size_t frame = RAMEND - (size_t) &frame;
         volatile uint8_t stack[s_top - frame]; // should be volatile else it will be optimized out
+        memset(stack,0x55,sizeof(stack)); // for stack usage debugging
+        
         if (s_main.stack == NULL) s_main.stack = (const uint8_t*)stack; // remember on first call stack of main task
 
         // Check that the task can be allocated without already used CCM
@@ -1340,7 +1307,7 @@ uint8_t REVOMINIScheduler::register_io_completion(Handler handler){
         noInterrupts();
 
         // starts on 0x18, we need 3rd byte of register at 0x20 - so 0x22
-        SCB->SHP[14 /* ISR number  */ - 4 /* SHP starts from 4 */ ] = 0xff;
+        SCB->SHP[14 /* ISR number  */ - 4 /* SHP starts from 4 */ ] = 0xdd; // low priority 13
 
         // Ensure the effect of the priority change occurs before 
         // clearing PRIMASK to ensure that future PendSV exceptions 

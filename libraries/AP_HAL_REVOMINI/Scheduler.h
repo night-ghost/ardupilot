@@ -27,17 +27,13 @@
 
 #define USE_ISR_SCHED 1
 
-#if USE_ISR_SCHED
- #define SHED_FREQ 8000 // in Hz - we don't use it for tasks anymore
-#else
- #define SHED_FREQ 1000 // in Hz
-#endif
+#define SHED_FREQ 10000 // in Hz
 
 
 
 #define MAIN_STACK_SIZE  8192U    // measured use of stack is only 1K - but it grows up to 4K when using FatFs
 #define DEFAULT_STACK_SIZE  8192U // Default tasks stack size and stack max - io_thread can do work with filesystem
-#define SLOW_TASK_STACK 1536U     // small stack for sensors
+#define SLOW_TASK_STACK 2048U     // small stack for sensors
 #define STACK_MAX  65536U
 
 

@@ -68,6 +68,46 @@
 * added parameter to set PWM mode
 * added used memory reporting
 * added I2C error reporting
+* realized low-power idle state with WFE, TIMER6 used to generate events each 1uS
+* added HAL_RC_INPUT parameter to allow to force RC input module
+* added used stack reporting
+* added generation of .DFU file
+* time-consuming operations moved out from interrupt level to IO_Completion level with lowest possible priority
+* added support for Clock Security System - if HSE fails in air system will use HSI instead
+* added boardEmergencyHandler which will be called on any Fault or Panic() before halt - eg. to release parachute
+* motor layout switched to per-board basis
+* console assignment switched to per-board basis
+* HAL switched to new DMA api with completion interrupts
+* AirbotV2 is fully supported with SD card and OSD (OSD not tested, just compiles)
+* added support for reading from SD card via USB - HAL parameter allows to be USB MassStorege
+* fixed BUG in scheduler which periodically causes HardFault
+* added check for stack overflow for low priority tasks
+* all boards formats internal flash chip as FAT and allows access via USB
+* added spi flash autodetection
+* added support for TRIM command on FAT-formatted Dataflash
+* fixed bug in hardware I2C driver which spoils writes to I2C2
+* fixed bug in log write with different meanings of flags in FatFs and Posix
+* rewritten SD library to support 'errno' and early distinguish between file and dir
+* compass processing (4027uS) and baro processing(1271uS)  moved out from interrupt level to low-priority io level, because its
+ execution time spoils loop time (500Hz = 2000uS for all)
+* added reformatting of DataFlash in case of hard filesystem errors, which fixes FatFs bug when there is no free space
+ after file overflows and then deleted
+* added autodetect for all known types of baro on external I2C bus
+* added autodetect for all known types ofcompass on external I2C bus
+* added check to I2C_Mgr for same device on same bus - to prevent autodetection like MS5611 (already initialized) as BMP_085
+* added time offset HAL parameter
+* added time syncronization between board's time and GPS time - so logs now will show real local date&time
+* i2c driver is fully rewritten, added parsing of bus error flags - ARLO & BERR
+* errors at STOP don't cause data loss or time errors - bus reset scheduled as once io_task
+* ALL I2C reads does via DMA!
+* added parsing of TIMEOUT bus flag
+* added asyncronous bus reset in case when loockup occures after STOP generation
+* full BusReset changed to SoftReset on 1st try
+* new SoftI2C driver uses timer and works in interrupts
+* added support for SUMD and non-inverted SBUS via PPM pins
+* added support for SUMD via UARTs
+* MPU not uses FIFO - data readed out via interrupts
+* added parameter allowing to defer EEPROM save up to disarm
 * ...
 * a lot of minor enhancements
 
@@ -75,14 +115,9 @@ Incompatibility!!!
 
 Since this controller is intended primarily for very small aircraft, the following unnecessary functions are disabled by default:
 * Terrain following - there is no SD card
-* Optical Flow
-* ADSB support
-* Precision landing
 * Push Button
-* Rangefinder support
 * Sprayer support
 * EPM gripper support
-* Mount control support
 * CLI support
 
 If some of this is needed it can be enabled later
@@ -90,8 +125,8 @@ If some of this is needed it can be enabled later
 Also, this HAL now is not compatible with LibMapple/ArduinoSTM32 ("wirish" folder) - all imported files are altered.
 
 Warning!!!
-EEPROM emulation in Flash cause periodic program hunging on time of sector erase! So never allow auto-save parameters 
-like MOT_THST_HOVER - MOT_HOVER_LEARN should NOT be 2!
+EEPROM emulation in Flash cause periodic program hunging on time of sector erase! So to allow auto-save parameters 
+like MOT_THST_HOVER - MOT_HOVER_LEARN to be 2 you should defer parameter writing (Param HAL_EE_DEFER)
 
 If you like this project and want to support further development - you can do it! [![Donate](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](htt
 ps://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SLUC8B3U7E7PS)USD
