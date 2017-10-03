@@ -62,7 +62,7 @@ void usb_init(void){
 
 }
 
-inline void enableFPU(void){
+static INLINE void enableFPU(void){
 #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
 	SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));	// set CP10 and CP11 Full Access
 #endif
@@ -82,14 +82,14 @@ inline static void setupClocks() {
 }
 
 
-inline static void setupCCM(){
+static INLINE void setupCCM(){
     extern unsigned _sccm,_eccm; // defined by link script
 
     RCC->AHB1ENR |= RCC_AHB1ENR_CCMDATARAMEN;
     asm volatile("dsb \n");
 
 //    volatile unsigned *src = &_siccm; // CCM initializers in flash
-    volatile unsigned *dest = &_sccm; // start of CCM
+    volatile unsigned  *dest = &_sccm; // start of CCM
 
 #if 0 // no support for initialized data in CCM
 
@@ -101,9 +101,29 @@ inline static void setupCCM(){
     while (dest < &_eccm) {
         *dest++ = 0;
     }
+
+    while (dest < ((volatile unsigned int*)STM32_CCM_END)-16) {
+        *dest++ = 0x5555; // fill stack to check it's usage
+    }
+
 }
 
-inline static void setupNVIC() {
+static inline void switch_stack(){
+    uint32_t sp=1024;   // 1K of stack for ISR
+    noInterrupts();
+    asm volatile (
+        "    MRS     r1, MSP                   \n" // Get stack pointer
+        "    SUB     r1, %[stack]              \n" // reserve place for ISR stack
+        "    MSR     PSP, r1                   \n" // store process SP to PSP
+        "    MOV     R0, #6                    \n" // set up the current (thread) mode: use PSP as stack pointer, privileged level, FPU active
+        "    MSR     CONTROL, R0               \n"
+        "    ISB                               \n" // Insert a barrier
+        : [stack]"+r" (sp)  // output
+    );
+}
+
+static INLINE void setupNVIC()
+{
     /* 4 bit preemption,  0 bit subpriority */
     NVIC_PriorityGroupConfig( NVIC_PriorityGroup_4);
     
@@ -152,15 +172,16 @@ uint32_t board_get_rtc_register(uint16_t reg)
 
 // 1st executing function
 
-void INLINE init(void) {
-    setupCCM(); // needs because stack in CCM
+void inline init(void) {
     
+    // now we can use stack
 
     if(board_get_rtc_register(RTC_SIGNATURE_REG) == DFU_RTC_SIGNATURE) {
         board_set_rtc_register(0, RTC_SIGNATURE_REG);
         goDFU();        // just after reset - so all hardware is in boot state
     }
 
+    switch_stack(); // change used stack to PSP
 
     setupFlash();  // empty
     setupClocks(); // empty
@@ -169,6 +190,7 @@ void INLINE init(void) {
     SystemCoreClockUpdate();
 
     enableFPU();
+
     setupNVIC();
     systick_init(SYSTICK_RELOAD_VAL);
 
@@ -184,12 +206,11 @@ void INLINE init(void) {
 /*
      only CPU init here, all another moved to modules .init() functions
 */
-    usart_disable_all();
-
-
+    interrupts();
 }
 
 void pre_init(){ // before any stack usage @NG
+    setupCCM(); // needs because stack in CCM
 
     init();
 }

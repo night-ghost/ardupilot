@@ -174,7 +174,7 @@ extern void clock_gettime(uint32_t mode, void *ptr);
 
 
 #ifndef BOARD_NR_GPIO_PINS
-#error "Board type has not been selected correctly."
+ #error "Board type has not been selected correctly."
 #endif
 
 

@@ -125,7 +125,7 @@ interrupts priorities:
 0 PWM input
 1 soft_uart 
 2 micros() Timer5 / timer_i2C / MPU DataReady
-3 
+3 SysTick
 4 uart
 5 gpio pin
 6
@@ -136,7 +136,7 @@ a
 b usb
 c
 d io_completion
-e
+e 
 f scheduler - Timer7 
 
 Timer usage:

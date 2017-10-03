@@ -41,6 +41,8 @@
 #           r1          4
 #    SP-->  r0          0
 
+  .syntax unified
+  .cpu cortex-m4
 .text
 .globl HardFault_Handler
 .globl NMI_Handler
@@ -48,6 +50,7 @@
 .globl BusFault_Handler
 .globl UsageFault_Handler
 .globl __default_exc
+.globl __do_context_switch
 
 .code 16
 .thumb_func
@@ -78,8 +81,13 @@ FLASH_IRQHandler:
 
 .thumb_func
 __default_exc:
-    ldr r3, [sp, #24]           @ PC of exception - if access to wrong address
-    ldr r1, [sp, #20]           @ LR of exception - if call to wrong address
+    tst lr, #4
+    ite eq
+    mrseq r1, msp
+    mrsne r1, psp 
+ 
+    ldr r3, [r1, #24]           @ PC of exception - if access to wrong address
+    ldr r1, [r1, #20]           @ LR of exception - if call to wrong address
 
     ldr r2, BFAR                @ for debug
     ldr r2, CFSR
@@ -110,13 +118,46 @@ __default_exc:
     push {r3}                   @ R1 - PC of exception
     push {r0}                   @ R0 - exception code
 
-    ldr r1, EXC_RETURN          @ Return to thread mode
+    tst     lr, #4
+    ite eq
+    ldreq r1, EXC_RETURN          @ Return to thread mode with PSP
+    ldrne r1, EXC_RETURN          @ Return to thread mode with MSP
     mov lr, r1
-    bx lr                       @ Exception exit
+    bx lr                         @ Exception exit
+
+
+.thumb_func
+__do_context_switch:
+
+    MRS       R0, PSP           @  PSP is process stack pointer
+    TST       LR, #0x10         @  exc_return[4]=0? (it means that current process
+    IT        EQ                @  has active floating point context)
+    VSTMDBEQ  R0!, {S16-S31}    @  if so - save it.
+    STMDB     R0!, {R4-R11, LR} @  save remaining regs r4-11 and LR (EXC_RETURN) on process stack
+
+        @ At this point, entire context of process has been saved
+    LDR     R4, =px_running     @  address of s_running
+    LDR     R1, [R4]            @ value of s_running - address of task_t
+    STR     R0, [R1]            @ store stack pointer
+    
+    LDR     R1, =px_getNextTask
+    BLX     R1                  @ call getNextTask()
+
+    LDR     R1, [R4]            @ value of s_running - address of new task_t
+    LDR     R0, [R1]            @ R0 is new process SP
+
+    LDMIA     R0!, {R4-R11, LR} @  Restore r4-11 and LR from new process stack
+    TST       LR, #0x10         @  exc_return[4]=0? (it means that new process
+    IT        EQ                @  has active floating point context)
+    VLDMIAEQ  R0!, {S16-S31}    @  if so - restore it.
+    MSR       PSP, R0           @  Load PSP with new process SP
+    BX        LR                @  Return to saved exc_return. Exception return will restore remaining context                              
+  .align 2                    
 
 .align 4
 CPSR_MASK:     .word 0x61000000
 EXC_RETURN:    .word 0xFFFFFFF9
+EXC_RETURN_PSP: .word 0xFFFFFFFD
 TARGET_PC:     .word __error
 NVIC_CCR:      .word 0xE000ED14    @ NVIC configuration control register
 SYSTICK_CSR:   .word 0xE000E010    @ Systick control register
@@ -127,3 +168,6 @@ HFSR:          .word 0xE000ED2C
 DFSR:          .word 0xE000ED30
 AFSR:          .word 0xE000ED3C
 SHCSR:         .word 0xE000ED24
+
+px_running:     .word s_running    
+px_getNextTask: .word getNextTask

@@ -171,6 +171,8 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
     gpio->init();
 
     rcout->init(); 
+    
+    usart_disable_all();
 
     {
 #if defined(USB_MASSSTORAGE)
