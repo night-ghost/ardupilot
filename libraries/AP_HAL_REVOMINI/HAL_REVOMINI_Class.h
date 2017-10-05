@@ -22,6 +22,10 @@
 #include "massstorage/mass_storage.h"
 #endif
 
+/*
+Backup SRAM 4KByte - 0x4002 4000 - 0x4002 4FFF
+*/
+
 
 class HAL_state{ 
 public:

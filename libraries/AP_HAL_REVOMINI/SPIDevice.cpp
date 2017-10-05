@@ -316,7 +316,6 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
             revo_call_handler(_completion_cb, (uint32_t)&_desc);
             _completion_cb=0;
         }
-//        hal_yield(0);
     }
     return ret==0;
 

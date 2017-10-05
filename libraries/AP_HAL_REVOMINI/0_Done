@@ -129,15 +129,15 @@ interrupts priorities:
 4 uart
 5 gpio pin
 6
-7
+7 
 8
 9 dma IO complete
 a
 b usb
-c
-d io_completion
+c SVC
+d 
 e 
-f scheduler - Timer7 
+f scheduler - Timer7, io_completion
 
 Timer usage:
 

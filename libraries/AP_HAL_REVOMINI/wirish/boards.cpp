@@ -65,6 +65,12 @@ void usb_init(void){
 static INLINE void enableFPU(void){
 #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
 	SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));	// set CP10 and CP11 Full Access
+	
+/*
+FPU_FPCCR_ASPEN_Msk
+FPU_FPCCR_LSPEN_Msk
+*/	
+	
 #endif
 }
 
@@ -102,25 +108,18 @@ static INLINE void setupCCM(){
         *dest++ = 0;
     }
 
-    while (dest < ((volatile unsigned int*)STM32_CCM_END)-16) {
-        *dest++ = 0x5555; // fill stack to check it's usage
+    uint32_t sp;
+    
+    // Get stack pointer
+    asm volatile ("mov %0, sp\n\t"  : "=rm" (sp) );
+
+    while ((uint32_t)dest < (sp-8)) {
+        *dest++ = 0x55555555; // fill stack to check it's usage
     }
 
 }
 
-static inline void switch_stack(){
-    uint32_t sp=1024;   // 1K of stack for ISR
-    noInterrupts();
-    asm volatile (
-        "    MRS     r1, MSP                   \n" // Get stack pointer
-        "    SUB     r1, %[stack]              \n" // reserve place for ISR stack
-        "    MSR     PSP, r1                   \n" // store process SP to PSP
-        "    MOV     R0, #6                    \n" // set up the current (thread) mode: use PSP as stack pointer, privileged level, FPU active
-        "    MSR     CONTROL, R0               \n"
-        "    ISB                               \n" // Insert a barrier
-        : [stack]"+r" (sp)  // output
-    );
-}
+
 
 static INLINE void setupNVIC()
 {
@@ -131,22 +130,23 @@ static INLINE void setupNVIC()
 }
 
 
+/*
+[..] To enable access to the RTC Domain and RTC registers, proceed as follows:
+    (+) Enable the Power Controller (PWR) APB1 interface clock using the
+       RCC_APB1PeriphClockCmd() function.
+   (+) Enable access to RTC domain using the PWR_BackupAccessCmd() function.
+   (+) Select the RTC clock source using the RCC_RTCCLKConfig() function.
+   (+) Enable RTC Clock using the RCC_RTCCLKCmd() function.
+*/
+
 void board_set_rtc_register(uint32_t sig, uint16_t reg)
 {
-
-        RCC->APB1ENR |= RCC_APB1ENR_PWREN;
-        // enable the backup registers.
         PWR->CR   |= PWR_CR_DBP;
-        RCC->BDCR |= RCC_BDCR_RTCEN;
-        RCC->AHB1ENR |= RCC_AHB1ENR_BKPSRAMEN;
-        PWR_BackupAccessCmd(ENABLE);
 
-//        RTC_WriteProtectionCmd(DISABLE);
-        for(volatile int i=0; i<50; i++); // small delay
         
         RTC_WriteBackupRegister(reg, sig);
 
-        PWR_BackupAccessCmd(DISABLE);
+//        PWR_BackupAccessCmd(DISABLE);
 
         // disable the backup registers
 //        RCC->BDCR &= RCC_BDCR_RTCEN;
@@ -158,7 +158,6 @@ uint32_t board_get_rtc_register(uint16_t reg)
 {
         // enable the backup registers.
         PWR->CR   |= PWR_CR_DBP;
-        RCC->BDCR |= RCC_BDCR_RTCEN;
 
         uint32_t ret = RTC_ReadBackupRegister(reg);
 
@@ -176,12 +175,27 @@ void inline init(void) {
     
     // now we can use stack
 
+// turn on and enable RTC
+    RCC->APB1ENR |= RCC_APB1ENR_PWREN;
+    RCC->AHB1ENR |= RCC_AHB1ENR_BKPSRAMEN;
+    PWR_BackupAccessCmd(ENABLE);
+
+    RCC_RTCCLKConfig(RCC_RTCCLKSource_LSI);
+    RCC_RTCCLKCmd(ENABLE);
+
+    // enable the backup registers.
+    RCC->BDCR |= RCC_BDCR_RTCEN;
+
+    RTC_WriteProtectionCmd(DISABLE);
+    for(volatile int i=0; i<50; i++); // small delay
+// RTC is ready
     if(board_get_rtc_register(RTC_SIGNATURE_REG) == DFU_RTC_SIGNATURE) {
         board_set_rtc_register(0, RTC_SIGNATURE_REG);
-        goDFU();        // just after reset - so all hardware is in boot state
+        emerg_delay(1000);
+        uint32_t reg=board_get_rtc_register(RTC_SIGNATURE_REG); // read again
+        if(reg==0)
+            goDFU();        // just after reset - so all hardware is in boot state
     }
-
-    switch_stack(); // change used stack to PSP
 
     setupFlash();  // empty
     setupClocks(); // empty
@@ -223,6 +237,7 @@ void emerg_delay(uint32_t n){
         for (i=4000; i!=0; i--) { // 16MHz, command each tick - ~4MHz or 0.25uS * 4000 = 1ms
             asm volatile("nop \n");
         }
+        n--;
     }
 }
 

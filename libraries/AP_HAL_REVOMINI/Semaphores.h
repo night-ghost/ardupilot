@@ -15,11 +15,12 @@ public:
     bool take(uint32_t timeout_ms);
     bool take_nonblocking();
 
-    inline void *get_owner(){ return _task; }
+    inline void *get_owner(){ return _task; } // task that owns this semaphore
+    inline void set_weak(bool f){ _weak=f; }  // bus semaphores don't increase priority
+    
+    inline bool is_taken(){ return _taken; }
     
     static inline bool get_error(){ bool t=_error; _error=false; return t; }
-
-    void lock(bool f);
 
 #ifdef SEM_PROF 
     static uint64_t sem_time;    
@@ -31,6 +32,7 @@ protected:
 
     volatile bool _taken;
     void * _task; // owner
+    bool _weak;
 
     static bool _error;
 

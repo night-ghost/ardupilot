@@ -1055,7 +1055,7 @@ void I2C_DMALastTransferCmd(I2C_TypeDef* I2Cx, FunctionalState NewState)
   */
 uint16_t I2C_ReadRegister(I2C_TypeDef* I2Cx, uint8_t I2C_Register)
 {
-  __IO uint32_t tmp = 0;
+  uint32_t tmp = 0;
 
   /* Check the parameters */
   assert_param(IS_I2C_ALL_PERIPH(I2Cx));
@@ -1245,7 +1245,7 @@ uint32_t I2C_GetLastEvent(I2C_TypeDef* I2Cx)
 FlagStatus I2C_GetFlagStatus(I2C_TypeDef* I2Cx, uint32_t I2C_FLAG)
 {
   FlagStatus bitstatus = RESET;
-  __IO uint32_t i2creg = 0, i2cxbase = 0;
+  uint32_t i2creg = 0, i2cxbase = 0;
 
   /* Check the parameters */
   assert_param(IS_I2C_ALL_PERIPH(I2Cx));

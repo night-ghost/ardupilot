@@ -233,7 +233,7 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
 // main application loop hosted here!
     for (;;) {
         callbacks->loop();
-        ((REVOMINI::REVOMINIScheduler *)scheduler)->loop(); // to execute stats in main loop
+//        ((REVOMINI::REVOMINIScheduler *)scheduler)->loop(); // to execute stats in main loop
 //        ((REVOMINI::REVOMINIRCInput *)rcin)->loop(); // to execute debug in main loop
     }
 }

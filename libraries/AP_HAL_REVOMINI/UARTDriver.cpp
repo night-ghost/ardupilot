@@ -89,7 +89,9 @@ uint32_t REVOMINIUARTDriver::available() {
     }
 
     uint16_t v=usart_data_available(_usart_device); 
+#ifndef PREEMPTIVE
     if(!v) REVOMINIScheduler::yield(); // если нет данных то переключим задачу насильно, все равно делать нечего
+#endif
     return v;
 }
 

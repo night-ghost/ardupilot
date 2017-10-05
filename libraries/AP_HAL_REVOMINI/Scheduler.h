@@ -29,11 +29,9 @@
 
 #define SHED_FREQ 10000 // in Hz
 
-#define PREEMPTIVE
-
 #define MAIN_STACK_SIZE  10240U   // measured use of stack is only 1K - but it grows up to 4K when using FatFs, also this includes 2K stack for ISR
 #define DEFAULT_STACK_SIZE  8192U // Default tasks stack size and stack max - io_thread can do work with filesystem
-#define SLOW_TASK_STACK 1536U // 2048U     // small stack for sensors
+#define SLOW_TASK_STACK 1024U // 2048U     // small stack for sensors
 #define STACK_MAX  65536U
 
 
@@ -49,6 +47,7 @@ struct task_t {
         const uint8_t* stack;   //!< Task stack, should be first to access from context switcher
         uint8_t id;             // id of task
         uint8_t priority;       // priority of task
+        uint8_t curr_prio;      // current priority of task, usually higher than priority
         bool active;            // task not ended
         bool in_ioc;            // task starts IO_Completion so don't release bus semaphore
         uint8_t has_semaphore;  // count how many times task has a semaphore so let it run until gives it
@@ -58,7 +57,8 @@ struct task_t {
         uint32_t max_delay;     // maximal execution time of task - used in scheduler
         uint32_t in_isr;        // time in ISR when task runs
         uint32_t period;        // if set then task starts on time basis only
-        REVOMINI::Semaphore *sem;
+        REVOMINI::Semaphore *sem; // task should start after owning this semaphore
+        REVOMINI::Semaphore *sem_wait; // task is waiting this semaphore
         uint32_t def_ttw;       // default TTW - not as hard as period
         uint32_t time_start;    // start time of task
 #ifdef MTASK_PROF
@@ -67,6 +67,7 @@ struct task_t {
         uint32_t maxt_addr; // address of end of max-time code
         uint32_t count;     // call count to calc mean
         uint32_t sched_error; // delay on task start
+        uint32_t sem_count;   // how many times task was not switched because has semaphore
 #endif
         uint32_t guard; // stack guard
 };
@@ -87,8 +88,9 @@ extern "C" {
     void getNextTask();
     
     void switchContext();
+    void __do_context_switch();
 
-    task_t* s_running;
+    extern task_t* s_running;
 
     extern caddr_t stack_bottom; // for SBRK check
     
@@ -148,11 +150,13 @@ typedef struct RevoTick {
 typedef struct RevoSchedLog {
     uint32_t start;
     uint32_t end;
-    uint32_t sleep;
     uint32_t loop_count;
-    uint32_t ttw_skip_count;
+//    uint32_t ttw_skip_count;
     uint32_t ttw;
+    uint32_t time_start;    
     uint8_t task_id;
+    uint8_t prio;
+    uint8_t active;
 } revo_sched_log;
 
 #define SHED_DEBUG_SIZE 512
@@ -311,9 +315,18 @@ public:
   static inline void set_task_ioc(bool v) { s_running->in_ioc=v; }
   static inline void task_has_semaphore(bool v) { 
     noInterrupts();
-    if(v) s_running->has_semaphore++; 
-    else  if(s_running->has_semaphore) s_running->has_semaphore--; 
+    if(v) {
+        s_running->has_semaphore++; 
+    } else  if(s_running->has_semaphore) {
+        s_running->has_semaphore--; 
+    }
     interrupts();
+  }
+
+  static inline void task_want_semaphore(void * _task, REVOMINI::Semaphore *sem) { //Increase the priority of the semaphore's owner up to the priority of the current task
+    task_t * task = (task_t*)_task;
+    if(task->priority < s_running->priority) task->curr_prio = s_running->priority;
+    s_running->sem_wait = sem;
   }
 
   static void get_next_task();
@@ -361,11 +374,13 @@ public:
 
     static inline void do_io_completion(uint8_t id){ // schedule selected IO completion
         if(id) io_completion[id-1].request = true;
-
+        need_io_completion=true;
         SCB->ICSR = SCB_ICSR_PENDSVSET_Msk; // PENDSVSET
     }
 
     static void PendSV_Handler();
+    static volatile bool need_io_completion;
+
 #ifdef PREEMPTIVE
     static volatile bool need_switch_task; // should be public
 #endif
@@ -411,9 +426,6 @@ protected:
 
     static uint32_t fill_task(task_t &tp);
 
-    /** Running task. */
-    static task_t* s_running;
-  
     /** Task stack allocation top. */
     static size_t s_top;
   

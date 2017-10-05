@@ -563,7 +563,7 @@ bool Soft_I2C::bus_reset(void) {
 again:
     /* Wait for any clock stretching to finish */
     while (!SCL_read) {// device can output 1 so check clock first
-        hal_yield(10); // пока ожидаем - пусть другие работают
+        hal_yield(0); // пока ожидаем - пусть другие работают
         
         if(systick_uptime()-t > MAX_I2C_TIME) return false;
     }
@@ -574,7 +574,7 @@ again:
         /* Wait for any clock stretching to finish */
         while (!SCL_read) {
             SCL_H; // may be another thread causes LOW
-            hal_yield(10); // пока ожидаем - пусть другие работают
+            hal_yield(0); // пока ожидаем - пусть другие работают
 
             if(systick_uptime()-t > MAX_I2C_TIME) return false;
         }

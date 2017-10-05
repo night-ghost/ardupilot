@@ -94,13 +94,22 @@ LoopFillZerobss:
   cmp  r2, r3
   bcc  FillZerobss
 
+@ switch stack
+    MRS     r1, MSP                   @ Get stack pointer
+    MOV     r0, #2048
+    SUB     r1, r0                    @ reserve space for ISR stack
+    MSR     PSP, r1                   @ store process SP to PSP
+    MOV     R0, #2                    @ set up the current (thread) mode: use PSP as stack pointer, privileged level
+    MSR     CONTROL, R0               
+    ISB                               @ Insert a barrier
+
 /* hardware inint in C */
-  bl pre_init
+    bl pre_init
 
 /* Invoke all static constructors */ 
-  bl      __libc_init_array      
+    bl      __libc_init_array      
 /* Call the application's entry point.*/
-  bl  main
+    bl  main
 /*  bx  lr   - to where? return from main() as exception  */
     mov r0, #6  
     b __default_exc

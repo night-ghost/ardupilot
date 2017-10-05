@@ -229,7 +229,6 @@ uint32_t Soft_I2C::read( uint8_t addr, uint8_t reg, uint8_t len, uint8_t *buf)
         f = f && _ReceiveByte(&buf[cnt++]);
         if (len == 1) f = f && _NoAck();
         else          f = f && _Ack();
-        I2C_yield(0);
         len--;
     }
     _Stop();
@@ -259,7 +258,6 @@ uint32_t Soft_I2C::transfer(uint8_t  addr, uint8_t  send_len, const uint8_t *sen
             i2cErrorCount++;
             return I2C_ERROR;
         }
-        I2C_yield(0);
     }
 
     f = f && _Start();
@@ -271,7 +269,6 @@ uint32_t Soft_I2C::transfer(uint8_t  addr, uint8_t  send_len, const uint8_t *sen
         if(len == 1) f = f && _NoAck();
         else         f = f && _Ack();
         len--;
-        I2C_yield(0);
     }
     _Stop();
 
@@ -291,7 +288,6 @@ bool Soft_I2C::wait_scl(){
 
     while (stopwatch_getticks()  < dt) {
         if (SCL_read)  return true; // line released
-        I2C_yield(0); // пока ожидаем - пусть другие работают
     }
     
     return false;
@@ -307,7 +303,7 @@ bool Soft_I2C::bus_reset(void) {
 again:
     /* Wait for any clock stretching to finish */
     while (!SCL_read) {// device can output 1 so check clock first
-        REVOMINIScheduler::yield(10); // пока ожидаем - пусть другие работают
+        REVOMINIScheduler::yield(0); // пока ожидаем - пусть другие работают
         
         if(systick_uptime()-t > MAX_I2C_TIME) goto error;
     }
@@ -318,7 +314,7 @@ again:
         /* Wait for any clock stretching to finish */
         while (!SCL_read) {
             SCL_H_NW; // may be another thread causes LOW
-            REVOMINIScheduler::yield(10); // пока ожидаем - пусть другие работают
+            REVOMINIScheduler::yield(0); // пока ожидаем - пусть другие работают
 
             if(systick_uptime()-t > MAX_I2C_TIME) goto error;
         }

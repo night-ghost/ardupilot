@@ -18,6 +18,8 @@
 #define SEM_PROF 
 #define SHED_PROF 
 #define MTASK_PROF
-//#define SHED_DEBUG
+#define SHED_DEBUG
 
 #define USE_WFE
+
+#define PREEMPTIVE

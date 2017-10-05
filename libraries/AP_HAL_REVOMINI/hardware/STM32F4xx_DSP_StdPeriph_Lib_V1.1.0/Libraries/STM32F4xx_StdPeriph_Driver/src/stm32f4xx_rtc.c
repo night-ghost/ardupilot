@@ -374,7 +374,7 @@ static uint8_t RTC_Bcd2ToByte(uint8_t Value);
   */
 ErrorStatus RTC_DeInit(void)
 {
-  __IO uint32_t wutcounter = 0x00;
+  uint32_t wutcounter = 0x00;
   uint32_t wutwfstatus = 0x00;
   ErrorStatus status = ERROR;
   
@@ -551,7 +551,7 @@ void RTC_WriteProtectionCmd(FunctionalState NewState)
   */
 ErrorStatus RTC_EnterInitMode(void)
 {
-  __IO uint32_t initcounter = 0x00;
+  uint32_t initcounter = 0x00;
   ErrorStatus status = ERROR;
   uint32_t initstatus = 0x00;
      
@@ -618,7 +618,7 @@ void RTC_ExitInitMode(void)
   */
 ErrorStatus RTC_WaitForSynchro(void)
 {
-  __IO uint32_t synchrocounter = 0;
+  uint32_t synchrocounter = 0;
   ErrorStatus status = ERROR;
   uint32_t synchrostatus = 0x00;
 
@@ -1309,7 +1309,7 @@ void RTC_GetAlarm(uint32_t RTC_Format, uint32_t RTC_Alarm, RTC_AlarmTypeDef* RTC
   */
 ErrorStatus RTC_AlarmCmd(uint32_t RTC_Alarm, FunctionalState NewState)
 {
-  __IO uint32_t alarmcounter = 0x00;
+  uint32_t alarmcounter = 0x00;
   uint32_t alarmstatus = 0x00;
   ErrorStatus status = ERROR;
     
@@ -1553,7 +1553,7 @@ uint32_t RTC_GetWakeUpCounter(void)
   */
 ErrorStatus RTC_WakeUpCmd(FunctionalState NewState)
 {
-  __IO uint32_t wutcounter = 0x00;
+  uint32_t wutcounter = 0x00;
   uint32_t wutwfstatus = 0x00;
   ErrorStatus status = ERROR;
   
@@ -2302,7 +2302,7 @@ void RTC_TamperPullUpCmd(FunctionalState NewState)
   */
 void RTC_WriteBackupRegister(uint32_t RTC_BKP_DR, uint32_t Data)
 {
-  __IO uint32_t tmp = 0;
+  uint32_t tmp = 0;
   
   /* Check the parameters */
   assert_param(IS_RTC_BKP(RTC_BKP_DR));
@@ -2323,7 +2323,7 @@ void RTC_WriteBackupRegister(uint32_t RTC_BKP_DR, uint32_t Data)
   */
 uint32_t RTC_ReadBackupRegister(uint32_t RTC_BKP_DR)
 {
-  __IO uint32_t tmp = 0;
+  uint32_t tmp = 0;
   
   /* Check the parameters */
   assert_param(IS_RTC_BKP(RTC_BKP_DR));

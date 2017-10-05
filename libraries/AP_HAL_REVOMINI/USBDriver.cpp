@@ -41,7 +41,9 @@ void USBDriver::begin(uint32_t baud) {
 
 uint32_t USBDriver::available() { 
     uint32_t v = usb_data_available();
+#ifndef PREEMPTIVE
     if(!v) REVOMINIScheduler::yield(); // если нет данных то переключим задачу насильно, все равно делать нечего
+#endif
     return v; 
 }
 

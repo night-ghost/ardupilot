@@ -18,7 +18,9 @@ uint64_t Semaphore::sem_time=0;
 
 // Constructor
 Semaphore::Semaphore()
-    : _taken(false) 
+    : _taken(false)
+    , _task(NULL)
+    , _weak(false)
 {}
 
 
@@ -31,6 +33,7 @@ bool Semaphore::give() {
         REVOMINIScheduler::task_has_semaphore(false);
         _task = NULL;
         result=true;
+        REVOMINIScheduler::yield();        // switch context to waiting task if any
     } else {
         interrupts();
     }
@@ -39,14 +42,22 @@ bool Semaphore::give() {
 
 bool Semaphore::take_nonblocking() {       
     bool ret = _take_nonblocking(); 
-    if(ret) REVOMINIScheduler::task_has_semaphore(true); 
+    if(ret) {
+        if(!_weak)  REVOMINIScheduler::task_has_semaphore(true); 
+    }
+
+//Increase the priority to one tick of the semaphore's owner up to the priority of the current task, without task blocking
+    REVOMINIScheduler::task_want_semaphore(_task, NULL); 
     return ret; 
 }
 
 
 bool Semaphore::take(uint32_t timeout_ms) {
     if (REVOMINIScheduler::_in_timerprocess()) {
-        if(_take_nonblocking()) return true; // all OK if we got
+        if(_take_nonblocking()) {
+            if(!_weak)  REVOMINIScheduler::task_has_semaphore(true); // onlyr fo resource semaphores, not for bus semaphores
+            return true; // all OK if we got
+        }
         
 /*
 !!!    we got breaking changes from upstream - all drivers now calls ->take(WAIT_FOREVER) so I can't allow to kill UAV
@@ -66,11 +77,10 @@ bool Semaphore::take(uint32_t timeout_ms) {
 }
 
 bool Semaphore::_take_from_mainloop(uint32_t timeout_ms) {
-    hal_yield(0); // task is ready to wait
     
     /* Try to take immediately */
     if (_take_nonblocking()) {
-        REVOMINIScheduler::task_has_semaphore(true);
+        if(!_weak) REVOMINIScheduler::task_has_semaphore(true);
         return true;
     } 
 
@@ -80,10 +90,18 @@ bool Semaphore::_take_from_mainloop(uint32_t timeout_ms) {
     uint32_t dt = timeout_ms*1000; // timeout time
 
     do {
-        hal_yield(0); // no max task time - this is more useful  // REVOMINIScheduler::_delay_microseconds(10);
+        if(timeout_ms == HAL_SEMAPHORE_BLOCK_FOREVER){
+            //Increase the priority of the semaphore's owner up to the priority of the current task and block task
+            REVOMINIScheduler::task_want_semaphore(_task, this); 
+        } else  {
+            //Increase the priority of the semaphore's owner up to the priority of the current task for one tick
+            REVOMINIScheduler::task_want_semaphore(_task, NULL); 
+        }
+
+        hal_yield(0); // no max task time - this is more useful, task will be excluded from scheduling until semaphore released  // REVOMINIScheduler::_delay_microseconds(10);
         if (_take_nonblocking()) {
             ret= true;
-            REVOMINIScheduler::task_has_semaphore(true);
+            if(!_weak) REVOMINIScheduler::task_has_semaphore(true);
             break;
         }
     } while(timeout_ms == HAL_SEMAPHORE_BLOCK_FOREVER ||  (REVOMINIScheduler::_micros() - t) < dt);

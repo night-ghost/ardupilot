@@ -96,7 +96,7 @@ public:
     bool transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t len) override;
 
     /* See AP_HAL::Device::get_semaphore() */
-    inline REVOMINI::Semaphore *get_semaphore() { uint8_t n = _desc.bus - 1; if(n<MAX_BUS_NUM) return &_semaphores[n]; else return NULL; } // numbers from 1
+    inline REVOMINI::Semaphore *get_semaphore() { uint8_t n = _desc.bus - 1; if(n<MAX_BUS_NUM) {_semaphores[n].set_weak(true); return &_semaphores[n];} else return NULL; } // numbers from 1
 
     /* See AP_HAL::Device::register_periodic_callback() */
     inline AP_HAL::Device::PeriodicHandle register_periodic_callback(uint32_t period_usec, AP_HAL::Device::PeriodicCb proc) override

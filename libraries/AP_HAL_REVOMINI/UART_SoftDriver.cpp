@@ -140,9 +140,9 @@ bool SerialDriver::tx_pending() {
 uint32_t SerialDriver::available() {
 
     int i = (receiveBufferWrite + SS_MAX_RX_BUFF - receiveBufferRead) % SS_MAX_RX_BUFF;
-
+#ifndef PREEMPTIVE
     if(!i) REVOMINIScheduler::yield(); // если нет данных то переключим задачу насильно, все равно делать нечего
-
+#endif
     return i;
 }
 

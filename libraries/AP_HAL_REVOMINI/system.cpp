@@ -41,22 +41,30 @@ void panic(const char *errormsg, ...)
 
 uint32_t millis()
 {
+#ifndef PREEMPTIVE
     REVOMINIScheduler::yield(0);
+#endif
     return REVOMINIScheduler::_millis();
 }
 
 uint64_t millis64(){
+#ifndef PREEMPTIVE
     REVOMINIScheduler::yield(0);
+#endif
     return REVOMINIScheduler::_millis64();
 }
 
 uint32_t micros() {
+#ifndef PREEMPTIVE
     REVOMINIScheduler::yield(0);
+#endif
     return REVOMINIScheduler::_micros();
 }
 
 uint64_t micros64(){
+#ifndef PREEMPTIVE
     REVOMINIScheduler::yield(0);
+#endif
     return REVOMINIScheduler::_micros64();
 }
 

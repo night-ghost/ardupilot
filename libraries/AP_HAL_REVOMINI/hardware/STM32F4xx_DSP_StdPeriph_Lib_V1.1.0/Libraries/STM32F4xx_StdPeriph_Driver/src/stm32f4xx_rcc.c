@@ -278,7 +278,7 @@ void RCC_HSEConfig(uint8_t RCC_HSE)
   */
 ErrorStatus RCC_WaitForHSEStartUp(void)
 {
-  __IO uint32_t startupcounter = 0;
+  uint32_t startupcounter = 0;
   ErrorStatus status = ERROR;
   FlagStatus hsestatus = RESET;
   /* Wait till HSE is ready and if Time out is reached exit */

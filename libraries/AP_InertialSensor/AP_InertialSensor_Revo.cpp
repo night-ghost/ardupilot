@@ -491,7 +491,7 @@ void AP_InertialSensor_Revo::start()
     // start the timer process to read samples
 //    _dev->register_periodic_callback(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)); - we don't require semaphore so use sheduler's API
 //    REVOMINIScheduler::i_know_new_api(); // request scheduling in timers interrupt
-//    task_handle = REVOMINIScheduler::register_timer_task(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL);
+    task_handle = REVOMINIScheduler::register_timer_task(500, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL);
 
 // this semaphore shoud be free on task call
 //    REVOMINIScheduler::set_checked_semaphore(task_handle,(REVOMINI::Semaphore *)_sem);
@@ -562,7 +562,9 @@ void AP_InertialSensor_Revo::_ioc(){ // io completion ISR, data in it place
 //    _dev->get_semaphore()->give();            // release
 
 // schedule data parsing to next timer's tick
+#ifndef PREEMPTIVE
     REVOMINIScheduler::do_at_next_tick(REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)), (REVOMINI::Semaphore *)_sem);    
+#endif    
 }
 
 /*
@@ -702,13 +704,13 @@ bool AP_InertialSensor_Revo::_accumulate_fast_sampling(uint8_t *samples, uint8_t
     return ret;
 }
 
-#define MAX_NODATA_COUNT 5
+#define MAX_NODATA_TIME 20000
 
 void AP_InertialSensor_Revo::_read_fifo()
 {
-    uint32_t now=REVOMINIScheduler::_millis();
+    uint32_t now=REVOMINIScheduler::_micros();
     if(read_ptr == write_ptr) {
-        if(now - last_sample > MAX_NODATA_COUNT) { // something went wrong - data stream stopped
+        if(now - last_sample > MAX_NODATA_TIME) { // something went wrong - data stream stopped
             _start(); // try to restart MPU        
             last_sample=now;
             REVOMINIScheduler::MPU_restarted(); // count them
@@ -743,12 +745,18 @@ void AP_InertialSensor_Revo::_read_fifo()
             }
         }
         count++;
-        dt=REVOMINIScheduler::_micros() - t ;
+        now = REVOMINIScheduler::_micros();
+        dt= now - t ;
+        last_sample=now;
+#ifndef PREEMPTIVE
         if(count>=4) { // not more than 4 points at a time, all another next time
             REVOMINIScheduler::do_at_next_tick(REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)), (REVOMINI::Semaphore *)_sem);    
             break;
         }
+#endif
     }
+
+    last_sample=now;
 
     REVOMINIScheduler::MPU_stats(count,dt);
 }

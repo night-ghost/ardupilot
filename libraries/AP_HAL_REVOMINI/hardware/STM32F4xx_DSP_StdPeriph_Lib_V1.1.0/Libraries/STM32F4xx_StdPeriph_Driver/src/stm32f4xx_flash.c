@@ -1141,7 +1141,7 @@ FLASH_Status FLASH_GetStatus(void)
   */
 FLASH_Status FLASH_WaitForLastOperation(void)
 { 
-  __IO FLASH_Status status = FLASH_COMPLETE;
+  FLASH_Status status = FLASH_COMPLETE;
    
   /* Check for the FLASH Status */
   status = FLASH_GetStatus();

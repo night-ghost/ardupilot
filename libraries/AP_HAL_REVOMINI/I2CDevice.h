@@ -83,19 +83,19 @@ public:
     inline bool set_speed(enum AP_HAL::Device::Speed speed) override { return true; };
 
     /* See AP_HAL::Device::get_semaphore() */
-    inline REVOMINI::Semaphore *get_semaphore() override { return &_semaphores[_bus]; } // numbers from 0
+    inline REVOMINI::Semaphore *get_semaphore() override {_semaphores[_bus].set_weak(true); return &_semaphores[_bus]; } // numbers from 0
 
     /* See AP_HAL::Device::register_periodic_callback() */
     inline AP_HAL::Device::PeriodicHandle register_periodic_callback(
         uint32_t period_usec, Device::PeriodicCb proc) override
     {   
-        return REVOMINIScheduler::register_timer_task(period_usec, proc, &_semaphores[_bus] );
+        return REVOMINIScheduler::register_timer_task(period_usec, proc, get_semaphore() );
     }
 
     inline AP_HAL::Device::PeriodicHandle register_periodic_callback(
         uint32_t period_usec, PeriodicCbBool proc)
     {
-        return REVOMINIScheduler::register_timer_task(period_usec, proc, &_semaphores[_bus] );
+        return REVOMINIScheduler::register_timer_task(period_usec, proc, get_semaphore() );
     }
 
 
