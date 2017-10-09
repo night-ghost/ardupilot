@@ -18,6 +18,8 @@
  */
 #if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
 
+#pragma GCC optimize ("O2")
+
 #include "AP_HAL_REVOMINI.h"
 #include <AP_HAL/AP_HAL.h>
 

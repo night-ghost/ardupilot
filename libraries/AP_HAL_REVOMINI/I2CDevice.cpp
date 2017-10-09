@@ -5,6 +5,7 @@
  * Copyright (C) 2013, Virtualrobotix.com Roberto Navoni , Emile 
  * All Rights Reserved.R Written by Roberto Navoni  <info@virtualrobotix.com>, 11 January 2013
  */
+#pragma GCC optimize ("O2")
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Param_Helper/AP_Param_Helper.h>

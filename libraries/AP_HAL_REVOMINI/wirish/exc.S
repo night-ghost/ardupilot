@@ -90,11 +90,17 @@ __default_exc:
     ldr r1, [r1, #20]           @ LR of exception - if call to wrong address
 
     ldr r2, BFAR                @ for debug
+    ldr r2, [r2]
     ldr r2, CFSR
+    ldr r2, [r2]
     ldr r2, HFSR
+    ldr r2, [r2]
     ldr r2, DFSR
+    ldr r2, [r2]
     ldr r2, AFSR
+    ldr r2, [r2]
     ldr r2, SHCSR
+    ldr r2, [r2]
 
     mov r12, r1
     ldr r2, NVIC_CCR            @ Enable returning to thread mode even if there are

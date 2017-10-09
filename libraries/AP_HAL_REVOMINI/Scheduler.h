@@ -154,9 +154,12 @@ typedef struct RevoSchedLog {
 //    uint32_t ttw_skip_count;
     uint32_t ttw;
     uint32_t time_start;    
-    uint8_t task_id;
-    uint8_t prio;
-    uint8_t active;
+    uint32_t timeFromLast;
+    uint32_t remains;
+    uint32_t quant;
+    uint8_t  task_id;
+    uint8_t  prio;
+    uint8_t  active;
 } revo_sched_log;
 
 #define SHED_DEBUG_SIZE 512
@@ -269,7 +272,7 @@ public:
     static inline bool in_interrupt(){ return (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) /* || (__get_BASEPRI()) */; }
 
 
-//{ this functions do a cooperative multitask and inspired by Arduino-Scheduler (Mikael Patel)
+//{ this functions do a cooperative/preemptive multitask and inspired by Arduino-Scheduler (Mikael Patel), and scmrtos
     
   /**
    * Initiate scheduler and main task with given stack size. Should
@@ -282,11 +285,10 @@ public:
     static bool adjust_stack(size_t stackSize);
     
   /**
-   * Start a task with given functions and stack size. Should be
-   * called from main task (in setup). The functions are executed by
-   * the task. The taskSetup function (if provided) is run once.
-   * The taskLoop function is repeatedly called. The taskSetup may be
-   * omitted (NULL). Returns true if successful otherwise false.
+   * Start a task with given function and stack size. Should be
+   * called from main task. The functions are executed by the
+   * task. The taskLoop function is repeatedly called. Returns 
+   * true if successful otherwise false (no memory for new task).
    * @param[in] taskSetup function (may be NULL).
    * @param[in] taskLoop function (may not be NULL).
    * @param[in] stackSize in bytes.
@@ -303,16 +305,22 @@ public:
         return _start_task(r.h, stackSize);
   }
   
+  // functions to alter task's properties
   static void set_task_period(void *h, uint32_t period);
   static void set_task_semaphore(void *h, REVOMINI::Semaphore *sem);
   static void set_task_ttw(void *h, uint32_t ttw);
   static void set_task_priority(void *h, uint8_t prio);
+  static void inline set_task_ioc(bool v) { s_running->in_ioc=v; }
   
   static void stop_task(void * h);
-  static task_t* get_empty_task();
   static inline void * get_current_task() { return s_running; }
 
-  static inline void set_task_ioc(bool v) { s_running->in_ioc=v; }
+    /*
+        scheduler of multitask. Gives task ready to run with highest priority
+    */
+    static void get_next_task(); 
+
+  // informs that task owns semaphore so should have priority increase
   static inline void task_has_semaphore(bool v) { 
     noInterrupts();
     if(v) {
@@ -323,13 +331,14 @@ public:
     interrupts();
   }
 
-  static inline void task_want_semaphore(void * _task, REVOMINI::Semaphore *sem) { //Increase the priority of the semaphore's owner up to the priority of the current task
+  // allows to block task on semaphore
+  static inline void task_want_semaphore(void * _task, REVOMINI::Semaphore *sem) { 
     task_t * task = (task_t*)_task;
+    //Increase the priority of the semaphore's owner up to the priority of the current task
     if(task->priority < s_running->priority) task->curr_prio = s_running->priority;
     s_running->sem_wait = sem;
   }
 
-  static void get_next_task();
   /**               
    * Context switch to next task in run queue.
    */
@@ -341,6 +350,7 @@ public:
    */
   static size_t task_stack();
   
+  // check from what task it called
   static bool is_main_task();
 //}
 
@@ -414,24 +424,29 @@ public:
 
 protected:
 
+//{ multitask
+    // executor for task's handler
     static void do_task(task_t * task);
+    // gves first deleted task or NULL
+    static task_t* get_empty_task();
 /**
    * Initiate a task with the given functions and stack. When control
-   * is yield to the task the setup function is first called and then
-   * the loop function is repeatedly called.
+   * is yield to the task then the loop function is repeatedly called.
    * @param[in] h     task handler (may not be NULL).
    * @param[in] stack top reference.
    */
     static void *init_task(uint64_t h, const uint8_t* stack);
 
+    // prepares TCB
     static uint32_t fill_task(task_t &tp);
 
     /** Task stack allocation top. */
     static size_t s_top;
   
-    static uint16_t task_n; // counter
+    static uint16_t task_n; // counter of tasks
   
     static void check_stack(uint32_t sp);
+
  
 #define await(cond) while(!(cond)) yield()
   
@@ -451,6 +466,7 @@ private:
      * called from an interrupt. */
     static void _timer_isr_event(uint32_t v /*TIM_TypeDef *tim */);
     static void _timer5_ovf(uint32_t v /*TIM_TypeDef *tim */ );
+    static void _tail_timer_event(uint32_t v /*TIM_TypeDef *tim */);
     
     static void _run_timer_procs(bool called_from_isr);
 

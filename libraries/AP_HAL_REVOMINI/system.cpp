@@ -1,3 +1,5 @@
+#pragma GCC optimize ("O2")
+
 #include <stdarg.h>
 #include <stdio.h>
 

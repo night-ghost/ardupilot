@@ -1,4 +1,3 @@
-#pragma GCC push_options
 #pragma GCC optimize ("O2")
 
 #include <exti.h>
@@ -13,7 +12,6 @@
 
 #include "RC_PPM_parser.h"
 
-#pragma GCC pop_options
 
 using namespace AP_HAL;
 using namespace REVOMINI;

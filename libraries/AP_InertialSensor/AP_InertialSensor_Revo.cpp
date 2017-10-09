@@ -490,9 +490,9 @@ void AP_InertialSensor_Revo::start()
 // DON'T request scheduling in timers interrupt - because data already readed
     // start the timer process to read samples
 //    _dev->register_periodic_callback(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)); - we don't require semaphore so use sheduler's API
-//    REVOMINIScheduler::i_know_new_api(); // request scheduling in timers interrupt
-    task_handle = REVOMINIScheduler::register_timer_task(500, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL);
 
+    task_handle = REVOMINIScheduler::register_timer_task(500, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL);
+    REVOMINIScheduler::set_task_priority(task_handle,93);
 // this semaphore shoud be free on task call
 //    REVOMINIScheduler::set_checked_semaphore(task_handle,(REVOMINI::Semaphore *)_sem);
 

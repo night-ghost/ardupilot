@@ -1,5 +1,5 @@
-//#pragma GCC push_options
-//#pragma GCC optimize ("O0")
+
+#pragma GCC optimize ("O2")
 
 #include "AP_HAL_REVOMINI.h"
 #include "RCOutput.h"

@@ -19,11 +19,8 @@
 #include <spi.h>
 #include <boards.h>
 
-//#pragma GCC optimize ("O0")
 #include "SPIDevice.h"
 #include "GPIO.h"
-//#pragma GCC pop_options
-
 
 
 using namespace REVOMINI;

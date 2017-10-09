@@ -62,7 +62,6 @@ it requires 189 interrupts to receive 2 bytes (with adressing and restart) and t
 it requires 16326 cycles to receive 6 bytes (with addressing and restart)
 */
 
-#pragma GCC push_options
 #pragma GCC optimize ("O2")
 
 #include <AP_HAL/AP_HAL.h>
