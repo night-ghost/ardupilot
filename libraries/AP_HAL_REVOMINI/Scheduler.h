@@ -311,6 +311,7 @@ public:
   static void set_task_ttw(void *h, uint32_t ttw);
   static void set_task_priority(void *h, uint8_t prio);
   static void inline set_task_ioc(bool v) { s_running->in_ioc=v; }
+  static void inline set_task_active(void *h) {   task_t * task = (task_t*)h; task->active=true; }
   
   static void stop_task(void * h);
   static inline void * get_current_task() { return s_running; }

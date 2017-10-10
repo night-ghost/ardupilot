@@ -130,6 +130,7 @@ REVOMINIScheduler::REVOMINIScheduler()
     s_main.next = &s_main;
     s_main.prev = &s_main;
     s_main.priority = 100;
+    s_main.active = true; // not paused
     s_main.handle = h.h;        // to not 0
     s_main.guard = STACK_GUARD;
 
@@ -139,7 +140,10 @@ bool REVOMINIScheduler::is_main_task() { return s_running == &s_main; }
 
 #ifdef PREEMPTIVE
 static void idle_task(){
-    __WFE();
+    while(1){
+        __WFE();
+        REVOMINIScheduler::yield(0);
+    }
 }
 #endif
 
@@ -159,7 +163,10 @@ void REVOMINIScheduler::init()
     // to prevent it from occurring while being configured 
     noInterrupts();
 
-    NVIC_SetPriority(PendSV_IRQn, 15);              // lowest priority so all IRQs can't be switced
+    NVIC_SetPriority(PendSV_IRQn, 15);         // lowest priority so all IRQs can't be switced
+    NVIC_SetPriority(SVCall_IRQn, 12);         // priority 12 - to be called from PendSV
+    NVIC_SetPriority(SysTick_IRQn, 3);         // priority 3 - less thah fast device IO ISRs but higher than USB
+
 
     // Ensure the effect of the priority change occurs before 
     // clearing PRIMASK to ensure that future PendSV exceptions 
@@ -170,9 +177,6 @@ void REVOMINIScheduler::init()
     interrupts();
 
 
-    NVIC_SetPriority(SysTick_IRQn, 3);          // priority 3 - less thah fast device IO ISRs but higher than USB
-    NVIC_SetPriority(SVCall_IRQn,  12);         // priority 12 - 
-
 
     CLEAR_BIT(SCB->SCR, ((uint32_t)SCB_SCR_SLEEPDEEP_Msk)); //we don't need deep sleep
     SET_BIT(  SCB->SCR, ((uint32_t)SCB_SCR_SEVONPEND_Msk)); //we need Event on each interrupt
@@ -182,13 +186,12 @@ void REVOMINIScheduler::init()
 //]*/
 
     timer_foreach(timer_reset); // timer_reset(dev) moved out from configTimeBase so reset by hands
-
     {
         uint32_t period    = (2000000UL / SHED_FREQ) - 1; 
                 // dev    period   freq, kHz
         configTimeBase(TIMER7, period, 2000);       //2MHz 0.5us ticks
         Revo_handler h = { .isr = _timer_isr_event };
-        timer_attach_interrupt(TIMER7, TIMER_UPDATE_INTERRUPT, h.h , 0xf); // lowest priority
+        timer_attach_interrupt(TIMER7, TIMER_UPDATE_INTERRUPT, h.h , 0xE); // almost lowest priority, higher than Pend_SW to schedule task switch
         timer_resume(TIMER7);
     }
 
@@ -215,17 +218,18 @@ void REVOMINIScheduler::init()
         timer_attach_interrupt(TIMER11, TIMER_UPDATE_INTERRUPT, h.h , 0xA); // priority 10
     }
     
+
+#ifdef PREEMPTIVE
+    void *task = _start_task((uint32_t)idle_task, 256);
+    set_task_priority(task, 255); // lowest possible, to fill delay()
+#endif
     
 #ifdef SHED_PROF
 // show stats output each 10 seconds
-    void *task = register_timer_task(10000000, FUNCTOR_BIND_MEMBER(&REVOMINIScheduler::_set_10s_flag, bool), NULL);
+    task = register_timer_task(10000000, FUNCTOR_BIND_MEMBER(&REVOMINIScheduler::_set_10s_flag, bool), NULL);
     set_task_priority(task, 100); // like main has
 #endif
 
-#ifdef PREEMPTIVE
-    task = _start_task((uint32_t)idle_task, 256);
-    set_task_priority(task, 255); // lowest possible, to fill delay()
-#endif
 
 }
 
@@ -475,7 +479,7 @@ void REVOMINIScheduler::_timer_isr_event(uint32_t v  /* TIM_TypeDef *tim */) {
     uint32_t sp; 
 
     // Get stack pointer
-    asm volatile ("MRS     %0, PSP\n\t"  : "=rm" (sp) );
+    asm volatile ("MRS     %0, PSP\n\t"  : "=rm" (sp));
 
     check_stack(sp);
     
@@ -982,7 +986,7 @@ uint32_t REVOMINIScheduler::fill_task(task_t &tp){
 //    tp.active = true;
     tp.ttw = 1;       // delay after 1st enter
     tp.priority=108;  // main task has 100 so by default such tasks will use 1/8 of CPU
-
+    tp.active = true; // all tasks starts as active
 #ifdef MTASK_PROF
     tp.start=_micros(); 
 #endif
@@ -1030,11 +1034,11 @@ void REVOMINIScheduler::do_task(task_t *task) {
             }
             task->time_start=_micros();
             revo_call_handler(task->handle, 0); 
-//            task->active=false;
             if(task->sem && !task->in_ioc) task->sem->give(); // give semaphore when task finished
             task->has_semaphore=0; // task is over so glitch
-            task->active=false;     // then turn off active, to know when task is started
-
+            if(task->priority!=255) { // not for idle task
+                task->active=false;     // then turn off active, to know when task is started
+            }
             t = _micros()-task->time_start; // execution time
             if(task->def_ttw && task->def_ttw > t) t = task->def_ttw - t; // time to wait
             else if(task->period)                  t = (task->period - t)/2; // exclude from checks
@@ -1069,9 +1073,10 @@ void * REVOMINIScheduler::init_task(Handler handler, const uint8_t* stack){
     *(--sp)  = ((uint32_t)do_task)|1; // LR the same, with thumb bit set
     sp -= 4;                          // emulate "push R12,R3,R2,R1"
     *(--sp)  = (uint32_t)task;        // emulate "push r0"
-// SW frame, context saved as  STMDB     R0!, {R4-R11, LR}
+// SW frame, context saved as  "STMDB     R0!, {R4-R11, LR}"
     *(--sp)  = 0xFFFFFFFDUL;          // emulate "push lr" =exc_return: Return to Thread mode, floating-point context inactive, execution uses PSP after return.
-    sp -= 8;                          // emulate "push R4-R11"
+    asm volatile ("STMDB     %0!, {R4-R11}\n\t"  : "+rm" (sp) ); // push real registers - they can be global register variables
+//    sp -= 8;                        // emulate "push R4-R11"
     task->sp=(uint8_t *)sp;           // set stack pointer of task
 
     return (void *)ret;
@@ -1187,6 +1192,7 @@ void REVOMINIScheduler::set_task_period(void *h, uint32_t period){
     task_t *task = (task_t *)h;
 
     task->period = period;
+    task->active = false;
     task->start  = _micros();
     task->priority = 95; // priority for periodic tasks, speed of main 2ill be 1/5 of this
 }
@@ -1302,17 +1308,21 @@ void REVOMINIScheduler::get_next_task(){
         }
             
         // если для задачи установлен период выполнения и она в самом начале - проверим 
-        if(ptr->period && !ptr->active){
-            if(_timer_suspended) goto skip_task; //       timed tasks can't be started
+        if(!ptr->active){
+            if(ptr->period){
+                if(_timer_suspended) goto skip_task; //       timed tasks can't be started
                 
-            timeFromLast = now - ptr->time_start; // time from last run  less  than task's period
-            if( timeFromLast < ptr->period) {
-                remains = ptr->period - timeFromLast;
-                if(remains < TIMER_PERIOD) { // если время, оставшееся до запуска, меньше кванта - установим таймер перезапуска
-                    if(partial_quant==0 || remains<partial_quant) partial_quant=remains;
-                    if(remains>10) goto skip_task; 
+                timeFromLast = now - ptr->time_start; // time from last run  less  than task's period
+                if( timeFromLast < ptr->period) {
+                    remains = ptr->period - timeFromLast;
+                    if(remains < TIMER_PERIOD) { // если время, оставшееся до запуска, меньше кванта - установим таймер перезапуска
+                        if(partial_quant==0 || remains<partial_quant) partial_quant=remains;
+                        if(remains>10) goto skip_task; 
+                    }
+                    goto skip_task; 
                 }
-                goto skip_task; 
+            }else { // non-active non-periodic tasks
+                goto skip_task; // should be skipped
             }
 
         } else { // задачи без строгого периода, обычный тайм слайс
@@ -1371,9 +1381,8 @@ void REVOMINIScheduler::get_next_task(){
 skip_task:
     // we shoul do this check after EACH task so can't use "continue" which skips ALL loop. And we can't move this to begin of loop because then interrupted task does not participate in the comparison of priorities
         if(ptr == me) {  // 'me' is the task that calls yield(), so full loop - there is no job.
+            if(task) break; // we have task to run so let it run!
             loop_count++;
-
-            if(task) break; // we have task to run
 
 #if defined(USE_WFE) // we can't find  a task to run so sleep in loop. to prevent it there is a low-priority task which always ready to run
 

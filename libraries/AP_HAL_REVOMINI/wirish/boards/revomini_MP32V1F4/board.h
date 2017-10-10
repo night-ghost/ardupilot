@@ -102,7 +102,7 @@ void boardInit(void);
 #ifdef I2C_ON_FLEXI
  #define BOARD_I2C_BUS_EXT      1  // external HARD I2C
  #define BOARD_I2C_BUS_SLOW     1  // slow down this bus
- #define BOARD_SOFT_I2C2
+// #define BOARD_SOFT_I2C2
 #else
  #define BOARD_I2C_BUS_EXT      2  // external soft I2C
  #define BOARD_I2C_BUS_SLOW     2  // slow down this bus
@@ -128,7 +128,7 @@ void boardInit(void);
 #define BOARD_COMPASS_DEFAULT           HAL_COMPASS_HMC5843
 #define BOARD_COMPASS_HMC5843_I2C_ADDR  0x1E
 #define BOARD_HMC5883_DRDY_PIN          38  // PB7 - but it not used by driver
-#define BOARD_COMPASS_HMC5843_ROTATION  ROTATION_YAW_270  //ROTATION_YAW_270 
+#define BOARD_COMPASS_HMC5843_ROTATION  ROTATION_YAW_270  
 
 #define HAL_COMPASS_HMC5843_I2C_BUS     BOARD_I2C_BUS_INT
 #define HAL_COMPASS_HMC5843_I2C_EXT_BUS BOARD_I2C_BUS_EXT // external compass on soft I2C
@@ -190,12 +190,12 @@ void boardInit(void);
 
 #ifdef BOARD_NRF_NAME
    //                                    name            device   bus  mode         cs_pin                       speed_low       speed_high soft   dma
-#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  false, 0 }, \
+#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  false, 1 }, \
                              { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* caller controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, false, 1 },\
                              { BOARD_NRF_NAME,           _SPI3,   3,  SPI_MODE_3, 254 /* caller controls CS */,  SPI_1_125MHZ,   SPI_9MHZ,  false, 0 },
 #else
 //
-#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_2_25MHZ,  false, 1 }, \
+#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  false, 1 }, \
                              { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* caller controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, false, 1 },
 #endif
 
@@ -292,6 +292,7 @@ void boardInit(void);
 #define BOARD_HAL_VARINFO \
     AP_GROUPINFO("MOTOR_LAYOUT", 1, AP_Param_Helper, _motor_layout, 0), \
     AP_GROUPINFO("SERVO_MASK",   2, AP_Param_Helper, _servo_mask, 0), \
+    AP_GROUPINFO("UART1_SBUS",   3, AP_Param_Helper, _uart1_sbus, 0), \
     AP_GROUPINFO("SOFTSERIAL",   3, AP_Param_Helper, _use_softserial, 0), \
     AP_GROUPINFO("CONNECT_COM",  4, AP_Param_Helper, _connect_com, 0), \
     AP_GROUPINFO("CONNECT_ESC",  5, AP_Param_Helper, _connect_esc, 0), \
@@ -313,6 +314,7 @@ void boardInit(void);
     AP_Int8 _servo_mask;   \
     AP_Int8 _connect_com;  \
     AP_Int8 _connect_esc; \
+    AP_Int8 _uart1_sbus; \
     AP_Int8 _flexi_i2c; \
     AP_Int8 _pwm_type; \
     AP_Int8 _dbg_wayback; \

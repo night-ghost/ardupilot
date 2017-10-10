@@ -136,8 +136,8 @@ a tail timer
 b usb
 c SVC
 d 
-e 
-f scheduler - Timer7, io_completion
+e scheduler - Timer7
+f Pend_Sw io_completion
 
 Timer usage:
 

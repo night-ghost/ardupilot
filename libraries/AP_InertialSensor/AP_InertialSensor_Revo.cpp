@@ -491,7 +491,8 @@ void AP_InertialSensor_Revo::start()
     // start the timer process to read samples
 //    _dev->register_periodic_callback(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)); - we don't require semaphore so use sheduler's API
 
-    task_handle = REVOMINIScheduler::register_timer_task(500, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL);
+//    task_handle = REVOMINIScheduler::register_timer_task(500, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL);
+    task_handle = REVOMINIScheduler::register_timer_task(0, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL); // 0 period means that task will be activated by request
     REVOMINIScheduler::set_task_priority(task_handle,93);
 // this semaphore shoud be free on task call
 //    REVOMINIScheduler::set_checked_semaphore(task_handle,(REVOMINI::Semaphore *)_sem);
@@ -562,9 +563,14 @@ void AP_InertialSensor_Revo::_ioc(){ // io completion ISR, data in it place
 //    _dev->get_semaphore()->give();            // release
 
 // schedule data parsing to next timer's tick
-#ifndef PREEMPTIVE
+#ifdef PREEMPTIVE
+    // now we can call REVOMINIScheduler::set_task_active(task_handle) instead of using period
+    REVOMINIScheduler::set_task_active(task_handle);
+#else
     REVOMINIScheduler::do_at_next_tick(REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)), (REVOMINI::Semaphore *)_sem);    
 #endif    
+
+
 }
 
 /*
