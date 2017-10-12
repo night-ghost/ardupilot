@@ -271,6 +271,7 @@ static int8_t xmit_datablock (	/* 1:OK, 0:Failed */
 /*-----------------------------------------------------------------------*/
 /* Send a command packet to the MMC                                      */
 /*-----------------------------------------------------------------------*/
+static uint8_t buf[6]; // to use DMA
 
 static
 BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
@@ -278,7 +279,7 @@ BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 	DWORD arg		/* Argument */
 )
 {
-	BYTE n, res;
+	BYTE crc, res;
 
 
 	if (cmd & 0x80) {	/* Send a CMD55 prior to ACMD<n> */
@@ -293,27 +294,31 @@ BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 	/* Select the card and wait for ready except to stop multiple block read */
 	if (cmd != CMD12) {
 		deselect();
-		spi_yield();
+		spi_yield(); // sync quant so no interrupts when receiving answer
 		if (!select()) {
 		    printf("can't select SDn");
 		    return 0xFF;
 		}
 	}
 
+	crc = 0x01;				/* Dummy CRC + Stop */
+	if (cmd == CMD0) crc = 0x95;		/* Valid CRC for CMD0(0) */
+	if (cmd == CMD8) crc = 0x87;		/* Valid CRC for CMD8(0x1AA) */
+
+
 	/* Send command packet */
-	xchg_spi(0x40 | cmd);			/* Start + command index */
-	xchg_spi((BYTE)(arg >> 24));		/* Argument[31..24] */
-	xchg_spi((BYTE)(arg >> 16));		/* Argument[23..16] */
-	xchg_spi((BYTE)(arg >> 8));		/* Argument[15..8] */
-	xchg_spi((BYTE)arg);			/* Argument[7..0] */
-	n = 0x01;				/* Dummy CRC + Stop */
-	if (cmd == CMD0) n = 0x95;		/* Valid CRC for CMD0(0) */
-	if (cmd == CMD8) n = 0x87;		/* Valid CRC for CMD8(0x1AA) */
-	xchg_spi(n);
+	buf[0] = 0x40 | cmd;			/* Start + command index */
+	buf[1] = (BYTE)(arg >> 24);		/* Argument[31..24] */
+	buf[2] = (BYTE)(arg >> 16);		/* Argument[23..16] */
+	buf[3] = (BYTE)(arg >> 8);		/* Argument[15..8] */
+	buf[4] = (BYTE)arg;			/* Argument[7..0] */
+        buf[5] = crc;                           /* CRC + Stop */
+
+        xmit_spi_multi(buf, 6);	// entire command in one packet
 
 	/* Receive command resp */
 	if (cmd == CMD12) xchg_spi(0xFF);	/* Diacard following one byte when CMD12 */
-	n = 32;					/* Wait for response (10 bytes max) */
+	uint8_t n = 32;				/* Wait for response (10 bytes max) */
 	do {
 	    res = xchg_spi(0xFF);
 	    spi_yield();	                /* This loop will take a time. Insert rot_rdq() here for multitask environment. */
@@ -352,9 +357,9 @@ DSTATUS sd_initialize () {
 		Timer1 = 1000;						/* Initialization timeout = 1 sec */
 		if (send_cmd(CMD8, 0x1AA) == 1) {	/* SDv2? */
 			for (n = 0; n < 4; n++) ocr[n] = xchg_spi(0xFF);	/* Get 32 bit return value of R7 resp */
-			if (ocr[2] == 0x01 && ocr[3] == 0xAA) {				/* Is the card supports vcc of 2.7-3.6V? */
+			if (ocr[2] == 0x01 && ocr[3] == 0xAA) {			/* Is the card supports vcc of 2.7-3.6V? */
 				while (Timer1 && send_cmd(ACMD41, 1UL << 30)) ;	/* Wait for end of initialization with ACMD41(HCS) */
-				if (Timer1 && send_cmd(CMD58, 0) == 0) {		/* Check CCS bit in the OCR */
+				if (Timer1 && send_cmd(CMD58, 0) == 0) {	/* Check CCS bit in the OCR */
 					for (n = 0; n < 4; n++) ocr[n] = xchg_spi(0xFF);
 					ty = (ocr[0] & 0x40) ? CT_SD2 | CT_BLOCK : CT_SD2;	/* Card id SDv2 */
 				}
@@ -377,7 +382,11 @@ DSTATUS sd_initialize () {
 
 	if (ty) {			/* OK */
 	    Stat &= ~STA_NOINIT;	/* Clear STA_NOINIT flag */
-            sd_getSectorCount(&sd_max_sectors);
+	    uint8_t i;
+	    for(i=0;i<15;i++){  //      15 tries to get size
+                sd_getSectorCount(&sd_max_sectors);
+                if(sd_max_sectors!=0) break;
+            }
         } else {			/* Failed */
 	    Stat = STA_NOINIT;
 	}
@@ -415,13 +424,13 @@ DSTATUS sd_status (){
 
 uint8_t sd_get_state(){
 
-    if(send_cmd(CMD13, 0)){
+    if(send_cmd(CMD13, 0)<=1){
         BYTE ret = xchg_spi(0xFF);
         if(ret) printf("Card error: %x\n",ret);
         return ret;
     }
     
-    return 0xff;
+    return 0; // CMD13 not supported so all OK
 
 /*
 7 - out of range / CSD overwrite
@@ -459,7 +468,7 @@ DRESULT sd_read (
 	if (!count) return RES_PARERR;		        /* Check parameter */
 	if (Stat & STA_NOINIT) return RES_NOTRDY;	/* Check if drive is ready */
 	
-	if(sector > sd_max_sectors) return RES_PARERR;		        /* Check parameter */
+	if(sd_max_sectors && sector > sd_max_sectors) return RES_PARERR;		        /* Check parameter */
 
 	if (!(CardType & CT_BLOCK)) {
 	    sectorInc = 512;
@@ -540,7 +549,7 @@ DRESULT sd_write (
 	if (!count) return RES_PARERR;		/* Check parameter */
 	if (Stat & STA_NOINIT) return RES_NOTRDY;	/* Check drive status */
 	if (Stat & STA_PROTECT) return RES_WRPRT;	/* Check write protect */
-	if(sector > sd_max_sectors) return RES_PARERR;		        /* Check parameter */
+	if(sd_max_sectors && sector > sd_max_sectors) return RES_PARERR;		        /* Check parameter */
 
         uint16_t sectorInc = 1;
 
@@ -760,7 +769,7 @@ void sd_timerproc (void)
 #define DF_NUM_PAGES 0x1f00
 #define DF_PAGE_SIZE 256L
 
-#define DF_RESET BOARD_DATAFLASH_CS_PIN // RESET (PB3)
+#define DF_RESET BOARD_DATAFLASH_CS_PIN 
 
 //Winbond M25P16 Serial Flash Embedded Memory 16 Mb, 3V
 #define JEDEC_WRITE_ENABLE           0x06

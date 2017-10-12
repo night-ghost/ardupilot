@@ -110,8 +110,8 @@ void boardInit(void);
 
 
 #define BOARD_SDCARD_NAME "sdcard"
-#define BOARD_SDCARD_CS_PIN   2
-#define BOARD_SDCARD_DET_PIN   38 // PB7
+#define BOARD_SDCARD_CS_PIN    2
+#define BOARD_SDCARD_DET_PIN  38 // PB7
 
 #define BOARD_HAS_SDIO
 #define HAL_BOARD_LOG_DIRECTORY "0:/APM/LOGS"
@@ -245,6 +245,14 @@ void boardInit(void);
     // @User: Advanced
     AP_GROUPINFO("AIBAO_FS",     7, AP_Param_Helper, _aibao_fs, 0)
 
+    // @Param: SD_REFORMAT
+    // @DisplayName: Allows to re-format SD card in case of errors in FS
+    // @Description: Any FS errors that cause failure of logging will be corrected by SD card formatting
+    // @Values: 0: not allow, 1:allow
+    // @User: Advanced
+    AP_GROUPINFO("SD_REFORMAT",     7, AP_Param_Helper, _sd_format, 0)
+
+
 */
 #define BOARD_HAL_VARINFO \
     AP_GROUPINFO("MOTOR_LAYOUT", 1, AP_Param_Helper, _motor_layout, 0), \
@@ -259,7 +267,8 @@ void boardInit(void);
     AP_GROUPINFO("CONSOLE_UART", 10, AP_Param_Helper, _console_uart, HAL_CONSOLE_PORT), \
     AP_GROUPINFO("EE_DEFERRED",  11, AP_Param_Helper, _eeprom_deferred, 0), \
     AP_GROUPINFO("RC_INPUT",     12, AP_Param_Helper, _rc_input, 0), \
-    AP_GROUPINFO("AIBAO_FS",     14, AP_Param_Helper, _aibao_fs, 0)
+    AP_GROUPINFO("AIBAO_FS",     14, AP_Param_Helper, _aibao_fs, 0), \
+    AP_GROUPINFO("SD_REFORMAT",  15, AP_Param_Helper, _sd_format, 0)
     
 
 // parameters
@@ -276,6 +285,7 @@ void boardInit(void);
     AP_Int8 _console_uart; \
     AP_Int8 _eeprom_deferred; \
     AP_Int8 _usb_storage; \
+    AP_Int8 _sd_format; \
     AP_Int8 _aibao_fs;
     
 #endif

@@ -24,6 +24,8 @@
 #include <time.h>
 #include <stdio.h>
 #include <GCS_MAVLink/GCS.h>
+#include <AP_Param_Helper/AP_Param_Helper.h>
+
 extern const AP_HAL::HAL& hal;
 
 #define MAX_LOG_FILES 50U
@@ -296,6 +298,12 @@ void DataFlash_File::Prep_MinSpace()
                 printf("error getting free space, formatting!\n");
                 SD.format(_log_directory);
                 return;
+#elif defined(BOARD_SDCARD_CS_PIN)
+                if(hal_param_helper->_sd_format){
+                    printf("error getting free space, formatting!\n");
+                    SD.format(_log_directory);
+                    return;
+                }
 #endif
                 break;
             }

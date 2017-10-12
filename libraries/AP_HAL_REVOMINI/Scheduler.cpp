@@ -603,7 +603,7 @@ void REVOMINIScheduler::_print_stats(){
 
             printf("\nSched stats:\n  %% of full time: %5.2f  Efficiency %5.3f max loop time %ld\n", (task_time/10.0)/t /* in percent*/ , shed_eff, max_loop_time);
             uint32_t  fc=tsched_count+tsched_count_y+tsched_count_t;
-            printf("sched time: by timer %5.2f (%5.2f%%) sw %5.2f%% in yield %5.2f (%5.2f%%) sw %5.2f%% in tails %5.2f (%5.2f%%) sw %5.2f%%\n", ((float)tsched_time/tsched_count)/us_ticks, 100.0*tsched_count/fc, 100.0 * tsched_count/tsched_sw_count, ((float)tsched_time_y/tsched_count_y)/us_ticks, 100.0*tsched_count_y/fc,100.0 * tsched_count_y/tsched_sw_count_y,((float)tsched_time_t/tsched_count_t)/us_ticks, 100.0*tsched_count_t/fc,100.0 * tsched_count_t/tsched_sw_count_t );
+            printf("sched time: by timer %5.2f (%5.2f%%) sw %5.2f%% in yield %5.2f (%5.2f%%) sw %5.2f%% in tails %5.2f (%5.2f%%) sw %5.2f%% total %5.2f%%\n", ((float)tsched_time/tsched_count)/us_ticks, 100.0*tsched_count/fc, 100.0 * tsched_sw_count/tsched_count, ((float)tsched_time_y/tsched_count_y)/us_ticks, 100.0*tsched_count_y/fc,100.0 * tsched_sw_count_y/tsched_count_y,((float)tsched_time_t/tsched_count_t)/us_ticks, 100.0*tsched_count_t/fc,100.0 * tsched_sw_count_t/tsched_count_t, 100.0*fc/t/us_ticks );
             printf("delay times: in main %5.2f including in semaphore %5.2f  in timer %5.2f",         (delay_time/10.0)/t, (Semaphore::sem_time/10.0)/t,  (delay_int_time/10.0)/t);
             max_loop_time=0;
 
@@ -1193,7 +1193,10 @@ void * NOINLINE REVOMINIScheduler::_start_task(Handler handle, size_t stackSize)
         }
 
         // Check that the task can be allocated without already used CCM
-        if ((s_top + stackSize) > (STACK_MAX       -     (&_eccm-&_sccm))) return NULL;
+        if ((s_top + stackSize) > (STACK_MAX       -     (&_eccm-&_sccm))) {
+            disable_stack_check = false;
+            return NULL;
+        }
 
         // Adjust stack top for next task allocation
 
@@ -1264,10 +1267,8 @@ task_t *REVOMINIScheduler::get_next_task(){
 
     if(me->has_semaphore) {
         me->sem_count++;
-        if(me->curr_prio>1)   me->curr_prio--;      // increase priority if task owns semaphore
+        if(me->curr_prio>5)   me->curr_prio-=me->has_semaphore;      // increase priority if task owns semaphore
     }
-
-    disable_stack_check = true;
 
 #ifdef SHED_DEBUG
     uint32_t ttw_skip_count=0;
@@ -1319,8 +1320,12 @@ task_t *REVOMINIScheduler::get_next_task(){
         
         if(ptr->sem_wait) {
             if(ptr->sem_wait->is_taken()) { // task blocked on semaphore
-                if(ptr->curr_prio>1) ptr->curr_prio--;      // increase priority as task waiting for a semaphore
-                goto skip_task; 
+                if(ptr->sem_wait->get_owner() != ptr) { 
+                    if(ptr->curr_prio>1) ptr->curr_prio--;      // increase priority as task waiting for a semaphore
+                    goto skip_task; 
+                } else  {
+                    ptr->sem_wait=NULL; // task tries to get a semaphore that already owns(), something wrong
+                }
             } else {
                 ptr->sem_wait=NULL; // clear semaphore after release
             }
@@ -1471,7 +1476,7 @@ skip_task:
     if(err>task->sched_error) task->sched_error=err;
 
     if(partial_quant>=10) { // 10uS max error
-        timer_set_reload(TIMER11, partial_quant);
+        timer_set_reload(TIMER11, partial_quant+5);
         timer_resume(TIMER11);
     }
 
@@ -1541,7 +1546,6 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
 
     if (setjmp(me->context)) {
         // we come here via longjmp - context switch is over
-        disable_stack_check = false;
         return;
     }
     
@@ -1673,6 +1677,44 @@ void REVOMINIScheduler::SVC_Handler(){
     }
 
 }
+
+/*
+
+void SVCHandler(unsigned int * svc_args){
+    unsigned int * svc_args;
+    
+    asm volatile (
+        "mov %0, lr\n\t"  
+        TST lr, #4
+        MRSEQ %0, MSP
+        MRSNE %0, PSP
+        
+        : "=rm" (svc_args) );
+
+    unsigned int svc_number;    
+    //    * Stack contains:    * r0, r1, r2, r3, r12, r14, the return address and xPSR      
+    svc_number = ((char *)svc_args[6])[-2];    
+    uint32_t r0=svc_args[0];    //      First argument (r0) is svc_args[0]
+    switch(svc_number)    {        
+    case SVC_00:            // Handle SVC 00 
+        break;        
+    case SVC_01:            // Handle SVC 01 
+        break;
+    default:                // Unknown SVC 
+        break;    
+    }
+}
+
+#define SVC_00 0x00
+#define SVC_01 0x01
+void __svc(SVC_00) svc_zero(const char *string);
+void __svc(SVC_01) svc_one(const char *string);
+int call_system_func(void){    
+    svc_zero("String to pass to SVC handler zero"); 
+    svc_one("String to pass to a different OS function");
+}
+
+*/
 
 ////////////////////////////////////
 /*

@@ -29,9 +29,9 @@ bool Semaphore::give() {
     noInterrupts();
     if (_taken) {
         _taken = false;
-        interrupts();
         REVOMINIScheduler::task_has_semaphore(false);
         _task = NULL;
+        interrupts();
         result=true;
         REVOMINIScheduler::yield();        // switch context to waiting task if any
     } else {
@@ -88,6 +88,8 @@ bool Semaphore::_take_from_mainloop(uint32_t timeout_ms) {
 
     uint32_t t  = REVOMINIScheduler::_micros(); 
     uint32_t dt = timeout_ms*1000; // timeout time
+
+    hal_yield(0); // to sync with context switch timer
 
     do {
         if(timeout_ms == HAL_SEMAPHORE_BLOCK_FOREVER){
