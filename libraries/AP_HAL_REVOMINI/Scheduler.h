@@ -90,7 +90,8 @@ extern "C" {
     void switchContext();
     void __do_context_switch();
 
-    extern task_t* s_running;
+    extern task_t *s_running; // running task 
+    extern task_t *next_task; // task to run next
 
     extern caddr_t stack_bottom; // for SBRK check
     
@@ -317,17 +318,18 @@ public:
   static inline void * get_current_task() { return s_running; }
 
     /*
-        scheduler of multitask. Gives task ready to run with highest priority
+        task scheduler. Gives task ready to run with highest priority
     */
-    static void get_next_task(); 
+  static task_t *get_next_task(); 
 
   // informs that task owns semaphore so should have priority increase
   static inline void task_has_semaphore(bool v) { 
+    task_t * curr_task = s_running;
     noInterrupts();
     if(v) {
-        s_running->has_semaphore++; 
-    } else  if(s_running->has_semaphore) {
-        s_running->has_semaphore--; 
+        curr_task->has_semaphore++; 
+    } else  if(curr_task->has_semaphore) {
+        curr_task->has_semaphore--; 
     }
     interrupts();
   }
@@ -335,9 +337,11 @@ public:
   // allows to block task on semaphore
   static inline void task_want_semaphore(void * _task, REVOMINI::Semaphore *sem) { 
     task_t * task = (task_t*)_task;
+    task_t * curr_task = s_running;
+    
     //Increase the priority of the semaphore's owner up to the priority of the current task
-    if(task->priority < s_running->priority) task->curr_prio = s_running->priority;
-    s_running->sem_wait = sem;
+    if(task->priority < curr_task->priority) task->curr_prio = curr_task->priority;
+    curr_task->sem_wait = sem;
   }
 
   /**               
@@ -390,6 +394,7 @@ public:
     }
 
     static void PendSV_Handler();
+    static void SVC_Handler();
     static volatile bool need_io_completion;
 
 #ifdef PREEMPTIVE
@@ -519,6 +524,16 @@ private:
 
 #ifdef MTASK_PROF
     static uint32_t max_wfe_time;
+    static uint64_t tsched_time;
+    static uint32_t tsched_count;
+    static uint32_t tsched_sw_count;
+    static uint64_t tsched_time_y;
+    static uint32_t tsched_count_y;
+    static uint32_t tsched_sw_count_y;
+    static uint64_t tsched_time_t;
+    static uint32_t tsched_count_t;
+    static uint32_t tsched_sw_count_t;
+
 
  #ifdef SHED_DEBUG
     static revo_sched_log logbuf[SHED_DEBUG_SIZE];

@@ -134,8 +134,8 @@ interrupts priorities:
 9 dma IO complete
 a tail timer
 b usb
-c SVC
-d 
+c 
+d svc
 e scheduler - Timer7
 f Pend_Sw io_completion
 

@@ -476,8 +476,9 @@ uint8_t  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint3
 
 
 //  проверить, не занят ли поток DMA перед использованием
-    while(dma_is_stream_enabled(dp.stream_rx) || dma_is_stream_enabled(dp.stream_tx) ) {
-        // wait for transfer termination
+    uint32_t t = hal_micros();
+    while(dma_is_stream_enabled(dp.stream_rx) || dma_is_stream_enabled(dp.stream_tx) ) {   // wait for previous transfer termination
+        if(hal_micros() - t > 1000) break; // DMA transfer can't be more than 1ms
         hal_yield(0);
     } 
 
@@ -542,7 +543,7 @@ uint8_t  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint3
    
 #define MAX_SPI_TIME 900// in uS
 
-    uint32_t t=hal_micros();
+    t=hal_micros();
     while ( (dma_get_isr_bits(dp.stream_rx) & DMA_FLAG_TCIF) == 0) { 
         if(hal_micros()-t > MAX_SPI_TIME) return 1; // timeout
         if(dly!=0)   hal_yield(dly); // пока ждем пусть другие работают. 

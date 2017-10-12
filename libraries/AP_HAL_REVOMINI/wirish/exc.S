@@ -142,14 +142,13 @@ __do_context_switch:
     STMDB     R0!, {R4-R11, LR} @  save remaining regs r4-11 and LR (EXC_RETURN) on process stack
 
         @ At this point, entire context of process has been saved
-    LDR     R4, px_running     @  address of s_running
-    LDR     R1, [R4]            @ value of s_running - address of task_t
+    LDR     R4, px_running      @  address of s_running
+    LDR     R1, [R4]            @ value of s_running - address of old task_t
     STR     R0, [R1]            @ store stack pointer
     
-    LDR     R1, px_getNextTask
-    BLX     R1                  @ call getNextTask()
-
-    LDR     R1, [R4]            @ value of s_running - address of new task_t
+    LDR     R3, px_nextTask     @ address of next_task
+    LDR     R1, [R3]            @ value of next_task - address of new task_t
+    STR     R1, [R4]            @ save to s_running
     LDR     R0, [R1]            @ R0 is new process SP
 
     LDMIA     R0!, {R4-R11, LR} @  Restore r4-11 and LR from new process stack
@@ -175,4 +174,4 @@ AFSR:          .word 0xE000ED3C
 SHCSR:         .word 0xE000ED24
 
 px_running:     .word s_running    
-px_getNextTask: .word getNextTask
+px_nextTask:    .word next_task
