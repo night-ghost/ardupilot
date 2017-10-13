@@ -38,6 +38,8 @@ extern void revo_call_handler(uint64_t hh, uint32_t arg);
 #define __packed __attribute__((__packed__))
 #endif
 
+#define NAKED __attribute__((__naked__))
+
 #define __io volatile
 #define __deprecated __attribute__((__deprecated__))
 #define __weak __attribute__((weak))

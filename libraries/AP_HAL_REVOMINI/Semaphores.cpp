@@ -25,102 +25,86 @@ Semaphore::Semaphore()
 
 
 bool Semaphore::give() {
-    noInterrupts();
-    if (_taken) {
-        _taken = false;
-        _task = NULL;
-        interrupts();
-        REVOMINIScheduler::yield();        // switch context to waiting task if any
-        return true;
+    if (REVOMINIScheduler::in_interrupt()) { // this should not happens
+        return svc_give();
     }
-    interrupts();
-    return false;
+    return _give();
 }
 
 bool Semaphore::take_nonblocking() {       
-    bool ret = _take_nonblocking(); 
-    if(!ret) { //Increase the priority to one tick of the semaphore's owner up to the priority of the current task, without task blocking
-        REVOMINIScheduler::task_want_semaphore(_task, NULL); 
-    }
-    return ret; 
+    return _take_nonblocking(); 
 }
 
 
 bool Semaphore::take(uint32_t timeout_ms) {
-    if (REVOMINIScheduler::in_interrupt()) {
-        if(_take_nonblocking()) {
+    if (REVOMINIScheduler::in_interrupt()) { // this should not happens
+        if(svc_take_nonblocking()) {
             return true; // all OK if we got
         }
         
-/*
-!!!    we got breaking changes from upstream - all drivers now calls ->take(WAIT_FOREVER) so I can't allow to kill UAV
-
-        if(timeout_ms) {       // no panic in air! just return
-             AP_HAL::panic("PANIC: Semaphore::take used from inside timer process");
-*/
-
 // let set global flag and check it in scheduler so reschedule such tasks in next tick        
-            _error=true; // remember that it was
-//                      or to add queue for such tasks and use setjmp/longjmp to emulate waiting in semaphore
-            
-            return false; 
-//        } 
+        _error=true; // remember that it was        
+        return false; 
     }
     return _take_from_mainloop(timeout_ms);
 }
 
-bool Semaphore::_take_from_mainloop(uint32_t timeout_ms) {
-    
-    /* Try to take immediately */
-    if (_take_nonblocking()) {
-        return true;
-    } 
-
-    hal_yield(0); // to sync with context switch timer
-
-    bool ret=false;
-
-    uint32_t t  = REVOMINIScheduler::_micros(); 
-    uint32_t dt = timeout_ms*1000; // timeout time
-
-    do {
-        if(timeout_ms == HAL_SEMAPHORE_BLOCK_FOREVER){
-            //Increase the priority of the semaphore's owner up to the priority of the current task and block task
-            REVOMINIScheduler::task_want_semaphore(_task, this); 
-        } else  {
-            //Increase the priority of the semaphore's owner up to the priority of the current task for one tick
-            REVOMINIScheduler::task_want_semaphore(_task, NULL); 
-        }
-
-        hal_yield(0); // no max task time - this is more useful, task will be excluded from scheduling until semaphore released  // REVOMINIScheduler::_delay_microseconds(10);
-        if (_take_nonblocking()) {
-            ret= true;
-            break;
-        }
-    } while(timeout_ms == HAL_SEMAPHORE_BLOCK_FOREVER ||  (REVOMINIScheduler::_micros() - t) < dt);
-
-#ifdef SEM_PROF 
-    sem_time += REVOMINIScheduler::_micros()-t; // calculate semaphore wait time
-#endif
-
-    return ret;
+bool NAKED Semaphore::_give() {
+    asm volatile("svc 1 \r\n"
+                 "bx lr \r\n");
 }
 
-bool Semaphore::_take_nonblocking() {
-    noInterrupts();
-    void *me = REVOMINIScheduler::get_current_task();
-    if (!_taken) {
-        _taken = true;
-        _task = me;// remember task which owns semaphore 
-        if(!_weak)  REVOMINIScheduler::task_has_semaphore(true); 
-        interrupts();
+
+bool NAKED Semaphore::_take_from_mainloop(uint32_t timeout_ms) {
+    asm volatile("svc 2 \r\n"
+                 "bx lr \r\n");
+
+}
+
+bool NAKED Semaphore::_take_nonblocking() {
+    asm volatile("svc 3 \r\n"
+                 "bx lr \r\n");
+}
+
+
+// this functions called only at SVC level so serialized by hardware and don't needs to disable interrupts
+
+bool Semaphore::svc_give() {
+    if (_taken) {
+        _taken = false;
+        _task = NULL;
+        if(!_weak)  REVOMINIScheduler::task_has_semaphore(false); 
         return true;
     }
-    if(_task == me){     // the current task already owns this semaphore
-        interrupts();
-        return true; 
-    }
-    interrupts();
     return false;
 }
 
+bool Semaphore::svc_take_nonblocking() {
+    void *me = REVOMINIScheduler::get_current_task();
+    if (!_taken) {
+        _taken = true;
+        _task = me; // remember task which owns semaphore 
+        if(!_weak)  REVOMINIScheduler::task_has_semaphore(true); 
+        return true;
+    }
+    if(_task == me){     // the current task already owns this semaphore
+        return true; 
+    }
+    REVOMINIScheduler::task_want_semaphore(_task, NULL, 0); 
+    return false;
+}
+
+bool Semaphore::svc_take(uint32_t timeout_ms) {
+    void *me = REVOMINIScheduler::get_current_task();
+    if (!_taken) {
+        _taken = true;
+        _task = me; // remember task which owns semaphore 
+        if(!_weak)  REVOMINIScheduler::task_has_semaphore(true); 
+        return true;
+    }
+    if(_task == me){     // the current task already owns this semaphore
+        return true; 
+    }
+    REVOMINIScheduler::task_want_semaphore(_task, this, timeout_ms); 
+    return false;
+}

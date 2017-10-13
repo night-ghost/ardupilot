@@ -31,7 +31,7 @@
 
 #define MAIN_STACK_SIZE  10240U   // measured use of stack is only 1K - but it grows up to 4K when using FatFs, also this includes 2K stack for ISR
 #define DEFAULT_STACK_SIZE  8192U // Default tasks stack size and stack max - io_thread can do work with filesystem
-#define SLOW_TASK_STACK 1024U // 2048U     // small stack for sensors
+#define SMALL_TASK_STACK 1024U    // small stack for sensors
 #define STACK_MAX  65536U
 
 
@@ -54,11 +54,18 @@ struct task_t {
         uint32_t ttw;           // time to work
         uint32_t t_yield;       // time of yield
         uint32_t start;         // microseconds of timeslice start
+#ifndef PREEMPTIVE
         uint32_t max_delay;     // maximal execution time of task - used in scheduler
         uint32_t in_isr;        // time in ISR when task runs
+#endif
+#if !defined(PREEMPTIVE) || defined(MTASK_PROF)
+        uint32_t in_isr;        // time in ISR when task runs
+#endif
         uint32_t period;        // if set then task starts on time basis only
         REVOMINI::Semaphore *sem; // task should start after owning this semaphore
         REVOMINI::Semaphore *sem_wait; // task is waiting this semaphore
+        uint32_t sem_time;             // time to wait semaphore
+        uint32_t sem_start_wait;       // time when waiting starts
         uint32_t def_ttw;       // default TTW - not as hard as period
         uint32_t time_start;    // start time of task
 #ifdef MTASK_PROF
@@ -322,28 +329,30 @@ public:
     */
   static task_t *get_next_task(); 
 
+//[ this functions called only from SVC level so serialized by hahdware
+
   // informs that task owns semaphore so should have priority increase
   static inline void task_has_semaphore(bool v) { 
     task_t * curr_task = s_running;
-    noInterrupts();
     if(v) {
         curr_task->has_semaphore++; 
     } else  if(curr_task->has_semaphore) {
         curr_task->has_semaphore--; 
     }
-    interrupts();
   }
 
   // allows to block task on semaphore
-  static inline void task_want_semaphore(void * _task, REVOMINI::Semaphore *sem) { 
+  static inline void task_want_semaphore(void * _task, REVOMINI::Semaphore *sem, uint32_t ms) { 
     task_t * task = (task_t*)_task;
     task_t * curr_task = s_running;
     
     //Increase the priority of the semaphore's owner up to the priority of the current task
     if(task->priority < curr_task->priority) task->curr_prio = curr_task->priority;
-    curr_task->sem_wait = sem;
+    curr_task->sem_wait = sem;             // semaphore
+    curr_task->sem_time = (ms == HAL_SEMAPHORE_BLOCK_FOREVER)?ms:ms*1000;        // time to wait semaphore
+    curr_task->sem_start_wait = _micros(); // time when waiting starts
   }
-
+//]
   /**               
    * Context switch to next task in run queue.
    */
@@ -394,7 +403,7 @@ public:
     }
 
     static void PendSV_Handler();
-    static void SVC_Handler();
+    static void SVC_Handler(uint32_t * svc_args);
     static volatile bool need_io_completion;
 
 #ifdef PREEMPTIVE
@@ -446,13 +455,15 @@ protected:
     // prepares TCB
     static uint32_t fill_task(task_t &tp);
 
+    static void switch_task();
+
     /** Task stack allocation top. */
     static size_t s_top;
   
     static uint16_t task_n; // counter of tasks
   
     static void check_stack(uint32_t sp);
-
+    static task_t *_idle_task; // remember address
  
 #define await(cond) while(!(cond)) yield()
   

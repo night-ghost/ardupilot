@@ -15,10 +15,15 @@ public:
     bool take(uint32_t timeout_ms);
     bool take_nonblocking();
 
+//[ functions that called only in SVC level so need not to disable interrupts
+    bool svc_give();
+    bool svc_take(uint32_t timeout_ms);
+    bool svc_take_nonblocking();
     inline void *get_owner(){ return _task; } // task that owns this semaphore
-    inline void set_weak(bool f){ _weak=f; }  // bus semaphores don't increase priority
-    
     inline bool is_taken(){ return _taken; }
+//]
+
+    inline void set_weak(bool f){ _weak=f; }  // bus semaphores don't increase priority
     
     static inline bool get_error(){ bool t=_error; _error=false; return t; }
 
@@ -29,6 +34,7 @@ public:
 protected:
     bool _take_from_mainloop(uint32_t timeout_ms);
     bool _take_nonblocking();
+    bool _give();
 
     volatile bool _taken;
     void * _task; // owner

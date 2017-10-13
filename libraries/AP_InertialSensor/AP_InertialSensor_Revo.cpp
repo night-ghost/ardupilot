@@ -488,7 +488,6 @@ void AP_InertialSensor_Revo::start()
     _register_read(MPUREG_INT_STATUS); // reset interrupt request
 
 // DON'T request scheduling in timers interrupt - because data already readed
-    // start the timer process to read samples
 //    _dev->register_periodic_callback(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)); - we don't require semaphore so use sheduler's API
 
 //    task_handle = REVOMINIScheduler::register_timer_task(500, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL);
@@ -562,14 +561,13 @@ void AP_InertialSensor_Revo::_ioc(){ // io completion ISR, data in it place
 // we should release the bus semaphore if we use them 
 //    _dev->get_semaphore()->give();            // release
 
-// schedule data parsing to next timer's tick
+
 #ifdef PREEMPTIVE
-    // now we can call REVOMINIScheduler::set_task_active(task_handle) instead of using period
-    REVOMINIScheduler::set_task_active(task_handle);
+    REVOMINIScheduler::set_task_active(task_handle); // resume task instead of using period. 
 #else
+// schedule data parsing to next timer's tick
     REVOMINIScheduler::do_at_next_tick(REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)), (REVOMINI::Semaphore *)_sem);    
 #endif    
-
 
 }
 
