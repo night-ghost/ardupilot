@@ -25,37 +25,30 @@ Semaphore::Semaphore()
 
 
 bool Semaphore::give() {
-    bool result = false;
     noInterrupts();
     if (_taken) {
         _taken = false;
-        REVOMINIScheduler::task_has_semaphore(false);
         _task = NULL;
         interrupts();
-        result=true;
         REVOMINIScheduler::yield();        // switch context to waiting task if any
-    } else {
-        interrupts();
+        return true;
     }
-    return result;
+    interrupts();
+    return false;
 }
 
 bool Semaphore::take_nonblocking() {       
     bool ret = _take_nonblocking(); 
-    if(ret) {
-        if(!_weak)  REVOMINIScheduler::task_has_semaphore(true); 
+    if(!ret) { //Increase the priority to one tick of the semaphore's owner up to the priority of the current task, without task blocking
+        REVOMINIScheduler::task_want_semaphore(_task, NULL); 
     }
-
-//Increase the priority to one tick of the semaphore's owner up to the priority of the current task, without task blocking
-    REVOMINIScheduler::task_want_semaphore(_task, NULL); 
     return ret; 
 }
 
 
 bool Semaphore::take(uint32_t timeout_ms) {
-    if (REVOMINIScheduler::_in_timerprocess()) {
+    if (REVOMINIScheduler::in_interrupt()) {
         if(_take_nonblocking()) {
-            if(!_weak)  REVOMINIScheduler::task_has_semaphore(true); // onlyr fo resource semaphores, not for bus semaphores
             return true; // all OK if we got
         }
         
@@ -80,16 +73,15 @@ bool Semaphore::_take_from_mainloop(uint32_t timeout_ms) {
     
     /* Try to take immediately */
     if (_take_nonblocking()) {
-        if(!_weak) REVOMINIScheduler::task_has_semaphore(true);
         return true;
     } 
+
+    hal_yield(0); // to sync with context switch timer
 
     bool ret=false;
 
     uint32_t t  = REVOMINIScheduler::_micros(); 
     uint32_t dt = timeout_ms*1000; // timeout time
-
-    hal_yield(0); // to sync with context switch timer
 
     do {
         if(timeout_ms == HAL_SEMAPHORE_BLOCK_FOREVER){
@@ -103,7 +95,6 @@ bool Semaphore::_take_from_mainloop(uint32_t timeout_ms) {
         hal_yield(0); // no max task time - this is more useful, task will be excluded from scheduling until semaphore released  // REVOMINIScheduler::_delay_microseconds(10);
         if (_take_nonblocking()) {
             ret= true;
-            if(!_weak) REVOMINIScheduler::task_has_semaphore(true);
             break;
         }
     } while(timeout_ms == HAL_SEMAPHORE_BLOCK_FOREVER ||  (REVOMINIScheduler::_micros() - t) < dt);
@@ -117,11 +108,17 @@ bool Semaphore::_take_from_mainloop(uint32_t timeout_ms) {
 
 bool Semaphore::_take_nonblocking() {
     noInterrupts();
+    void *me = REVOMINIScheduler::get_current_task();
     if (!_taken) {
         _taken = true;
+        _task = me;// remember task which owns semaphore 
+        if(!_weak)  REVOMINIScheduler::task_has_semaphore(true); 
         interrupts();
-        _task = REVOMINIScheduler::get_current_task();// remember task which owns semaphore 
         return true;
+    }
+    if(_task == me){     // the current task already owns this semaphore
+        interrupts();
+        return true; 
     }
     interrupts();
     return false;

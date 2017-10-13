@@ -1057,13 +1057,11 @@ void REVOMINIScheduler::do_task(task_t *task) {
             task->time_start=_micros();
             revo_call_handler(task->handle, 0); 
             if(task->sem && !task->in_ioc) task->sem->give(); // give semaphore when task finished
+
             task->has_semaphore=0; // task is over so glitch
-            if(task->priority!=255) { // not for idle task
-                task->active=false;     // then turn off active, to know when task is started
-            }
+            task->active=false;     // then turn off active, to know when task is started
             t = _micros()-task->time_start; // execution time
             if(task->def_ttw && task->def_ttw > t) t = task->def_ttw - t; // time to wait
-            else if(task->period)                  t = (task->period - t)/2; // exclude from checks
             else                                   t = 0;
         } else t=0;
         yield(t);        // wait some time in normal mode. Task Switch occures asyncronously so we should wait until task becomes active again
@@ -1123,17 +1121,12 @@ void * REVOMINIScheduler::init_task(Handler handler, const uint8_t* stack)
             if(task.handle) {
                 if(task.sem && !task.in_ioc) {// if task requires a semaphore - try to take
                     if(!task.sem->take_nonblocking()) {
-                        void *own = task.sem->get_owner();
-                        if( (uint32_t)own != (uint32_t)(&task) ) { // some another task owns
-                            yield(0);
-                            continue;
-                        } else {
-                            // if we owns semaphore then something went wrong and simply ignore it
-                        }
+                        yield(0);
+                        continue;
                     }
                 }
                 task.time_start=_micros();
-                revo_call_handler(task.handle, 0); 
+                revo_call_handler(task.handle, 0); // call the task 
                 if(task.sem && !task.in_ioc) task.sem->give(); // give semaphore when task finished
                 task.active=false;
                 task.has_semaphore=0; // task is over so glitch
