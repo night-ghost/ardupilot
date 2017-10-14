@@ -23,7 +23,7 @@ public:
     inline bool is_taken(){ return _taken; }
 //]
 
-    inline void set_weak(bool f){ _weak=f; }  // bus semaphores don't increase priority
+    inline void set_weak(bool f){ _weak=f; }  // bus semaphores don't increase priority to task which owns it
     
     static inline bool get_error(){ bool t=_error; _error=false; return t; }
 

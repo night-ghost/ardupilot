@@ -239,7 +239,7 @@ public:
     static void _reboot(bool hold_in_bootloader);
     void     reboot(bool hold_in_bootloader);
 
-// drivers are not the best place for its own sheduler
+// drivers are not the best place for its own sheduler so let do it here
     static AP_HAL::Device::PeriodicHandle register_timer_task(uint32_t period_us, AP_HAL::Device::PeriodicCb proc, REVOMINI::Semaphore *sem) {
         Revo_cb r = { .pcb=proc };
         return _register_timer_task(period_us, r.h, sem, CB_PERIODIC);
@@ -275,8 +275,6 @@ public:
     static bool           unregister_timer_task(AP_HAL::Device::PeriodicHandle h);
     void                  loop();      // to add ability to print out scheduler's stats in main thread
 
-
-//    bool                  _run_1khz_procs();
     static inline bool in_interrupt(){ return (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) /* || (__get_BASEPRI()) */; }
 
 
@@ -312,17 +310,22 @@ public:
         Revo_handler r = { .mp=proc };
         return _start_task(r.h, stackSize);
   }
+  // not used - tasks are never stopped
+  static void stop_task(void * h);
+
   
-  // functions to alter task's properties
+// functions to alter task's properties
+//[ this functions called only at task start
   static void set_task_period(void *h, uint32_t period);
   static void set_task_semaphore(void *h, REVOMINI::Semaphore *sem);
   static void set_task_ttw(void *h, uint32_t ttw);
   static void set_task_priority(void *h, uint8_t prio);
-  static void inline set_task_ioc(bool v) { s_running->in_ioc=v; }
+
+// this functions are atomic so don't need to disable interrupts
+  static void inline set_task_ioc(bool v) {      s_running->in_ioc=v; }
   static void inline set_task_active(void *h) {   task_t * task = (task_t*)h; task->active=true; }
-  
-  static void stop_task(void * h);
   static inline void * get_current_task() { return s_running; }
+//]  
 
     /*
         task scheduler. Gives task ready to run with highest priority
@@ -330,7 +333,6 @@ public:
   static task_t *get_next_task(); 
 
 //[ this functions called only from SVC level so serialized by hahdware
-
   // informs that task owns semaphore so should have priority increase
   static inline void task_has_semaphore(bool v) { 
     task_t * curr_task = s_running;
@@ -353,6 +355,7 @@ public:
     curr_task->sem_start_wait = _micros(); // time when waiting starts
   }
 //]
+
   /**               
    * Context switch to next task in run queue.
    */
@@ -365,7 +368,8 @@ public:
   static size_t task_stack();
   
   // check from what task it called
-  static bool is_main_task();
+  static inline bool is_main_task() { return s_running == &s_main; }
+
 //}
 
 
@@ -457,6 +461,8 @@ protected:
 
     static void switch_task();
 
+    static task_t s_main;
+    
     /** Task stack allocation top. */
     static size_t s_top;
   

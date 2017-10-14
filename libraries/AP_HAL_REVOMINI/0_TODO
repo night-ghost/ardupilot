@@ -5,18 +5,3 @@ RC_NRF_parser
 UART_SoftDriver
 
 
-
-old style drivers in timer's interrupt
-
-shed task 0x80A9DD920004A94 tim      0.0 int 0.000% tot 0.0000% mean time   0.0 max time 0
-shed task 0x80AB4B320004B08 tim   3828.4 int 41.126% tot 19.1403% mean time 207.8 max time 969
-shed task 0x80470B520007540 tim    380.1 int 4.082% tot 1.9002% mean time 206.6 max time 225
-shed task 0x804A59520007D60 tim    354.1 int 3.803% tot 1.7703% mean time 301.6 max time 305
-shed task 0x80535B120007E90 tim   4747.1 int 50.988% tot 23.7332% mean time 343.0 max time 1066
-
-delay times: in main 56.26 including in semaphore  0.00  in timer 20.31
-max delay() error= 2473 wfe time = 0
-
-
-
-new style drivers via IO_Completion
