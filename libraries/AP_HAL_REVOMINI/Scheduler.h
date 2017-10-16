@@ -208,7 +208,7 @@ public:
     void     delay_microseconds_boost(uint16_t us) override { _delay_microseconds_boost(us); }
     
     inline   uint32_t millis() { yield(0);   return _millis(); } // this allows to run io_proc without calls to delay()
-    inline   uint32_t micros() { yield(0);   return _micros(); }
+    inline   uint32_t micros() {             return _micros(); }
     
     void     register_timer_process(AP_HAL::MemberProc proc) { _register_timer_process(proc, 1000); }
     inline void  suspend_timer_procs(){     _timer_suspended = true; }
@@ -225,8 +225,11 @@ public:
 
         _register_timer_task(period, r.h, NULL, CB_MEMBERPROC);
     }
+
     
+#ifndef PREEMPTIVE
     static void reschedule_proc(uint64_t proc);
+#endif
 
     inline bool in_timerprocess() {   return _in_timer_proc; }
 
@@ -239,6 +242,8 @@ public:
     static void _reboot(bool hold_in_bootloader);
     void     reboot(bool hold_in_bootloader);
 
+//    bool in_main_thread() const override { return _in_main_thread(); }
+
 // drivers are not the best place for its own sheduler so let do it here
     static AP_HAL::Device::PeriodicHandle register_timer_task(uint32_t period_us, AP_HAL::Device::PeriodicCb proc, REVOMINI::Semaphore *sem) {
         Revo_cb r = { .pcb=proc };
@@ -250,8 +255,9 @@ public:
         return _register_timer_task(period_us, r.h, sem, CB_PERIODICBOOL);
     }
 
+#ifndef PREEMPTIVE
     static void set_checked_semaphore(AP_HAL::Device::PeriodicHandle h, REVOMINI::Semaphore *sem);
-    
+#endif    
 
 /*
     try to get a semaphore and call handler on success
@@ -321,6 +327,7 @@ public:
   static void set_task_ttw(void *h, uint32_t ttw);
   static void set_task_priority(void *h, uint8_t prio);
 
+
 // this functions are atomic so don't need to disable interrupts
   static void inline set_task_ioc(bool v) {      s_running->in_ioc=v; }
   static void inline set_task_active(void *h) {   task_t * task = (task_t*)h; task->active=true; }
@@ -348,11 +355,11 @@ public:
     task_t * task = (task_t*)_task;
     task_t * curr_task = s_running;
     
-    //Increase the priority of the semaphore's owner up to the priority of the current task
-    if(task->priority < curr_task->priority) task->curr_prio = curr_task->priority;
+    curr_task->sem_start_wait = _micros(); // time when waiting starts
     curr_task->sem_wait = sem;             // semaphore
     curr_task->sem_time = (ms == HAL_SEMAPHORE_BLOCK_FOREVER)?ms:ms*1000;        // time to wait semaphore
-    curr_task->sem_start_wait = _micros(); // time when waiting starts
+    //Increase the priority of the semaphore's owner up to the priority of the current task
+    if(task->priority < curr_task->priority) task->curr_prio = curr_task->priority;
   }
 //]
 
@@ -368,7 +375,7 @@ public:
   static size_t task_stack();
   
   // check from what task it called
-  static inline bool is_main_task() { return s_running == &s_main; }
+  static inline bool _in_main_thread() { return s_running == &s_main; }
 
 //}
 
@@ -408,9 +415,9 @@ public:
 
     static void PendSV_Handler();
     static void SVC_Handler(uint32_t * svc_args);
-    static volatile bool need_io_completion;
 
 #ifdef PREEMPTIVE
+    static volatile bool need_io_completion;
     static volatile bool need_switch_task; // should be public
 #endif
 //}
@@ -427,8 +434,11 @@ public:
         
     static inline void setEmergencyHandler(voidFuncPtr handler) { boardEmergencyHandler = handler; }
 
+#ifndef PREEMPTIVE
     static inline void i_know_new_api() { new_api_flag=true; }
-    
+#endif
+
+#ifdef MPU_DEBUG
     static inline void MPU_buffer_overflow(){ MPU_overflow_cnt++; } 
     static inline void MPU_restarted() {      MPU_restart_cnt++; }
     static inline void MPU_stats(uint16_t count, uint32_t time) {
@@ -437,7 +447,8 @@ public:
             MPU_Time=time;
         }
     }
-    
+#endif
+
     static inline void arming_state_changed(bool v){ if(!v && on_disarm_handler) revo_call_handler(on_disarm_handler, 0); }
     static inline void register_on_disarm(Handler h){ on_disarm_handler=h; }
 
@@ -459,9 +470,10 @@ protected:
     // prepares TCB
     static uint32_t fill_task(task_t &tp);
 
+    // plan context switch
     static void switch_task();
 
-    static task_t s_main;
+    static task_t s_main; // main task TCB
     
     /** Task stack allocation top. */
     static size_t s_top;
@@ -469,7 +481,7 @@ protected:
     static uint16_t task_n; // counter of tasks
   
     static void check_stack(uint32_t sp);
-    static task_t *_idle_task; // remember address
+    static task_t *_idle_task; // remember TCB of idle task
  
 #define await(cond) while(!(cond)) yield()
   
@@ -570,12 +582,16 @@ private:
     static uint8_t num_io_completion;
     static bool _in_io_proc;
 
+#ifndef PREEMPTIVE
     static bool new_api_flag;
+#endif
+
+#ifdef MPU_DEBUG
     static uint32_t MPU_overflow_cnt;
     static uint32_t MPU_restart_cnt;
     static uint32_t MPU_count;
     static uint32_t MPU_Time;
-    
+#endif
     
     static Handler on_disarm_handler;
 };

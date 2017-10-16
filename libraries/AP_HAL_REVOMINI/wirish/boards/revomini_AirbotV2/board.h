@@ -267,7 +267,8 @@ void boardInit(void);
     AP_GROUPINFO("CONSOLE_UART", 10, AP_Param_Helper, _console_uart, HAL_CONSOLE_PORT), \
     AP_GROUPINFO("EE_DEFERRED",  11, AP_Param_Helper, _eeprom_deferred, 0), \
     AP_GROUPINFO("RC_INPUT",     12, AP_Param_Helper, _rc_input, 0), \
-    AP_GROUPINFO("AIBAO_FS",     14, AP_Param_Helper, _aibao_fs, 0), \
+    AP_GROUPINFO("AIBAO_FS",     13, AP_Param_Helper, _aibao_fs, 0), \
+    AP_GROUPINFO("RC_FS",        14, AP_Param_Helper, _rc_fs, 0), \
     AP_GROUPINFO("SD_REFORMAT",  15, AP_Param_Helper, _sd_format, 0)
     
 
@@ -286,7 +287,8 @@ void boardInit(void);
     AP_Int8 _eeprom_deferred; \
     AP_Int8 _usb_storage; \
     AP_Int8 _sd_format; \
-    AP_Int8 _aibao_fs;
+    AP_Int8 _aibao_fs; \
+    AP_Int8 _rc_fs;
     
 #endif
 

@@ -23,8 +23,8 @@ cppSRCS_$(d) += $(WIR)/boards/$(BOARD)/board.cpp
 cppSRCS_$(d) += $(WIR)/boards.cpp
 
 sSRCS_$(d)   := 
-sSRCS_$(d)   += $(WIR)/boards/$(BOARD)/startup.S # early startup code
-sSRCS_$(d)   += $(WIR)/exc.S                     # exception handling code
+sSRCS_$(d)   += $(WIR)/startup.S           # early startup code
+sSRCS_$(d)   += $(WIR)/exc.S               # exception handling and task switching code
 
 
 cFILES_$(d)   := $(cSRCS_$(d):%=$(d)/%)

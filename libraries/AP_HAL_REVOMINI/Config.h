@@ -23,3 +23,5 @@
 #define USE_WFE
 
 #define PREEMPTIVE
+
+#define MPU_DEBUG

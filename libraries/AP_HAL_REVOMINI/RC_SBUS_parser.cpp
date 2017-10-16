@@ -1,3 +1,4 @@
+#pragma GCC optimize ("O2")
 #include <AP_HAL/HAL.h>
 
 #ifdef BOARD_SBUS_UART1

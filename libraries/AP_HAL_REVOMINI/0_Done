@@ -110,6 +110,8 @@
 * optimized multitask to not switch context if next task is the same as current. Real context switch occures in ~4% of calls to task scheduler
 * all work with task list moved out to ISR level so there is no race condition anymore
 * all work with semaphores moved out to the same ISR level so serialized by hardware and don't requires disabling interrupts
+* added parameter RC_FS to enable all RC failsafe
+* added disabling of data cache on flash write, just for case (upstream has this update too)
 * ...
 * a lot of minor enhancements
 

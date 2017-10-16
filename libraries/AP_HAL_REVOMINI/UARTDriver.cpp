@@ -98,8 +98,9 @@ uint32_t REVOMINIUARTDriver::available() {
 }
 
 int16_t REVOMINIUARTDriver::read() {
-    if (available()== 0)
+    if (available() == 0) {
         return -1;
+    }
     return usart_getc(_usart_device);
 }
 

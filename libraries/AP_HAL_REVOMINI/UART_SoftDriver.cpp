@@ -91,8 +91,8 @@ void SerialDriver::begin(uint32_t baud) {
         Revo_handler h = { .isr = txNextBit };
         timer_attach_interrupt(channel->timer, TIMER_UPDATE_INTERRUPT, h.h, 1 ); // also enables interrupt
     }
-    // so disable it
-    txDisableInterrupts();
+    txDisableInterrupts();     // so disable it
+
     
     // Load the timer values and start it
     timer_generate_update(channel->timer);

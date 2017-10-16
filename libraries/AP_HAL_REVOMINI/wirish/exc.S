@@ -142,7 +142,7 @@ __do_context_switch:
     STMDB     R0!, {R4-R11, LR} @  save remaining regs r4-11 and LR (EXC_RETURN) on process stack
 
         @ At this point, entire context of process has been saved
-    LDR     R4, px_running      @  address of s_running
+    LDR     R4, px_running      @ address of s_running
     LDR     R1, [R4]            @ value of s_running - address of old task_t
     STR     R0, [R1]            @ store stack pointer
     

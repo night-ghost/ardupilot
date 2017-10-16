@@ -96,6 +96,7 @@ public:
         static FLASH_Status write_16(uint32_t addr, uint16_t data);
         static FLASH_Status write_8(uint32_t addr, uint8_t data);
         static void FLASH_Lock_check();
+        static void FLASH_Unlock_dis();
         
         static inline uint32_t read_16(uint32_t addr){
             return *(__IO uint16_t*)addr;

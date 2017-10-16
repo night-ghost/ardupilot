@@ -487,15 +487,8 @@ void AP_InertialSensor_Revo::start()
 
     _register_read(MPUREG_INT_STATUS); // reset interrupt request
 
-// DON'T request scheduling in timers interrupt - because data already readed
-//    _dev->register_periodic_callback(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)); - we don't require semaphore so use sheduler's API
-
-//    task_handle = REVOMINIScheduler::register_timer_task(500, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL);
     task_handle = REVOMINIScheduler::register_timer_task(0, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL); // 0 period means that task will be activated by request
-    REVOMINIScheduler::set_task_priority(task_handle,93);
-// this semaphore shoud be free on task call
-//    REVOMINIScheduler::set_checked_semaphore(task_handle,(REVOMINI::Semaphore *)_sem);
-
+    REVOMINIScheduler::set_task_priority(task_handle,93); // 1 more than other drivers
 }
 
 
@@ -546,13 +539,12 @@ void AP_InertialSensor_Revo::_isr(){
     _block_read(MPUREG_ACCEL_XOUT_H, data, MPU_SAMPLE_SIZE); // start SPI transfer 
 }
 
-void AP_InertialSensor_Revo::_ioc(){ // io completion ISR, data in it place
+void AP_InertialSensor_Revo::_ioc(){ // io completion ISR, data already in its place
     uint16_t old_wp = write_ptr;
     if(write_ptr++ >= MPU_FIFO_BUFFER_LEN) { // move write pointer
         write_ptr=0;                         // ring
     }
     if(write_ptr == read_ptr) { // buffer overflow
-//        debug("MPU buffer overflow!");    
         REVOMINIScheduler::MPU_buffer_overflow(); // count them
         write_ptr=old_wp; // not overwrite, just skip last data
     }
@@ -572,7 +564,7 @@ void AP_InertialSensor_Revo::_ioc(){ // io completion ISR, data in it place
 }
 
 /*
- * Timer process to poll for new data from the Invensense. Called from timer's interrupt
+ * Timer process to poll for new data from the Invensense. Called from timer's interrupt or from personal thread
  */
 void AP_InertialSensor_Revo::_poll_data()
 {
@@ -581,6 +573,7 @@ void AP_InertialSensor_Revo::_poll_data()
 
 bool AP_InertialSensor_Revo::_accumulate(uint8_t *samples, uint8_t n_samples)
 {
+    bool ret=true;
     for (uint8_t i = 0; i < n_samples; i++) {
         const uint8_t *data = samples + MPU_SAMPLE_SIZE * i;
         Vector3f accel, gyro;
@@ -591,13 +584,13 @@ bool AP_InertialSensor_Revo::_accumulate(uint8_t *samples, uint8_t n_samples)
                          int16_val(data, 0),
                          -int16_val(data, 2)) * _accel_scale;
 
+        int16_t t2 = int16_val(data, 3);
 /*
         if (!_check_raw_temp(t2)) {
             debug("temp reset %d %d i=%d", _raw_temp, t2, i);
             return false; // just skip this sample
         }
 */        
-        int16_t t2 = int16_val(data, 3);
         float temp = t2 * temp_sensitivity + temp_zero;
         
         gyro = Vector3f(int16_val(data, 5),
@@ -607,24 +600,28 @@ bool AP_InertialSensor_Revo::_accumulate(uint8_t *samples, uint8_t n_samples)
         _rotate_and_correct_accel(_accel_instance, accel);
         _rotate_and_correct_gyro(_gyro_instance, gyro);
 
+#if 0
         float len = accel.length();
         if(is_zero(accel_len)) {
             accel_len=len;
         } else {
-            if((accel_len-len)/(accel_len+len)*100 > 20) { // difference more than 40% from mean value
-                debug("accel len reset: mean %f got %f", accel_len, len );
-                return false;
+    
+            if(abs(accel_len-len)/(accel_len+len)*100 > 25) { // difference more than 50% from mean value
+                debug("accel len error: mean %f got %f", accel_len, len );
+//                ret= false; just report
             }
 #define FILTER_KOEF 0.1
-            accel_len = accel_len * (1-FILTER_KOEF) + len*FILTER_KOEF; // complimentary filter 1/10
+            accel_len = accel_len * (1-FILTER_KOEF) + len*FILTER_KOEF; // complimentary filter 1/10 on all samples
         }
+#endif
+        if(ret) {
+            _notify_new_accel_raw_sample(_accel_instance, accel, 0, fsync_set);
+            _notify_new_gyro_raw_sample(_gyro_instance, gyro);
 
-        _notify_new_accel_raw_sample(_accel_instance, accel, 0, fsync_set);
-        _notify_new_gyro_raw_sample(_gyro_instance, gyro);
-
-        _temp_filtered = _temp_filter.apply(temp);
+            _temp_filtered = _temp_filter.apply(temp);
+        }
     }
-    return true;
+    return ret;
 }
 
 /*
@@ -647,7 +644,7 @@ bool AP_InertialSensor_Revo::_accumulate_fast_sampling(uint8_t *samples, uint8_t
 
         // use temperatue to detect FIFO corruption
         int16_t t2 = int16_val(data, 3);
-/*
+/* MPU don't likes such reads
         if (!_check_raw_temp(t2)) {
             debug("temp reset %d %d", _raw_temp, t2);
 //            _fifo_reset();
@@ -708,7 +705,7 @@ bool AP_InertialSensor_Revo::_accumulate_fast_sampling(uint8_t *samples, uint8_t
     return ret;
 }
 
-#define MAX_NODATA_TIME 20000
+#define MAX_NODATA_TIME 20000 // 20ms
 
 void AP_InertialSensor_Revo::_read_fifo()
 {
@@ -724,9 +721,9 @@ void AP_InertialSensor_Revo::_read_fifo()
 
     last_sample=now;
 
-    uint32_t t=REVOMINIScheduler::_micros();
-    uint16_t count=0;
-    uint32_t dt=0;
+    uint32_t t     = REVOMINIScheduler::_micros();
+    uint16_t count = 0;
+    uint32_t dt    = 0;
     
     while(read_ptr != write_ptr) { // there are samples
 //        uint64_t time = _fifo_buffer[read_ptr++].time; // we can get exact time
@@ -749,9 +746,6 @@ void AP_InertialSensor_Revo::_read_fifo()
             }
         }
         count++;
-        now = REVOMINIScheduler::_micros();
-        dt= now - t ;
-        last_sample=now;
 #ifndef PREEMPTIVE
         if(count>=4) { // not more than 4 points at a time, all another next time
             REVOMINIScheduler::do_at_next_tick(REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)), (REVOMINI::Semaphore *)_sem);    
@@ -759,6 +753,8 @@ void AP_InertialSensor_Revo::_read_fifo()
         }
 #endif
     }
+    now = REVOMINIScheduler::_micros();
+    dt= now - t;// time from entry
 
     last_sample=now;
 

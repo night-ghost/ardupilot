@@ -234,8 +234,10 @@ void boardInit(void);
     AP_GROUPINFO("USB_STORAGE",  8, AP_Param_Helper, _usb_storage, 0), \
     AP_GROUPINFO("TIME_OFFSET",  9, AP_Param_Helper, _time_offset, 0), \
     AP_GROUPINFO("CONSOLE_UART", 10, AP_Param_Helper, _console_uart, HAL_CONSOLE_PORT), \
-    AP_GROUPINFO("EE_DEFERRED",11, AP_Param_Helper, _eeprom_deferred, 0), \
-    AP_GROUPINFO("RC_INPUT",     12, AP_Param_Helper, _rc_input, 0)
+    AP_GROUPINFO("EE_DEFERRED",  11, AP_Param_Helper, _eeprom_deferred, 0), \
+    AP_GROUPINFO("RC_INPUT",     12, AP_Param_Helper, _rc_input, 0), \
+    AP_GROUPINFO("AIBAO_FS",     13, AP_Param_Helper, _aibao_fs, 0), \
+    AP_GROUPINFO("RC_FS",        14, AP_Param_Helper, _rc_fs, 0)
     
 
 // parameters
@@ -250,7 +252,9 @@ void boardInit(void);
     AP_Int8 _time_offset; \
     AP_Int8 _console_uart; \
     AP_Int8 _eeprom_deferred; \
-    AP_Int8 _usb_storage; 
+    AP_Int8 _usb_storage; \
+    AP_Int8 _aibao_fs; \
+    AP_Int8 _rc_fs; 
     
 #endif
 

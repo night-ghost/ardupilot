@@ -39,7 +39,6 @@
 #if HAL_WITH_UAVCAN
 #include "AP_Baro_UAVCAN.h"
 #endif
-#include "AP_Baro_Revo.h"
 
 #define C_TO_KELVIN 273.15f
 // Gas Constant is from Aerodynamics for Engineering Students, Third Edition, E.L.Houghton and N.B.Carruthers

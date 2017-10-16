@@ -1,4 +1,5 @@
 #pragma once 
+#pragma GCC optimize ("O2")
 
 #include "RC_parser.h"
 #include "RCInput.h"

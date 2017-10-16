@@ -1,0 +1,7 @@
+upstream removed this initialization in commit https://github.com/ArduPilot/ardupilot/commit/2f8f2ffd2dec1d85546cc9b8f2e875d9b77fb4c9
+
+#define MTK_INIT_MSG \
+    "$PMTK314,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0*29\r\n" /* RMC, GGA & VTG once every fix */ \
+    "$PMTK330,0*2E\r\n"                                 /* datum = WGS84 */ \
+    "$PMTK313,1*2E\r\n"                                 /* SBAS on */ \
+    "$PMTK301,2*2E\r\n"                                 /* use SBAS data for DGPS */

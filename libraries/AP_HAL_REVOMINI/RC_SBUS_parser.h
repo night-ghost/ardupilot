@@ -1,5 +1,7 @@
 #pragma once 
 
+#pragma GCC optimize ("O2")
+
 #include <AP_HAL/HAL.h>
 
 #include "RC_parser.h"

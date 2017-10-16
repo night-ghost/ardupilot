@@ -94,6 +94,12 @@ again:
 void EEPROMClass::FLASH_Lock_check(){
     FLASH_Lock();
     FLASH->CR |= FLASH_CR_ERRIE;
+    FLASH->ACR |= FLASH_ACR_DCEN; // enable data cache again
+}
+
+void EEPROMClass::FLASH_Unlock_dis(){
+    FLASH->ACR &= ~FLASH_ACR_DCEN; // disable data cache
+    FLASH_Unlock();
 }
 
 /**

@@ -199,10 +199,10 @@ void boardInit(void);
                              { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* caller controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, false, 1 },
 #endif
 
-#define HAL_CONSOLE USB_Driver // console on USB
-//#define HAL_CONSOLE uart1Driver // console on radio
-#define HAL_CONSOLE_PORT 0 // USB
-//#define HAL_CONSOLE_PORT 1 // console on radio
+//#define HAL_CONSOLE USB_Driver // console on USB
+//#define HAL_CONSOLE_PORT 0 // USB
+#define HAL_CONSOLE uart1Driver // console on radio
+#define HAL_CONSOLE_PORT 1 // console on radio
 
 /*
     // @Param: MOTOR_LAYOUT
@@ -293,18 +293,19 @@ void boardInit(void);
     AP_GROUPINFO("MOTOR_LAYOUT", 1, AP_Param_Helper, _motor_layout, 0), \
     AP_GROUPINFO("SERVO_MASK",   2, AP_Param_Helper, _servo_mask, 0), \
     AP_GROUPINFO("UART1_SBUS",   3, AP_Param_Helper, _uart1_sbus, 0), \
-    AP_GROUPINFO("SOFTSERIAL",   3, AP_Param_Helper, _use_softserial, 0), \
-    AP_GROUPINFO("CONNECT_COM",  4, AP_Param_Helper, _connect_com, 0), \
-    AP_GROUPINFO("CONNECT_ESC",  5, AP_Param_Helper, _connect_esc, 0), \
-    AP_GROUPINFO("FLEXI_I2C",    6, AP_Param_Helper, _flexi_i2c, 0), \
-    AP_GROUPINFO("PWM_TYPE",     7, AP_Param_Helper, _pwm_type, 0), \
-    AP_GROUPINFO("DBG_WAYBACK",  8, AP_Param_Helper, _dbg_wayback, 0), \
-    AP_GROUPINFO("USB_STORAGE",  9, AP_Param_Helper, _usb_storage, 0), \
-    AP_GROUPINFO("TIME_OFFSET",  10, AP_Param_Helper, _time_offset, 0), \
-    AP_GROUPINFO("CONSOLE_UART", 11, AP_Param_Helper, _console_uart, HAL_CONSOLE_PORT), \
-    AP_GROUPINFO("EE_DEFERRED",  12, AP_Param_Helper, _eeprom_deferred, 0), \
-    AP_GROUPINFO("RC_INPUT",     13, AP_Param_Helper, _rc_input, 0), \
-    AP_GROUPINFO("AIBAO_FS",     14, AP_Param_Helper, _aibao_fs, 0)
+    AP_GROUPINFO("SOFTSERIAL",   4, AP_Param_Helper, _use_softserial, 0), \
+    AP_GROUPINFO("CONNECT_COM",  5, AP_Param_Helper, _connect_com, 0), \
+    AP_GROUPINFO("CONNECT_ESC",  6, AP_Param_Helper, _connect_esc, 0), \
+    AP_GROUPINFO("FLEXI_I2C",    7, AP_Param_Helper, _flexi_i2c, 0), \
+    AP_GROUPINFO("PWM_TYPE",     8, AP_Param_Helper, _pwm_type, 0), \
+    AP_GROUPINFO("DBG_WAYBACK",  9, AP_Param_Helper, _dbg_wayback, 0), \
+    AP_GROUPINFO("USB_STORAGE",  10, AP_Param_Helper, _usb_storage, 0), \
+    AP_GROUPINFO("TIME_OFFSET",  11, AP_Param_Helper, _time_offset, 0), \
+    AP_GROUPINFO("CONSOLE_UART", 12, AP_Param_Helper, _console_uart, HAL_CONSOLE_PORT), \
+    AP_GROUPINFO("EE_DEFERRED",  13, AP_Param_Helper, _eeprom_deferred, 0), \
+    AP_GROUPINFO("RC_INPUT",     14, AP_Param_Helper, _rc_input, 0), \
+    AP_GROUPINFO("AIBAO_FS",     15, AP_Param_Helper, _aibao_fs, 0), \
+    AP_GROUPINFO("RC_FS",        16, AP_Param_Helper, _rc_fs, 0)
     
 
 // parameters
@@ -323,7 +324,8 @@ void boardInit(void);
     AP_Int8 _console_uart; \
     AP_Int8 _eeprom_deferred; \
     AP_Int8 _rc_input; \
-    AP_Int8 _aibao_fs;
+    AP_Int8 _aibao_fs; \
+    AP_Int8 _rc_fs; 
     
 #define ERROR_USART _USART1 // main port - telemetry, all panic messages goes there
 

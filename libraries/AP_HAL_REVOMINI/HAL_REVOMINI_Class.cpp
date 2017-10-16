@@ -7,6 +7,7 @@
 #include "AP_HAL_REVOMINI_Namespace.h"
 #include "AP_HAL_REVOMINI_Private.h"
 #include "HAL_REVOMINI_Class.h"
+#include "RCInput.h"
 #include "Util.h"
 #include <AP_HAL_Empty/AP_HAL_Empty.h>
 #include <AP_HAL_Empty/AP_HAL_Empty_Private.h>
@@ -487,6 +488,8 @@ done:
 #ifdef BOARD_SBUS_UART1    
     if(hal_param_helper->_uart1_sbus) flags |= BOARD_SBUS_UART1;
 #endif
+    if(hal_param_helper->_rc_fs)      flags |= BOARD_RC_FAILSAFE;
+
     REVOMINIRCInput::late_init(flags);
 }
 

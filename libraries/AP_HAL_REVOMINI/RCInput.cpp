@@ -79,6 +79,9 @@ uint8_t REVOMINIRCInput::_last_read_from IN_CCM;
 
 uint16_t REVOMINIRCInput::max_num_pulses IN_CCM;
 
+
+bool REVOMINIRCInput::rc_failsafe_enabled IN_CCM;
+
 /* constrain captured pulse to be between min and max pulsewidth. */
 static inline uint16_t constrain_pulse(uint16_t p) {
     if (p > RC_INPUT_MAX_PULSEWIDTH) return RC_INPUT_MAX_PULSEWIDTH;
@@ -126,15 +129,17 @@ void REVOMINIRCInput::late_init(uint8_t b) {
     for(uint8_t i=0; i<PPM_INPUTS;i++) {
         parsers[i]->late_init(b);
     }
+    
+    if(b & BOARD_RC_FAILSAFE) rc_failsafe_enabled=true;
 }
 
-// we have 3 individual sources of data - internal DSM from UART5 and 2 PPM parsers
+// we can have 4 individual sources of data - internal DSM from UART5, SBUS from UART1 and 2 PPM parsers
 bool REVOMINIRCInput::new_input()
 {
     if(_override_valid) return true;
 
     uint8_t inp=hal_param_helper->_rc_input;
-    if(inp &&  inp < sizeof(parsers)/sizeof(_parser *)+1){
+    if(inp &&  inp < PPM_INPUTS+1){
         inp-=1;
         
         return parsers[inp]->get_last_signal() >_last_read;
@@ -202,7 +207,10 @@ uint16_t REVOMINIRCInput::read(uint8_t ch)
             pulse = p->get_last_signal();
             last  = p->get_last_change();
             uint32_t dt = now-pulse; // time from signal
-            if( pulse >_last_read && dt<best_t && (now - last ) < RC_DEAD_TIME) {
+            if( pulse >_last_read &&  // data is newer than last
+                dt<best_t &&          // and most recent
+                ((now - last ) < RC_DEAD_TIME || !rc_failsafe_enabled)) // and time from last change less than RC_DEAD_TIME
+            {
                 best_t = dt;
                 data = _read_ppm(ch,i);
                 got = i+1;
@@ -237,8 +245,10 @@ uint16_t REVOMINIRCInput::read(uint8_t ch)
         last_4 = data;
     }
 
-    if( ch == 2 ) { // throttle
-        if( (now - pulse) > LOST_TIME || (now-last) > RC_DEAD_TIME ){
+    if( ch == 2 && rc_failsafe_enabled) { // throttle
+        if( (now-pulse) > LOST_TIME ||   // last pulse is very old
+            (now-last)  > RC_DEAD_TIME ) // last change is very old
+        {
             data = 900;
         }
 

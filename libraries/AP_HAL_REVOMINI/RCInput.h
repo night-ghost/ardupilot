@@ -1,7 +1,6 @@
 #ifndef __AP_HAL_REVOMINI_RCINPUT_H__
 #define __AP_HAL_REVOMINI_RCINPUT_H__
 
-#pragma GCC push_options
 #pragma GCC optimize ("O2")
 #include <AP_HAL/AP_HAL.h>
 
@@ -11,9 +10,8 @@
 #include "RC_parser.h"
 #include "Config.h"
 
-#pragma GCC pop_options
 
-
+#define BOARD_RC_FAILSAFE 2 // flag that failsafe is enabled
 
 #define  RC_DEAD_TIME 60000 // 60 seconds no data changes
 
@@ -72,7 +70,8 @@ private:
     /* override state */
     static uint16_t _override[REVOMINI_RC_INPUT_NUM_CHANNELS];
     static bool _override_valid;
-    
+
+    static bool rc_failsafe_enabled;    
 
 };
 
