@@ -272,7 +272,6 @@ static void getSerialLine(char *cp ){      // получение строки
 
 static bool lateInitDone=false;
 
-void usb_mass_mal_USBdisconnect();
 
 void usb_mass_mal_USBdisconnect(){ 
     HAL_REVOMINI::state.sd_busy=false;

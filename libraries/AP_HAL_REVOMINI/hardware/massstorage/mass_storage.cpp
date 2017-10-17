@@ -71,7 +71,6 @@ int8_t usb_mass_mal_read_memory(uint8_t lun, uint32_t lba, uint8_t *readbuff, ui
   return USB_MASS_MAL_FAIL;
 }
 
-extern void usb_mass_mal_USBdisconnect(); // in HAL
 
 } // extern C
 

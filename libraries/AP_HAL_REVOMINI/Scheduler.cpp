@@ -1437,9 +1437,9 @@ task_t *REVOMINIScheduler::get_next_task(){
 #endif
         }
 
-        if(ptr->curr_prio < task->curr_prio){ // select the most priority task
+        if(ptr->curr_prio <= task->curr_prio){ // select the most priority task, round-robin for equal priorities
             // task loose tick
-            if(task->curr_prio != 255) { // not for idle task
+            if(task->priority != 255) { // not for idle task
                 if(task->curr_prio>1)
                     task->curr_prio--;      // increase priority if task loose tick
 // в результате роста приоритета ожидающей задачи мы не останавливаем низкоприоритетные задачи полностью, а лишь замедляем их

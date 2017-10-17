@@ -487,7 +487,7 @@ void AP_InertialSensor_Revo::start()
 
     _register_read(MPUREG_INT_STATUS); // reset interrupt request
 
-    task_handle = REVOMINIScheduler::register_timer_task(0, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL); // 0 period means that task will be activated by request
+    task_handle = REVOMINIScheduler::register_timer_task(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL); // period just for case, task will be activated by request
     REVOMINIScheduler::set_task_priority(task_handle,93); // 1 more than other drivers
 }
 
@@ -545,7 +545,9 @@ void AP_InertialSensor_Revo::_ioc(){ // io completion ISR, data already in its p
         write_ptr=0;                         // ring
     }
     if(write_ptr == read_ptr) { // buffer overflow
+#ifdef MPU_DEBUG
         REVOMINIScheduler::MPU_buffer_overflow(); // count them
+#endif
         write_ptr=old_wp; // not overwrite, just skip last data
     }
 
@@ -705,16 +707,21 @@ bool AP_InertialSensor_Revo::_accumulate_fast_sampling(uint8_t *samples, uint8_t
     return ret;
 }
 
-#define MAX_NODATA_TIME 20000 // 20ms
+#define MAX_NODATA_TIME 5000 // 5ms
 
 void AP_InertialSensor_Revo::_read_fifo()
 {
     uint32_t now=REVOMINIScheduler::_micros();
     if(read_ptr == write_ptr) {
+        if(_data_ready()){ // no interrupt for some reason?
+            _isr();
+        }
         if(now - last_sample > MAX_NODATA_TIME) { // something went wrong - data stream stopped
             _start(); // try to restart MPU        
             last_sample=now;
+#ifdef MPU_DEBUG
             REVOMINIScheduler::MPU_restarted(); // count them
+#endif
         }
         return;
     }
@@ -754,11 +761,12 @@ void AP_InertialSensor_Revo::_read_fifo()
 #endif
     }
     now = REVOMINIScheduler::_micros();
-    dt= now - t;// time from entry
-
     last_sample=now;
 
+#ifdef MPU_DEBUG
+    dt= now - t;// time from entry
     REVOMINIScheduler::MPU_stats(count,dt);
+#endif
 }
 
 /*
