@@ -51,7 +51,7 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     {&gpiog,   NULL, NULL,  7, 0, ADCx}, /* D34/PG7  4*/
     {&gpiog,   NULL, NULL,  6, 0, ADCx}, /* D35/PG6  5*/
     {&gpiob, &timer3,NULL,  5, 2, ADCx}, /* D36/PB5  6 LED_BLUE */
-    {&gpiob, &timer4,NULL,  6, 1, ADCx}, /* D37/PB6  7 LED_YELLOW - OPTIONAL*/
+    {&gpiob, &timer4,NULL,  6, 1, ADCx}, /* D37/PB6  7 LED_YELLOW - OPTIONAL, not connected */
     {&gpiob, &timer4,NULL,  7, 2, ADCx}, /* D38/PB7  8 DRDY_HMC5883 */
     {&gpiof,   NULL,&_adc3, 6, 0,    4}, /* D39/PF6  9*/
     {&gpiof,   NULL,&_adc3, 7, 0,    5}, /* D40/PF7  40*/

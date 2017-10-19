@@ -23,7 +23,7 @@ extern const AP_HAL::HAL& hal;
 
 #if defined(BOARD_DSM_USART)
 REVOMINIUARTDriver DSM_parser::uartSDriver(BOARD_DSM_USART);
-#elif defined(BOARD_SPEKTRUM_RX_PIN)
+#elif defined(BOARD_USART5_RX_PIN)
 REVOMINIUARTDriver DSM_parser::uartSDriver(_UART5);
 #endif
 

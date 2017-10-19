@@ -26,7 +26,7 @@ public:
     void begin(uint32_t b);
     void begin(uint32_t b, uint16_t rxS, uint16_t txS) {    begin(b); }
 
-    inline void end()   {  /* if(_usb_present)*/ usb_close(); } 
+    inline void end()   {  usb_close(); } 
     inline bool is_initialized(){ return _initialized; }
     inline void set_blocking_writes(bool blocking) { _blocking=blocking; }
     inline bool tx_pending() {   return false; }

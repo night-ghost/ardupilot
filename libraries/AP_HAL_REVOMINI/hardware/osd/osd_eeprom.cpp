@@ -32,11 +32,12 @@ uint8_t OSD_EEPROM::read(uint16_t addr){
     return 0xff; // got to begin and still FF - really FF
 }
 
+static uint8_t data[EEPROM_SIZE] IN_CCM; // don't use malloc() because memory can be eated out by AP_Wayback
+
 void OSD_EEPROM::write(uint16_t addr, uint8_t val){
     uint8_t cv = read(addr);
     if(cv == val) return; // already is
 
-    FLASH_Unlock();
     
     if( /* we can write - there is no '0' where we need '1' */ (~cv & val)==0 ){
         write_8(ee_ptr, val);    // just overwrite last value
@@ -49,6 +50,7 @@ void OSD_EEPROM::write(uint16_t addr, uint8_t val){
             uint32_t ea = EEPROM_PAGE + i*EEPROM_SIZE + addr;
             cv = read_8(ea);
             if(cv == 0xFF) { // empty 
+                FLASH_Unlock_dis();
                 write_8(ea, val);
                 goto done;
             }
@@ -58,11 +60,9 @@ void OSD_EEPROM::write(uint16_t addr, uint8_t val){
     // no empty slots - so need to erase page
     { // isolate "data"
 // 1st copy all data to RAM
-//         uint8_t data[EEPROM_SIZE]; //this executes in task so stack is very limited!
-        uint8_t *data = (uint8_t *)malloc(EEPROM_SIZE);
         if(data==NULL) goto done; // no memory
     
-        for(uint16_t i=0;i<EEPROM_SIZE; i++){
+        for(uint16_t i=0;i<EEPROM_SIZE; i++){ // read out all to buffer
             data[i] = read(i);
         }
     
@@ -70,6 +70,7 @@ void OSD_EEPROM::write(uint16_t addr, uint8_t val){
     
 // 2nd - erase page. power loss here cause data loss! In execution time CPU is frozen!
         hal.console->printf("\nEEprom_OSD erase page %d\n ", (uint16_t)((EEPROM_PAGE & 0x00ffffff) / 0x4000) ); // clear high byte of address and count 16K blocks
+        FLASH_Unlock_dis();
         erasePageByAddress(EEPROM_PAGE); 
 
 // 3rd write data back to the beginning of Flash page
@@ -77,7 +78,6 @@ void OSD_EEPROM::write(uint16_t addr, uint8_t val){
             write_8(EEPROM_PAGE+i, data[i]);
         }
     
-        free(data);
     }
 done:
     FLASH_Lock_check();

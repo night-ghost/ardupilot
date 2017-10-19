@@ -19,12 +19,10 @@ public:
     bool svc_give();
     bool svc_take(uint32_t timeout_ms);
     bool svc_take_nonblocking();
-    inline void *get_owner(){ return _task; } // task that owns this semaphore
-    inline bool is_taken(){ return _taken; }
-//]
-
-    inline void set_weak(bool f){ _weak=f; }  // bus semaphores don't increase priority to task which owns it
-    
+    inline void *get_owner() { return _task; } // task that owns this semaphore
+    inline bool is_taken()   { return _taken; }
+    inline bool is_waiting() { return _is_waiting; } // does anyone want this semaphore when it was busy?
+//]    
     static inline bool get_error(){ bool t=_error; _error=false; return t; }
 
 #ifdef SEM_PROF 
@@ -38,7 +36,7 @@ protected:
 
     volatile bool _taken;
     void * _task; // owner
-    bool _weak;
+    bool _is_waiting;
 
     static bool _error;
 

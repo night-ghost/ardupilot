@@ -53,4 +53,7 @@ private:
     static inline void FLASH_Lock_check() {
         EEPROMClass::FLASH_Lock_check();
     }
+    static inline void FLASH_Unlock_dis() {
+        EEPROMClass::FLASH_Unlock_dis();
+    }
 };

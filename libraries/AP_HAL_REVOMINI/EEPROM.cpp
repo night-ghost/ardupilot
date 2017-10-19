@@ -60,9 +60,6 @@ void EEPROMClass::FLASH_OB_WRPConfig(uint32_t OB_WRP, FunctionalState NewState)
 FLASH_Status EEPROMClass::write_16(uint32_t addr, uint16_t data){
     uint16_t n_try=16;
 again:
-#ifndef PREEMPTIVE
-    hal_yield(0);
-#endif
     FLASH_Status  sts = FLASH_ProgramHalfWord(addr, data);
     
     if(sts != FLASH_COMPLETE ) {
@@ -76,9 +73,6 @@ again:
 FLASH_Status EEPROMClass::write_8(uint32_t addr, uint8_t data){ 
     uint16_t n_try=16;
 again:
-#ifndef PREEMPTIVE
-    hal_yield(0);
-#endif
 
     FLASH_Status  sts = FLASH_ProgramByte(addr, data);
     
@@ -111,9 +105,6 @@ void EEPROMClass::FLASH_Unlock_dis(){
   */
 uint16_t EEPROMClass::_CheckPage(uint32_t pageBase, uint16_t status)
 {
-#ifndef PREEMPTIVE
-    hal_yield(0);
-#endif    
 	uint32_t pageEnd = pageBase + PageSize;
 
 	// Page Status not EEPROM_ERASED and not a "state"
@@ -134,9 +125,6 @@ uint16_t EEPROMClass::_CheckPage(uint32_t pageBase, uint16_t status)
   */
 FLASH_Status EEPROMClass::_ErasePageByAddress(uint32_t Page_Address)
 {
-#ifndef PREEMPTIVE
-    hal_yield(0);
-#endif
 
 	int Page_Offset = Page_Address - 0x08000000; // calculates sector by address
 	uint32_t FLASH_Sector;
@@ -248,9 +236,6 @@ uint16_t EEPROMClass::_GetVariablesCount(uint32_t pageBase, uint16_t skipAddress
 			continue;
 
 		mycount++;
-#ifndef PREEMPTIVE
-                hal_yield(0);
-#endif
 
 		for(idx = pageBase + 4; idx < pageEnd; idx += 4) {
 			nextAddress = read_16(idx);
@@ -299,10 +284,6 @@ uint16_t EEPROMClass::_PageTransfer(uint32_t newPage, uint32_t oldPage, uint16_t
 			continue;						// it's means that power off after write data
 
 		found = 0;
-#ifndef PREEMPTIVE
-                hal_yield(0);
-#endif
-
 
 		for (idx = newPage + 6; idx < newIdx; idx += 4){
 			if (read_16(idx) == address) {
@@ -381,10 +362,6 @@ uint16_t EEPROMClass::_VerifyPageFullWriteVariable(uint16_t Address, uint16_t Da
 			break;
 		}
 	}
-#ifndef PREEMPTIVE
-        hal_yield(0);
-#endif
-
 
 	// Check each active page address starting from begining
 	for (idx = pageBase + 4; idx < pageEnd; idx += 4){
@@ -398,10 +375,6 @@ uint16_t EEPROMClass::_VerifyPageFullWriteVariable(uint16_t Address, uint16_t Da
 			return EEPROM_OK;
 		}
         }
-#ifndef PREEMPTIVE
-        hal_yield(0);
-#endif
-
 
 	// Empty slot not found, need page transfer
 	// Calculate unique variables in page
@@ -652,10 +625,6 @@ uint16_t EEPROMClass::erases(uint16_t *Erases)
 uint16_t EEPROMClass::read(uint16_t Address, uint16_t *Data)
 {
 	uint32_t pageBase, pageEnd;
-#ifndef PREEMPTIVE
-        hal_yield(0);
-#endif
-
 
 	*Data = EEPROM_DEFAULT_DATA; // Set default data (empty EEPROM)
 
@@ -674,11 +643,6 @@ uint16_t EEPROMClass::read(uint16_t Address, uint16_t *Data)
 		*Data = read_16(pageEnd - 2);		// Get content of Address-2 which is variable value
 		return EEPROM_OK;
 	    }
-
-#ifndef PREEMPTIVE
-	    if((pageEnd&0x7f) == 0x7e) hal_yield(0);
-#endif
-
 	}
 
 	// Return ReadStatus value: (0: variable exist, 1: variable doesn't exist)
@@ -699,10 +663,6 @@ uint16_t EEPROMClass::read(uint16_t Address, uint16_t *Data)
   */
 uint16_t EEPROMClass::write(uint16_t Address, uint16_t Data)
 {
-#ifndef PREEMPTIVE
-        hal_yield(0);
-#endif
-
 	if (_status == EEPROM_NOT_INIT)
 		if (_init() != EEPROM_OK)
 			return _status;
@@ -726,10 +686,6 @@ uint16_t EEPROMClass::write(uint16_t Address, uint16_t Data)
   */
 uint16_t EEPROMClass::count(uint16_t *cnt)
 {
-#ifndef PREEMPTIVE
-        hal_yield(0);
-#endif
-
 	// Get valid Page for write operation
 	uint32_t pageBase = _FindValidPage();
 	if (pageBase == 0)

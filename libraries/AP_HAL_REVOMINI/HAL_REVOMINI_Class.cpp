@@ -102,7 +102,7 @@ HAL_state HAL_REVOMINI::state;
         AP_HAL::UARTDriver* _uartB, // 1st GPS
         AP_HAL::UARTDriver* _uartC, // telem1
         AP_HAL::UARTDriver* _uartD, // telem2
-        AP_HAL::UARTDriver* _uartE, // 2nd GPS
+        AP_HAL::UARTDriver* _uartE, // 2nd GPS - 
         AP_HAL::UARTDriver* _uartF, // extra1
 */
 HAL_REVOMINI::HAL_REVOMINI() :
@@ -115,35 +115,35 @@ HAL_REVOMINI::HAL_REVOMINI() :
 #else
         NULL,          /* no uartD */
 #endif
-#ifdef BOARD_OSD_CS_PIN
-        &uartOSDdriver, /* uartE  - OSD emulated UART */
-#else
- #if FRAME_CONFIG == QUAD_FRAME && defined(BOARD_USART4_RX_PIN)
+#if FRAME_CONFIG == QUAD_FRAME && defined(BOARD_USART4_RX_PIN)
         &uart4Driver,  /* uartE  - PWM pins 5&6 */
- #else
+#else
         NULL,          /* no uartE */
- #endif
 #endif
-#if defined(USE_SOFTSERIAL) && defined(BOARD_SOFTSERIAL_TX) && defined(BOARD_SOFTSERIAL_RX)
-        &softDriver,   /* uartF */
+#if defined(BOARD_OSD_NAME)
+        &uartOSDdriver, /* uartF  - OSD emulated UART */
+#elif defined(USE_SOFTSERIAL) && defined(BOARD_SOFTSERIAL_TX) && defined(BOARD_SOFTSERIAL_RX)
+        &softDriver,   /* uartF softSerial */
 #else
         NULL,          /* no uartF */
 #endif
         &i2c_mgr_instance,
         &spiDeviceManager, /* spi */
-        &analogIn,       /* analogin */
-        &storageDriver,  /* storage */
-        &HAL_CONSOLE,    /* console via radio or USB on per-board basis */
-        &gpioDriver,     /* gpio */
-        &rcinDriver,     /* rcinput */
-        &rcoutDriver,    /* rcoutput */
+        &analogIn,        /* analogin */
+        &storageDriver,   /* storage */
+        &HAL_CONSOLE,     /* console via radio or USB on per-board basis */
+        &gpioDriver,      /* gpio */
+        &rcinDriver,      /* rcinput */
+        &rcoutDriver,     /* rcoutput */
         &schedulerInstance, /* scheduler */
-        &utilInstance,	 /* util */
-        nullptr,         /* no optical flow */
-        nullptr          /* no CAN */
+        &utilInstance,	  /* util */
+        nullptr,          /* no optical flow */
+        nullptr           /* no CAN */
     )
     
-    , uarts{ &uartA, &uartB, &uartC, &uartD, &uartE, &uartF }
+           //  0     1       2       3        4       5
+           // USB    Main    Flexi   UART6    Uart4   Soft/Osd
+    , uarts{ &uartA, &uartC, &uartD, &uartB,  &uartE, &uartF }
 
 {
 

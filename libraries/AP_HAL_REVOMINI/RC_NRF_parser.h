@@ -1,6 +1,12 @@
 #ifndef __AP_HAL_REVOMINI_NRF_PARSER_H__
 #define __AP_HAL_REVOMINI_NRF_PARSER_H__
 
+/*
+    imported from Betaflight/INAV
+
+*/
+
+
 #ifdef BOARD_NRF_CS_PIN
 
 #pragma GCC push_options

@@ -42,9 +42,8 @@ void boardInit(void);
 #define BOARD_USART4_TX_PIN     47
 
 #define BOARD_USART5_RX_PIN     26  // PD2  EXTI_RFM22B / UART5_RX
-//#define BOARD_BUTTON_PIN        103 // PA15 CS_RFM22B
 
-#define BOARD_SPEKTRUM_RX_PIN   26  // PD2  INT_RFM22
+#define BOARD_SPEKTRUM_RX_PIN   BOARD_USART5_RX_PIN
 #define BOARD_SPEKTRUM_PWR_PIN  103 // PA15 CS_RFM22B
 #define BOARD_SPEKTRUM_PWR_ON   1
 #define BOARD_SPEKTRUM_PWR_OFF  0
@@ -86,7 +85,7 @@ void boardInit(void);
 
 
 # define BOARD_GPIO_A_LED_PIN   36  // BLUE
-//# define HAL_GPIO_B_LED_PIN   37  // YELLOW OPTIONAL (not included)
+//# define HAL_GPIO_B_LED_PIN   37  // PB6 YELLOW OPTIONAL (not included)
 # define BOARD_GPIO_B_LED_PIN   9      //  frequency select - resistor to VCC or ground
 # define BOARD_GPIO_C_LED_PIN   105 // RED
 

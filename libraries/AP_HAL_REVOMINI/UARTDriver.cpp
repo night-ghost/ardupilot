@@ -91,9 +91,6 @@ uint32_t REVOMINIUARTDriver::available() {
     }
 
     uint16_t v=usart_data_available(_usart_device); 
-#ifndef PREEMPTIVE
-    if(!v) REVOMINIScheduler::yield(); // если нет данных то переключим задачу насильно, все равно делать нечего
-#endif
     return v;
 }
 
@@ -115,7 +112,6 @@ size_t REVOMINIUARTDriver::write(uint8_t c) {
     while(tr) {
         n = usart_putc(_usart_device, c);
         if(n==0) { // no place for character
-            REVOMINIScheduler::yield(); // пока ожидаем - пусть другие работают
             if(!_blocking || REVOMINIScheduler::_in_timerprocess() ) tr--; // при неблокированном выводе уменьшим счетчик попыток
         } else break; // успешно отправили
     } 
@@ -124,11 +120,20 @@ size_t REVOMINIUARTDriver::write(uint8_t c) {
 
 size_t REVOMINIUARTDriver::write(const uint8_t *buffer, size_t size)
 {
-    size_t n = 0;
-    while (size--) {
-        n += write(*buffer++);
+    uint16_t tr=3; // 3 попытки
+    uint16_t n;
+    uint16_t sent=0;
+    while(tr && size) {
+
+        n = usart_tx(_usart_device, buffer, size);
+        if(n<size) { // no place for character
+            if(!_blocking || REVOMINIScheduler::_in_timerprocess() ) tr--; // при неблокированном выводе уменьшим счетчик попыток
+        } else break; // успешно отправили
+        buffer+=n;
+        sent+=n;
+        size-=n;
     }
-    return n;
+    return sent;
 }
 
 #endif // CONFIG_HAL_BOARD

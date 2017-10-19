@@ -1,5 +1,3 @@
-
-
 #include <AP_HAL/AP_HAL.h>
 
 #ifdef BOARD_OSD_CS_PIN
@@ -48,6 +46,9 @@ OSD osd; //OSD object
 static ring_buffer osd_rxrb IN_CCM;
 static uint8_t osd_rx_buf[OSD_RX_BUF_SIZE] IN_CCM;
 
+static ring_buffer osd_txrb IN_CCM;
+static uint8_t osd_tx_buf[OSD_TX_BUF_SIZE] IN_CCM;
+
 AP_HAL::OwnPtr<REVOMINI::SPIDevice> osd_spi;
 AP_HAL::Semaphore                *osd_spi_sem;
 
@@ -67,12 +68,13 @@ void max_do_transfer(const char *buffer, uint16_t len);
 
 
 static bool osd_need_redraw = false;
+static void * task_handle;
 
 void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 
     osd_spi = std::move(spi);
     
-    osd_spi_sem = osd_spi->get_semaphore();
+    osd_spi_sem = osd_spi->get_semaphore(); // bus semaphore
 
     const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
     gpio_set_mode(pp.gpio_device, pp.gpio_bit, GPIO_OUTPUT_PP);
@@ -86,6 +88,7 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 //    max7456_on();
 
     rb_init(&osd_rxrb, OSD_RX_BUF_SIZE, osd_rx_buf);
+    rb_init(&osd_txrb, OSD_TX_BUF_SIZE, osd_tx_buf);
 
     readSettings();
 
@@ -117,22 +120,26 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 #ifdef BOARD_OSD_VSYNC_PIN
     Revo_hal_handler h = { .vp = vsync_ISR };
     
-    REVOMINIGPIO::_attach_interrupt(BOARD_OSD_VSYNC_PIN, h.h, RISING, 9);
+    REVOMINIGPIO::_attach_interrupt(BOARD_OSD_VSYNC_PIN, h.h, RISING, 7);
 #endif
+
+    void * task_handle = REVOMINIScheduler::start_task(OSDns::osd_loop, SMALL_TASK_STACK); // 
+    REVOMINIScheduler::set_task_priority(task_handle, OSD_LOW_PRIORITY); // less than main task
+    REVOMINIScheduler::set_task_period(task_handle, 10000);              // 100Hz 
+
 }
 
-
-// TODO: all SPI transfers should use register_completion_callback()
+// all task is in one thread so no sync required
 
 void osd_loop() {
     if(osd_need_redraw){ // если была отложенная передача
         osd_need_redraw=false;
         
         OSD::update();           
+        REVOMINIScheduler::set_task_priority(task_handle, OSD_LOW_PRIORITY); // restore priority to low
     }
 
-
-    uint32_t pt=millis();     //millis_plus(&pt, 0); much larger
+    uint32_t pt=millis();
 
     seconds = pt / 1000;
 
@@ -150,6 +157,7 @@ void osd_loop() {
         lflags.mav_request_done=1;
     }
 #endif
+    osd_dequeue();
 
     if(lflags.got_data){ // были свежие данные - обработать
 
@@ -264,18 +272,12 @@ void vsync_ISR(){
     vsync_time=millis(); // и отметим его время
 
     if(update_screen) { // there is data for screen
-        OSD::update();          // do it in interrupt! execution time is ~500uS so without interrupts we will NOT lose serial bytes because:
-                                    //   on 115200 bit time=1/speed = ~87uS so byte time= ~870uS. ATmega's datasheet says that 
-                                    //   receive buffer has 2 bytes, so we have time near 3*870uS = ~2500uS before character loss
+        osd_need_redraw=true;
+        REVOMINIScheduler::set_task_priority(task_handle, OSD_HIGH_PRIORITY); // higher than all drivers so it will be scheduled just after semaphore release
+        REVOMINIScheduler::set_task_active(task_handle); // task should be finished at this time so resume it
+        REVOMINIScheduler::context_switch_isr();   // switch context after interrupt
         update_screen = 0;
     }
-    
-#if defined(DEBUG)
-    byte sp;
-
-    if(((uint16_t)&sp)<stack_bottom)
-        stack_bottom=((uint16_t)&sp);
-#endif
 }
 
 
@@ -285,24 +287,28 @@ int16_t osd_available(){
     return rb_full_count(&osd_rxrb);
 }
 
-
-void osd_queue(uint8_t c) {
-    /* By default, push bytes around in the ring buffer. */
+void osd_queue(uint8_t c) {    // push bytes around in the ring buffer
     rb_push_insert(&osd_rxrb, c);
 }
 
 
-// get char from ring buffer
-int16_t osd_getc(){
+int16_t osd_getc(){ // get char from ring buffer
     return rb_remove(&osd_rxrb);
 }
 
 
-// parse char - no buffers
 void osd_putc(uint8_t c){
-    extern bool mavlink_one_byte(char c);
+    rb_push_insert(&osd_txrb, c);
+}
+
+void osd_dequeue() {
+
+    while(rb_full_count(&osd_txrb)) {
+        extern bool mavlink_one_byte(char c);
+        char c = rb_remove(&osd_txrb);
     
-    if(mavlink_one_byte(c)) lflags.got_data=true;
+        if(mavlink_one_byte(c)) lflags.got_data=true;
+    }
 }
 
 
@@ -314,7 +320,7 @@ void max7456_off(){
 }
 
 void max7456_on(){
-    if(osd_spi_sem->take(100)) {
+    if(osd_spi_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
         gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
 
@@ -336,34 +342,26 @@ byte MAX_rw(byte b){
   return osd_spi->transfer(b);
 }
 
-void max_do_transfer(const uint8_t *buffer, uint16_t len){
-        osd_spi->set_speed(AP_HAL::Device::SPEED_HIGH);
+// we don't need results of transfer so just release bus
+void ioc(){
+    osd_spi->register_completion_callback((Handler)0); // finished
 
-        MAX_write(MAX7456_DMAH_reg, 0);
-        MAX_write(MAX7456_DMAL_reg, 0);
-        MAX_write(MAX7456_DMM_reg, 1); // автоинкремент адреса
-        // DMA
-        osd_spi->transfer(buffer, len, NULL, 0);
+    max7456_off();
 
-        osd_spi->transfer(MAX7456_END_string); // 0xFF - "end of screen" character
-        max7456_off();
 }
 
 void update_max_buffer(const uint8_t *buffer, uint16_t len){
-//    max7456_on();
-    if(REVOMINIScheduler::in_interrupt()){
-        if(osd_spi_sem->take(0)) {
-            const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
-            gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
+    max7456_on();
+
+    MAX_write(MAX7456_DMAH_reg, 0);
+    MAX_write(MAX7456_DMAL_reg, 0);
+    MAX_write(MAX7456_DMM_reg, 1); // автоинкремент адреса
+
+    osd_spi->register_completion_callback(ioc); 
     
-            max_do_transfer(buffer, len);
-        } else {
-            osd_need_redraw=true; // can't get semaphore in ISR
-        }
-    } else {
-        max7456_on();
-        max_do_transfer(buffer, len);
-    }
+    // DMA
+    osd_spi->transfer(buffer, len, NULL, 0);
+    // all another in ioc()
 }
 
 

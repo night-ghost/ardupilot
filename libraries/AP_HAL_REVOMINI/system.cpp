@@ -12,7 +12,6 @@ extern const AP_HAL::HAL& hal;
 
 using namespace REVOMINI;
 
-//extern "C" void printf(const char *msg, ...);
 
 namespace AP_HAL {
 
@@ -43,26 +42,31 @@ void panic(const char *errormsg, ...)
 
 uint32_t millis()
 {
-    REVOMINIScheduler::yield(0);
+    static uint32_t last_yield=0;
+    uint32_t t=REVOMINIScheduler::_millis();
+    if(t-last_yield>50) {
+        REVOMINIScheduler::yield(0);
+        last_yield=t;
+    }
     return REVOMINIScheduler::_millis();
 }
 
 uint64_t millis64(){
-    REVOMINIScheduler::yield(0);
+    
+    static uint32_t last_yield=0;
+    uint32_t t=REVOMINIScheduler::_millis();
+    if(t-last_yield>50) {
+        REVOMINIScheduler::yield(0);
+        last_yield=t;
+    }
     return REVOMINIScheduler::_millis64();
 }
 
 uint32_t micros() {
-#ifndef PREEMPTIVE
-    REVOMINIScheduler::yield(0);
-#endif
     return REVOMINIScheduler::_micros();
 }
 
 uint64_t micros64(){
-#ifndef PREEMPTIVE
-    REVOMINIScheduler::yield(0);
-#endif
     return REVOMINIScheduler::_micros64();
 }
 
@@ -108,6 +112,8 @@ extern "C" {
     int _read(int fd, char *buf, size_t cnt);
 
     void putch(unsigned char c);
+    
+    extern int printf(const char *msg, ...);
 }
 
 
@@ -134,3 +140,11 @@ void putch(unsigned char c) {
     hal.console->write(c);
 }
 
+int printf(const char *msg, ...){
+    va_list ap;
+
+    va_start(ap, msg);
+    hal.console->vprintf(msg, ap);
+    va_end(ap);
+    return 1;
+}

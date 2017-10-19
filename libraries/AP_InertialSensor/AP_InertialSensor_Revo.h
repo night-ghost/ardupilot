@@ -35,6 +35,13 @@ typedef struct MPU_Item {
     uint16_t gz;
 } mpu_item;
     
+    
+typedef struct {
+    uint32_t t;
+    uint16_t read_ptr;
+    uint16_t write_ptr;
+} mpu_log_item;
+
 class AP_Invensense_AuxiliaryBus;
 
 class AP_InertialSensor_Revo : public AP_InertialSensor_Backend
@@ -158,5 +165,13 @@ private:
     void * task_handle;
     float accel_len;
     uint32_t last_sample;
+
+//#define MPU_DEBUG_LOG
+
+#ifdef MPU_DEBUG_LOG
+#define MPU_LOG_SIZE 512
+    static mpu_log_item mpu_log[MPU_LOG_SIZE];
+    static uint16_t mpu_log_ptr;
+#endif
 };
 

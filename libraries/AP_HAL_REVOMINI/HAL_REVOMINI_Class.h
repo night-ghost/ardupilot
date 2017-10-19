@@ -60,8 +60,5 @@ private:
 };
 
 
-//FUNCTOR_TYPEDEF(PeriodicCbBool, bool);
-
-
 #endif // __AP_HAL_REVOMINI_CLASS_H__
 #endif // __HAL_BOARD_REVOMINI__

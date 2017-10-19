@@ -18,7 +18,12 @@ extern union UU msgbuf;
 
 // #define  m_mavlink_buffer (&msgbuf.m)
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align"
+
 #include "GCS_MAVLink.h"
+
+
 
 union UU {
     mavlink_message_t m;
@@ -29,6 +34,7 @@ union UU {
 
 #include "protocols/MAVLink.h"
 
+#pragma GCC diagnostic pop
 
 #define MAX_OVERLOAD_COUNT 10
 #define MAX_FROZEN_COUNT 10

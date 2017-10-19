@@ -21,16 +21,18 @@
 #include <timer.h>
 #include <setjmp.h>
 
+#define REVOMINI_SCHEDULER_MAX_TIMER_PROCS 10
 #define REVOMINI_SCHEDULER_MAX_IO_PROCS 10
+#define REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS 32
 
 
 #define DRIVER_PRIORITY 99  // priority for drivers, speed of main will be 1/3 of this
-#define IO_PRIORITY    107  // main task has 100 so IO tasks will use 1/8 of CPU
+#define IO_PRIORITY    105  // main task has 100 so IO tasks will use 1/6 of CPU
 
 #define USE_ISR_SCHED 1
 
-#define SHED_FREQ 10000   // timer's freq in Hz
-#define TIMER_PERIOD 100  // task timeslice period in uS
+#define SHED_FREQ 2000   // timer's freq in Hz
+#define TIMER_PERIOD 100 // task timeslice period in uS
 
 
 #define MAIN_STACK_SIZE  10240U   // measured use of stack is only 1K - but it grows up to 4K when using FatFs, also this includes 2K stack for ISR
@@ -42,7 +44,11 @@
 
 
 struct task_t {
+#ifdef PREEMPTIVE
         const uint8_t* sp;      //!< Task stack pointer, should be first to access from context switcher
+#else
+        jmp_buf context;        //!< Task context
+#endif
         task_t* next;           //!< Next task
         task_t* prev;           //!< Previous task
         Handler handle;         //!< loop() in Revo_handler - to allow to change task, call via revo_call_handler
@@ -52,13 +58,17 @@ struct task_t {
         uint8_t curr_prio;      // current priority of task, usually higher than priority
         bool active;            // task not ended
         bool in_ioc;            // task starts IO_Completion so don't release bus semaphore
+        uint8_t has_semaphore;  // count how many times task has a semaphore so let it run until gives it
         uint32_t ttw;           // time to work
         uint32_t t_yield;       // time of yield
         uint32_t start;         // microseconds of timeslice start
-#if defined(MTASK_PROF)
+#ifndef PREEMPTIVE
+        uint32_t max_delay;     // maximal execution time of task - used in scheduler
+        uint32_t in_isr;        // time in ISR when task runs
+#endif
+#if !defined(PREEMPTIVE) || defined(MTASK_PROF)
         uint32_t in_isr;        // time in ISR when task runs
         uint32_t def_ttw;       // default TTW - not as hard as period
-        uint8_t sw_type;
 #endif
         uint32_t period;        // if set then task starts on time basis only
         uint32_t time_start;    // start time of task
@@ -104,27 +114,66 @@ extern "C" {
     void hal_delay_microseconds(uint16_t t);
     void hal_delay_us_ny(uint16_t t);
     uint32_t hal_micros();
-    void hal_isr_time(uint32_t t);
 }
 
 
 #define RAMEND ((size_t)&_estack)
 
 
+typedef enum REVO_cb_type {
+    CB_MEMBERPROC = 0,
+    CB_PERIODIC,
+    CB_PERIODICBOOL,
+} revo_cb_type;
+
+#pragma pack(push, 1)
+union Revo_cb { // кровь кишки ассемблер :) преобразование функторов в унифицированный вид
+    AP_HAL::MemberProc                  mp;
+    AP_HAL::Device::PeriodicCb          pcb;
+    AP_HAL::Device::PeriodicCbBool      pcbb;
+    Handler                             h;    // treat as handle
+    uint32_t                            w[2]; // words, to check
+};
+#pragma pack(pop)
+
+#if USE_ISR_SCHED
+typedef struct RevoTimer {
+    uint32_t period;            // interval in uS
+    uint32_t last_run;          // last run time
+//    union Revo_cb proc; // can't declare - got error "use of deleted function 'RevoTimer::RevoTimer()"
+    Handler proc;          //AP_HAL::Device::PeriodicCb proc and AP_HAL::MemberProc mp together
+    REVOMINI::Semaphore *sem; // semaphore to get
+    REVOMINI::Semaphore *sem2;// semaphore to check
+    revo_cb_type mode;
+
+ #ifdef SHED_PROF
+    uint32_t micros;    // max exec time
+    uint32_t count;     // number of calls
+    uint64_t fulltime;  // full consumed time to calc mean
+ #endif
+} revo_timer;
+
+typedef struct RevoTick {
+//    union Revo_cb proc; // can't declare - got error "use of deleted function 'RevoTimer::RevoTimer()"
+    Handler proc;          //AP_HAL::Device::PeriodicCb proc and AP_HAL::MemberProc mp together
+    REVOMINI::Semaphore *sem;
+} revo_tick;
+#endif
 
 #ifdef SHED_DEBUG
 typedef struct RevoSchedLog {
     uint32_t start;
     uint32_t end;
+    uint32_t loop_count;
+//    uint32_t ttw_skip_count;
     uint32_t ttw;
     uint32_t time_start;    
+    uint32_t timeFromLast;
+    uint32_t remains;
     uint32_t quant;
-    uint32_t in_isr;
-    task_t *want_tail;
     uint8_t  task_id;
     uint8_t  prio;
     uint8_t  active;
-    uint8_t  sw_type;
 } revo_sched_log;
 
 #define SHED_DEBUG_SIZE 512
@@ -148,6 +197,7 @@ public:
 
     typedef struct IO_COMPLETION {
         Handler handler;
+        REVOMINI::Semaphore *sem;
         bool request; 
 #ifdef SHED_PROF
         uint64_t time;
@@ -163,8 +213,8 @@ public:
     void     delay_microseconds(uint16_t us) { _delay_microseconds(us); }
     void     delay_microseconds_boost(uint16_t us) override { _delay_microseconds_boost(us); }
     
-    inline   uint32_t millis() {    return AP_HAL::millis(); } // this allows to run io_proc without calls to delay()
-    inline   uint32_t micros() {    return _micros(); }
+    inline   uint32_t millis() { yield(0);   return _millis(); } // this allows to run io_proc without calls to delay()
+    inline   uint32_t micros() {             return _micros(); }
     
     void     register_timer_process(AP_HAL::MemberProc proc) { _register_timer_process(proc, 1000); }
     inline void  suspend_timer_procs(){     _timer_suspended = true; }
@@ -177,12 +227,16 @@ public:
 
 
     static inline void     _register_timer_process(AP_HAL::MemberProc proc, uint32_t period) {
-        Revo_handler r = { .mp=proc };
+        Revo_cb r = { .mp=proc };
 
-        _register_timer_task(period, r.h, NULL);
+        _register_timer_task(period, r.h, NULL, CB_MEMBERPROC);
     }
 
     
+#ifndef PREEMPTIVE
+    static void reschedule_proc(uint64_t proc);
+#endif
+
     inline bool in_timerprocess() {   return _in_timer_proc; }
 
     static inline bool _in_timerprocess() {   return _in_timer_proc; }
@@ -198,9 +252,23 @@ public:
 
 // drivers are not the best place for its own sheduler so let do it here
     static AP_HAL::Device::PeriodicHandle register_timer_task(uint32_t period_us, AP_HAL::Device::PeriodicCb proc, REVOMINI::Semaphore *sem) {
-        Revo_handler r = { .pcb=proc };
-        return _register_timer_task(period_us, r.h, sem);
+        Revo_cb r = { .pcb=proc };
+        return _register_timer_task(period_us, r.h, sem, CB_PERIODIC);
     }
+
+    static AP_HAL::Device::PeriodicHandle register_timer_task(uint32_t period_us, AP_HAL::Device::PeriodicCbBool proc, REVOMINI::Semaphore *sem) {
+        Revo_cb r = { .pcbb=proc };
+        return _register_timer_task(period_us, r.h, sem, CB_PERIODICBOOL);
+    }
+
+#ifndef PREEMPTIVE
+    static void set_checked_semaphore(AP_HAL::Device::PeriodicHandle h, REVOMINI::Semaphore *sem);
+#endif    
+
+/*
+    try to get a semaphore and call handler on success
+*/
+    static void do_at_next_tick(Handler h, REVOMINI::Semaphore *sem);
 
     static void _delay(uint16_t ms);
     static void _delay_microseconds(uint16_t us);
@@ -222,7 +290,7 @@ public:
     static inline bool in_interrupt(){ return (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) /* || (__get_BASEPRI()) */; }
 
 
-//{ this functions do a preemptive multitask and inspired by Arduino-Scheduler (Mikael Patel), and scmrtos
+//{ this functions do a cooperative/preemptive multitask and inspired by Arduino-Scheduler (Mikael Patel), and scmrtos
     
   /**
    * Initiate scheduler and main task with given stack size. Should
@@ -269,7 +337,7 @@ public:
 // this functions are atomic so don't need to disable interrupts
   static void inline set_task_ioc(bool v) {      s_running->in_ioc=v; }
   static void inline set_task_active(void *h) {   task_t * task = (task_t*)h; task->active=true; }
-  static inline void *get_current_task() { return s_running; }
+  static inline void * get_current_task() { return s_running; }
 //]  
 
     /*
@@ -278,6 +346,15 @@ public:
   static task_t *get_next_task(); 
 
 //[ this functions called only from SVC level so serialized by hahdware
+  // informs that task owns semaphore so should have priority increase
+  static inline void task_has_semaphore(bool v) { 
+    task_t * curr_task = s_running;
+    if(v) {
+        curr_task->has_semaphore++; 
+    } else  if(curr_task->has_semaphore) {
+        curr_task->has_semaphore--; 
+    }
+  }
 
   // allows to block task on semaphore
   static inline void task_want_semaphore(void * _task, REVOMINI::Semaphore *sem, uint32_t ms) { 
@@ -288,7 +365,7 @@ public:
     curr_task->sem_wait = sem;             // semaphore
     curr_task->sem_time = (ms == HAL_SEMAPHORE_BLOCK_FOREVER)?ms:ms*1000;        // time to wait semaphore
     //Increase the priority of the semaphore's owner up to the priority of the current task
-    if(task->priority < curr_task->priority) task->curr_prio = curr_task->priority-1;
+    if(task->priority < curr_task->priority) task->curr_prio = curr_task->priority;
   }
 //]
 
@@ -320,7 +397,7 @@ public:
     
     typedef voidFuncPtr ioc_proc;
 
-    static uint8_t register_io_completion(Handler handle);
+    static uint8_t register_io_completion(uint64_t handle);
 
     static inline uint8_t register_io_completion(ioc_proc cb) {
         Revo_handler r = { .vp=cb };
@@ -331,24 +408,30 @@ public:
         return register_io_completion(r.h);
     }
 
+    static inline void set_io_completion_sem(uint8_t id, REVOMINI::Semaphore *sem) {
+        IO_Completion &ioc = io_completion[id-1];
+        ioc.sem = sem;
+    }
+
     static inline void do_io_completion(uint8_t id){ // schedule selected IO completion
         if(id) { 
             io_completion[id-1].request = true;
+#ifdef PREEMPTIVE
             need_io_completion = true;
-            //timer_generate_update(TIMER13);
         } else {
             need_switch_task = true; // require context switch
+#endif
         }
         SCB->ICSR = SCB_ICSR_PENDSVSET_Msk; // PENDSVSET
     }
 
     static void PendSV_Handler();
     static void SVC_Handler(uint32_t * svc_args);
-    // do context switch after return from interrupt
-    static void context_switch_isr();
 
+#ifdef PREEMPTIVE
     static volatile bool need_io_completion;
     static volatile bool need_switch_task;   // should be public
+#endif
 //}
 
 
@@ -363,6 +446,9 @@ public:
         
     static inline void setEmergencyHandler(voidFuncPtr handler) { boardEmergencyHandler = handler; }
 
+#ifndef PREEMPTIVE
+    static inline void i_know_new_api() { new_api_flag=true; }
+#endif
 
 #ifdef MPU_DEBUG
     static inline void MPU_buffer_overflow(){ MPU_overflow_cnt++; } 
@@ -414,7 +500,7 @@ protected:
 //} end of multitask
     
 private:
-    static AP_HAL::Device::PeriodicHandle _register_timer_task(uint32_t period_us, Handler proc, REVOMINI::Semaphore *sem);
+    static AP_HAL::Device::PeriodicHandle _register_timer_task(uint32_t period_us, uint64_t proc, REVOMINI::Semaphore *sem, revo_cb_type mode=CB_MEMBERPROC);
 
     static volatile bool _in_timer_proc;
 
@@ -443,6 +529,14 @@ private:
     static Revo_IO _io_proc[REVOMINI_SCHEDULER_MAX_IO_PROCS];
     static uint8_t _num_io_proc;
 
+#if USE_ISR_SCHED
+    static revo_timer _timers[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS];
+    static uint8_t    _num_timers;
+    static void _run_timers(void);
+    
+    static revo_tick _ticks[REVOMINI_SCHEDULER_MAX_SHEDULED_PROCS];
+    static uint8_t   _num_ticks;
+#endif
     static void _run_io(void);
 
     void _print_stats();
@@ -457,7 +551,7 @@ private:
     static uint64_t delay_int_time;
     static uint32_t max_loop_time;
     
-    void _set_10s_flag();
+    bool _set_10s_flag();
     static uint64_t ioc_time;
     static uint64_t sleep_time;
     static uint32_t max_delay_err;
@@ -500,6 +594,9 @@ private:
     static uint8_t num_io_completion;
     static bool _in_io_proc;
 
+#ifndef PREEMPTIVE
+    static bool new_api_flag;
+#endif
 
 #ifdef MPU_DEBUG
     static uint32_t MPU_overflow_cnt;

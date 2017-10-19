@@ -249,8 +249,9 @@ uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uin
     /*!< While the bus is busy */
     t = hal_micros();
     while ((dev->I2Cx->SR2 & (I2C_FLAG_BUSY>>16) & FLAG_MASK) != 0) {
-	if (hal_micros() - t > I2C_TIMEOUT)
+	if (hal_micros() - t > I2C_TIMEOUT){
 	    return state; // 2 - bus busy
+	}
 	
 	I2C_Yield(0); 
     }
@@ -285,6 +286,8 @@ uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uin
         }
 	if (hal_micros() - t > I2C_TIMEOUT)
 	    return state; // 3 - failed to start
+
+	I2C_Yield(0); 
     }
 
 

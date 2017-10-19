@@ -669,7 +669,10 @@ static U16 VCP_DataRx(U8 *buffer, U32 nbytes)
 
 void OTG_FS_IRQHandler(void)
 {
+    uint32_t t=hal_micros();
     USBD_OTG_ISR_Handler(&USB_OTG_dev);
+    
+    hal_isr_time(hal_micros() - t);
 }
 
 

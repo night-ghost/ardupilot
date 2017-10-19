@@ -20,15 +20,17 @@ uint64_t Semaphore::sem_time=0;
 Semaphore::Semaphore()
     : _taken(false)
     , _task(NULL)
-    , _weak(false)
+    , _is_waiting(false)
 {}
 
 
 bool Semaphore::give() {
+#if 0
     if (REVOMINIScheduler::in_interrupt()) { // this should not happens
         return svc_give();
     }
-    return _give();
+#endif
+    return _give(); // call to semafores from interrupt will cause HardFault
 }
 
 bool Semaphore::take_nonblocking() {       
@@ -37,6 +39,7 @@ bool Semaphore::take_nonblocking() {
 
 
 bool Semaphore::take(uint32_t timeout_ms) {
+#if 0
     if (REVOMINIScheduler::in_interrupt()) { // this should not happens
         if(svc_take_nonblocking()) {
             return true; // all OK if we got
@@ -46,6 +49,7 @@ bool Semaphore::take(uint32_t timeout_ms) {
         _error=true; // remember that it was        
         return false; 
     }
+#endif
     return _take_from_mainloop(timeout_ms);
 }
 
@@ -70,10 +74,10 @@ bool NAKED Semaphore::_take_nonblocking() {
 // this functions called only at SVC level so serialized by hardware and don't needs to disable interrupts
 
 bool Semaphore::svc_give() {
+    _is_waiting=false;
     if (_taken) {
         _taken = false;
         _task = NULL;
-        if(!_weak)  REVOMINIScheduler::task_has_semaphore(false); 
         return true;
     }
     return false;
@@ -83,13 +87,13 @@ bool Semaphore::svc_take_nonblocking() {
     void *me = REVOMINIScheduler::get_current_task();
     if (!_taken) {
         _taken = true;
-        _task = me; // remember task which owns semaphore 
-        if(!_weak)  REVOMINIScheduler::task_has_semaphore(true); 
+        _task = me;     // remember task which owns semaphore 
         return true;
     }
     if(_task == me){     // the current task already owns this semaphore
         return true; 
     }
+    _is_waiting=true;
     REVOMINIScheduler::task_want_semaphore(_task, NULL, 0); 
     return false;
 }
@@ -99,12 +103,12 @@ bool Semaphore::svc_take(uint32_t timeout_ms) {
     if (!_taken) {
         _taken = true;
         _task = me; // remember task which owns semaphore 
-        if(!_weak)  REVOMINIScheduler::task_has_semaphore(true); 
         return true;
     }
     if(_task == me){     // the current task already owns this semaphore
         return true; 
     }
+    _is_waiting=true;
     REVOMINIScheduler::task_want_semaphore(_task, this, timeout_ms); 
     return false;
 }

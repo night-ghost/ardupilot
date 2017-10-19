@@ -253,7 +253,7 @@ extern const AP_HAL::HAL& hal;
 
 #define MPU_SAMPLE_SIZE 14
 #define MPU_FIFO_DOWNSAMPLE_COUNT 8
-#define MPU_FIFO_BUFFER_LEN 200// ms of samples
+#define MPU_FIFO_BUFFER_LEN 64// ms of samples
 
 #define int16_val(v, idx) ((int16_t)(((uint16_t)v[2*idx] << 8) | v[2*idx+1]))
 #define uint16_val(v, idx)(((uint16_t)v[2*idx] << 8) | v[2*idx+1])
@@ -263,6 +263,11 @@ extern const AP_HAL::HAL& hal;
  *  gyro as 16.4 LSB/DPS at scale factor of +/- 2000dps (FS_SEL==3)
  */
 static const float GYRO_SCALE = (0.0174532f / 16.4f);
+
+#ifdef MPU_DEBUG_LOG
+    mpu_log_item AP_InertialSensor_Revo::mpu_log[MPU_LOG_SIZE] IN_CCM;
+    uint16_t AP_InertialSensor_Revo::mpu_log_ptr=0;
+#endif
 
 /*
  *  RM-MPU-6000A-00.pdf, page 31, section 4.23 lists LSB sensitivity of
@@ -487,8 +492,9 @@ void AP_InertialSensor_Revo::start()
 
     _register_read(MPUREG_INT_STATUS); // reset interrupt request
 
-    task_handle = REVOMINIScheduler::register_timer_task(1000, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL); // period just for case, task will be activated by request
-    REVOMINIScheduler::set_task_priority(task_handle,93); // 1 more than other drivers
+                                                        // some longer than MPU period
+    task_handle = REVOMINIScheduler::register_timer_task(1010, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void), NULL); // period just for case, task will be activated by request
+//    REVOMINIScheduler::set_task_priority(task_handle, DRIVER_PRIORITY); // like other drivers
 }
 
 
@@ -540,8 +546,8 @@ void AP_InertialSensor_Revo::_isr(){
 }
 
 void AP_InertialSensor_Revo::_ioc(){ // io completion ISR, data already in its place
-    uint16_t old_wp = write_ptr;
-    if(write_ptr++ >= MPU_FIFO_BUFFER_LEN) { // move write pointer
+    uint16_t old_wp = write_ptr++;
+    if(write_ptr >= MPU_FIFO_BUFFER_LEN) { // move write pointer
         write_ptr=0;                         // ring
     }
     if(write_ptr == read_ptr) { // buffer overflow
@@ -556,13 +562,11 @@ void AP_InertialSensor_Revo::_ioc(){ // io completion ISR, data already in its p
 //    _dev->get_semaphore()->give();            // release
 
 
-#ifdef PREEMPTIVE
-    REVOMINIScheduler::set_task_active(task_handle); // resume task instead of using period. 
-#else
-// schedule data parsing to next timer's tick
-    REVOMINIScheduler::do_at_next_tick(REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)), (REVOMINI::Semaphore *)_sem);    
-#endif    
+    if(REVOMINIScheduler::get_current_task() != (void *)task_handle) {
+        REVOMINIScheduler::set_task_active(task_handle); // resume task instead of using period. 
 
+        REVOMINIScheduler::context_switch_isr(); // and reschedule tasks after interrupt
+    }
 }
 
 /*
@@ -707,11 +711,22 @@ bool AP_InertialSensor_Revo::_accumulate_fast_sampling(uint8_t *samples, uint8_t
     return ret;
 }
 
+
 #define MAX_NODATA_TIME 5000 // 5ms
 
 void AP_InertialSensor_Revo::_read_fifo()
 {
     uint32_t now=REVOMINIScheduler::_micros();
+
+#ifdef MPU_DEBUG_LOG
+    uint16_t old_log_ptr=mpu_log_ptr;
+    mpu_log_item & p = mpu_log[mpu_log_ptr++];
+    if(mpu_log_ptr>=MPU_LOG_SIZE) mpu_log_ptr=0;
+    p.t=now;
+    p.read_ptr=read_ptr;
+    p.write_ptr=write_ptr;
+#endif
+    
     if(read_ptr == write_ptr) {
         if(_data_ready()){ // no interrupt for some reason?
             _isr();
@@ -728,7 +743,7 @@ void AP_InertialSensor_Revo::_read_fifo()
 
     last_sample=now;
 
-    uint32_t t     = REVOMINIScheduler::_micros();
+    uint32_t t     = now;
     uint16_t count = 0;
     uint32_t dt    = 0;
     
@@ -753,16 +768,15 @@ void AP_InertialSensor_Revo::_read_fifo()
             }
         }
         count++;
-#ifndef PREEMPTIVE
-        if(count>=4) { // not more than 4 points at a time, all another next time
-            REVOMINIScheduler::do_at_next_tick(REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_poll_data, void)), (REVOMINI::Semaphore *)_sem);    
-            break;
-        }
-#endif
     }
     now = REVOMINIScheduler::_micros();
     last_sample=now;
 
+#ifdef MPU_DEBUG_LOG
+    if(count==1) {
+        mpu_log_ptr = old_log_ptr;
+    }
+#endif
 #ifdef MPU_DEBUG
     dt= now - t;// time from entry
     REVOMINIScheduler::MPU_stats(count,dt);

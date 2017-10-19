@@ -39,7 +39,6 @@ public:
     };
 
     FUNCTOR_TYPEDEF(PeriodicCb, void);
-    FUNCTOR_TYPEDEF(PeriodicCbBool, bool);
     typedef void* PeriodicHandle;
 
     Device(enum BusType type)

@@ -112,6 +112,7 @@
 * all work with semaphores moved out to the same ISR level so serialized by hardware and don't requires disabling interrupts
 * added parameter RC_FS to enable all RC failsafe
 * added disabling of data cache on flash write, just for case (upstream has this update too)
+* added a way to schedule context switch from ISR, eg. at data receive
 * ...
 * a lot of minor enhancements
 
@@ -134,14 +135,14 @@ interrupts priorities:
 4 uart
 5 gpio pin
 6
-7 
-8
+7 OSD VSI
+8 
 9 dma IO complete
-a tail timer
+a 
 b usb
 c 
-d svc
-e scheduler - Timer7
+d 
+e scheduler - Timer7, tail timer, svc
 f Pend_Sw io_completion
 
 Timer usage:
@@ -158,6 +159,9 @@ Timer usage:
 10 soft_i2c2
 11 schedule tail timer
 12 PPM_IN
-13
+13 
 14
 
+
+stacks:
+main 0x1000FC00 revoMini uses up to f600 so uses only 0x600 bytes

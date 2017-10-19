@@ -96,19 +96,13 @@ public:
     bool transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t len) override;
 
     /* See AP_HAL::Device::get_semaphore() */
-    inline REVOMINI::Semaphore *get_semaphore() { uint8_t n = _desc.bus - 1; if(n<MAX_BUS_NUM) {_semaphores[n].set_weak(true); return &_semaphores[n];} else return NULL; } // numbers from 1
+    inline REVOMINI::Semaphore *get_semaphore() { uint8_t n = _desc.bus - 1; if(n<MAX_BUS_NUM) { return &_semaphores[n];} else return NULL; } // numbers from 1
 
     /* See AP_HAL::Device::register_periodic_callback() */
     inline AP_HAL::Device::PeriodicHandle register_periodic_callback(uint32_t period_usec, AP_HAL::Device::PeriodicCb proc) override
     {
         return REVOMINIScheduler::register_timer_task(period_usec, proc, get_semaphore() );
     }
-
-    inline AP_HAL::Device::PeriodicHandle register_periodic_callback( uint32_t period_usec, PeriodicCbBool proc)
-    {
-        return REVOMINIScheduler::register_timer_task(period_usec, proc, get_semaphore() );
-    }
-
 
     inline bool adjust_periodic_callback(AP_HAL::Device::PeriodicHandle h, uint32_t period_usec) override
     {

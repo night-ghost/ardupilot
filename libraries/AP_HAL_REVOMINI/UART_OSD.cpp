@@ -33,14 +33,6 @@ UART_OSD::UART_OSD():
 void UART_OSD::begin(uint32_t baud) {
 
     OSDns::osd_begin(REVOMINI::SPIDeviceManager::_get_device(BOARD_OSD_NAME));
-
-    void * task = REVOMINIScheduler::start_task(OSDns::osd_loop, SMALL_TASK_STACK); // 
-#ifndef PREEMPTIVE
-    REVOMINIScheduler::set_task_ttw(task, 10000); // 100Hz
-#else
-    REVOMINIScheduler::set_task_period(task, 20000); // 50Hz
-    REVOMINIScheduler::set_task_priority(task, 101); // 1 less than main task
-#endif
     _initialized = true;
 }
 
@@ -48,16 +40,11 @@ void UART_OSD::begin(uint32_t baud) {
 /* REVOMINI implementations of Stream virtual methods */
 
 uint32_t UART_OSD::available() {
-    uint16_t v=OSDns::osd_available(); 
-#ifndef PREEMPTIVE
-    if(!v) REVOMINIScheduler::yield(); // если нет данных то переключим задачу насильно, все равно делать нечего
-#endif
-    return v;
+    return OSDns::osd_available(); 
 }
 
 int16_t UART_OSD::read() {
-    if (available() <= 0)
-        return -1;
+    if (available() <= 0) return -1;
     return OSDns::osd_getc();
 }
 
@@ -82,4 +69,3 @@ size_t UART_OSD::write(const uint8_t *buffer, size_t size)
 }
 
 #endif // CONFIG_HAL_BOARD
-
