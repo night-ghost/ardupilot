@@ -33,16 +33,16 @@ void PPM_parser::init(uint8_t ch){
     last_pulse = {0,0};
 
     _ioc = REVOMINIScheduler::register_io_completion(FUNCTOR_BIND_MEMBER(&PPM_parser::parse_pulses, void));
-    
+    // TODO Panic on IOC not allocated
+
+    // callback is called on each edge so must be as fast as possible
     Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&PPM_parser::start_ioc, void) };
     pwm_setHandler(h.h, _ch-1);
 }
 
 
-void PPM_parser::start_ioc(void){
-    if(_ioc) {
-        REVOMINIScheduler::do_io_completion(_ioc);
-    }
+void PPM_parser::start_ioc(void){ 
+    REVOMINIScheduler::do_io_completion(_ioc);
 }
 
 void PPM_parser::parse_pulses(void){

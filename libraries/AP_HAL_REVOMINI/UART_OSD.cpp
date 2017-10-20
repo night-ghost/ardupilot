@@ -31,6 +31,7 @@ UART_OSD::UART_OSD():
 }
 
 void UART_OSD::begin(uint32_t baud) {
+    if(_initialized) return;
 
     OSDns::osd_begin(REVOMINI::SPIDeviceManager::_get_device(BOARD_OSD_NAME));
     _initialized = true;

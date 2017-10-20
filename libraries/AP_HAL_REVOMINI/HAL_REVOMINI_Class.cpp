@@ -221,6 +221,10 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
 #endif
 
 
+#if defined(BOARD_OSD_NAME)
+    uartF->begin(57600); // init OSD before call to lateInit()
+#endif
+
     callbacks->setup();
 
 #if 0 //[ here is too late :( so we need a small hack and call lateInit from REVOMINIScheduler::register_delay_callback 
@@ -229,7 +233,10 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
     lateInit();
 #endif //]
 
+    
     scheduler->system_initialized(); // clear bootloader flag
+
+    REVOMINIScheduler::start_stats_task(); 
 
 // main application loop hosted here!
     for (;;) {
@@ -273,10 +280,6 @@ static void getSerialLine(char *cp ){      // получение строки
 static bool lateInitDone=false;
 
 
-void usb_mass_mal_USBdisconnect(){ 
-    HAL_REVOMINI::state.sd_busy=false;
-
-}
 
 void HAL_REVOMINI::lateInit() {
     
@@ -472,6 +475,7 @@ done:
 #endif
 
     REVOMINIRCOutput::lateInit(); // 2nd stage - now with loaded parameters
+
     // all another parameter-dependent inits
 
 #ifdef BOARD_I2C_FLEXI
@@ -492,12 +496,14 @@ done:
     REVOMINIRCInput::late_init(flags);
 }
 
-
+// 57600 gives ~6500 chars per second or 6 chars per ms
 void HAL_REVOMINI::connect_uart(AP_HAL::UARTDriver* uartL,AP_HAL::UARTDriver* uartR, AP_HAL::Proc proc){
     while(1){
-        if(uartL->available()) uartR->write(uartL->read());
-        if(uartR->available()) uartL->write(uartR->read());
+        bool got=false;
+        if(uartL->available()) { uartR->write(uartL->read()); got=true; }
+        if(uartR->available()) { uartL->write(uartR->read()); got=true; }
         if(proc) proc();
+        if(!got) REVOMINIScheduler::yield(300); // give a chance to other threads
         if(state.disconnect) break;
     }
 }
@@ -507,5 +513,12 @@ const AP_HAL::HAL& AP_HAL::get_HAL() {
     return hal_revo;
 }
 
+
+extern "C" void usb_mass_mal_USBdisconnect();
+
+void usb_mass_mal_USBdisconnect(){ 
+    HAL_REVOMINI::state.sd_busy=false;
+
+}
 
 #endif

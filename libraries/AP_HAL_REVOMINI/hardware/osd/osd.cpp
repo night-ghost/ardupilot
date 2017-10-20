@@ -42,6 +42,8 @@ OSD osd; //OSD object
 #include "osd_core/Panels.h"
 
 
+// TODO: чтение конфига и еепром с карты памяти, чтобы закинуть .mcm и .osd и все       
+
 
 static ring_buffer osd_rxrb IN_CCM;
 static uint8_t osd_rx_buf[OSD_RX_BUF_SIZE] IN_CCM;
@@ -123,7 +125,7 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
     REVOMINIGPIO::_attach_interrupt(BOARD_OSD_VSYNC_PIN, h.h, RISING, 7);
 #endif
 
-    void * task_handle = REVOMINIScheduler::start_task(OSDns::osd_loop, SMALL_TASK_STACK); // 
+    task_handle = REVOMINIScheduler::start_task(OSDns::osd_loop, SMALL_TASK_STACK); // 
     REVOMINIScheduler::set_task_priority(task_handle, OSD_LOW_PRIORITY); // less than main task
     REVOMINIScheduler::set_task_period(task_handle, 10000);              // 100Hz 
 
@@ -143,6 +145,8 @@ void osd_loop() {
 
     seconds = pt / 1000;
 
+    osd_dequeue(); // we MUST parse input even in case  of bad config because it is the only way to communicate
+
     if(pt < BOOTTIME || lflags.bad_config){ // startup delay for fonts or EEPROM error
             logo();
             return;
@@ -157,7 +161,6 @@ void osd_loop() {
         lflags.mav_request_done=1;
     }
 #endif
-    osd_dequeue();
 
     if(lflags.got_data){ // были свежие данные - обработать
 
@@ -288,6 +291,7 @@ int16_t osd_available(){
 }
 
 void osd_queue(uint8_t c) {    // push bytes around in the ring buffer
+    while(rb_is_full(&osd_rxrb)) hal_yield(100);
     rb_push_insert(&osd_rxrb, c);
 }
 
@@ -298,17 +302,21 @@ int16_t osd_getc(){ // get char from ring buffer
 
 
 void osd_putc(uint8_t c){
+    while(rb_is_full(&osd_txrb)) hal_yield(100);
     rb_push_insert(&osd_txrb, c);
 }
 
 void osd_dequeue() {
+    REVOMINIScheduler::set_task_priority(task_handle, 100); // equal to main to not overflow buffers on packet decode
 
-    while(rb_full_count(&osd_txrb)) {
+    while(!rb_is_empty(&osd_txrb)) {
         extern bool mavlink_one_byte(char c);
         char c = rb_remove(&osd_txrb);
     
         if(mavlink_one_byte(c)) lflags.got_data=true;
     }
+    REVOMINIScheduler::set_task_priority(task_handle, OSD_LOW_PRIORITY); // restore priority to low
+
 }
 
 

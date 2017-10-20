@@ -50,7 +50,6 @@ void SBUS_parser::init(uint8_t ch){
                         &sbus_failsafe, &sbus_frame_drop,
                         REVOMINI_RC_INPUT_NUM_CHANNELS);
 #endif
-    
 }
 
 
@@ -58,7 +57,7 @@ void SBUS_parser::late_init(uint8_t b){
     if(b & BOARD_SBUS_UART1) {
 #ifdef BOARD_SBUS_INVERTER
         REVOMINIGPIO::_pinMode(BOARD_SBUS_INVERTER, OUTPUT);
-        REVOMINIGPIO::_write(  BOARD_SBUS_INVERTER, HIGH);
+        REVOMINIGPIO::_write(  BOARD_SBUS_INVERTER, HIGH); // do inverse
 #endif
         // initialize SBUS UART
         uartSDriver.end();
@@ -66,7 +65,6 @@ void SBUS_parser::late_init(uint8_t b){
         Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&SBUS_parser::add_uart_input, void) };
         uartSDriver.setCallback(h.h);
     }
-
 }
 
 

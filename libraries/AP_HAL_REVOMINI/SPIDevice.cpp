@@ -154,7 +154,6 @@ uint8_t SPIDevice::_transfer(uint8_t data) {
 
 
 
-
 bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, uint32_t recv_len){
     
     uint8_t ret=0;

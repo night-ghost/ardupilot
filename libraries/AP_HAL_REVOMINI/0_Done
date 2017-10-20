@@ -140,10 +140,10 @@ interrupts priorities:
 9 dma IO complete
 a 
 b usb
-c 
+c driver's io_completion
 d 
 e scheduler - Timer7, tail timer, svc
-f Pend_Sw io_completion
+f Pend_Sw 
 
 Timer usage:
 
@@ -159,7 +159,7 @@ Timer usage:
 10 soft_i2c2
 11 schedule tail timer
 12 PPM_IN
-13 
+13 driver's io_completion
 14
 
 

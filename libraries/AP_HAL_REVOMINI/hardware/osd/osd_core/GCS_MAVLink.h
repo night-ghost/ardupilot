@@ -10,6 +10,7 @@
 
 
 #define MAVLINK_COMM_NUM_CHANNELS 1
+#define MAVLINK_CRC_EXTRA 1
 
 #include "include/mavlink/v2.0/ardupilotmega/version.h"
 

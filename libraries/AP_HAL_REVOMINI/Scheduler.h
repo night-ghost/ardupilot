@@ -89,7 +89,7 @@ extern "C" {
     void PendSV_Handler();
     void SVC_Handler();
     void getNextTask();
-    
+
     void switchContext();
     void __do_context_switch();
 
@@ -334,16 +334,18 @@ public:
     static inline void do_io_completion(uint8_t id){ // schedule selected IO completion
         if(id) { 
             io_completion[id-1].request = true;
-            need_io_completion = true;
-            //timer_generate_update(TIMER13);
-        } else {
-            need_switch_task = true; // require context switch
-        }
-        SCB->ICSR = SCB_ICSR_PENDSVSET_Msk; // PENDSVSET
+            timer_generate_update(TIMER13);
+        } 
     }
 
-    static void PendSV_Handler();
+    static inline void plan_context_switch(){
+        need_switch_task = true; // require context switch
+        SCB->ICSR = SCB_ICSR_PENDSVSET_Msk; // PENDSVSET    
+    }
+
+    static void exec_io_completion();
     static void SVC_Handler(uint32_t * svc_args);
+
     // do context switch after return from interrupt
     static void context_switch_isr();
 
@@ -378,6 +380,8 @@ public:
     static inline void arming_state_changed(bool v){ if(!v && on_disarm_handler) revo_call_handler(on_disarm_handler, 0); }
     static inline void register_on_disarm(Handler h){ on_disarm_handler=h; }
 
+    static void start_stats_task(); // it interferes with CONNECT_COM and CONNECT_ESC so should be started last
+    
 protected:
 
 //{ multitask
@@ -428,6 +432,7 @@ private:
     static void _timer_isr_event(uint32_t v /*TIM_TypeDef *tim */);
     static void _timer5_ovf(uint32_t v /*TIM_TypeDef *tim */ );
     static void _tail_timer_event(uint32_t v /*TIM_TypeDef *tim */);
+    static void _ioc_timer_event(uint32_t v /*TIM_TypeDef *tim */);
     
     static void _run_timer_procs(bool called_from_isr);
 
@@ -445,7 +450,7 @@ private:
 
     static void _run_io(void);
 
-    void _print_stats();
+    static void _print_stats();
     void stats_proc(void);
     
 #ifdef SHED_PROF
@@ -457,7 +462,7 @@ private:
     static uint64_t delay_int_time;
     static uint32_t max_loop_time;
     
-    void _set_10s_flag();
+    static void _set_10s_flag();
     static uint64_t ioc_time;
     static uint64_t sleep_time;
     static uint32_t max_delay_err;

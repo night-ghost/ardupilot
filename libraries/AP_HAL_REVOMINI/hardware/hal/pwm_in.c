@@ -147,7 +147,7 @@ struct PPM_State  {
 	        }
 	        TIM_ICInit(channel->tim, &TIM_ICInitStructure);
                 
-                if(input->handler) revo_call_handler(input->handler, 0);
+                if(input->handler) revo_call_handler(input->handler, 0); // call callback on each edge
 	    }
 	}
 }

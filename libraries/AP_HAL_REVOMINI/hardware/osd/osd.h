@@ -4,7 +4,7 @@
 
 #ifdef BOARD_OSD_CS_PIN
 
-#define OSD_RX_BUF_SIZE 128
+#define OSD_RX_BUF_SIZE 256
 #define OSD_TX_BUF_SIZE 256
 
 #include <AP_HAL_REVOMINI/AP_HAL_REVOMINI.h>

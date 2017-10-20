@@ -15,6 +15,8 @@ using namespace REVOMINI;
 
 namespace AP_HAL {
 
+void cond_yield();
+
 void init() // early init on creation of HAL class
 {
 }
@@ -33,32 +35,32 @@ void panic(const char *errormsg, ...)
     va_end(ap);
     hal.console->printf("\n");
 
-
-    if(is_bare_metal())  // bare metal build without bootloader should reboot to DFU after any fault
+    if(is_bare_metal()) { // bare metal build without bootloader should reboot to DFU after any fault
         board_set_rtc_register(DFU_RTC_SIGNATURE, RTC_SIGNATURE_REG);
+    }
 
     error_throb(0);
 }
 
-uint32_t millis()
-{
+void cond_yield(){
     static uint32_t last_yield=0;
     uint32_t t=REVOMINIScheduler::_millis();
     if(t-last_yield>50) {
         REVOMINIScheduler::yield(0);
         last_yield=t;
     }
+}
+
+
+uint32_t millis()
+{
+    cond_yield();
     return REVOMINIScheduler::_millis();
 }
 
+
 uint64_t millis64(){
-    
-    static uint32_t last_yield=0;
-    uint32_t t=REVOMINIScheduler::_millis();
-    if(t-last_yield>50) {
-        REVOMINIScheduler::yield(0);
-        last_yield=t;
-    }
+    cond_yield();
     return REVOMINIScheduler::_millis64();
 }
 
@@ -91,18 +93,6 @@ void yield(uint32_t us){
 
 } // namespace AP_HAL
 
-
-
-/*
-int printf(const char *msg, ...){
-    va_list ap;
-
-    va_start(ap, msg);
-    hal.console->vprintf(msg, ap);
-    va_end(ap);
-    return 1;
-}
-*/
 
 // export console IO to low-level functions
 // so any printf will go to console, not to /dev/null

@@ -108,12 +108,12 @@ uint32_t REVOMINIScheduler::max_stack_pc IN_CCM ;
 bool REVOMINIScheduler::disable_stack_check=false;
 
 bool REVOMINIScheduler::_in_io_proc IN_CCM =0;
+#ifdef MPU_DEBUG
 uint32_t REVOMINIScheduler::MPU_overflow_cnt IN_CCM;
 uint32_t REVOMINIScheduler::MPU_restart_cnt IN_CCM;
 uint32_t REVOMINIScheduler::MPU_count IN_CCM;
 uint32_t REVOMINIScheduler::MPU_Time IN_CCM;
-
-volatile bool REVOMINIScheduler::need_io_completion IN_CCM;
+#endif
 volatile bool REVOMINIScheduler::need_switch_task IN_CCM;
 
 REVOMINIScheduler::REVOMINIScheduler()
@@ -215,27 +215,31 @@ void REVOMINIScheduler::init()
         TIMER11->regs->CR1 &= ~(TIMER_CR1_ARPE | TIMER_CR1_URS); // not buffered preload, interrupt by overflow or by UG set
     }
 
-/*
+
     { // timer to generate interrupt for driver's IO_Completion
                 // dev    period   freq, kHz
         configTimeBase(TIMER13, 0, 1000);       //1MHz 1us ticks
-        Revo_handler h = { .isr = PendSV_Handler };
+        Revo_handler h = { .isr = _ioc_timer_event };
         timer_attach_interrupt(TIMER13, TIMER_UPDATE_INTERRUPT, h.h , 0xC); // priority 12
         TIMER13->regs->CR1 &= ~(TIMER_CR1_ARPE | TIMER_CR1_URS); // not buffered preload, interrupt by overflow or by UG set
     }
 
-*/
     void *task = _start_task((uint32_t)idle_task, 256); // only for one context
     set_task_priority(task, 255); // lowest possible, to fill delay()
     _idle_task=(task_t *)task;
     set_task_active(task); // tasks without period are created paused so run it
     
+
+
+}
+
+void REVOMINIScheduler::start_stats_task(){
 #ifdef DEBUG_BUILD
 // show stats output each 10 seconds
-    task = register_timer_task(10000000, FUNCTOR_BIND_MEMBER(&REVOMINIScheduler::_set_10s_flag, void), NULL);
+    Revo_handler h = { .vp = _set_10s_flag };
+    void *task = _register_timer_task(10000000, h.h, NULL);
     set_task_priority(task, 100); // like main task has
 #endif
-
 
 }
 
@@ -504,7 +508,7 @@ void REVOMINIScheduler::_timer_isr_event(uint32_t v  /* TIM_TypeDef *tim */) {
         s_running->sw_type=0;
         tsched_sw_count++;
 #endif
-        do_io_completion(0);     // plan context switch
+        plan_context_switch();     // plan context switch
     }
 }
 
@@ -598,7 +602,7 @@ void REVOMINIScheduler::_print_stats(){
             else              shed_eff = shed_eff*(1 - 1/Kf) + eff*(1/Kf);
 
             printf("\nSched stats:\n  %% of full time: %5.2f  Efficiency %5.3f max loop time %ld\n", (task_time/10.0)/t /* in percent*/ , shed_eff, max_loop_time);
-            printf("delay times: in main %5.2f including in semaphore %5.2f  in timer %5.2f",         (delay_time/10.0)/t, (Semaphore::sem_time/10.0)/t,  (delay_int_time/10.0)/t);
+            printf("delay times: in main %5.2f including in timer %5.2f",         (delay_time/10.0)/t, (delay_int_time/10.0)/t);
             max_loop_time=0;
 
 #ifdef ISR_PROF
@@ -871,7 +875,6 @@ void * NOINLINE REVOMINIScheduler::_start_task(Handler handle, size_t stackSize)
 
     // Adjust stack size with size of task context
     stackSize += sizeof(task_t)+8; // for alignment
-    void * ret;
 
     // we don't need to use arrays because we will prepare context
     if (s_main.stack == NULL) {       // first call, initialize all task subsystem
@@ -928,7 +931,7 @@ static uint16_t next_log_ptr(uint16_t sched_log_ptr){
 task_t *REVOMINIScheduler::get_next_task(){
     task_t *me = s_running; // current task
     task_t *task=_idle_task; // task to switch to, idle_task by default
-    uint32_t loop_count=0;
+
     uint32_t timeFromLast=0;
     uint32_t remains = 0;
 
@@ -1120,7 +1123,7 @@ void REVOMINIScheduler::_tail_timer_event(uint32_t v /*TIM_TypeDef *tim */){
     if(next_task != s_running) { // if we should switch task
         s_running->sw_type=1;
         tsched_sw_count_t++;
-        do_io_completion(0);    // plan  context switch
+        plan_context_switch();    // plan context switch
     }
 #endif
 }
@@ -1172,7 +1175,7 @@ uint8_t REVOMINIScheduler::register_io_completion(Handler handler){
     return 0;
 }
 
-void REVOMINIScheduler::PendSV_Handler(){ // isr at lowest priority to do all IO completion routines
+void REVOMINIScheduler::_ioc_timer_event(uint32_t v){ // isr at low priority to do all IO completion routines
     bool do_it = false;
 
 #ifdef SHED_PROF
@@ -1220,16 +1223,7 @@ void REVOMINIScheduler::PendSV_Handler(){ // isr at lowest priority to do all IO
 
 
 void PendSV_Handler(){
-
-    if( REVOMINIScheduler::need_io_completion) {
-        REVOMINIScheduler::need_io_completion=false;
-        REVOMINIScheduler::PendSV_Handler();            // do all IO_completion jobs
-    }
-
-    if(!REVOMINIScheduler::need_switch_task) return;
     REVOMINIScheduler::need_switch_task=false;
-
-
     __do_context_switch();
 }
 
@@ -1249,16 +1243,17 @@ void SVC_Handler(){
 
 // svc executes on same priority as Timer7 ISR so there is no need to prevent interrupts
 void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
-    unsigned int svc_number;    
     //    * Stack contains:    * r0, r1, r2, r3, r12, r14, the return address and xPSR      
-    svc_number = ((char *)svc_args[6])[-2];    
-//    uint32_t r0=svc_args[0];          First argument (r0) is svc_args[0]
+    unsigned int svc_number = ((char *)svc_args[6])[-2];    
+
     bool ret;
     switch(svc_number)    {        
     case 0:            // Handle SVC 00 - yield()
 //        s_running->ttw=svc_args[0]; // we can do it in yield() itself
-        if(svc_args[0]){ // the task voluntarily gave up its quant and wants delay, so that at the end of the delay it will have the highest priority
+        if(s_running->ttw){ // the task voluntarily gave up its quant and wants delay, so that at the end of the delay it will have the highest priority
             s_running->curr_prio = s_running->priority - 6;
+        } else {
+            s_running->ttw=90; // skip one quant
         }
         switch_task();
         break;        
@@ -1314,7 +1309,7 @@ void REVOMINIScheduler::switch_task(){
         s_running->sw_type=2;
         tsched_sw_count_y++;
 #endif
-        do_io_completion(0);   // plan context switch
+        plan_context_switch();   // plan context switch
     }
 
 }
