@@ -156,7 +156,7 @@ uint8_t SPIDevice::_transfer(uint8_t data) {
 
 bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, uint32_t recv_len){
     
-    uint8_t ret=0;
+    uint8_t ret=1;
     bool was_dma=false;
 
 // differrent devices on bus requires different modes
@@ -166,7 +166,7 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
     
     if(!_initialized){
         init();
-        if(!_initialized) return false;
+        if(!_initialized) goto done;
         owner[_desc.bus-1] = this; // Got it!
     }
 
@@ -219,7 +219,7 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
     
         uint32_t t = hal_micros();
         while(_desc.dev->state->busy){ //       wait for previous transfer finished
-            if(hal_micros() - t > 1000) return false;
+            if(hal_micros() - t > 2000) break; // SPI transfer can't be so long so let grab the bus
             hal_yield(0);
         }
         
@@ -302,7 +302,7 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
     if(spi_trans_ptr>=SPI_LOG_SIZE) spi_trans_ptr=0;
 #endif
 
-
+done:
     if(was_dma){    
         // nothing to do - all in ISR
     } else {
@@ -564,11 +564,11 @@ void SPIDevice::isr(){
     dma_clear_isr_bits(dp.stream_rx); dma_clear_isr_bits(dp.stream_tx);
 
     _cs_release(); // free bus
+    _desc.dev->state->busy=false; // reset 
 
     if(_desc.dev->state->len) {
         memmove(_desc.dev->state->dst, &buffer[_desc.bus-1][0], _desc.dev->state->len);
     }
-    _desc.dev->state->busy=false; // reset 
 
     if(_completion_cb) {
         revo_call_handler(_completion_cb, (uint32_t)&_desc);

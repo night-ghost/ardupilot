@@ -350,26 +350,17 @@ byte MAX_rw(byte b){
   return osd_spi->transfer(b);
 }
 
-// we don't need results of transfer so just release bus
-void ioc(){
-    osd_spi->register_completion_callback((Handler)0); // finished
-
-    max7456_off();
-
-}
-
 void update_max_buffer(const uint8_t *buffer, uint16_t len){
     max7456_on();
 
     MAX_write(MAX7456_DMAH_reg, 0);
     MAX_write(MAX7456_DMAL_reg, 0);
     MAX_write(MAX7456_DMM_reg, 1); // автоинкремент адреса
-
-    osd_spi->register_completion_callback(ioc); 
     
     // DMA
     osd_spi->transfer(buffer, len, NULL, 0);
-    // all another in ioc()
+
+    max7456_off();
 }
 
 

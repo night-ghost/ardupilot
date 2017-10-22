@@ -987,16 +987,16 @@ task_t *REVOMINIScheduler::get_next_task(){
         
         if(ptr->sem_wait) { // task want a semaphore
             if(ptr->sem_wait->is_taken()) { // task blocked on semaphore
-                if(ptr->sem_wait->get_owner() != ptr) { // owner is another task?
-                    if(ptr->sem_time != HAL_SEMAPHORE_BLOCK_FOREVER) { // is time to wait limited?
-                        uint32_t dt = now - ptr->sem_start_wait;   // time since start waiting
-                        if(dt < ptr->sem_time) {
-                            if(ptr->curr_prio>1) ptr->curr_prio--;      // increase priority as task waiting for a semaphore
-                            goto skip_task; 
-                        } else {
-                            ptr->sem_wait=NULL; // time to wait is over
-                        }
-                    } else goto skip_task;  // endless waiting
+                task_t *own =(task_t *)ptr->sem_wait->get_owner();
+                if(own != ptr) { // owner is another task?
+                    uint32_t dt = now - ptr->sem_start_wait;   // time since start waiting
+                    if(ptr->sem_time == HAL_SEMAPHORE_BLOCK_FOREVER || dt < ptr->sem_time) {
+                        if(ptr->curr_prio>1) ptr->curr_prio--;      // increase priority as task waiting for a semaphore
+                        own->curr_prio=ptr->curr_prio;
+                        goto skip_task; 
+                    } else {
+                        ptr->sem_wait=NULL; // time to wait is over
+                    }
                 } else  {
                     ptr->sem_wait=NULL; // task tries to get a semaphore that already owns, something wrong
                 }
