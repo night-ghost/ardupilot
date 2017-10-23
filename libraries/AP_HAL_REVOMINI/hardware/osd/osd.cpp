@@ -301,9 +301,13 @@ int16_t osd_getc(){ // get char from ring buffer
 }
 
 
-void osd_putc(uint8_t c){
-    while(rb_is_full(&osd_txrb)) hal_yield(100);
+void osd_putc(uint8_t c){ 
+    while(rb_is_full(&osd_txrb)) {
+        REVOMINIScheduler::set_task_priority(task_handle, 100); // equal to main to run in time of yield()
+        hal_yield(100);
+    }
     rb_push_insert(&osd_txrb, c);
+    REVOMINIScheduler::set_task_priority(task_handle, OSD_LOW_PRIORITY); // restore priority to low
 }
 
 void osd_dequeue() {
