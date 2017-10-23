@@ -537,16 +537,24 @@ uint8_t  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint3
     }
 
     // no callback - need to wait
-    uint16_t dly = btr * byte_time / 4; // time in 0.25uS
-    /* Wait until Receive Complete */
    
 #define MAX_SPI_TIME 900// in uS
 
+#if 0
+    _desc.dev->state->task = REVOMINIScheduler::get_current_task();
+    REVOMINIScheduler::task_pause(_desc.dev->state->task);
+    while ( (dma_get_isr_bits(dp.stream_rx) & DMA_FLAG_TCIF) == 0) { 
+        if(hal_micros()-t > MAX_SPI_TIME) return 1; // timeout
+    }
+#else
+    uint16_t dly = btr * byte_time / 4; // time in 0.25uS
+    /* Wait until Receive Complete */
     t=hal_micros();
     while ( (dma_get_isr_bits(dp.stream_rx) & DMA_FLAG_TCIF) == 0) { 
         if(hal_micros()-t > MAX_SPI_TIME) return 1; // timeout
         if(dly!=0)   hal_yield(dly); // пока ждем пусть другие работают. 
     }
+#endif
 
     isr();  //  disable DMA 
     return 0; // OK
@@ -574,6 +582,12 @@ void SPIDevice::isr(){
         revo_call_handler(_completion_cb, (uint32_t)&_desc);
         _completion_cb=0; // only once
     }
+#if 0
+    if(_desc.dev->state->task){ // resume paused task
+        REVOMINIScheduler::set_task_active(_desc.dev->state->task);
+        _desc.dev->state->task=null;
+    }
+#endif
 }
 
 

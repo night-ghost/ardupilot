@@ -39,7 +39,16 @@ bool Semaphore::take_nonblocking() {
 }
 
 bool Semaphore::take(uint32_t timeout_ms) {
-    return _take_from_mainloop(timeout_ms);
+    // task switching can be asyncronous but we can't return to caller
+    uint32_t now=REVOMINIScheduler::_micros();
+    uint32_t dt = timeout_ms*1000;
+    bool ret;
+    do {
+        ret = _take_from_mainloop(timeout_ms);
+        if(ret) break;
+    }while(REVOMINIScheduler::_micros()-now <dt || timeout_ms==HAL_SEMAPHORE_BLOCK_FOREVER);
+    
+    return ret;
 }
 
 
@@ -85,7 +94,6 @@ bool Semaphore::svc_take_nonblocking() {
         return true; 
     }
     _is_waiting=true;
-    REVOMINIScheduler::task_want_semaphore(_task, NULL, 0); 
     return false;
 }
 
@@ -100,6 +108,5 @@ bool Semaphore::svc_take(uint32_t timeout_ms) {
         return true; 
     }
     _is_waiting=true;
-    REVOMINIScheduler::task_want_semaphore(_task, this, timeout_ms); 
     return false;
 }

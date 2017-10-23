@@ -82,10 +82,12 @@ static inline void rb_init(ring_buffer *rb, uint16_t size, uint8_t *buf) {
  * @param rb Buffer whose elements to count.
  */
 static inline uint16_t rb_full_count(ring_buffer *rb) {
-    __IO ring_buffer *arb = rb;
-    int32_t size = arb->tail - arb->head;
-    if (arb->tail < arb->head) {
-        size += arb->size + 1;
+    uint16_t t=rb->tail;
+    uint16_t h=rb->head;
+    
+    int32_t size = t - h;
+    if (t < h) {
+        size += rb->size + 1;
     }
     return (uint16_t)size;
 }
@@ -95,8 +97,9 @@ static inline uint16_t rb_full_count(ring_buffer *rb) {
  * @param rb Buffer to test.
  */
 static inline int rb_is_full(ring_buffer *rb) {
-    return (rb->tail + 1 == rb->head) ||
-        (rb->tail == rb->size && rb->head == 0);
+    uint16_t t=rb->tail;
+    uint16_t h=rb->head;
+    return (t + 1 == h || (t == rb->size && h == 0) );
 }
 
 /**
@@ -113,8 +116,9 @@ static inline int rb_is_empty(ring_buffer *rb) {
  * @param element Value to append.
  */
 static inline void rb_insert(ring_buffer *rb, uint8_t element) {
-    rb->buf[rb->tail] = element;
-    rb->tail = (rb->tail == rb->size) ? 0 : rb->tail + 1;
+    uint16_t t=rb->tail;
+    rb->buf[t] = element;
+    rb->tail = (t == rb->size) ? 0 : t + 1;
 }
 
 /**
@@ -122,8 +126,9 @@ static inline void rb_insert(ring_buffer *rb, uint8_t element) {
  * @param rb Buffer to remove from, must contain at least one element.
  */
 static inline uint8_t rb_remove(ring_buffer *rb) {
-    uint8_t ch = rb->buf[rb->head];
-    rb->head = (rb->head == rb->size) ? 0 : rb->head + 1;
+    uint16_t h=rb->head;
+    uint8_t ch = rb->buf[h];
+    rb->head = (h == rb->size) ? 0 : h + 1;
     return ch;
 }
 

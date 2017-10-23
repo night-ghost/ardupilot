@@ -22,11 +22,11 @@
 #endif
 
 enum BOARD_RC_MODE {
-    BOARD_RC_NONE=0,
-    BOARD_RC_SBUS,
-    BOARD_RC_DSM,
-    BOARD_RC_SUMD,
-    BOARD_RC_SBUS_NI,
+    BOARD_RC_NONE    = 0,
+    BOARD_RC_SBUS    = 1,
+    BOARD_RC_DSM     = 2,
+    BOARD_RC_SUMD    = 4,
+    BOARD_RC_SBUS_NI = 8,
 };
 
 

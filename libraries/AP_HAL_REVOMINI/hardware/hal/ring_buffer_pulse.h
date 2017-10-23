@@ -61,10 +61,11 @@ static inline void pb_init(volatile pulse_buffer *pb, uint16_t size, Pulse *buf)
  * @param pb Buffer whose elements to count.
  */
 static inline uint16_t pb_full_count(volatile pulse_buffer *pb) {
-    __IO pulse_buffer *apb = pb;
-    int32_t size = apb->tail - apb->head;
-    if (apb->tail < apb->head) {
-        size += apb->size + 1;
+    uint16_t h=pb->head;
+    uint16_t t=pb->tail;
+    int32_t size = t - h;
+    if (t < h) {
+        size += pb->size + 1;
     }
     return (uint16_t)size;
 }
@@ -75,7 +76,8 @@ static inline uint16_t pb_full_count(volatile pulse_buffer *pb) {
  */
 static inline int pb_is_full(volatile pulse_buffer *pb) {
     uint16_t t = pb->tail;
-    return (t + 1 == pb->head) || (t == pb->size && pb->head == 0);
+    uint16_t h = pb->head;
+    return (t + 1 == h) || (t == pb->size && h == 0);
 }
 
 /**
@@ -103,8 +105,9 @@ static inline void pb_insert(volatile pulse_buffer *pb, Pulse element) {
  * @param pb Buffer to remove from, must contain at least one element.
  */
 static inline Pulse pb_remove(volatile pulse_buffer *pb) {
-    Pulse p = pb->buf[pb->head];
-    pb->head = (pb->head == pb->size) ? 0 : pb->head + 1;
+    uint16_t h = pb->head;
+    Pulse p = pb->buf[h];
+    pb->head = (h == pb->size) ? 0 : h + 1;
     return p;
 }
 

@@ -269,6 +269,7 @@ public:
 // this functions are atomic so don't need to disable interrupts
   static void inline set_task_ioc(bool v) {      s_running->in_ioc=v; }
   static void inline set_task_active(void *h) {   task_t * task = (task_t*)h; task->active=true; }
+  static void inline task_pause(void *h) {   task_t * task = (task_t*)h; task->active=false; yield(0); }
   static inline void *get_current_task() { return s_running; }
 //]  
 
@@ -276,21 +277,6 @@ public:
         task scheduler. Gives task ready to run with highest priority
     */
   static task_t *get_next_task(); 
-
-//[ this functions called only from SVC level so serialized by hahdware
-
-  // allows to block task on semaphore
-  static inline void task_want_semaphore(void * _task, REVOMINI::Semaphore *sem, uint32_t ms) { 
-    task_t * task = (task_t*)_task;
-    task_t * curr_task = s_running;
-    
-    curr_task->sem_start_wait = _micros(); // time when waiting starts
-    curr_task->sem_wait = sem;             // semaphore
-    curr_task->sem_time = (ms == HAL_SEMAPHORE_BLOCK_FOREVER)?ms:ms*1000;        // time to wait semaphore
-    //Increase the priority of the semaphore's owner up to the priority of the current task
-    if(task->priority < curr_task->priority) task->curr_prio = curr_task->priority-1;
-  }
-//]
 
   /**               
    * Context switch to next task in run queue.
@@ -402,6 +388,7 @@ protected:
 
     // plan context switch
     static void switch_task();
+    static void _switch_task();
 
     static task_t s_main; // main task TCB
     
@@ -476,13 +463,10 @@ private:
 
 #ifdef MTASK_PROF
     static uint32_t max_wfe_time;
-    static uint64_t tsched_time;
     static uint32_t tsched_count;
     static uint32_t tsched_sw_count;
-    static uint64_t tsched_time_y;
     static uint32_t tsched_count_y;
     static uint32_t tsched_sw_count_y;
-    static uint64_t tsched_time_t;
     static uint32_t tsched_count_t;
     static uint32_t tsched_sw_count_t;
 

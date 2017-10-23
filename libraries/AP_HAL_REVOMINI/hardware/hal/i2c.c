@@ -615,7 +615,7 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
     if(dma_mode) {
         //  проверить, не занят ли поток DMA перед использованием
         t = hal_micros();
-        while(dma_is_stream_enabled(rx_stream) || dma_is_stream_enabled(dev->dma.stream_tx) ) {
+        while(dma_is_stream_enabled(rx_stream)/* || dma_is_stream_enabled(dev->dma.stream_tx)*/ ) {
             // wait for transfer termination
             if (hal_micros() - t > I2C_TIMEOUT) {
                 dma_disable(rx_stream);  // something went wrong so let it get stopped
@@ -659,7 +659,7 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
         
         dma_init_transfer(rx_stream, &DMA_InitStructure);
 
-        dma_attach_interrupt(rx_stream, (Handler)dev->dma_isr, DMA_CR_TCIE); // isr is VoidFuncPrt
+        dma_attach_interrupt(rx_stream, (Handler)dev->dma_isr, DMA_CR_TCIE); 
 
         dma_enable(rx_stream);        
     } // DMA mode
@@ -702,7 +702,7 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
     // Send address for write
     I2C_Send7bitAddress(dev->I2Cx, addr<<1, I2C_Direction_Transmitter );
     
-    dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP);    /* clear STOP condition */
+    dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP);    /* clear STOP condition - just to touch CR1 */
 
     t = hal_micros();
     // Test on EV6 and clear it

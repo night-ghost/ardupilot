@@ -142,7 +142,7 @@ struct PPM_State  {
 	        } else  {               // falling edge
 	            input->state = 0;
 	
-	            TIM_ICInitStructure.TIM_ICPolarity = TIM_ICPolarity_Rising; // reprogram timer to raising
+	            TIM_ICInitStructure.TIM_ICPolarity = TIM_ICPolarity_Rising; // reprogram timer to rising
 //	            timer_cc_set_pol(channel->timer, channel->channel_n, 0);
 	        }
 	        TIM_ICInit(channel->tim, &TIM_ICInitStructure);

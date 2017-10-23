@@ -62,25 +62,28 @@ void PPM_parser::parse_pulses(void){
 }
 
 
+
 void PPM_parser::rxIntRC(uint16_t value0, uint16_t value1, bool state)
 {
 
-    if(state && _rc_mode!=BOARD_RC_SBUS) { // falling and not SBUS detected
-        if(_rc_mode==BOARD_RC_DSM || _rc_mode==BOARD_RC_SUMD || _rc_mode == BOARD_RC_SBUS_NI || !_process_ppmsum_pulse( (value0 + value1) >>1 ) ) { // process PPM only if no DSM detected
+    if(state && _rc_mode!=BOARD_RC_SBUS) { // rising and not SBUS detected
+        if(_rc_mode!=BOARD_RC_NONE || !_process_ppmsum_pulse( (value0 + value1) >>1 ) ) { // process PPM only if no protocols detected
 
-            if(_rc_mode != BOARD_RC_SBUS_NI){
-                // not PPM - try treat as DSM
+            if((_rc_mode & ~(BOARD_RC_DSM | BOARD_RC_SUMD)) == 0){
+                // not PPM - try treat as DSM or SUMD
                 _process_dsm_pulse(value0>>1, value1>>1);
             }
             
-            if(!(_rc_mode==BOARD_RC_DSM || _rc_mode==BOARD_RC_SUMD)){
+            if((_rc_mode &~BOARD_RC_SBUS_NI) == 0 ){
                 // test for non-inverted SBUS in 2nd memory structures
                 _process_sbus_pulse(value0>>1, value1>>1, 1); 
             }
         }
-    } else { // rising
+    } else { // falling
             // try treat as SBUS (inverted)
+        if((_rc_mode &~BOARD_RC_SBUS) == 0 ){
             _process_sbus_pulse(value1>>1, value0>>1, 0); // was 0 so now is length of 0, last is a length of 1
+        }
     }
 }
 
@@ -146,7 +149,7 @@ void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1, uint8
     // pull in the high bits
     state.bytes[byte_ofs] |= ((1U<<bits_s1)-1) << bit_ofs;
     state.bit_ofs += bits_s1;
-    bit_ofs += bits_s1;
+    bit_ofs = state.bit_ofs;
 
     // pull in the low bits
     nlow = bits_s0;
@@ -280,7 +283,9 @@ void PPM_parser::_process_dsm_pulse(uint16_t width_s0, uint16_t width_s1)
                 }
                 uint8_t bt= ((v>>1) & 0xFF);
                 bytes[i] = bt;
-                if(_rc_mode != BOARD_RC_DSM) { // try to decode  SUMD data
+                
+                if(_rc_mode != BOARD_RC_DSM) { 
+                // try to decode  SUMD data on each byte, decoder butters frame itself.
                     uint16_t values[REVOMINI_RC_INPUT_NUM_CHANNELS];
                     uint8_t rssi;
                     uint8_t rx_count;
@@ -303,7 +308,7 @@ void PPM_parser::_process_dsm_pulse(uint16_t width_s0, uint16_t width_s1)
                     }
                 }
             }
-            if(_rc_mode != BOARD_RC_SUMD) { // try to decode buffer as DSM
+            if(_rc_mode != BOARD_RC_SUMD) { // try to decode buffer as DSM on full frame
                 uint16_t values[8];
                 uint16_t num_values=0;
                 if (dsm_decode(AP_HAL::micros64(), bytes, values, &num_values, 8) &&

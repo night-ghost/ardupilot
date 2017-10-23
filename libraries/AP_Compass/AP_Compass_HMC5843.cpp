@@ -159,7 +159,12 @@ bool AP_Compass_HMC5843::init()
 {
     AP_HAL::Semaphore *bus_sem = _bus->get_semaphore();
 
-    if (!bus_sem || !bus_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+    if (!bus_sem) {
+        hal.console->printf("HMC5843: Failed to allocate bus semaphore\n");
+        return false;
+    }
+
+    if (!bus_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         hal.console->printf("HMC5843: Unable to get bus semaphore\n");
         return false;
     }
