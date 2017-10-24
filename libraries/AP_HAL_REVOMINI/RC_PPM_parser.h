@@ -20,6 +20,12 @@ public:
 
     void init(uint8_t ch);
 
+    struct SbusState {
+        uint16_t bytes[25]; // including start bit, parity and stop bits
+        uint16_t bit_ofs;
+        BOARD_RC_MODE mode;
+    };
+
 protected:
     void parse_pulses(void);
     void start_ioc(void);
@@ -29,7 +35,7 @@ private:
 
     bool _process_ppmsum_pulse(uint16_t value);
     void _process_dsm_pulse(uint16_t width_s0, uint16_t width_s1);
-    void _process_sbus_pulse(uint16_t width_s0, uint16_t width_s1, uint8_t id);
+    void _process_sbus_pulse(uint16_t width_s0, uint16_t width_s1, struct PPM_parser::SbusState &state);
 
 
     void add_dsm_input();  // add some DSM  input bytes, for RCInput over a PPMSUM line
@@ -62,10 +68,7 @@ private:
     
     
     // state of SBUS bit decoder
-    struct SbusState {
-        uint16_t bytes[25]; // including start bit, parity and stop bits
-        uint16_t bit_ofs;
-    } sbus_state[2];
+    struct SbusState sbus_state[2];
 
     // state of DSM bit decoder
     struct DSM_State {

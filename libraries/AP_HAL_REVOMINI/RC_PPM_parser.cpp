@@ -38,6 +38,9 @@ void PPM_parser::init(uint8_t ch){
     // callback is called on each edge so must be as fast as possible
     Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&PPM_parser::start_ioc, void) };
     pwm_setHandler(h.h, _ch-1);
+    
+    sbus_state[0].mode=BOARD_RC_SBUS;
+    sbus_state[1].mode=BOARD_RC_SBUS_NI;
 }
 
 
@@ -61,29 +64,36 @@ void PPM_parser::parse_pulses(void){
     }
 }
 
+#pragma GCC optimize ("Og")
 
 
-void PPM_parser::rxIntRC(uint16_t value0, uint16_t value1, bool state)
+void PPM_parser::rxIntRC(uint16_t last_value, uint16_t value, bool state)
 {
 
-    if(state && _rc_mode!=BOARD_RC_SBUS) { // rising and not SBUS detected
-        if(_rc_mode!=BOARD_RC_NONE || !_process_ppmsum_pulse( (value0 + value1) >>1 ) ) { // process PPM only if no protocols detected
+    if(state) { // was 1 so falling
+        if(_rc_mode==BOARD_RC_NONE){
+            _process_ppmsum_pulse( (last_value + value) >>1 ); // process PPM only if no protocols detected
+        }
+        
+        if((_rc_mode &~BOARD_RC_SBUS_NI) == 0 ){
+            // test for non-inverted SBUS in 2nd memory structures
+            _process_sbus_pulse(last_value>>1, value>>1, sbus_state[1]);  // was 1 so now is length of 1, last is a length of 0
+        }
 
-            if((_rc_mode & ~(BOARD_RC_DSM | BOARD_RC_SUMD)) == 0){
-                // not PPM - try treat as DSM or SUMD
-                _process_dsm_pulse(value0>>1, value1>>1);
-            }
-            
-            if((_rc_mode &~BOARD_RC_SBUS_NI) == 0 ){
-                // test for non-inverted SBUS in 2nd memory structures
-                _process_sbus_pulse(value0>>1, value1>>1, 1); 
-            }
-        }
-    } else { // falling
+    } else { // was 0 so rising
+
+        if((_rc_mode & ~BOARD_RC_SBUS) == 0){
             // try treat as SBUS (inverted)
-        if((_rc_mode &~BOARD_RC_SBUS) == 0 ){
-            _process_sbus_pulse(value1>>1, value0>>1, 0); // was 0 so now is length of 0, last is a length of 1
+            // SBUS protocols detection occures on the beginning of start bit of next frame
+            _process_sbus_pulse(value>>1, last_value>>1,  sbus_state[0]); // was 0 so now is length of 0, last is a length of 1
         }
+
+
+        if((_rc_mode & ~(BOARD_RC_DSM | BOARD_RC_SUMD)) == 0){
+            // try treat as DSM or SUMD. Detection occures on the end of stop bit
+            _process_dsm_pulse(value>>1, last_value>>1);
+        }
+
     }
 }
 
@@ -125,14 +135,12 @@ bool PPM_parser::_process_ppmsum_pulse(uint16_t value)
   pulses are captured on each edges and SBUS parser called on rising edge - beginning of start bit
 */
 
-void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1, uint8_t id)
+void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1, REVOMINI::PPM_parser::SbusState &state)
 {
     // convert to bit widths, allowing for up to 4usec error, assuming 100000 bps - inverted
     uint16_t bits_s0 = (width_s0+4) / 10;
     uint16_t bits_s1 = (width_s1+4) / 10;
     
-    struct SbusState &state=sbus_state[id];
-
     uint8_t byte_ofs = state.bit_ofs/12;
     uint8_t bit_ofs  = state.bit_ofs%12;
     uint16_t nlow;
@@ -149,15 +157,15 @@ void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1, uint8
     // pull in the high bits
     state.bytes[byte_ofs] |= ((1U<<bits_s1)-1) << bit_ofs;
     state.bit_ofs += bits_s1;
-    bit_ofs = state.bit_ofs;
+    bit_ofs       += bits_s1;
 
     // pull in the low bits
-    nlow = bits_s0;
-    if (nlow + bit_ofs > 12) {
-        nlow = 12 - bit_ofs;
+    nlow = bits_s0;          // length of low bits
+    if (nlow + bit_ofs > 12) { // переехали за границу байта?
+        nlow = 12 - bit_ofs;   // остаток этого байта
     }
-    bits_s0 -= nlow;
-    state.bit_ofs += nlow;
+    bits_s0 -= nlow;  // непосчитанный остаток нулевых битов
+    state.bit_ofs += nlow; // добить нулями до конца байта
 
     if (state.bit_ofs == 25*12 && bits_s0 > 12) { // all frame got and was gap
         // we have a full frame
@@ -203,11 +211,7 @@ void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1, uint8
             }
             _channels = num_values;
             
-            if(id){
-                _rc_mode = BOARD_RC_SBUS_NI; // lock input mode, SBUS has a parity and other checks so false positive is unreal
-            } else {
-                _rc_mode = BOARD_RC_SBUS; // lock input mode, SBUS has a parity and other checks so false positive is unreal
-            }
+            _rc_mode = state.mode; // lock input mode, SBUS has a parity and other checks so false positive is unreal
             
             if (!sbus_failsafe) {
                 _got_dsm = true;
@@ -222,7 +226,8 @@ void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1, uint8
 reset:
 
 reset_ok:
-    memset(&state, 0, sizeof(state));
+    state.bit_ofs=0;
+    memset(&state.bytes, 0, sizeof(state.bytes));
 }
 
 

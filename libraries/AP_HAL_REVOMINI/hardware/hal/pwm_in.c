@@ -126,7 +126,7 @@ struct PPM_State  {
 
                 Pulse p={
                     .length  = time, 
-                    .state = input->state
+                    .state = input->state // we store last state, so state reflects input line
                 };
 
                 if(!pb_is_full(&input->pulses)){ // save pulse length and state 
@@ -147,7 +147,7 @@ struct PPM_State  {
 	        }
 	        TIM_ICInit(channel->tim, &TIM_ICInitStructure);
                 
-                if(input->handler) revo_call_handler(input->handler, 0); // call callback on each edge
+                if(input->handler) revo_call_handler(input->handler, 0); // call callback on each edge, SBUS decoding requires only  1.4% of CPU (2.5 for full io_completion)
 	    }
 	}
 }

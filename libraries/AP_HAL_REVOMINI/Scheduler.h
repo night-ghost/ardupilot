@@ -152,6 +152,7 @@ public:
 #ifdef SHED_PROF
         uint64_t time;
         uint32_t count;
+        uint32_t max_time;
 #endif
     } IO_Completion;
 

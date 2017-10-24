@@ -55,7 +55,7 @@ void Copter::perf_info_check_loop_time(uint32_t time_in_micros)
     }
     if( time_in_micros > PERF_INFO_OVERTIME_THRESHOLD_MICROS ) {
         perf_info_long_running++;
-        printf("\n huge loop time=%ld!\n", time_in_micros);
+    //    printf("\n huge loop time=%ld!\n", time_in_micros);
     }
     perf_info_sigma_time += time_in_micros;
     perf_info_sigmasquared_time += time_in_micros * time_in_micros;

@@ -94,6 +94,10 @@ LoopFillZerobss:
   cmp  r2, r3
   bcc  FillZerobss
 
+
+/* hardware inint in C */
+    bl pre_init
+
 @[ switch stack
     MRS     r1, MSP                   @ Get stack pointer
     MOV     r0, #1024                 @ size of MSP stack - nested interrupts are here
@@ -104,8 +108,6 @@ LoopFillZerobss:
     ISB                               @ Insert a barrier
 @]
 
-/* hardware inint in C */
-    bl pre_init
 
 /* Invoke all static constructors */ 
     bl      __libc_init_array      

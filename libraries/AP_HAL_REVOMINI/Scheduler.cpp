@@ -663,15 +663,15 @@ void REVOMINIScheduler::_print_stats(){
             } break;
         
         case 5: {
-            printf("\nIO completion time=%9.1fms (%7.3f%%)\n", ioc_time/1000.0,  ioc_time/1000.0/t*100);
+            printf("\nIO completion %7.3f%%\n", ioc_time/1000.0,  ioc_time/1000.0/t*100);
             uint64_t iot=0;
             for(uint8_t i=0; i<num_io_completion; i++){
                 struct IO_COMPLETION &io = io_completion[i];
                 
                 if(io.handler) {
                     if(io.count){
-                        printf("task %llx time %9.1fms (%7.3f%%) mean %7.3fuS\n", io.handler,  io.time/1000.0, 100.0 * io.time / t / 1000, (float)io.time/io.count);
-                        
+                        printf("task %llx time %7.3f%% mean %7.3fuS max %lduS\n", io.handler,  io.time/1000.0, 100.0 * io.time / t / 1000, (float)io.time/io.count, io.max_time);
+                        io.max_time=0; 
                         iot+=io.time;
                     }
                 }    
@@ -925,7 +925,6 @@ static uint16_t next_log_ptr(uint16_t sched_log_ptr){
 
 // this function called only from Level 14  ISRs so there is no need to be reentrant
 task_t *REVOMINIScheduler::get_next_task(){
-again:
     task_t *me = s_running; // current task
     task_t *task=_idle_task; // task to switch to, idle_task by default
 
@@ -1079,11 +1078,6 @@ skip_task:
     task->count++;
 #endif
 
-    if(task==_idle_task) {// still idle_task? nothing to do 
-        __WFE();
-        goto again; // сэкономим на переключении контекста и просто выполним WFE тут, это никому не помешает
-    }
-
     // выбрали задачу для переключения. 
     // проверим сохранность дескриптора
     if(task->guard != STACK_GUARD){
@@ -1205,6 +1199,7 @@ void REVOMINIScheduler::_ioc_timer_event(uint32_t v){ // isr at low priority to 
                     t = _micros() - t;
                     io.time += t;
                     io.count++;
+                    if(t>io.max_time) io.max_time=t;
 #endif
                 }
             }
@@ -1322,7 +1317,7 @@ void REVOMINIScheduler::switch_task(){
 void REVOMINIScheduler::_switch_task(){
     if(need_switch_task || task_n==0) return; // already scheduled context switch
 
-    next_task = get_next_task(); // 2.5uS full time
+    next_task = get_next_task(); // 2.5uS mean full time
 
 #ifdef MTASK_PROF
     tsched_count_y++;

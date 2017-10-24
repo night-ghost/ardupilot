@@ -137,7 +137,7 @@ extern USBD_Class_cb_TypeDef  USBD_CDC_cb;
 
 #ifndef USB_TX_BUFF_SIZE 
  #define USB_TX_BUFF_SIZE 512
- #define USB_RX_BUFF_SIZE 2048
+ #define USB_RX_BUFF_SIZE 1024
 #endif
 
 /*

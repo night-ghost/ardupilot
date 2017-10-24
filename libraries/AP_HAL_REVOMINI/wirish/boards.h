@@ -147,8 +147,7 @@ static inline void goDFU();
 static inline void goDFU(){            // Reboot to BootROM - to DFU mode
     asm volatile("\
     ldr     r0, =0x1FFF0000\n\
-    ldr     r1,[r0, #0]    \n\
-    msr     MSP,r1         \n\
+    ldr     sp,[r0, #0]    \n\
     ldr     r0,[r0, #4]    \n\
     bx      r0             \n\
     ");

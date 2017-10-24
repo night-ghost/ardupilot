@@ -100,23 +100,27 @@ static INLINE void setupCCM(){
 #if 0 // no support for initialized data in CCM
 
     while (dest < &_eccm) {
-        *dest = *src;
+        *dest++ = *src++;
     }
-//        for (src = &_data_loadaddr, dest = &_data;                 dest < &_edata;                 src++, dest++) {
 #endif
     while (dest < &_eccm) {
         *dest++ = 0;
     }
 
+#if 1
     uint32_t sp;
     
     // Get stack pointer
     asm volatile ("mov %0, sp\n\t"  : "=rm" (sp) );
 
+ #if 1
+    memset((void *)dest,0x55, sp-8);
+ #else
     while ((uint32_t)dest < (sp-8)) {
         *dest++ = 0x55555555; // fill stack to check it's usage
     }
-
+ #endif
+#endif
 }
 
 
@@ -191,10 +195,11 @@ void inline init(void) {
 // RTC is ready
     if(board_get_rtc_register(RTC_SIGNATURE_REG) == DFU_RTC_SIGNATURE) {
         board_set_rtc_register(0, RTC_SIGNATURE_REG);
-        emerg_delay(1000);
+        for(volatile int i=0; i<50; i++); // small delay
         uint32_t reg=board_get_rtc_register(RTC_SIGNATURE_REG); // read again
-        if(reg==0)
+        if(reg==0) {
             goDFU();        // just after reset - so all hardware is in boot state
+        }
     }
 
     setupFlash();  // empty
@@ -223,6 +228,7 @@ void inline init(void) {
     interrupts();
 }
 
+// called with stack in MSP
 void pre_init(){ // before any stack usage @NG
     setupCCM(); // needs because stack in CCM
 
