@@ -38,7 +38,8 @@ REVOMINIUARTDriver::REVOMINIUARTDriver(const struct usart_dev *usart):
 {
 }
 
-void REVOMINIUARTDriver::begin(uint32_t baud) {
+//uint8_t mode = (UART_Parity_No <<4) | UART_Stop_Bits_1
+void REVOMINIUARTDriver::begin(uint32_t baud, uint32_t bmode) {
 
     if(!_usart_device) return;
 
@@ -69,7 +70,7 @@ void REVOMINIUARTDriver::begin(uint32_t baud) {
         
     usart_init(_usart_device);
     usart_setup(_usart_device, (uint32_t)baud, 
-                USART_WordLength_8b, USART_StopBits_1, USART_Parity_No, mode, USART_HardwareFlowControl_None);
+                USART_WordLength_8b, bmode & 0xffff /*USART_StopBits_1*/ , (bmode>>16) & 0xffff /* USART_Parity_No*/, mode, USART_HardwareFlowControl_None);
     usart_enable(_usart_device);
 
     _initialized = true;

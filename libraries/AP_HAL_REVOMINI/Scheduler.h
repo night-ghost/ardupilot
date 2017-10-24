@@ -24,7 +24,7 @@
 #define REVOMINI_SCHEDULER_MAX_IO_PROCS 10
 
 
-#define DRIVER_PRIORITY 99  // priority for drivers, speed of main will be 1/3 of this
+#define DRIVER_PRIORITY 98  // priority for drivers, speed of main will be 1/4 of this
 #define IO_PRIORITY    107  // main task has 100 so IO tasks will use 1/8 of CPU
 
 #define USE_ISR_SCHED 1
@@ -33,7 +33,7 @@
 #define TIMER_PERIOD 100  // task timeslice period in uS
 
 
-#define MAIN_STACK_SIZE  10240U   // measured use of stack is only 1K - but it grows up to 4K when using FatFs, also this includes 2K stack for ISR
+#define MAIN_STACK_SIZE  10240U   // measured use of stack is only 1.5K - but it grows up to 4K when using FatFs, also this includes 1K stack for ISR
 #define DEFAULT_STACK_SIZE  1024U // Default tasks stack size 
 #define IO_STACK_SIZE       8192U // IO_tasks stack size and stack max - io_thread can do work with filesystem
 #define SMALL_TASK_STACK 1024U    // small stack for sensors
@@ -52,25 +52,26 @@ struct task_t {
         uint8_t curr_prio;      // current priority of task, usually higher than priority
         bool active;            // task not ended
         bool in_ioc;            // task starts IO_Completion so don't release bus semaphore
-        uint32_t ttw;           // time to work
+        uint32_t ttw;           // time to wait
         uint32_t t_yield;       // time of yield
         uint32_t start;         // microseconds of timeslice start
-#if defined(MTASK_PROF)
-        uint32_t in_isr;        // time in ISR when task runs
-        uint32_t def_ttw;       // default TTW - not as hard as period
-        uint8_t sw_type;
-#endif
         uint32_t period;        // if set then task starts on time basis only
         uint32_t time_start;    // start time of task
         REVOMINI::Semaphore *sem; // task should start after owning this semaphore
         REVOMINI::Semaphore *sem_wait; // task is waiting this semaphore
         uint32_t sem_time;             // time to wait semaphore
         uint32_t sem_start_wait;       // time when waiting starts
-#ifdef MTASK_PROF
+#if defined(MTASK_PROF)
+        uint32_t in_isr;        // time in ISR when task runs
+        uint32_t def_ttw;       // default TTW - not as hard as period
+        uint8_t sw_type;
         uint64_t time;  // full time
         uint32_t max_time; //  maximal execution time of task - to show
         uint32_t count;     // call count to calc mean
         uint32_t work_time; // max time of full task
+        uint32_t sem_max_wait; // max time of semaphore waiting
+        uint32_t quants;       // count of ticks
+        uint32_t quants_time;  // sum of quatn's times
 #endif
         uint32_t guard; // stack guard
 };

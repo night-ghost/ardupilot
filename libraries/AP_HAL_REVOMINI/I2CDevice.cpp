@@ -304,7 +304,6 @@ again:
             hal_yield(0);
             _dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_SWRST); // clear SoftReset flag            
         }
-         
 
         if((_retries-retries) > 0 || ret==I2C_BUS_ERR){ // not reset bus or log error on 1st try, except ArbitrationLost error
             last_error = ret;   // remember

@@ -61,7 +61,7 @@ void SBUS_parser::late_init(uint8_t b){
 #endif
         // initialize SBUS UART
         uartSDriver.end();
-        uartSDriver.begin(100000);
+        uartSDriver.begin(100000, (UART_Parity_Even <<4) | UART_Stop_Bits_2);
         Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&SBUS_parser::add_uart_input, void) };
         uartSDriver.setCallback(h.h);
     }
@@ -72,10 +72,7 @@ void SBUS_parser::late_init(uint8_t b){
   add some bytes of input in SBUS serial stream format, coping with partial packets - UART input callback
  */
 void SBUS_parser::add_uart_input() {
-
-    if(_ioc) {
-        REVOMINIScheduler::do_io_completion(_ioc);
-    }
+    REVOMINIScheduler::do_io_completion(_ioc);
 }
 
 

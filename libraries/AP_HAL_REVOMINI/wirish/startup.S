@@ -100,7 +100,7 @@ LoopFillZerobss:
 
 @[ switch stack
     MRS     r1, MSP                   @ Get stack pointer
-    MOV     r0, #1024                 @ size of MSP stack - nested interrupts are here
+    MOV     r0, #1024                 @ size of MSP stack - nested interrupts are here, really used only ~512
     SUB     r1, r0                    @ reserve space for ISR stack
     MSR     PSP, r1                   @ store process SP to PSP
     MOV     R0, #2                    @ set up the current (thread) mode: use PSP as stack pointer, privileged level

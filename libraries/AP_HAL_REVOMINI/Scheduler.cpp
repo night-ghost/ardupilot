@@ -398,8 +398,8 @@ void REVOMINIScheduler::_register_io_process(Handler h, Revo_IO_Flags flags)
 
     if(_num_io_proc==0){
         void *task = start_task(_run_io, IO_STACK_SIZE);
-        set_task_priority(task, IO_PRIORITY); 
         set_task_period(task, 500); 
+        set_task_priority(task, IO_PRIORITY); 
     }
 
     uint8_t i;
@@ -626,13 +626,16 @@ void REVOMINIScheduler::_print_stats(){
             task_t* ptr = &s_main;
 
             uint32_t  fc=tsched_count+tsched_count_y+tsched_count_t;
-            printf("\nsched time: by timer %5.2f%% sw %5.2f%% in yield %5.2f%% sw %5.2f%% in tails %5.2f%% sw %5.2f%%\n", 100.0*tsched_count/fc, 100.0 * tsched_sw_count/tsched_count, 100.0*tsched_count_y/fc,100.0 * tsched_sw_count_y/tsched_count_y, 100.0*tsched_count_t/fc,100.0 * tsched_sw_count_t/tsched_count_t );
+            printf("\nsched time: by timer %5.2f%% sw %5.2f%% in yield %5.2f%% sw %5.2f%% in tails %5.2f%% sw %5.2f%%\n", 100.0*tsched_count/fc, 100.0 * tsched_sw_count/tsched_count, 100.0*tsched_count_y/fc,100.0 * tsched_sw_count_y/tsched_count_y, 100.0*tsched_count_t/fc, 100.0 * tsched_sw_count_t/tsched_count_t);
         
             do {
-                printf("task %d (0x%015llx) times: %7.2f%% mean %8.1fuS max %lduS full %lduS\n",  ptr->id, ptr->handle, 100.0 * ptr->time/1000.0 / t, (float)ptr->time / ptr->count, ptr->max_time, ptr->work_time);
+                printf("task %2d (0x%015llx) time: %7.2f%% mean %8.1fuS max %5lduS full %7lduS in %6ld ticks (mean %8.1fuS) %7.2f%%  wait sem. %6lduS\n",  ptr->id, ptr->handle, 100.0 * ptr->time/1000.0 / t, (float)ptr->time / ptr->count, ptr->max_time, ptr->work_time, ptr->quants, (float)ptr->quants_time/ptr->quants, (float)ptr->quants_time/(ptr->work_time-ptr->sem_max_wait), ptr->sem_max_wait);
         
                 ptr->max_time=0; // reset times
                 ptr->work_time=0;
+                ptr->sem_max_wait=0;
+                ptr->quants=0;
+                ptr->quants_time=0;
                 
                 ptr = ptr->next;
             } while(ptr != &s_main);
@@ -944,6 +947,7 @@ task_t *REVOMINIScheduler::get_next_task(){
         else                 dt=0;
 
         me->time+=dt;                           // calculate sum
+        me->quants_time+=dt;
 #endif
 
 
@@ -990,15 +994,14 @@ task_t *REVOMINIScheduler::get_next_task(){
                         if(ptr->curr_prio>1) ptr->curr_prio--;      // increase priority as task waiting for a semaphore
                         own->curr_prio=ptr->curr_prio;
                         goto skip_task; 
-                    } else {
-                        ptr->sem_wait=NULL; // time to wait is over
                     }
-                } else  {
-                    ptr->sem_wait=NULL; // task tries to get a semaphore that already owns, something wrong
                 }
-            } else {
-                ptr->sem_wait=NULL; // clear semaphore after release
-            }
+            } 
+            ptr->sem_wait=NULL; // clear semaphore after release
+#ifdef MTASK_PROF
+            uint32_t st=now-ptr->sem_start_wait;
+            if(st>ptr->sem_max_wait) ptr->sem_max_wait=st; // time of semaphore waiting
+#endif            
         }
             
         
@@ -1075,7 +1078,8 @@ skip_task:
     task->start = now;  // task startup time
 #if defined(MTASK_PROF) 
     task->in_isr=0; // reset ISR time
-    task->count++;
+    task->count++;     // full count
+    task->quants++;    // one-start count
 #endif
 
     // выбрали задачу для переключения. 
@@ -1330,7 +1334,11 @@ void REVOMINIScheduler::_switch_task(){
 #endif
         plan_context_switch();   // plan context switch
     }
-
+#ifdef MTASK_PROF
+      else if(next_task == _idle_task){ // the same task
+        tsched_count_y--; // don't count loops in idle task
+    }
+#endif
 }
 
 ////////////////////////////////////

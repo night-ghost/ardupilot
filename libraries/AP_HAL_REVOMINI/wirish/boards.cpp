@@ -113,8 +113,8 @@ static INLINE void setupCCM(){
     // Get stack pointer
     asm volatile ("mov %0, sp\n\t"  : "=rm" (sp) );
 
- #if 1
-    memset((void *)dest,0x55, sp-8);
+ #if 0
+    memset((void *)dest,0x55, (sp-(uint32_t)dest) -128); 
  #else
     while ((uint32_t)dest < (sp-8)) {
         *dest++ = 0x55555555; // fill stack to check it's usage
