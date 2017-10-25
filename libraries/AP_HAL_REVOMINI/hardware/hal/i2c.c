@@ -856,6 +856,7 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
         if(dev->state->ioc) return I2C_PENDING;
                 
         t = hal_micros();
+        uint32_t n_bytes=rxlen;
         // need to wait until DMA transfer complete */
         while ( dma_is_stream_enabled(rx_stream)) {
             if (hal_micros() - t > I2C_TIMEOUT) {
@@ -866,7 +867,8 @@ uint32_t i2c_read(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint
                 state = 100; // 100 DMA error
                 goto err_exit;
             }
-            I2C_Yield(i2c_bit_time * 8 * rxlen); // пока ждем пусть другие работают
+            I2C_Yield(i2c_bit_time * 8 * n_bytes); // пока ждем пусть другие работают
+            n_bytes=1; // long delay only once
         }
 
         //** DMA disabled and stop generated in ISR

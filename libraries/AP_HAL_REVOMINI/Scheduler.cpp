@@ -1,4 +1,4 @@
-#pragma GCC optimize ("O2")
+#pragma GCC optimize ("Og")
 
 
 #include "Scheduler.h"
@@ -629,7 +629,13 @@ void REVOMINIScheduler::_print_stats(){
             printf("\nsched time: by timer %5.2f%% sw %5.2f%% in yield %5.2f%% sw %5.2f%% in tails %5.2f%% sw %5.2f%%\n", 100.0*tsched_count/fc, 100.0 * tsched_sw_count/tsched_count, 100.0*tsched_count_y/fc,100.0 * tsched_sw_count_y/tsched_count_y, 100.0*tsched_count_t/fc, 100.0 * tsched_sw_count_t/tsched_count_t);
         
             do {
-                printf("task %2d (0x%015llx) time: %7.2f%% mean %8.1fuS max %5lduS full %7lduS in %6ld ticks (mean %8.1fuS) %7.2f%%  wait sem. %6lduS\n",  ptr->id, ptr->handle, 100.0 * ptr->time/1000.0 / t, (float)ptr->time / ptr->count, ptr->max_time, ptr->work_time, ptr->quants, (float)ptr->quants_time/ptr->quants, (float)ptr->quants_time/(ptr->work_time-ptr->sem_max_wait), ptr->sem_max_wait);
+                printf("task %d (0x%015llx) time: %7.2f%% mean %8.1fuS max %5lduS full %7lduS in %6ld ticks (mean %8.1fuS) %7.2f%%  wait sem. %6lduS\n",  
+                          ptr->id, ptr->handle, 100.0 * ptr->time/1000.0 / t, 
+                                                              (float)ptr->time / ptr->count, 
+                                                                       ptr->max_time, 
+                                                                                  ptr->work_time, ptr->quants,(float)ptr->quants_time/ptr->quants, 
+                                                                                                                           (float)ptr->quants_time/ptr->work_time*100.0, 
+                                                                                                                                            ptr->sem_max_wait);
         
                 ptr->max_time=0; // reset times
                 ptr->work_time=0;
@@ -666,14 +672,14 @@ void REVOMINIScheduler::_print_stats(){
             } break;
         
         case 5: {
-            printf("\nIO completion %7.3f%%\n", ioc_time/1000.0,  ioc_time/1000.0/t*100);
+            printf("\nIO completion %7.3f%%\n",  ioc_time/1000.0/t*100);
             uint64_t iot=0;
             for(uint8_t i=0; i<num_io_completion; i++){
                 struct IO_COMPLETION &io = io_completion[i];
                 
                 if(io.handler) {
                     if(io.count){
-                        printf("task %llx time %7.3f%% mean %7.3fuS max %lduS\n", io.handler,  io.time/1000.0, 100.0 * io.time / t / 1000, (float)io.time/io.count, io.max_time);
+                        printf("task %llx time %7.3f%% mean %7.3fuS max %lduS\n", io.handler,  100.0 * io.time / t / 1000, (float)io.time/io.count, io.max_time);
                         io.max_time=0; 
                         iot+=io.time;
                     }
@@ -790,12 +796,21 @@ void REVOMINIScheduler::do_task(task_t *task) {
                 }
             }
             revo_call_handler(task->handle, task->id); 
-            if(task->sem && !task->in_ioc) task->sem->give(); // give semaphore when task finished
+            if(task->sem){
+                if(!task->in_ioc){
+                    task->sem->give(); // give semaphore when task finished
+#ifdef SEM_DEBUG
+                } else {
+                    printf("\nsemaphore not given because in IO_Complete!\n");
+#endif
+                }
+            }
             task->active=false;                    // turn off active, to know when task is started again
             task->curr_prio = task->priority - 6;  // just activated task will have a highest priority for one quant
-
+#ifdef MTASK_PROF
             t = _micros()-task->time_start; // execution time
             if(t > task->work_time)  task->work_time=t;
+#endif
         }
         yield(0);        // give up quant remainder
     }// endless loop
@@ -992,7 +1007,9 @@ task_t *REVOMINIScheduler::get_next_task(){
                     uint32_t dt = now - ptr->sem_start_wait;   // time since start waiting
                     if(ptr->sem_time == HAL_SEMAPHORE_BLOCK_FOREVER || dt < ptr->sem_time) {
                         if(ptr->curr_prio>1) ptr->curr_prio--;      // increase priority as task waiting for a semaphore
-                        own->curr_prio=ptr->curr_prio;
+                        if(own->curr_prio > ptr->curr_prio) {
+                            own->curr_prio=ptr->curr_prio;
+                        }
                         goto skip_task; 
                     }
                 }
@@ -1256,7 +1273,7 @@ void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
         if(s_running->ttw){ // the task voluntarily gave up its quant and wants delay, so that at the end of the delay it will have the high priority
             s_running->curr_prio = s_running->priority - 6;
         } else {
-            s_running->ttw=90; // skip one quant
+            s_running->curr_prio = s_running->priority+1; // to guarantee that quant will not return if there is equal priority tasks
         }
         switch_task();
         break;        
@@ -1276,15 +1293,15 @@ void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
             if(!ret)  {// if failed - switch context to pause waiting task
                 task_t *own = (task_t *)sem->get_owner();
                 task_t *curr_task = s_running;
-                curr_task->sem_wait = sem;           // semaphore
+                curr_task->sem_wait = sem;             // semaphore
+                curr_task->sem_start_wait = _micros(); // time when waiting starts
                 if(timeout_ms == HAL_SEMAPHORE_BLOCK_FOREVER){
                     curr_task->sem_time = timeout_ms;
                 } else {
-                    curr_task->sem_start_wait = _micros();      // time when waiting starts
                     curr_task->sem_time = timeout_ms*1000;      // time to wait semaphore
                 }
                 //Increase the priority of the semaphore's owner up to the priority of the current task
-                if(own->priority > curr_task->priority) own->curr_prio = curr_task->priority-1;
+                if(own->priority >= curr_task->priority) own->curr_prio = curr_task->priority-1;
                 switch_task(); 
             }
         }
@@ -1303,8 +1320,13 @@ void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
             }
         }
         break;
-        
-    //case 4: // whats more we can do via SVC?
+    
+    case 4: {          // set_task_ioc(bool v) 
+            s_running->in_ioc=svc_args[0];
+        }
+        break;    
+    
+    //case 5: // whats more we can do via SVC?
 
     default:                // Unknown SVC - just ignore
         break;    

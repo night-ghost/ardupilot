@@ -269,7 +269,7 @@ public:
 
 
 // this functions are atomic so don't need to disable interrupts
-  static void inline set_task_ioc(bool v) {      s_running->in_ioc=v; }
+  static void inline NAKED set_task_ioc(bool v) { asm volatile("svc 4");  /*   s_running->in_ioc=v; */ }
   static void inline set_task_active(void *h) {   task_t * task = (task_t*)h; task->active=true; }
   static void inline task_pause(void *h) {   task_t * task = (task_t*)h; task->active=false; yield(0); }
   static inline void *get_current_task() { return s_running; }

@@ -112,7 +112,7 @@ public:
     inline bool unregister_callback(PeriodicHandle h) { return REVOMINIScheduler::unregister_timer_task(h); }
 
     void register_completion_callback(Handler h);
-    
+
     inline void register_completion_callback(AP_HAL::MemberProc proc){
         Revo_handler r = { .mp=proc };
         register_completion_callback(r.h);

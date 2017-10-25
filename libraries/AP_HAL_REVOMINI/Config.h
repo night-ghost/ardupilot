@@ -14,11 +14,13 @@
 
 // profiling
 //#define ISR_PERF - now all time-consuming calculations moved out from ISR to io_completion level
-//#define SEM_PROF 
+//#define SEM_PROF - now semaphores are part of scheduler
 #define SHED_PROF 
 #define MTASK_PROF
 //#define SHED_DEBUG
 
 #define USE_WFE
+
+//#define SEM_DEBUG
 
 //#define MPU_DEBUG

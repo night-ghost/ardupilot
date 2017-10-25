@@ -7,6 +7,28 @@
 #include <exti.h>
 #include "Config.h"
 
+#ifdef SEM_DEBUG
+#define SEM_LOG_SIZE 500
+enum Sem_OP {
+    Sem_Give,
+    Sem_Take,
+    Sem_Take_Nonblocking
+};
+
+class REVOMINI::Semaphore;
+
+typedef struct SEM_LOG {
+    uint32_t time;
+    REVOMINI::Semaphore *sem;
+    void * task;
+    enum Sem_OP op;
+    bool result;
+} Sem_Log;
+
+Sem_Log sem_log[SEM_LOG_SIZE];
+
+#endif
+
 
 class REVOMINI::Semaphore : public AP_HAL::Semaphore {
 public:
@@ -25,8 +47,9 @@ public:
 //]
     static inline bool get_error(){ bool t=_error; _error=false; return t; }
 
-#ifdef SEM_PROF 
-    static uint64_t sem_time;    
+#ifdef SEM_DEBUG
+    static Sem_Log  sem_log[SEM_LOG_SIZE];
+    static uint16_t sem_log_ptr;
 #endif
 
 protected:

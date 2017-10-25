@@ -53,7 +53,6 @@ bool Semaphore::take(uint32_t timeout_ms) {
 
 
 // realization
-
 bool NAKED Semaphore::_give() {
     asm volatile("svc 1 \r\n"
                  "bx lr \r\n");
@@ -71,6 +70,19 @@ bool NAKED Semaphore::_take_nonblocking() {
 }
 
 
+#ifdef SEM_DEBUG
+void Semaphore::save_log(enum Sem_OP op, bool result){
+    Sem_Log *lp = sem_log[sem_log_ptr++];
+    if(sem_log_ptr >= SEM_LOG_SIZE) sem_log_ptr=0;
+    
+    lp.time=REVOMINIScheduler::_micros();
+    lp.sem  = this;
+    lp.task = REVOMINIScheduler::get_current_task();
+    lp.op = op;
+    lp.result=result;
+    
+#endif
+
 // this functions called only at SVC level so serialized by hardware and don't needs to disable interrupts
 
 bool Semaphore::svc_give() {
@@ -78,8 +90,14 @@ bool Semaphore::svc_give() {
     if (_taken) {
         _taken = false;
         _task = NULL;
+#ifdef SEM_DEBUG
+        save_log(Sem_Give, true);
+#endif
         return true;
     }
+#ifdef SEM_DEBUG
+        save_log(Sem_Give, false);
+#endif
     return false;
 }
 
@@ -88,12 +106,22 @@ bool Semaphore::svc_take_nonblocking() {
     if (!_taken) {
         _taken = true;
         _task = me;     // remember task which owns semaphore 
+#ifdef SEM_DEBUG
+        save_log(Sem_Take_Nonblocking, true);
+#endif
         return true;
     }
+
     if(_task == me){     // the current task already owns this semaphore
+#ifdef SEM_DEBUG
+        save_log(Sem_Take_Nonblocking, true);
+#endif
         return true; 
     }
     _is_waiting=true;
+#ifdef SEM_DEBUG
+    save_log(Sem_Take_Nonblocking, false);
+#endif
     return false;
 }
 
@@ -102,11 +130,21 @@ bool Semaphore::svc_take(uint32_t timeout_ms) {
     if (!_taken) {
         _taken = true;
         _task = me; // remember task which owns semaphore 
+#ifdef SEM_DEBUG
+        save_log(Sem_Take, true);
+#endif
         return true;
     }
     if(_task == me){     // the current task already owns this semaphore
+#ifdef SEM_DEBUG
+        save_log(Sem_Take, true);
+#endif
         return true; 
     }
     _is_waiting=true;
+#ifdef SEM_DEBUG
+    save_log(Sem_Take, false);
+#endif
     return false;
 }
+

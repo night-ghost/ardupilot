@@ -133,7 +133,7 @@ __default_exc:
 
 
 .thumb_func
-__do_context_switch:
+__do_context_switch: @ we already in interrupt so all interrupts with higher priority will use MSP - so dont need to disable interrupts
 
     MRS       R0, PSP           @  PSP is process stack pointer
     TST       LR, #0x10         @  exc_return[4]=0? (it means that current process
@@ -142,15 +142,15 @@ __do_context_switch:
     STMDB     R0!, {R4-R11, LR} @  save remaining regs r4-11 and LR (EXC_RETURN) on process stack
 
         @ At this point, entire context of process has been saved
-    LDR     R4, px_running      @ address of s_running
-    LDR     R1, [R4]            @ value of s_running - address of old task_t
+    LDR     R2, px_running      @ address of s_running
+    LDR     R1, [R2]            @ value of s_running - address of old task_t
     STR     R0, [R1]            @ store stack pointer
     
     LDR     R3, px_nextTask     @ address of next_task
     LDR     R1, [R3]            @ value of next_task - address of new task_t
-    STR     R1, [R4]            @ save to s_running
+    STR     R1, [R2]            @ save to s_running
     LDR     R0, [R1]            @ R0 is new process SP
-
+        @load context of new process
     LDMIA     R0!, {R4-R11, LR} @  Restore r4-11 and LR from new process stack
     TST       LR, #0x10         @  exc_return[4]=0? (it means that new process
     IT        EQ                @  has active floating point context)

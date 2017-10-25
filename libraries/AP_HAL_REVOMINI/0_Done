@@ -113,6 +113,7 @@
 * added parameter RC_FS to enable all RC failsafe
 * added disabling of data cache on flash write, just for case (upstream has this update too)
 * added a way to schedule context switch from ISR, eg. at data receive
+* added timeout to SPI flags waiting
 * ...
 * a lot of minor enhancements
 

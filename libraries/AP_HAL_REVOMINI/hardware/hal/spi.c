@@ -223,7 +223,10 @@ int spimaster_transfer(const spi_dev *dev,
 	    uint8_t bt=*txbuf++;
 	    
 	    dev->SPIx->DR = bt;
-	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE));
+	    uint16_t dly=1000; // ~20uS so byte already transferred
+	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE)) {
+	        if(--dly==0) break;
+	    }
 	    (void) dev->SPIx->DR;
 	}
 
@@ -233,7 +236,10 @@ int spimaster_transfer(const spi_dev *dev,
 	while (rxcount--){
 	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_TXE));
 	    dev->SPIx->DR = 0xFF;
-	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE));
+	    uint16_t dly=1000;
+	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE)) {
+	        if(--dly==0) break;
+	    }
 	    *rxbuf++ = dev->SPIx->DR;
 	}
 

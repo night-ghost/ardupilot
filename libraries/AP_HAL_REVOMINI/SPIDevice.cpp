@@ -118,8 +118,11 @@ void SPIDevice::register_completion_callback(Handler h) {
         // TODO: ???
     }
     _completion_cb = h; 
-    
-    REVOMINIScheduler::set_task_ioc(h!=0);
+
+
+    if(!REVOMINIScheduler::in_interrupt()) { // drivers that calls  register_completion_callback() from interrupt has exclusive bus
+        REVOMINIScheduler::set_task_ioc(h!=0); // moreover interrupt can be in context of any task 
+    }
 }
 
 
@@ -544,15 +547,18 @@ uint8_t  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint3
     _desc.dev->state->task = REVOMINIScheduler::get_current_task();
     REVOMINIScheduler::task_pause(_desc.dev->state->task);
     while ( (dma_get_isr_bits(dp.stream_rx) & DMA_FLAG_TCIF) == 0) { 
+        hal_yield(dly); // пока ждем пусть другие работают. 
         if(hal_micros()-t > MAX_SPI_TIME) return 1; // timeout
     }
 #else
-    uint16_t dly = btr * byte_time / 4; // time in 0.25uS
     /* Wait until Receive Complete */
     t=hal_micros();
+    uint16_t n_bytes = btr;
     while ( (dma_get_isr_bits(dp.stream_rx) & DMA_FLAG_TCIF) == 0) { 
         if(hal_micros()-t > MAX_SPI_TIME) return 1; // timeout
-        if(dly!=0)   hal_yield(dly); // пока ждем пусть другие работают. 
+        uint16_t dly = n_bytes * byte_time / 4; // time in 0.25uS
+        hal_yield(dly); // пока ждем пусть другие работают. 
+        n_bytes=0; // long delay only once
     }
 #endif
 
@@ -579,8 +585,10 @@ void SPIDevice::isr(){
     }
 
     if(_completion_cb) {
-        revo_call_handler(_completion_cb, (uint32_t)&_desc);
-        _completion_cb=0; // only once
+        Handler h=_completion_cb;
+        _completion_cb=0; // only once and BEFORE call itself because IOC can do new transfer
+
+        revo_call_handler(h, (uint32_t)&_desc);
     }
 #if 0
     if(_desc.dev->state->task){ // resume paused task

@@ -183,7 +183,9 @@ void REVOI2CDevice::register_completion_callback(Handler h) {
     
     _completion_cb=h;
 
-    REVOMINIScheduler::set_task_ioc(h!=0);
+    if(!REVOMINIScheduler::in_interrupt()) { // drivers that calls  register_completion_callback() from interrupt has exclusive bus
+        REVOMINIScheduler::set_task_ioc(h!=0);
+    }
 }
     
 
