@@ -796,6 +796,7 @@ void REVOMINIScheduler::do_task(task_t *task) {
                 }
             }
             revo_call_handler(task->handle, task->id); 
+            task->active=false;                    // turn off active, to know when task is started again. Before semaphore!
             if(task->sem){
                 if(!task->in_ioc){
                     task->sem->give(); // give semaphore when task finished
@@ -805,7 +806,6 @@ void REVOMINIScheduler::do_task(task_t *task) {
 #endif
                 }
             }
-            task->active=false;                    // turn off active, to know when task is started again
             task->curr_prio = task->priority - 6;  // just activated task will have a highest priority for one quant
 #ifdef MTASK_PROF
             t = _micros()-task->time_start; // execution time
@@ -945,6 +945,7 @@ static uint16_t next_log_ptr(uint16_t sched_log_ptr){
 task_t *REVOMINIScheduler::get_next_task(){
     task_t *me = s_running; // current task
     task_t *task=_idle_task; // task to switch to, idle_task by default
+    task_t *prev_task = _idle_task;
 
     uint32_t timeFromLast=0;
     uint32_t remains = 0;
@@ -999,6 +1000,11 @@ task_t *REVOMINIScheduler::get_next_task(){
 #endif
             
         if(!ptr->handle) goto skip_task; // skip finished tasks
+        
+        if(ptr->f_yield) {
+            ptr->f_yield=false; // only once
+            goto skip_task;     // this allows to execute low-priority tasks 
+        }
         
         if(ptr->sem_wait) { // task want a semaphore
             if(ptr->sem_wait->is_taken()) { // task blocked on semaphore
@@ -1067,6 +1073,7 @@ task_t *REVOMINIScheduler::get_next_task(){
 // выполнение, заставляя пропустить число тиков, равное разности приоритетов. В результате низкоприоритетная задача выполняется на меньшей скорости,
 // которую можно настраивать изменением разницы приоритетов
             }
+//            prev_task=task; // remember previous leader
             task = ptr; // winner
         }
 skip_task:
@@ -1077,6 +1084,10 @@ skip_task:
             break;   // 'me' is the task that works now, so full loop - now we have most-priority task so let it run!
         }
     }
+
+//    if(task->f_yield) {
+//        task=prev_task;
+//    }
 
  #ifdef SHED_DEBUG
     revo_sched_log &lp = logbuf[sched_log_ptr];
@@ -1270,17 +1281,20 @@ void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
     switch(svc_number)    {        
     case 0:            // Handle SVC 00 - yield()
 //        s_running->ttw=svc_args[0]; // we can do it in yield() itself
-        if(s_running->ttw){ // the task voluntarily gave up its quant and wants delay, so that at the end of the delay it will have the high priority
-            s_running->curr_prio = s_running->priority - 6;
-        } else {
-            s_running->curr_prio = s_running->priority+1; // to guarantee that quant will not return if there is equal priority tasks
+        if(s_running->priority!=255){
+            if(s_running->ttw){ // the task voluntarily gave up its quant and wants delay, so that at the end of the delay it will have the high priority
+                s_running->curr_prio = s_running->priority - 6;
+            } else {
+                s_running->curr_prio = s_running->priority+1; // to guarantee that quant will not return if there is equal priority tasks
+            }
+            s_running->f_yield=true;
         }
         switch_task();
         break;        
 
     case 1:{            // Handle SVC 01 - semaphore give(semaphore) returns bool
             Semaphore * sem = (REVOMINI::Semaphore *)svc_args[0];
-            bool v=sem->is_waiting();
+            bool v=sem->is_waiting();            
             svc_args[0] = sem->svc_give();
             if(v) switch_task(); // switch context to waiting task if any
         }

@@ -51,6 +51,7 @@ struct task_t {
         uint8_t priority;       // priority of task
         uint8_t curr_prio;      // current priority of task, usually higher than priority
         bool active;            // task not ended
+        bool f_yield;           // task gives its quant
         bool in_ioc;            // task starts IO_Completion so don't release bus semaphore
         uint32_t ttw;           // time to wait
         uint32_t t_yield;       // time of yield

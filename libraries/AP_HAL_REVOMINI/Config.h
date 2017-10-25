@@ -5,6 +5,8 @@
 
 #define USART_SAFE_INSERT // ignore received bytes if buffer overflows
 
+#define USE_WFE
+
 //#define I2C_DEBUG
 //#define DEBUG_SPI
 
@@ -19,7 +21,6 @@
 #define MTASK_PROF
 //#define SHED_DEBUG
 
-#define USE_WFE
 
 //#define SEM_DEBUG
 
