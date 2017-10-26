@@ -58,6 +58,7 @@ private:
 
     float _scaling[3];
     float _gain_scale;
+    float compass_len;
 
     int16_t _mag_x;
     int16_t _mag_y;

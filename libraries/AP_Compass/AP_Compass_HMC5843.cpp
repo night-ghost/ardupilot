@@ -103,6 +103,7 @@ AP_Compass_HMC5843::AP_Compass_HMC5843(Compass &compass, AP_HMC5843_BusDriver *b
                                        bool force_external, enum Rotation rotation)
     : AP_Compass_Backend(compass)
     , _bus(bus)
+    , compass_len(0)
     , _rotation(rotation)
     , _force_external(force_external)
 {
@@ -252,9 +253,6 @@ void AP_Compass_HMC5843::_timer()
     }
 #endif
 
-    if (!_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) { // if take() failed it will be  rescheduled at next tick
-        return; 
-    }
 
     bool result = _read_sample();
 
@@ -288,7 +286,23 @@ void AP_Compass_HMC5843::_timer()
     
     // correct raw_field for known errors
     correct_field(raw_field, _compass_instance);
-    
+
+    bool ret=true;    
+    float len = raw_field.length();
+    if(is_zero(compass_len)) {
+        compass_len=len;
+    } else {
+        if(abs(compass_len-len)/(compass_len+len)*100 > 25) { // difference more than 50% from mean value
+            printf("\ncompass len error: mean %f got %f\n", compass_len, len );
+            ret= false; 
+        }
+#define FILTER_KOEF 0.1
+        compass_len = compass_len * (1-FILTER_KOEF) + len*FILTER_KOEF; // complimentary filter 1/10 on all samples
+    }
+    if(ret) {
+        if (!_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+            return; 
+        }
         _mag_x_accum += raw_field.x;
         _mag_y_accum += raw_field.y;
         _mag_z_accum += raw_field.z;
@@ -299,8 +313,8 @@ void AP_Compass_HMC5843::_timer()
             _mag_z_accum /= 2;
             _accum_count = 7;
         }
-
-    _sem->give();
+        _sem->give();
+    }
 }
 
 /*

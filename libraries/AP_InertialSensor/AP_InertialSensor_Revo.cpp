@@ -743,9 +743,11 @@ void AP_InertialSensor_Revo::_read_fifo()
 
     last_sample=now;
 
-    uint32_t t     = now;
     uint16_t count = 0;
+#ifdef MPU_DEBUG
     uint32_t dt    = 0;
+    uint32_t t     = now;
+#endif
     
     while(read_ptr != write_ptr) { // there are samples
 //        uint64_t time = _fifo_buffer[read_ptr++].time; // we can get exact time

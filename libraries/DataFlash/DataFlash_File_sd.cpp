@@ -451,11 +451,6 @@ bool DataFlash_File::StartNewLogOK() const
 /* Write a block of data at current offset */
 bool DataFlash_File::_WritePrioritisedBlock(const void *pBuffer, uint16_t size, bool is_critical)
 {
-/*
-    if (!(_write_fd) || !_initialised || _open_error) {
-        return false;
-    }
-*/
     if (! WriteBlockCheckStartupMessages()) {
         _dropped++;
         return false;
@@ -1019,8 +1014,24 @@ void DataFlash_File::_io_timer(void)
     ssize_t nwritten = _write_fd.write(head, nbytes);
     if (nwritten <= 0) {
         printf("Log write %ld bytes fails: %s\n",nbytes, SD.strError(SD.lastError));
-
         _write_fd.close();
+#if defined(BOARD_DATAFLASH_FATFS)
+        if(FR_INT_ERR == SD.lastError) { // internal error - bad filesystem
+            printf("formatting!\n");
+            SD.format(_log_directory);
+            start_new_log();             // re-open logging
+            if(_write_fd) {             // success?
+                nwritten = _write_fd.write(head, nbytes); // ok, try to write again
+                if(nwritten>0) {                        // if ok 
+                    _write_offset += nwritten;          //   then mark data as written
+                    _writebuf.advance(nwritten);
+                    _write_fd.sync();                  //   and fix it on SD
+                    return; 
+                }
+            }
+        }
+#endif
+
         _initialised = false;
     } else {
         _write_offset += nwritten;

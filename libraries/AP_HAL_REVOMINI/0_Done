@@ -112,9 +112,9 @@
 * all work with semaphores moved out to the same ISR level so serialized by hardware and don't requires disabling interrupts
 * added parameter RC_FS to enable all RC failsafe
 * added disabling of data cache on flash write, just for case (upstream has this update too)
-* added a way to schedule context switch from ISR, eg. at data receive
+* added a way to schedule context switch from ISR, eg. at data receive or IO_Complete
 * added timeout to SPI flags waiting
-* task now stops until DMA transfer completes
+* now task having started DMA IO goes to pause and resumes in IO_Completion ISR, not eating CPU time
 * optimized I2C wait times to work on noisy lines
 * ...
 * a lot of minor enhancements
@@ -125,10 +125,29 @@ EEPROM emulation in Flash cause periodic program hunging on time of sector erase
 like MOT_THST_HOVER - MOT_HOVER_LEARN to be 2 you should defer parameter writing (Param HAL_EE_DEFER)
 
 --------
-расклад времени
+Старый расклад времени:
 25.7 опрос датчиков, из них 7.7% ожидание
 остается 74.3%, из них 65% ожидание
 собственно на расчет с частотой 400 раз в секунду уходит около 10% всего времени
+
+Новый расклад времени:
+task 0 (0x0000000080ACE09) time:   12.18% mean     77.3uS max   131uS full       0uS wait sem.    122uS main task
+task 1 (0x0000000080AD735) time:   78.50% mean      4.2uS max    33uS full       0uS wait sem.      0uS idle
+task 2 (0x80AE3E920004CD0) time:    0.28% mean     13.9uS max    38uS full      38uS wait sem.      0uS analog IO
+task 3 (0x8049C0120007E50) time:    1.90% mean     44.8uS max   116uS full     617uS wait sem.      8uS baro
+task 4 (0x0000000080ADACD) time:    1.88% mean      9.5uS max    35uS full    1003uS wait sem.      0uS IO tasks
+task 5 (0x804CB7F2000CF08) time:    1.74% mean     51.3uS max   117uS full     763uS wait sem.    189uS compass
+task 6 (0x80546152000CFA0) time:    3.40% mean     33.5uS max    45uS full     155uS wait sem.     10uS MPU
+task 7 (0x0000000080AE225) time:    0.01% mean     85.6uS max   112uS full    1928uS wait sem.      0uS stats
+занято 21.5% , из них 7.5% опрос датчиков и 12.2 это основной процесс
+
+Шедулер:
+by timer 12.05% sw  5.88%  таймерный планировщик составляет 12% от всех вызовов, при этом контекст переключается в 6% случаев, итог - 0.72% 
+in yield 79.97% sw 97.13%  добровольное завершение кванта с вызовом планировщика это 80%, вероятность переключения 97%, итог - 77.6%
+in tails  7.98% sw 71.75%  переключение по таймеру до истечения кванта - 8%, вероятность 72%, итог - 5.8%
+вывод: кооперативная многозадачность на 77% :)
+
+
 
 interrupts priorities:
 0 PWM input

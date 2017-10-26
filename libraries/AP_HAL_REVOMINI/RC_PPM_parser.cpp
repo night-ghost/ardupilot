@@ -74,8 +74,8 @@ void PPM_parser::rxIntRC(uint16_t last_value, uint16_t value, bool state)
         if(_rc_mode==BOARD_RC_NONE){
             _process_ppmsum_pulse( (last_value + value) >>1 ); // process PPM only if no protocols detected
         }
-        
-        if((_rc_mode &~BOARD_RC_SBUS_NI) == 0 ){
+
+        if((_rc_mode &~BOARD_RC_SBUS_NI) == 0){
             // test for non-inverted SBUS in 2nd memory structures
             _process_sbus_pulse(last_value>>1, value>>1, sbus_state[1]);  // was 1 so now is length of 1, last is a length of 0
         }

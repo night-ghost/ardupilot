@@ -283,9 +283,6 @@ void AP_Baro_MS56XX::_timer(void)
     uint8_t next_cmd;
     uint8_t next_state;
 
-    if (!_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)){
-          return; // reschedule at next tick if failed
-    }
 
     uint32_t adc_val = _read_adc();
 
@@ -303,7 +300,7 @@ void AP_Baro_MS56XX::_timer(void)
                                : ADDR_CMD_CONVERT_PRESSURE;
                                
     if (!_dev->transfer(&next_cmd, 1, nullptr, 0)) {
-        goto exit;
+        return;
     }
 
     /* if we had a failed read we are all done */
@@ -311,15 +308,18 @@ void AP_Baro_MS56XX::_timer(void)
         // a failed read can mean the next returned value will be
         // corrupt, we must discard it
         _discard_next = true;
-        goto exit;
+        return;
     }
 
     if (_discard_next) {
         _discard_next = false;
         _state = next_state;
-        goto exit;
+        return;
     }
 
+    if (!_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)){
+          return;
+    }
 
         if (_state == 0) {
             _update_and_wrap_accumulator(&_accum.s_D2, adc_val,
@@ -330,8 +330,6 @@ void AP_Baro_MS56XX::_timer(void)
         }
         _state = next_state;
 
-
-exit:
     _sem->give();
 }
 

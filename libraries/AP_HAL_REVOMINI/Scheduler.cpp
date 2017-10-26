@@ -1291,9 +1291,9 @@ void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
             if(s_running->ttw){ // the task voluntarily gave up its quant and wants delay, so that at the end of the delay it will have the high priority
                 s_running->curr_prio = s_running->priority - 6;
             } else {
-                s_running->curr_prio = s_running->priority+1; // to guarantee that quant will not return if there is equal priority tasks
+                s_running->curr_prio = s_running->priority + 2; // to guarantee that quant will not return if there is equal priority tasks
+                // popular I2C wait time is 300us so let skip 2 quants
             }
-//            s_running->f_yield=true; заметно хуже
         }
         switch_task();
         break;        
@@ -1334,14 +1334,14 @@ void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
                 task_t *own = (task_t *)sem->get_owner();
                 task_t *curr_task = s_running;
                 //Increase the priority of the semaphore's owner up to the priority of the current task
-                if(own->priority > curr_task->priority) own->curr_prio = curr_task->priority-1;
+                if(own->priority >= curr_task->priority) own->curr_prio = curr_task->priority-1;
 
                 switch_task(); 
             }
         }
         break;
     
-    case 4: {          // set_task_ioc(bool v) 
+    case 4: {          // set_task_ioc(bool v) - to not be called from ISR
             s_running->in_ioc=svc_args[0];
         }
         break;    
