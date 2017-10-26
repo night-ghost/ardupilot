@@ -22,7 +22,7 @@ extern const AP_HAL::HAL& hal;
 
 
 #if defined(BOARD_DSM_USART)
-REVOMINIUARTDriver DSM_parser::uartSDriver(BOARD_DSM_USART);
+REVOMINIUARTDriver DSM_parser::uartSDriver(BOARD_DSM_USART); // UART connected to DSM pin
 #elif defined(BOARD_USART5_RX_PIN)
 REVOMINIUARTDriver DSM_parser::uartSDriver(_UART5);
 #endif
@@ -52,6 +52,8 @@ void DSM_parser::init(uint8_t ch)  {
 
     _ioc = REVOMINIScheduler::register_io_completion(FUNCTOR_BIND_MEMBER(&DSM_parser::_io_completion, void));
 
+    uartSDriver.end(); // just for case
+    
     // initialize DSM UART
     uartSDriver.begin(115200);
     Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&DSM_parser::add_dsm_uart_input, void) };

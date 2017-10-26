@@ -156,6 +156,7 @@ protected:
     static uint8_t spi_trans_ptr;
 #endif
     Handler _completion_cb;
+    void *_task;
 };
 
 class SPIDeviceManager : public AP_HAL::SPIDeviceManager {

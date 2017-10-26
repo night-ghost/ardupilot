@@ -17,7 +17,9 @@
 /* Maximum Timeout values for events waiting loops */
    
 #undef  I2C_TIMEOUT
-#define I2C_TIMEOUT         (4000)// in uS
+#define I2C_TIMEOUT         (300)// in uS - wait for byte transfer: 10us per bit (100kHz) * 9 bits
+#define I2C_SMALL_TIMEOUT   (50)  // in uS - wait for bit
+
 
 #define I2C_OK          0
 #define I2C_NO_DEVICE   1
@@ -32,6 +34,7 @@
 #define I2C_ERR_TIMEOUT 95
 #define I2C_DMA_BUSY    103
 #define I2C_PENDING     255
+#define I2C_DMA_ERROR   100
 
 
 #define DMA_BUFSIZE 8 // we read just 6 bytes from compass
@@ -44,13 +47,13 @@ typedef struct I2C_DMA {
 
 
 typedef struct I2c_state {
-    Handler  ioc;
     uint8_t *dst;
     uint16_t len;
     uint8_t  buff[DMA_BUFSIZE];
 } i2c_state;
 
 
+extern uint32_t i2c_bit_time;
 
 /**
  * @brief I2C device type.
@@ -65,7 +68,6 @@ typedef struct i2c_dev {
     IRQn_Type ev_nvic_line;  /* Event IRQ number */
     IRQn_Type er_nvic_line;  /* Error IRQ number */        
     I2C_dma dma;
-    voidFuncPtr dma_isr;
     i2c_state *state;
 } i2c_dev;
 
@@ -79,8 +81,6 @@ void i2c_deinit(const i2c_dev *dev);
 
 uint32_t i2c_write(const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint8_t txlen);
 uint32_t i2c_read (const i2c_dev *dev, uint8_t addr, const uint8_t *tx_buff, uint8_t txlen, uint8_t *rx_buff, uint8_t rxlen);
-
-static inline void i2c_set_ioc(const i2c_dev *dev, Handler h) { dev->state->ioc=h; }
 
 void i2c_lowLevel_deinit(const i2c_dev *dev);
 

@@ -642,6 +642,7 @@ void REVOMINIScheduler::_print_stats(){
                 ptr->sem_max_wait=0;
                 ptr->quants=0;
                 ptr->quants_time=0;
+                ptr->max_paused=0;
                 
                 ptr = ptr->next;
             } while(ptr != &s_main);
@@ -796,7 +797,6 @@ void REVOMINIScheduler::do_task(task_t *task) {
                 }
             }
             revo_call_handler(task->handle, task->id); 
-            task->active=false;                    // turn off active, to know when task is started again. Before semaphore!
             if(task->sem){
                 if(!task->in_ioc){
                     task->sem->give(); // give semaphore when task finished
@@ -806,11 +806,20 @@ void REVOMINIScheduler::do_task(task_t *task) {
 #endif
                 }
             }
-            task->curr_prio = task->priority - 6;  // just activated task will have a highest priority for one quant
 #ifdef MTASK_PROF
             t = _micros()-task->time_start; // execution time
             if(t > task->work_time)  task->work_time=t;
+            if(task->t_paused > task->max_paused) {
+                task->max_paused = task->t_paused;
+            }
+            if(task->count_paused>task->max_c_paused) {
+                task->max_c_paused = task->count_paused;
+            }
+            task->count_paused=0;
+            task->t_paused=0;
 #endif
+            task->active=false;                    // turn off active, to know when task is started again. last! or can never give semaphore
+            task->curr_prio = task->priority - 6;  // just activated task will have a highest priority for one quant
         }
         yield(0);        // give up quant remainder
     }// endless loop
@@ -1001,10 +1010,10 @@ task_t *REVOMINIScheduler::get_next_task(){
             
         if(!ptr->handle) goto skip_task; // skip finished tasks
         
-        if(ptr->f_yield) {
-            ptr->f_yield=false; // only once
-            goto skip_task;     // this allows to execute low-priority tasks 
-        }
+//        if(ptr->f_yield) {
+//            ptr->f_yield=false; // only once
+//            goto skip_task;     // this allows to execute low-priority tasks 
+//        }
         
         if(ptr->sem_wait) { // task want a semaphore
             if(ptr->sem_wait->is_taken()) { // task blocked on semaphore
@@ -1073,21 +1082,15 @@ task_t *REVOMINIScheduler::get_next_task(){
 // выполнение, заставляя пропустить число тиков, равное разности приоритетов. В результате низкоприоритетная задача выполняется на меньшей скорости,
 // которую можно настраивать изменением разницы приоритетов
             }
-//            prev_task=task; // remember previous leader
             task = ptr; // winner
         }
 skip_task:
     // we should do this check after EACH task so can't use "continue" which skips ALL loop. 
     // And we can't move this to begin of loop because then interrupted task does not participate in the comparison of priorities
         if(ptr == me) { 
-
             break;   // 'me' is the task that works now, so full loop - now we have most-priority task so let it run!
         }
     }
-
-//    if(task->f_yield) {
-//        task=prev_task;
-//    }
 
  #ifdef SHED_DEBUG
     revo_sched_log &lp = logbuf[sched_log_ptr];
@@ -1103,14 +1106,15 @@ skip_task:
 
     task->curr_prio=task->priority; // reset current priority to default value
     task->ttw=0;        // time to wait is over
-    task->start = now;  // task startup time
 #if defined(MTASK_PROF) 
+    task->start = now;  // task startup time
     task->in_isr=0; // reset ISR time
     task->count++;     // full count
     task->quants++;    // one-start count
 #endif
 
     // выбрали задачу для переключения. 
+
     // проверим сохранность дескриптора
     if(task->guard != STACK_GUARD){
         // TODO исключить задачу из планирования
@@ -1173,7 +1177,9 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
     asm volatile( "mov r0,%0 \n"  // time to sleep in R0
                   "svc 0     \n"::"r"(ttw)); // do scheduler in interrupt
 */
-    s_running->ttw=ttw;   // если переключение задачи происходит между записью и вызовом svc, мы всего лишь добавляем лишний тик
+    if(ttw) { // ttw cleared on sleep exit so always 0 if not set specially 
+        s_running->ttw=ttw;   // если переключение задачи происходит между записью и вызовом svc, мы всего лишь добавляем лишний тик
+    }
     asm volatile("svc 0");
 }
 
@@ -1287,7 +1293,7 @@ void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
             } else {
                 s_running->curr_prio = s_running->priority+1; // to guarantee that quant will not return if there is equal priority tasks
             }
-            s_running->f_yield=true;
+//            s_running->f_yield=true; заметно хуже
         }
         switch_task();
         break;        

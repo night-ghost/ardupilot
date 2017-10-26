@@ -251,6 +251,7 @@ void USBD_USR_DeviceReset(uint8_t speed )
 void USBD_USR_DeviceConfigured (void)
 {
     usb_connected = 1;
+    usb_opened = 1; // just for case
 }
 
 void USBD_USR_DeviceSuspended(void)
@@ -263,12 +264,14 @@ void USBD_USR_DeviceSuspended(void)
 void USBD_USR_DeviceResumed(void)
 {
     usb_connected = 1;
+    usb_opened = 1; // just for case
 }
 
 
 void USBD_USR_DeviceConnected (void)
 {
     usb_connected = 1;
+    usb_opened = 1; // just for case
 }
 
 
@@ -537,7 +540,8 @@ static U16 VCP_Ctrl (U32 Cmd, U8 *Buf, U32 Len)
     break;
   }
 
-     usb_opened = 1; // set active state only on VCP opening
+  usb_opened = 1; // set active state only on VCP opening
+  usb_connected = 1; // just for case
 
   return USBD_OK;
 }
@@ -647,24 +651,26 @@ unsigned VCP_DataAvailContig(void)
 
 static U16 VCP_DataRx(U8 *buffer, U32 nbytes)
 {
+    usb_opened = 1; // data from other side
+
 #ifdef DEBUG_BUILD
-        if(VCP_DTRHIGH) {
-            if(nbytes >= 4) {
-                if(buffer[0] == '1' && buffer[1] == 'E' && buffer[2] == 'A' && buffer[3] == 'F') {
-                        nbytes = 0;
-                        if(is_bare_metal())  // bare metal build without bootloader should reboot to DFU on this reset
-                            board_set_rtc_register(DFU_RTC_SIGNATURE, RTC_SIGNATURE_REG);
+    if(VCP_DTRHIGH) {
+        if(nbytes >= 4) {
+            if(buffer[0] == '1' && buffer[1] == 'E' && buffer[2] == 'A' && buffer[3] == 'F') {
+                    nbytes = 0;
+                    if(is_bare_metal())  // bare metal build without bootloader should reboot to DFU on this reset
+                        board_set_rtc_register(DFU_RTC_SIGNATURE, RTC_SIGNATURE_REG);
                         
-                        NVIC_SystemReset();
-                }
+                    NVIC_SystemReset();
             }
         }
-        VCP_DTRHIGH =0;
+    }
+    VCP_DTRHIGH =0;
 #endif
-        unsigned sz = VCP_GetContig(buffer, nbytes);
-        if (sz && (nbytes -= sz))
-                sz += VCP_GetContig((uint8_t*)buffer + sz, nbytes);
-        return sz;
+    unsigned sz = VCP_GetContig(buffer, nbytes);
+    if (sz && (nbytes -= sz))
+            sz += VCP_GetContig((uint8_t*)buffer + sz, nbytes);
+    return sz;
 }
 
 void OTG_FS_IRQHandler(void)
@@ -702,8 +708,6 @@ int usb_close(void)
 		USBD_DeInit(&USB_OTG_dev);
 		USB_OTG_StopDevice(&USB_OTG_dev);
 		usb_ready = 0;
-//		usb_cdcacm_disable(BOARD_USB_DISC_DEV, BOARD_USB_DISC_BIT);
-//              usb_cdcacm_set_hooks(USB_CDCACM_HOOK_RX | USB_CDCACM_HOOK_IFACE_SETUP, 0);            
 	}
 	
 	if (usb_attr->use_present_pin)
@@ -756,24 +760,6 @@ int usb_ioctl(int request, void *ctl)
 	return 1;
 }
 
-
-/*
-
-// * User hooks
-
-
-static void (*rx_hook)(unsigned, void*) = 0;
-static void (*iface_setup_hook)(unsigned, void*) = 0;
-
-void usb_cdcacm_set_hooks(unsigned hook_flags, void (*hook)(unsigned, void*)) {
-    if (hook_flags & USB_CDCACM_HOOK_RX) {
-        rx_hook = hook;
-    }
-    if (hook_flags & USB_CDCACM_HOOK_IFACE_SETUP) {
-        iface_setup_hook = hook;
-    }
-}
-*/
 
 // following functions can't be inline!
 void USB_OTG_BSP_uDelay (const uint32_t usec) {   

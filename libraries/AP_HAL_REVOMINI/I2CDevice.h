@@ -43,9 +43,11 @@ typedef struct I2C_STATE {
     uint8_t send_len;
     uint8_t recv_len;
     uint8_t ret;
-    uint8_t op_sr1;
-    uint8_t sr1;
-    uint8_t sr2;
+    uint16_t op_sr1;
+    uint16_t sr1;
+    uint16_t sr2;
+    uint16_t st_sr1;
+    uint16_t st_sr2;
 } I2C_State;
 #endif
 
@@ -112,19 +114,25 @@ public:
         register_completion_callback(r.h);
     }
 
-    inline uint32_t get_error_count() {return _lockup_count; }
-    inline uint8_t get_last_error() {return last_error; }
-    inline uint8_t get_bus() {return _bus; }
-    inline uint8_t get_addr() {return _address; }
+    inline uint32_t get_error_count() { return _lockup_count; }
+    inline uint8_t  get_last_error() { return last_error; }
+    inline uint8_t  get_bus()  { return _bus; }
+    inline uint8_t  get_addr() { return _address; }
     
-    static inline uint8_t get_dev_count() {return dev_count; }
+    static inline uint8_t get_dev_count() { return dev_count; }
     static inline REVOMINI::REVOI2CDevice * get_device(uint8_t i) { return devices[i]; }
 
     void do_bus_reset();
 
+    void _io_cb();
 
 private:
     void init();
+
+    uint32_t i2c_read(uint8_t addr, const uint8_t *tx_buff, uint8_t txlen, uint8_t *rx_buff, uint8_t rxlen);
+    uint32_t i2c_write(uint8_t addr, const uint8_t *tx_buff, uint8_t len);
+    void  isr();
+    uint32_t wait_stop_done(bool v);
 
     uint8_t  _bus;
     uint16_t _offs;
@@ -136,9 +144,8 @@ private:
     bool     _slow;
     bool     _failed;
     bool     need_reset;
+    void     *_task;
     
-//    AP_HAL::Device::PeriodicHandle h_timer; // handler to task to acces it later
-
     const i2c_dev *_dev;
     Soft_I2C s_i2c; // per-bus instances
 

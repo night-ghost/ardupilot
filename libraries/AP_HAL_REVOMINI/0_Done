@@ -114,6 +114,8 @@
 * added disabling of data cache on flash write, just for case (upstream has this update too)
 * added a way to schedule context switch from ISR, eg. at data receive
 * added timeout to SPI flags waiting
+* task now stops until DMA transfer completes
+* optimized I2C wait times to work on noisy lines
 * ...
 * a lot of minor enhancements
 

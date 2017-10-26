@@ -64,7 +64,7 @@ void PPM_parser::parse_pulses(void){
     }
 }
 
-#pragma GCC optimize ("Og")
+//#pragma GCC optimize ("Og")
 
 
 void PPM_parser::rxIntRC(uint16_t last_value, uint16_t value, bool state)

@@ -27,23 +27,23 @@
 #define DRIVER_PRIORITY 98  // priority for drivers, speed of main will be 1/4 of this
 #define IO_PRIORITY    107  // main task has 100 so IO tasks will use 1/8 of CPU
 
-#define USE_ISR_SCHED 1
-
 #define SHED_FREQ 10000   // timer's freq in Hz
 #define TIMER_PERIOD 100  // task timeslice period in uS
 
 
-#define MAIN_STACK_SIZE  10240U   // measured use of stack is only 1.5K - but it grows up to 4K when using FatFs, also this includes 1K stack for ISR
-#define DEFAULT_STACK_SIZE  1024U // Default tasks stack size 
-#define IO_STACK_SIZE       8192U // IO_tasks stack size and stack max - io_thread can do work with filesystem
-#define SMALL_TASK_STACK 1024U    // small stack for sensors
-#define STACK_MAX  65536U
+#define MAIN_STACK_SIZE    10240U   // measured use of stack is only 1.5K - but it grows up to 4K when using FatFs, also this includes 1K stack for ISR
+#define IO_STACK_SIZE       8192U   // IO_tasks stack size - io_thread can do work with filesystem
+#define DEFAULT_STACK_SIZE  1024U   // Default tasks stack size 
+#define SMALL_TASK_STACK    1024U   // small stack for sensors
+#define STACK_MAX          65536U
 
 
-
+/*
+ * Task run-time structure (Task control block AKA TCB)
+ */
 struct task_t {
         const uint8_t* sp;      //!< Task stack pointer, should be first to access from context switcher
-        task_t* next;           //!< Next task
+        task_t* next;           //!< Next task (double linked list)
         task_t* prev;           //!< Previous task
         Handler handle;         //!< loop() in Revo_handler - to allow to change task, call via revo_call_handler
         const uint8_t* stack;   //!< Task stack bottom
@@ -51,11 +51,10 @@ struct task_t {
         uint8_t priority;       // priority of task
         uint8_t curr_prio;      // current priority of task, usually higher than priority
         bool active;            // task not ended
-        bool f_yield;           // task gives its quant
+//        bool f_yield;           // task gives its quant
         bool in_ioc;            // task starts IO_Completion so don't release bus semaphore
         uint32_t ttw;           // time to wait
         uint32_t t_yield;       // time of yield
-        uint32_t start;         // microseconds of timeslice start
         uint32_t period;        // if set then task starts on time basis only
         uint32_t time_start;    // start time of task
         REVOMINI::Semaphore *sem; // task should start after owning this semaphore
@@ -63,9 +62,10 @@ struct task_t {
         uint32_t sem_time;             // time to wait semaphore
         uint32_t sem_start_wait;       // time when waiting starts
 #if defined(MTASK_PROF)
+        uint32_t start;         // microseconds of timeslice start
         uint32_t in_isr;        // time in ISR when task runs
         uint32_t def_ttw;       // default TTW - not as hard as period
-        uint8_t sw_type;
+        uint8_t sw_type;        // type of task switch
         uint64_t time;  // full time
         uint32_t max_time; //  maximal execution time of task - to show
         uint32_t count;     // call count to calc mean
@@ -73,6 +73,10 @@ struct task_t {
         uint32_t sem_max_wait; // max time of semaphore waiting
         uint32_t quants;       // count of ticks
         uint32_t quants_time;  // sum of quatn's times
+        uint32_t t_paused;   // time task was paused on IO
+        uint32_t count_paused; // count task was paused on IO
+        uint32_t max_paused;   // max time task was paused on IO
+        uint32_t max_c_paused; // count task was paused on IO
 #endif
         uint32_t guard; // stack guard
 };
@@ -144,9 +148,6 @@ typedef struct REVO_IO {
 
 class REVOMINI::REVOMINIScheduler : public AP_HAL::Scheduler {
 public:
-  /**
-   * Task run-time structure.
-   */
 
     typedef struct IO_COMPLETION {
         Handler handler;
@@ -214,7 +215,7 @@ public:
     static inline  uint32_t _millis() {    return systick_uptime(); } //systick_uptime returns 64-bit time
     static inline  uint64_t _millis64() {  return systick_uptime(); }
 
-    static inline  uint32_t _micros() {   /* return systick_micros();*/ return timer_get_count32(TIMER5); }
+    static inline  uint32_t _micros() {    return timer_get_count32(TIMER5); }
     static         uint64_t _micros64(); 
 
     
@@ -241,11 +242,10 @@ public:
    * Start a task with given function and stack size. Should be
    * called from main task. The functions are executed by the
    * task. The taskLoop function is repeatedly called. Returns 
-   * true if successful otherwise false (no memory for new task).
-   * @param[in] taskSetup function (may be NULL).
+   * not-NULL if successful otherwise NULL (no memory for new task).
    * @param[in] taskLoop function (may not be NULL).
    * @param[in] stackSize in bytes.
-   * @return bool.
+   * @return address of TCB.
    */
   static void * _start_task(Handler h,  size_t stackSize);
 
@@ -263,48 +263,64 @@ public:
   
 // functions to alter task's properties
 //[ this functions called only at task start
-  static void set_task_period(void *h, uint32_t period);
-  static void set_task_semaphore(void *h, REVOMINI::Semaphore *sem);
-  static void set_task_ttw(void *h, uint32_t ttw);
-  static void set_task_priority(void *h, uint8_t prio);
-
+  static void set_task_period(void *h, uint32_t period);                // task will be auto-activated by this period
+  static void set_task_semaphore(void *h, REVOMINI::Semaphore *sem);    // taskLoop function will be called owning this semaphore
+  static void set_task_priority(void *h, uint8_t prio);                 // priority is a relative speed of task
+//]
 
 // this functions are atomic so don't need to disable interrupts
-  static void inline NAKED set_task_ioc(bool v) { asm volatile("svc 4");  /*   s_running->in_ioc=v; */ }
-  static void inline set_task_active(void *h) {   task_t * task = (task_t*)h; task->active=true; }
-  static void inline task_pause(void *h) {   task_t * task = (task_t*)h; task->active=false; yield(0); }
   static inline void *get_current_task() { return s_running; }
+  static void inline set_task_active(void *h) {   task_t * task = (task_t*)h; task->active=true; } // tasks are created in stopped state
+
+#if defined(MTASK_PROF)
+  static void inline task_pause(uint16_t t) {   // called from task when it starts DMA transfer
+      s_running->ttw=t;
+      s_running->sem_start_wait=_micros();
+      s_running->count_paused++;
+  }                    
+  static void inline task_resume(void *h) {   // called from IO_Complete ISR to resume task
+      task_t * task = (task_t*)h; task->ttw=0;  
+      
+      uint32_t dt= _micros() - task->sem_start_wait;
+      task->t_paused += dt;
+  } 
+#else
+  static void inline task_pause(uint16_t t) {   s_running->ttw=t;  }                      // called from task when it starts DMA transfer
+  static void inline task_resume(void *h) {   task_t * task = (task_t*)h; task->ttw=0;  } // called from IO_Complete ISR to resume task
+#endif
+  static void inline NAKED set_task_ioc(bool v) { asm volatile("svc 4"); }  // task waits for IO_Complete so don't release semaphore when taskLoop finished
 //]  
 
-    /*
-        task scheduler. Gives task ready to run with highest priority
-    */
-  static task_t *get_next_task(); 
+/*
+    task scheduler. Gives task ready to run with highest priority
+*/
+    static task_t *get_next_task(); 
 
-  /**               
-   * Context switch to next task in run queue.
-   */
-  static void yield(uint16_t ttw=0); // optional time to wait
+    /*
+     * finish current tick and schedule new task
+     */
+    static void yield(uint16_t ttw=0); // optional time to wait
   
   /**
    * Return current task stack size.
    * @return bytes
    */
-  static size_t task_stack();
+    static size_t task_stack();
   
-  // check from what task it called
-  static inline bool _in_main_thread() { return s_running == &s_main; }
+    // check from what task it called
+    static inline bool _in_main_thread() { return s_running == &s_main; }
+
+    static inline void plan_context_switch(){
+        need_switch_task = true; // require context switch
+        SCB->ICSR = SCB_ICSR_PENDSVSET_Msk; // PENDSVSET    
+    }
+
+    static void SVC_Handler(uint32_t * svc_args); // many functions called via SVC for hardware serialization
 
 //}
 
 
-    static inline void register_IMU_handler(AP_HAL::MemberProc proc) {
-        Revo_handler h = { .mp=proc };
-        REVOMINIGPIO::_attach_interrupt(BOARD_MPU6000_DRDY_PIN, h.h, RISING, 11);
-    }
-
 //{ IO completion routines
-
  #define MAX_IO_COMPLETION 8
     
     typedef voidFuncPtr ioc_proc;
@@ -327,13 +343,7 @@ public:
         } 
     }
 
-    static inline void plan_context_switch(){
-        need_switch_task = true; // require context switch
-        SCB->ICSR = SCB_ICSR_PENDSVSET_Msk; // PENDSVSET    
-    }
-
     static void exec_io_completion();
-    static void SVC_Handler(uint32_t * svc_args);
 
     // do context switch after return from interrupt
     static void context_switch_isr();
@@ -343,6 +353,7 @@ public:
 //}
 
 
+    // helpers
     static inline Handler get_handler(AP_HAL::MemberProc proc){
         Revo_handler h = { .mp = proc };
         return h.h;
@@ -376,7 +387,8 @@ protected:
 //{ multitask
     // executor for task's handler
     static void do_task(task_t * task);
-    // gves first deleted task or NULL
+
+    // gves first deleted task or NULL - not used because tasks are never finished
     static task_t* get_empty_task();
 /**
    * Initiate a task with the given functions and stack. When control
