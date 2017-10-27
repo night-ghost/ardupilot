@@ -100,7 +100,7 @@ static const usart_dev uart5 = {
     .tx_pin = 255,              // RX-only
     .gpio_af = GPIO_AF_UART5
 };
-/** UART5 device */
+/* UART5 device */
 const usart_dev * const _UART5 = &uart5;
 #endif
 
@@ -123,6 +123,24 @@ static const usart_dev usart6 =
     };
 /** UART6 device */
 const usart_dev * const _USART6 = &usart6;
+
+const usart_dev * const UARTS[]={
+    NULL,
+    &usart1,
+    &usart2,
+    &usart3,
+#if defined(BOARD_USART4_RX_PIN) && defined(BOARD_USART4_TX_PIN)
+    &usart4,
+#else
+    NULL,
+#endif
+#if defined(BOARD_USART5_RX_PIN)
+    &usart5,
+#else
+    NULL,
+#endif
+    &usart6,
+};
 
 extern uint32_t us_ticks;
 

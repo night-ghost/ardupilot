@@ -1013,12 +1013,17 @@ void DataFlash_File::_io_timer(void)
 
     ssize_t nwritten = _write_fd.write(head, nbytes);
     if (nwritten <= 0) {
-        printf("Log write %ld bytes fails: %s\n",nbytes, SD.strError(SD.lastError));
+        FRESULT err=SD.lastError;
+        printf("Log write %ld bytes fails: %s\n",nbytes, SD.strError(err));
         _write_fd.close();
 #if defined(BOARD_DATAFLASH_FATFS)
-        if(FR_INT_ERR == SD.lastError) { // internal error - bad filesystem
+        if(FR_INT_ERR == err) { // internal error - bad filesystem
+            gcs().send_text(MAV_SEVERITY_INFO, "Formatting DataFlash, please wait");
             printf("formatting!\n");
+            _initialised = false; // format requires a long time and 1s task will kill process
             SD.format(_log_directory);
+            _initialised = true;
+            gcs().send_text(MAV_SEVERITY_INFO, "Formatting complete");
             start_new_log();             // re-open logging
             if(_write_fd) {             // success?
                 nwritten = _write_fd.write(head, nbytes); // ok, try to write again
@@ -1062,7 +1067,6 @@ bool DataFlash_File::io_thread_alive() const
     // if the io thread hasn't had a heartbeat in a 5 second then it is dead
     if(_io_timer_heartbeat + 5000 > tnow) return true;
     
-    volatile uint32_t xx=tnow; // just for breakpoint
     return false;
 }
 

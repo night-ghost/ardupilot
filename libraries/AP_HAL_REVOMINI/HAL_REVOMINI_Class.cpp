@@ -488,9 +488,7 @@ done:
     REVOMINIStorage::late_init(hal_param_helper->_eeprom_deferred); 
     
     uint8_t flags=0;
-#ifdef BOARD_SBUS_UART1    
-    if(hal_param_helper->_uart1_sbus) flags |= BOARD_SBUS_UART1;
-#endif
+
     if(hal_param_helper->_rc_fs)      flags |= BOARD_RC_FAILSAFE;
 
     REVOMINIRCInput::late_init(flags);

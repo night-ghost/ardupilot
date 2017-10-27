@@ -1,7 +1,8 @@
 #pragma GCC optimize ("O2")
 #include <AP_HAL/HAL.h>
+#include <AP_Param_Helper/AP_Param_Helper.h>
 
-#ifdef BOARD_SBUS_UART1
+#ifdef BOARD_SBUS_UART
 
 #include <exti.h>
 #include <timer.h>
@@ -20,7 +21,7 @@ using namespace REVOMINI;
 
 extern const AP_HAL::HAL& hal;
 
-REVOMINIUARTDriver SBUS_parser::uartSDriver(_USART1);
+REVOMINIUARTDriver *SBUS_parser::uartSDriver;
 
 void SBUS_parser::init(uint8_t ch){
 
@@ -54,17 +55,19 @@ void SBUS_parser::init(uint8_t ch){
 
 
 void SBUS_parser::late_init(uint8_t b){
-    if(b & BOARD_SBUS_UART1) {
+
+        if(hal_param_helper->_uart_sbus) {
 #ifdef BOARD_SBUS_INVERTER
-        REVOMINIGPIO::_pinMode(BOARD_SBUS_INVERTER, OUTPUT);
-        REVOMINIGPIO::_write(  BOARD_SBUS_INVERTER, HIGH); // do inverse
+            REVOMINIGPIO::_pinMode(BOARD_SBUS_INVERTER, OUTPUT);
+            REVOMINIGPIO::_write(  BOARD_SBUS_INVERTER, HIGH); // do inverse
 #endif
-        // initialize SBUS UART
-        uartSDriver.end();
-        uartSDriver.begin(100000, (UART_Parity_Even <<4) | UART_Stop_Bits_2);
-        Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&SBUS_parser::add_uart_input, void) };
-        uartSDriver.setCallback(h.h);
-    }
+            uartSDriver = new REVOMINIUARTDriver(UARTS[hal_param_helper->_uart_sbus]);
+            // initialize SBUS UART
+            uartSDriver->end();
+            uartSDriver->begin(100000, (UART_Parity_Even <<4) | UART_Stop_Bits_2);
+            Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&SBUS_parser::add_uart_input, void) };
+            uartSDriver->setCallback(h.h);
+        }
 }
 
 
@@ -78,7 +81,7 @@ void SBUS_parser::add_uart_input() {
 
 void SBUS_parser::_io_completion() {
 
-    while(uartSDriver.available()){
+    while(uartSDriver->available()){
         
         // at least 1 byte we have
         const uint8_t frame_size = sizeof(sbus.frame);
@@ -96,7 +99,7 @@ void SBUS_parser::_io_completion() {
         }
     
 
-        sbus.frame[sbus.partial_frame_count] = uartSDriver.read();
+        sbus.frame[sbus.partial_frame_count] = uartSDriver->read();
         sbus.partial_frame_count += 1;
 
 	if (sbus.partial_frame_count == frame_size) {

@@ -123,7 +123,7 @@ void boardInit(void);
 #define BOARD_USB_DMINUS 108
 
 
-#define BOARD_SBUS_UART1 1 // can use UART1 as hardware inverted input
+#define BOARD_SBUS_UART 1 // can use some UART as hardware inverted input
 
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
@@ -174,13 +174,13 @@ void boardInit(void);
     // @User: Advanced
     AP_GROUPINFO("_USE_SOFTSERIAL", 1,  HAL_REVOMINI, _use_softserial, 0),
 
-    // @Param: UART1_SBUS
-    // @DisplayName: Use UART1 as SBUS input
-    // @Description: Use UART1 as SBUS input, not as MAVlink telemetry
-    // @Values: 0:disabled,1:enabled
+    // @Param: UART_SBUS
+    // @DisplayName: What UART to use as SBUS input
+    // @Description: Allows to use any UART as SBUS input
+    // @Values: 0:disabled,1:UART1, 2:UART2 etc
     // @User: Advanced
-    AP_GROUPINFO("UART1_SBUS", 3, AP_Param_Helper, _uart1_sbus, 0), \
-
+    AP_GROUPINFO("UART_SBUS", 3, AP_Param_Helper, _uart_sbus, 0), \
+    
     // @Param: SERVO_MASK
     // @DisplayName: Servo Mask of Input port
     // @Description: Enable selected pins of Input port to be used as Servo Out
@@ -227,7 +227,7 @@ void boardInit(void);
 #define BOARD_HAL_VARINFO \
     AP_GROUPINFO("MOTOR_LAYOUT", 1, AP_Param_Helper, _motor_layout, 0), \
     AP_GROUPINFO("SERVO_MASK",   2, AP_Param_Helper, _servo_mask, 0), \
-    AP_GROUPINFO("UART1_SBUS",   3, AP_Param_Helper, _uart1_sbus, 0), \
+    AP_GROUPINFO("UART_SBUS",    3, AP_Param_Helper, _uart_sbus, 0), \
     AP_GROUPINFO("CONNECT_COM",  5, AP_Param_Helper, _connect_com, 0), \
     AP_GROUPINFO("PWM_TYPE",     6, AP_Param_Helper, _pwm_type, 0), \
     AP_GROUPINFO("CONNECT_ESC",  7, AP_Param_Helper, _connect_esc, 0), \
@@ -243,7 +243,7 @@ void boardInit(void);
 // parameters
 #define BOARD_HAL_PARAMS \
     AP_Int8 _motor_layout; \
-    AP_Int8 _uart1_sbus; \
+    AP_Int8 _uart_sbus; \
     AP_Int8 _servo_mask;   \
     AP_Int8 _connect_com;  \
     AP_Int8 _connect_esc; \

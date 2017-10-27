@@ -45,7 +45,7 @@ typedef struct usart_dev {
 } usart_dev;
 
 
-
+extern const usart_dev * const UARTS[];
 
 #ifdef __cplusplus
   extern "C" {

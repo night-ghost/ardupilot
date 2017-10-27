@@ -17,7 +17,7 @@ public:
     
 private:
 
-    static REVOMINIUARTDriver uartSDriver; 
+    static REVOMINIUARTDriver *uartSDriver; 
 
     void add_uart_input(); // add some input bytes, for SBUS over a serial port
     void _io_completion();

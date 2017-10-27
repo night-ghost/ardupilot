@@ -18,7 +18,7 @@
 #ifdef BOARD_NRF_CS_PIN
  #include "RC_NRF_parser.h"
 #endif
-#ifdef BOARD_SBUS_UART1
+#ifdef BOARD_SBUS_UART
  #include "RC_SBUS_parser.h"
 #endif
 
@@ -58,7 +58,7 @@ _parser *REVOMINIRCInput::parsers[] = { // individual parsers on each PPM pin an
 #ifdef BOARD_NRF_CS_PIN
     new NRF_parser,
 #endif
-#ifdef BOARD_SBUS_UART1
+#ifdef BOARD_SBUS_UART
     new SBUS_parser,
 #endif
 }; 
