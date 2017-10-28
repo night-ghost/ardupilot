@@ -138,7 +138,10 @@ void i2c_init(const i2c_dev *dev, uint16_t address, uint32_t speed)
     I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
     I2C_InitStructure.I2C_ClockSpeed          = speed;
 
+
     I2C_ITConfig(dev->I2Cx, I2C_IT_EVT | I2C_IT_BUF | I2C_IT_ERR, DISABLE);
+
+    (void)dev->I2Cx->DR; 
 
     /* I2C Peripheral Enable */
     I2C_Cmd(dev->I2Cx, ENABLE);
@@ -157,6 +160,29 @@ void i2c_init(const i2c_dev *dev, uint16_t address, uint32_t speed)
 void i2c_deinit(const i2c_dev *dev)
 {
     i2c_lowLevel_deinit(dev);
+}
+
+static void ev_handler(const i2c_dev *dev, bool err){
+    if(dev->state->handler) revo_call_handler(dev->state->handler, err);
+    else { // disable interrupts
+        dev->I2Cx->CR2 &= ~(I2C_CR2_ITBUFEN|I2C_CR2_ITEVTEN|I2C_CR2_ITERREN);    // Disable interrupts
+    }
+}
+
+void I2C1_EV_IRQHandler(){                // I2C1 Event                   
+    ev_handler(_I2C1, false);
+}
+  
+void I2C1_ER_IRQHandler(){                // I2C1 Error                   
+    ev_handler(_I2C1, true);
+}
+
+void I2C2_EV_IRQHandler(){                // I2C2 Event                 
+    ev_handler(_I2C2, false);
+}
+
+void I2C2_ER_IRQHandler(){                // I2C2 Error
+    ev_handler(_I2C2, true);
 }
 
 

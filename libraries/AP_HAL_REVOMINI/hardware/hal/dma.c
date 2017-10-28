@@ -81,6 +81,8 @@ void dma_init(dma_stream stream) {
     memset(dev->handlers, 0, 8 * sizeof(Handler));
     
     RCC_AHB1PeriphClockCmd(dev->clk_id, ENABLE);
+
+    dev->regs->STREAM[stream].CR &= ~DMA_CR_EN;
 }
 
 /**

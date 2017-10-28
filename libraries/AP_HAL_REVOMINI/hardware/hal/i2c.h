@@ -32,6 +32,8 @@
 #define I2C_STOP_BERR   97
 #define I2C_STOP_BUSY   96
 #define I2C_ERR_TIMEOUT 95
+#define I2C_ERR_REGISTER 94
+#define I2C_ERR_OVERRUN  93
 #define I2C_DMA_BUSY    103
 #define I2C_PENDING     255
 #define I2C_DMA_ERROR   100
@@ -50,6 +52,7 @@ typedef struct I2c_state {
     uint8_t *dst;
     uint16_t len;
     uint8_t  buff[DMA_BUFSIZE];
+    Handler handler;
 } i2c_state;
 
 
@@ -86,6 +89,24 @@ void i2c_lowLevel_deinit(const i2c_dev *dev);
 
 void i2c_master_release_bus(const i2c_dev *dev);
 bool i2c_bus_reset(const i2c_dev *dev);
+
+static inline void i2c_set_isr_handler(const i2c_dev *dev, Handler h){
+    IRQn_Type irq;
+    dev->state->handler = h;
+
+    irq=dev->er_nvic_line;
+    NVIC_EnableIRQ(irq);
+    NVIC_SetPriority(irq, 6);
+
+    irq=dev->ev_nvic_line;
+    NVIC_EnableIRQ(irq);
+    NVIC_SetPriority(irq, 6);
+}
+
+static inline void i2c_clear_isr_handler(const i2c_dev *dev){
+    dev->state->handler=0;
+}
+
 
 #ifdef I2C_DEBUG
 uint32_t i2c_get_operation_time(uint8_t *psr1);

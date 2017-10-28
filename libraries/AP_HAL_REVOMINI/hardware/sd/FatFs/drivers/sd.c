@@ -3,6 +3,7 @@
 #include "../ff.h"
 #include <stdlib.h>
 #include <stdint.h>
+#include <syscalls.h>
 
 
 #define CS_HIGH()	spi_chipSelectHigh()
@@ -809,6 +810,11 @@ static uint8_t erase_cmd=JEDEC_PAGE_ERASE;
 static uint8_t erase_cmd=JEDEC_SECTOR_ERASE;
 #endif
 
+static uint8_t cmd[4];
+
+
+static bool chip_is_clear=false;
+
 uint8_t sd_get_type() {
     return 0;
 }
@@ -964,14 +970,13 @@ static bool read_page( BYTE *buf, DWORD pageNum){
 
     if (!cs_assert()) return 0;
 
-    uint8_t cmd[4];
     cmd[0] = JEDEC_READ_DATA;
     cmd[1] = (PageAdr >> 16) & 0xff;
     cmd[2] = (PageAdr >>  8) & 0xff;
     cmd[3] = (PageAdr >>  0) & 0xff;
 
     
-    write_spi_multi(cmd, sizeof(cmd));
+    write_spi_multi(cmd, 4);
 
     read_spi_multi(sector_buf, DF_PAGE_SIZE);
 
@@ -1000,13 +1005,12 @@ static bool write_page(const BYTE *buf, DWORD pageNum){
 
     if (!cs_assert()) return 0;
 
-    uint8_t cmd[4];
     cmd[0] = JEDEC_PAGE_WRITE;
     cmd[1] = (PageAdr >> 16) & 0xff;
     cmd[2] = (PageAdr >>  8) & 0xff;
     cmd[3] = (PageAdr >>  0) & 0xff;
 
-    write_spi_multi(cmd, sizeof(cmd));
+    write_spi_multi(cmd, 4);
 
     write_spi_multi(sector_buf, DF_PAGE_SIZE);
     cs_release();
@@ -1020,16 +1024,31 @@ static bool erase_page(uint16_t pageNum)
 
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
-    uint8_t cmd[4];
     cmd[0] = erase_cmd;
     cmd[1] = (PageAdr >> 16) & 0xff;
     cmd[2] = (PageAdr >>  8) & 0xff;
     cmd[3] = (PageAdr >>  0) & 0xff;
 
     if (!cs_assert()) return 0;
-    write_spi_multi(cmd, sizeof(cmd));
+    write_spi_multi(cmd, 4);
     cs_release();
     return 1;
+}
+
+static void ChipErase()
+{
+
+    cmd[0] = JEDEC_BULK_ERASE;
+
+    Flash_Jedec_WriteEnable();
+    
+    if (!cs_assert()) return;
+
+    write_spi_multi(cmd, 1);    
+    
+    chip_is_clear=true;
+    
+    cs_release();
 }
 
 BYTE sd_getSectorCount(DWORD *ptr){
@@ -1367,7 +1386,7 @@ DRESULT sd_write (
 /*-----------------------------------------------------------------------*/
 
 DRESULT sd_ioctl (
-	BYTE cmd,		/* Control command code */
+	BYTE ctl,		/* Control command code */
 	void *buff		/* Pointer to the conrtol data */
 )
 {
@@ -1377,7 +1396,7 @@ DRESULT sd_ioctl (
 
     res = RES_ERROR;
 
-    if (cmd== CTRL_POWER){
+    if (ctl== CTRL_POWER){
 
         switch (*ptr) {
         case 0: // Sub control code == 0 (POWER_OFF) 
@@ -1398,7 +1417,7 @@ DRESULT sd_ioctl (
     
         if (Stat & STA_NOINIT) return RES_NOTRDY;	/* Check if drive is ready */
 
-	switch (cmd) {
+	switch (ctl) {
 	case CTRL_SYNC :		/* Wait for end of internal write process of the drive */
 	    res = RES_OK;
 	    break;
@@ -1424,6 +1443,11 @@ DRESULT sd_ioctl (
 	    uint32_t  block, last_block=-1;
 	    
 	    if(start_sector>=sd_max_sectors || end_sector>=sd_max_sectors) return RES_PARERR;
+            if(chip_is_clear) {
+    	        res = RES_OK;	    
+    	        chip_is_clear=false;
+                break;
+            }
 
             uint32_t  sector;
 	    for(sector=start_sector; sector <= end_sector;sector++){
@@ -1432,10 +1456,16 @@ DRESULT sd_ioctl (
                 if(last_block!=block){
                     last_block=block;
                     if(!erase_page(df_sect)) return RES_ERROR;                    
+                    putch('.');
                 }
             }
 	    res = RES_OK;
 	    
+            } break;
+
+        case CTRL_FORMAT:{
+                ChipErase();
+                res = RES_OK;	    
             } break;
 
 	default:

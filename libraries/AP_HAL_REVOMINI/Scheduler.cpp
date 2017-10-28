@@ -1402,7 +1402,7 @@ void revo_call_handler(uint64_t hh, uint32_t arg){
         (h.isr)(arg);
     } else if(ADDRESS_IN_FLASH(h.w[1])) {
 //        (h.mp)(arg);
-        (h.mp)();
+        (h.mpa)(arg);
     }
 }
 

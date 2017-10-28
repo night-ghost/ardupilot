@@ -131,10 +131,8 @@ private:
 
     uint32_t i2c_read(uint8_t addr, const uint8_t *tx_buff, uint8_t txlen, uint8_t *rx_buff, uint8_t rxlen);
     uint32_t i2c_write(uint8_t addr, const uint8_t *tx_buff, uint8_t len);
-    void  isr_ioc();
-    void  isr_ev();
+    void  isr();
     uint32_t wait_stop_done(bool v);
-    void finish_transfer();
 
     uint8_t  _bus;
     uint16_t _offs;
@@ -159,15 +157,6 @@ private:
     static bool lateInitDone;
     
     Handler _completion_cb;
-
-    uint8_t _state; // state of transfer for ISR
-    uint8_t _error; // error from ISR
-    uint8_t _addr;      //      data for ISR
-    const uint8_t *_tx_buff;
-    uint8_t  _tx_len;
-    uint8_t *_rx_buff;
-    uint8_t  _rx_len;
-    bool dma_mode;
 
     void _do_bus_reset();
     

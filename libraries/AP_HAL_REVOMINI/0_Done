@@ -116,6 +116,8 @@
 * added timeout to SPI flags waiting
 * now task having started DMA IO goes to pause and resumes in IO_Completion ISR, not eating CPU time
 * optimized I2C wait times to work on noisy lines
+* greatly reduced time of reformatting of DataFlash to FAT
+* I2C driver fully rewritten to work via interrupts
 * ...
 * a lot of minor enhancements
 
@@ -156,7 +158,7 @@ interrupts priorities:
 3 SysTick
 4 uart
 5 gpio pin
-6
+6 i2c
 7 OSD VSI
 8 
 9 dma IO complete
