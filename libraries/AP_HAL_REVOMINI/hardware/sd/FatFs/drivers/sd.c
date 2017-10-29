@@ -181,7 +181,6 @@ static
 int select (void)	/* 1:OK, 0:Timeout */
 {
 	if(!CS_LOW()) { /* take semaphore and Set CS# low */
-	    printf("semaphore failed!\n");
 	    return 0;		
 	}
 	xchg_spi(0xFF);	/* Dummy clock (force DO enabled) */
@@ -222,11 +221,6 @@ int8_t rcvr_datablock (	/* 1:OK, 0:Error */
                 goto done;
             }
 */
-            if(token == 0xFF) {
-                printf("rcvr_datablock timeout\n");
-            } else {
-                printf("rcvr_datablock failed token=%x\n", token);
-            }
 	    goto done;		/* Function fails if invalid DataStart token or timeout */
 	}
 
@@ -261,8 +255,7 @@ static int8_t xmit_datablock (	/* 1:OK, 0:Failed */
 
 		resp = xchg_spi(0xFF);			/* Receive data resp */
 		if ((resp & 0x1F) != 0x05) {
-		    printf("xmit_datablock failed resp=%x\n", resp);
-		     return 0;	/* Function fails if the data packet was not accepted */
+		    return 0;	/* Function fails if the data packet was not accepted */
 		}
 	}
 	return 1;
@@ -287,7 +280,9 @@ BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 		cmd &= 0x7F;
 		res = send_cmd(CMD55, 0);
 		if (res > 1) {
+ #ifdef DEBUG_BUILD
 		    printf("cmd55 failed\n");
+ #endif
 		    return res;
 		}
 	}
@@ -297,7 +292,9 @@ BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 		deselect();
 		spi_yield(); // sync quant so no interrupts when receiving answer
 		if (!select()) {
+ #ifdef DEBUG_BUILD
 		    printf("can't select SDn");
+ #endif
 		    return 0xFF;
 		}
 	}
@@ -325,10 +322,6 @@ BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 	    spi_yield();	                /* This loop will take a time. Insert rot_rdq() here for multitask environment. */
 	} while ((res & 0x80) && --n);
 
-        if(res>1){
-            printf("cmd%d response=%x\n",cmd, res);
-
-        }
 	return res;				/* Return received response */
 }
 
@@ -427,7 +420,6 @@ uint8_t sd_get_state(){
 
     if(send_cmd(CMD13, 0)<=1){
         BYTE ret = xchg_spi(0xFF);
-        if(ret) printf("Card error: %x\n",ret);
         return ret;
     }
     
@@ -481,8 +473,6 @@ DRESULT sd_read (
 		if (( (ret=send_cmd(CMD17, sector)) == 0)	/* READ_SINGLE_BLOCK */
 		    && rcvr_datablock(buff, 512)) {
 		        count = 0;
-		} else {
-		    printf("SD: failed to send CMD17 ret=%x\n", ret);
 		}
 		    
 	} else {				/* Multiple sector read */
@@ -493,11 +483,9 @@ DRESULT sd_read (
 			    buff   += 512;
 			    sector += sectorInc;
 			} else {
-			    printf("SD: failed to receive data count=%d\n", count);
 			    break;
 			}
 		    } else {
-		        printf("SD: failed to send CMD17 count=%d ret=%x\n", count, ret);
 		        break;
 		    }
                     deselect();
@@ -512,7 +500,6 @@ DRESULT sd_read (
             	if ((ret=send_cmd(CMD18, sector)) == 0) {	/* READ_MULTIPLE_BLOCK */
     		    do {
 		        if (!rcvr_datablock(buff, 512)) {
-		            printf("SD: failed to receive datablock count=%d\n", count);
 		            break;
 		        }
 		        got++;
@@ -524,9 +511,6 @@ DRESULT sd_read (
 		        single_sector_card=true;
 		        return sd_read(buff, sector/sectorInc, count); // read remaining in single sector mode
 		    }
-		} else {
-		    printf("SD: failed to send CMD18 count=%d ret=%x\n", count, ret);
-
 		}
 	    }
 	}
@@ -804,11 +788,12 @@ static bool flash_died=false;
 static uint8_t df_manufacturer;
 static uint16_t df_device;
 static uint32_t erase_size = BOARD_DATAFLASH_ERASE_SIZE;
-#if BOARD_DATAFLASH_ERASE_SIZE  >= 65536
-static uint8_t erase_cmd=JEDEC_PAGE_ERASE;
-#else
-static uint8_t erase_cmd=JEDEC_SECTOR_ERASE;
-#endif
+
+ #if BOARD_DATAFLASH_ERASE_SIZE  >= 65536
+   static uint8_t erase_cmd=JEDEC_PAGE_ERASE;
+ #else
+   static uint8_t erase_cmd=JEDEC_SECTOR_ERASE;
+ #endif
 
 static uint8_t cmd[4];
 
@@ -872,7 +857,6 @@ static
 bool cs_assert(void)	/* 1:OK, 0:Timeout */
 {
 	if(!CS_LOW()) { /* take semaphore and Set CS# low */
-	    printf("semaphore failed!\n");
 	    return 0;		
 	}
 	return 1;	
@@ -983,7 +967,7 @@ static bool read_page( BYTE *buf, DWORD pageNum){
     cs_release();
     uint16_t i;
     for(i=0; i<DF_PAGE_SIZE;i++){
-        buf[i] = ~sector_buf[i];       // let filesystem will be inverted, this allows extend files without having to Read-Modify-Write on FAT
+        buf[i] = ~sector_buf[i];    // let filesystem will be inverted, this allows extend files without having to Read-Modify-Write on FAT
                                     // original: 0xFF is clear and 0 can be programmed any time
                                     // inverted: 0 is clear and 1 can be programmed any time
                                     // to mark cluster as used it should be set 1 in the FAT. Also new entries in dirs can be created without RMW
@@ -1056,8 +1040,8 @@ BYTE sd_getSectorCount(DWORD *ptr){
     uint8_t capacity = df_device & 0xFF;
     uint8_t memtype =  (df_device>>8) & 0xFF;
     uint32_t size=0;
-    
-    printf("SPI Flash codes: mfg=%x type=%x cap=%x\n ",df_manufacturer, memtype, capacity);
+
+//    printf("SPI Flash codes: mfg=%x type=%x cap=%x\n ",df_manufacturer, memtype, capacity);
 
     const char * mfg=NULL;
     
@@ -1114,8 +1098,9 @@ BYTE sd_getSectorCount(DWORD *ptr){
         break;
     }
 
-    if(mfg && size) printf("%s SPI Flash found sectors=%ld\n", mfg, size);
-    else  {
+    if(mfg && size) {
+        printf("%s SPI Flash found sectors=%ld\n", mfg, size);
+    } else  {
         printf("unknown Flash!\n");
         size = BOARD_DATAFLASH_PAGES; // as defined 
     } 

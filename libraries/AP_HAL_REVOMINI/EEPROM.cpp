@@ -158,8 +158,9 @@ FLASH_Status EEPROMClass::_ErasePage(uint32_t pageBase)
 		data = read_16(pageBase + 2) + 1; // erase count +1
 	else
 		data = 0;
-
+#ifdef DEBUG_BUILD
         printf("\nEEprom erase page %d\n ", (uint16_t)((pageBase & 0x00ffffff) / 0x4000) ); // clear high byte of address and count 16K blocks
+#endif
 
 	status = _ErasePageByAddress(pageBase);
 	
@@ -429,8 +430,9 @@ uint16_t EEPROMClass::_init(void) //
 	erased0 = read_16(PageBase0 + 2);
 	if (erased0 == 0xffff) erased0 = 0;
 	// Print number of EEprom write cycles - but  it cleared each reflash
+#ifdef DEBUG_BUILD
 	hal.console->printf("\nEEprom write cycles %d\n ", erased0);
-
+#endif
 
 	status0 = read_16(PageBase0);
 	status1 = read_16(PageBase1);

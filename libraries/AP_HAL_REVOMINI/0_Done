@@ -114,10 +114,11 @@
 * added disabling of data cache on flash write, just for case (upstream has this update too)
 * added a way to schedule context switch from ISR, eg. at data receive or IO_Complete
 * added timeout to SPI flags waiting
-* now task having started DMA IO goes to pause and resumes in IO_Completion ISR, not eating CPU time
+* now task having started any IO (DMA or interrupts) goes to pause and resumes in IO_Completion ISR, not eating CPU time in wait loop
 * optimized I2C wait times to work on noisy lines
 * greatly reduced time of reformatting of DataFlash to FAT
-* I2C driver fully rewritten to work via interrupts
+* I2C driver fully rewritten to work via interrupts - no DMA, no polling
+* compass and baro gives bus semaphore ASAP to allow bus operations when calculations does
 * ...
 * a lot of minor enhancements
 
@@ -149,25 +150,6 @@ in yield 79.97% sw 97.13%  добровольное завершение ква�
 in tails  7.98% sw 71.75%  переключение по таймеру до истечения кванта - 8%, вероятность 72%, итог - 5.8%
 вывод: кооперативная многозадачность на 77% :)
 
-
-
-interrupts priorities:
-0 PWM input
-1 soft_uart 
-2 micros() Timer5 / timer_i2C / MPU DataReady
-3 SysTick
-4 uart
-5 gpio pin
-6 i2c
-7 OSD VSI
-8 
-9 dma IO complete
-a 
-b usb
-c driver's io_completion
-d 
-e scheduler - Timer7, tail timer, svc
-f Pend_Sw 
 
 Timer usage:
 

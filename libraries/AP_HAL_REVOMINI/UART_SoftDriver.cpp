@@ -85,11 +85,11 @@ void SerialDriver::begin(uint32_t baud) {
     rxSetCapture(); // wait for start bit
     {
         Revo_handler h = { .isr = rxNextBit };
-        timer_attach_interrupt(channel->timer, TIMER_RX_INTERRUPT,   h.h, 1 );
+        timer_attach_interrupt(channel->timer, TIMER_RX_INTERRUPT,   h.h, SOFT_UART_INT_PRIORITY);
     }
     {
         Revo_handler h = { .isr = txNextBit };
-        timer_attach_interrupt(channel->timer, TIMER_UPDATE_INTERRUPT, h.h, 1 ); // also enables interrupt
+        timer_attach_interrupt(channel->timer, TIMER_UPDATE_INTERRUPT, h.h, SOFT_UART_INT_PRIORITY); // also enables interrupt
     }
     txDisableInterrupts();     // so disable it
 

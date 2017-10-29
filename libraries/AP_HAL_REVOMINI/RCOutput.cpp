@@ -176,6 +176,7 @@ static void isr_handler(){
     printf("pc=%lx lr=%lx\n", sp[FRAME_SHIFT+6], sp[FRAME_SHIFT+5]);
 }
 #endif
+
 void REVOMINIRCOutput::lateInit(){ // 2nd stage with loaded parameters
 
     uint8_t map = hal_param_helper->_motor_layout;

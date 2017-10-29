@@ -317,6 +317,8 @@ void AP_Baro_MS56XX::_timer(void)
         return;
     }
 
+    _dev->get_semaphore()->give();  // give bus semaprore ASAP
+
     if (!_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)){
           return;
     }

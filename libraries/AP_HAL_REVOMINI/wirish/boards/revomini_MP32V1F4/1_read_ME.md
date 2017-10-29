@@ -41,3 +41,10 @@ pin 2 is +5(DSM sat requires 3.3!)
 pin 3 is Rx 
 pin 4 is Enable for 3.3 stab.
 
+
+Airspeed & RSSI 
+
+Pins Servo5 & Servo6 can be used as Analog Input for Airspeed sensor and/or RSSI, connection:
+
+Servo5 = 48
+Servo6 = 47

@@ -430,7 +430,7 @@ bool Soft_I2C::_start(void)
 // timers are per bus so re-init timer before use
     uint32_t freq = configTimeBase(_timer, 0, 10000);       //10MHz
     Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&Soft_I2C::tick, void) };
-    timer_attach_interrupt(_timer, TIMER_UPDATE_INTERRUPT, h.h, 2); // high priority
+    timer_attach_interrupt(_timer, TIMER_UPDATE_INTERRUPT, h.h, TIMER_I2C_INT_PRIORITY); // high priority
     timer_set_reload(_timer, SI2C_PERIOD * freq / 1000000);         // period to generate 2uS requests - 500kHz interrupts /4 = 125kHz I2C. 
                                                                 //  I hope that there will be a time between interrupts :)
 

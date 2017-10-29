@@ -49,9 +49,9 @@ typedef struct I2C_DMA {
 
 
 typedef struct I2c_state {
-    uint8_t *dst;
-    uint16_t len;
-    uint8_t  buff[DMA_BUFSIZE];
+//    uint8_t *dst;
+//    uint16_t len;
+//    uint8_t  buff[DMA_BUFSIZE];
     Handler handler;
 } i2c_state;
 
@@ -70,7 +70,7 @@ typedef struct i2c_dev {
     uint8_t gpio_af;     
     IRQn_Type ev_nvic_line;  /* Event IRQ number */
     IRQn_Type er_nvic_line;  /* Error IRQ number */        
-    I2C_dma dma;
+//    I2C_dma dma;
     i2c_state *state;
 } i2c_dev;
 
@@ -96,11 +96,11 @@ static inline void i2c_set_isr_handler(const i2c_dev *dev, Handler h){
 
     irq=dev->er_nvic_line;
     NVIC_EnableIRQ(irq);
-    NVIC_SetPriority(irq, 6);
+    NVIC_SetPriority(irq, I2C_INT_PRIORITY); // 8 bits * 4uS = 32uS max reaction time
 
     irq=dev->ev_nvic_line;
     NVIC_EnableIRQ(irq);
-    NVIC_SetPriority(irq, 6);
+    NVIC_SetPriority(irq, I2C_INT_PRIORITY);
 }
 
 static inline void i2c_clear_isr_handler(const i2c_dev *dev){

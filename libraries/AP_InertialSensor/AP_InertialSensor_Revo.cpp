@@ -488,7 +488,7 @@ void AP_InertialSensor_Revo::start()
         AP_HAL::panic("Invensense: Unable to allocate FIFO buffer");
     }
 
-    REVOMINIGPIO::_attach_interrupt(INVENSENSE_DRDY_PIN, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_isr, void)), RISING, 2);
+    REVOMINIGPIO::_attach_interrupt(INVENSENSE_DRDY_PIN, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Revo::_isr, void)), RISING, MPU_INT_PRIORITY);
 
     _register_read(MPUREG_INT_STATUS); // reset interrupt request
 
@@ -836,8 +836,9 @@ void AP_InertialSensor_Revo::_set_filter_register(void)
     if (enable_fast_sampling(_accel_instance)) {
         _fast_sampling = (_mpu_type != Invensense_MPU6000 && _dev->bus_type() == AP_HAL::Device::BUS_TYPE_SPI);
         if (_fast_sampling) {
-            hal.console->printf("MPU[%u]: enabled fast sampling\n", _accel_instance);
-
+#ifdef DEBUG_BUILD
+            printf("MPU[%u]: enabled fast sampling\n", _accel_instance);
+#endif
             // for logging purposes set the oversamping rate
             _set_accel_oversampling(_accel_instance, MPU_FIFO_DOWNSAMPLE_COUNT/2);
             _set_gyro_oversampling(_gyro_instance, MPU_FIFO_DOWNSAMPLE_COUNT);
@@ -973,7 +974,9 @@ bool AP_InertialSensor_Revo::_hardware_init(void)
     _dev->get_semaphore()->give();
 
     if (tries == 5) {
-        hal.console->printf("Failed to boot Invensense 5 times\n");
+#ifdef DEBUG_BUILD
+        printf("Failed to boot Invensense 5 times\n");
+#endif
         return false;
     }
 

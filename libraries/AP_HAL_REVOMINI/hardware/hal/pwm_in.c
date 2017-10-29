@@ -168,7 +168,7 @@ static inline void pwmInitializeInput(uint8_t ppmsum){
             TIM_Cmd(channel->tim, DISABLE);
 
             NVIC_EnableIRQ(channel->tim_irq);
-            NVIC_SetPriority(channel->tim_irq, 0); // highest - bit time is ~10uS only - ~1680 commands	
+            NVIC_SetPriority(channel->tim_irq, PWM_INT_PRIORITY); // almost highest - bit time is ~10uS only - ~1680 commands	
 
 	    if(last_tim != channel->tim) {
 	        Revo_hal_handler h = { .isr = pwmIRQHandler };

@@ -122,7 +122,7 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 #ifdef BOARD_OSD_VSYNC_PIN
     Revo_hal_handler h = { .vp = vsync_ISR };
     
-    REVOMINIGPIO::_attach_interrupt(BOARD_OSD_VSYNC_PIN, h.h, RISING, 7);
+    REVOMINIGPIO::_attach_interrupt(BOARD_OSD_VSYNC_PIN, h.h, RISING, VSI_INT_PRIORITY);
 #endif
 
     task_handle = REVOMINIScheduler::start_task(OSDns::osd_loop, SMALL_TASK_STACK); // 

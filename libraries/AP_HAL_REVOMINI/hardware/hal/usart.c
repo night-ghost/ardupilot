@@ -130,17 +130,31 @@ const usart_dev * const UARTS[]={
     &usart2,
     &usart3,
 #if defined(BOARD_USART4_RX_PIN) && defined(BOARD_USART4_TX_PIN)
-    &usart4,
+    &uart4,
 #else
     NULL,
 #endif
 #if defined(BOARD_USART5_RX_PIN)
-    &usart5,
+    &uart5,
 #else
     NULL,
 #endif
     &usart6,
 };
+
+void usart_foreach(void (*fn)(const usart_dev*))
+{
+    fn(_USART1);
+    //fn(_USART2);
+    fn(_USART3);
+#if defined( BOARD_USART4_RX_PIN) && defined( BOARD_USART4_TX_PIN)
+    fn(_UART4);
+#endif
+#if defined( BOARD_USART5_RX_PIN)
+    fn(_UART5);
+#endif
+    fn(_USART6);
+}
 
 extern uint32_t us_ticks;
 
@@ -233,7 +247,7 @@ void usart_setup(const usart_dev *dev, uint32_t baudRate, uint16_t wordLength,
     NVIC_InitTypeDef NVIC_InitStructure;
     /* Enable the USART Interrupt */
     NVIC_InitStructure.NVIC_IRQChannel = dev->irq;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = UART_INT_PRIORITY;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
@@ -256,19 +270,6 @@ void usart_disable(const usart_dev *dev)
 }
 
 
-void usart_foreach(void (*fn)(const usart_dev*))
-{
-    fn(_USART1);
-    //fn(_USART2);
-    fn(_USART3);
-#if defined( BOARD_USART4_RX_PIN) && defined( BOARD_USART4_TX_PIN)
-    fn(_UART4);
-#endif
-#if defined( BOARD_USART5_RX_PIN)
-    fn(_UART5);
-#endif
-    fn(_USART6);
-}
 
 
 uint32_t usart_tx(const usart_dev *dev, const uint8_t *buf, uint32_t len)

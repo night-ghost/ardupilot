@@ -52,7 +52,7 @@ void usb_init(void){
     usb_open();
 
     usb_default_attr(&usb_attr);
-    usb_attr.preempt_prio = 11;
+    usb_attr.preempt_prio = USB_INT_PRIORITY;
     usb_attr.sub_prio = 0;
     usb_attr.use_present_pin = 1;
     usb_attr.present_port = PIN_MAP[BOARD_USB_SENSE].gpio_device;
@@ -215,11 +215,13 @@ void inline init(void) {
 
     stopwatch_init(); // will use stopwatch_delay_us() and stopwatch_get_ticks()
 
+#ifdef DEBUG_BUILD
 //*///    enable clock in sleep for debugging
     DBGMCU->CR |= DBGMCU_STANDBY | DBGMCU_STOP | DBGMCU_SLEEP;
     DBGMCU->APB1FZ |= DBGMCU_TIM4_STOP | DBGMCU_TIM5_STOP | DBGMCU_TIM7_STOP;  // stop internal timers
     DBGMCU->APB2FZ |= DBGMCU_TIM10_STOP | DBGMCU_TIM11_STOP;
 //*///    
+#endif
 
     boardInit(); // board-specific part of init
 /*

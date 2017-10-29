@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include "stm32.h"
 #include "util.h"
+#include "../../Config.h"
 
 #ifdef __cplusplus
   extern "C" {

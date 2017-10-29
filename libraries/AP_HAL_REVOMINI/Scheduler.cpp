@@ -156,9 +156,9 @@ void REVOMINIScheduler::init()
     // to prevent it from occurring while being configured 
     noInterrupts();
 
-    NVIC_SetPriority(PendSV_IRQn, 15);         // lowest priority so all IRQs can't be switced
-    NVIC_SetPriority(SVCall_IRQn, 14);         // priority 14 - the same as Timer7 ISR
-    NVIC_SetPriority(SysTick_IRQn, 3);         // priority 3 - less thah fast device IO ISRs but higher than USB
+    NVIC_SetPriority(PendSV_IRQn,  PENDSV_INT_PRIORITY);      // lowest priority so all IRQs can't be switced
+    NVIC_SetPriority(SVCall_IRQn,  SVC_INT_PRIORITY);         // priority 14 - the same as Timer7 ISR
+    NVIC_SetPriority(SysTick_IRQn, SYSTICK_INT_PRIORITY);     // priority 5 - less thah fast device IO ISRs but higher than USB
 
 
     // Ensure the effect of the priority change occurs before 
@@ -185,7 +185,7 @@ void REVOMINIScheduler::init()
                 // dev    period   freq, kHz
         configTimeBase(TIMER7, period, 2000);       //2MHz 0.5us ticks
         Revo_handler h = { .isr = _timer_isr_event };
-        timer_attach_interrupt(TIMER7, TIMER_UPDATE_INTERRUPT, h.h , 0xE); // almost lowest priority, higher than Pend_SW to schedule task switch
+        timer_attach_interrupt(TIMER7, TIMER_UPDATE_INTERRUPT, h.h , SVC_INT_PRIORITY); // almost lowest priority, higher than Pend_SW to schedule task switch
         TIMER7->regs->CR1 |=  TIMER_CR1_URS;  // interrupt only by overflow, not by update
         timer_resume(TIMER7);
     }
@@ -195,7 +195,7 @@ void REVOMINIScheduler::init()
         configTimeBase(TIMER5, 0, 1000);       //1MHz 1us ticks
         timer_set_count(TIMER5,(1000000/SHED_FREQ)/2); // to not interfere with TIMER7
         Revo_handler h = { .isr = _timer5_ovf };
-        timer_attach_interrupt(TIMER5, TIMER_UPDATE_INTERRUPT, h.h, 2); // high priority
+        timer_attach_interrupt(TIMER5, TIMER_UPDATE_INTERRUPT, h.h, MPU_INT_PRIORITY); // high priority
         timer_resume(TIMER5);
     }
 
@@ -210,7 +210,7 @@ void REVOMINIScheduler::init()
                 // dev    period   freq, kHz
         configTimeBase(TIMER11, 0, 1000);       //1MHz 1us ticks
         Revo_handler h = { .isr = _tail_timer_event };
-        timer_attach_interrupt(TIMER11, TIMER_UPDATE_INTERRUPT, h.h , 0xE); // priority 14 - the same as Timer7 and SVC
+        timer_attach_interrupt(TIMER11, TIMER_UPDATE_INTERRUPT, h.h , SVC_INT_PRIORITY); // priority 14 - the same as Timer7 and SVC
         TIMER11->regs->CR1 &= ~(TIMER_CR1_ARPE | TIMER_CR1_URS); // not buffered preload, interrupt by overflow or by UG set
     }
 
@@ -219,7 +219,7 @@ void REVOMINIScheduler::init()
                 // dev    period   freq, kHz
         configTimeBase(TIMER13, 0, 1000);       //1MHz 1us ticks
         Revo_handler h = { .isr = _ioc_timer_event };
-        timer_attach_interrupt(TIMER13, TIMER_UPDATE_INTERRUPT, h.h , 0xC); // priority 12
+        timer_attach_interrupt(TIMER13, TIMER_UPDATE_INTERRUPT, h.h , IOC_INT_PRIORITY); // priority 12
         TIMER13->regs->CR1 &= ~(TIMER_CR1_ARPE | TIMER_CR1_URS); // not buffered preload, interrupt by overflow or by UG set
     }
 

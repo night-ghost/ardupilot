@@ -32,7 +32,6 @@
  # define HAL_GPIO_LED_OFF          HIGH
 #endif
 
-#define GPIO_INT_PRIORITY 5
 
 /*
     case OUTPUT:

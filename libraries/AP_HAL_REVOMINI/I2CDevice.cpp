@@ -170,10 +170,6 @@ void REVOI2CDevice::init(){
 //        i2c_init(_dev, _offs, _slow?I2C_75KHz_SPEED:I2C_250KHz_SPEED);
         i2c_init(_dev, _offs, _slow?I2C_250KHz_SPEED:I2C_400KHz_SPEED);
 
-        // init DMA beforehand    
-        dma_init(_dev->dma.stream_rx); 
-//        dma_init(_dev->dma.stream_Tx);  not used
-
     }else {
         s_i2c.init( );
 
@@ -388,10 +384,9 @@ enum I2C_state {
     moved from low layer to be properly integrated to multitask
 
 */
-#pragma GCC optimize ("Og")
+//#pragma GCC optimize ("Og")
 
 
-//#define I2C_DMA_SEND // not works well
 
 /* Send a buffer to the i2c port */
 uint32_t REVOI2CDevice::i2c_write(uint8_t addr, const uint8_t *tx_buff, uint8_t len) {
@@ -407,13 +402,12 @@ uint32_t REVOI2CDevice::i2c_write(uint8_t addr, const uint8_t *tx_buff, uint8_t 
             
     i2c_set_isr_handler(_dev, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&REVOI2CDevice::isr_ev, void)));
 
-    // Bus got!  enable Acknowledge for our operation
-    _dev->I2Cx->CR1 |= I2C_CR1_ACK; 
-    _dev->I2Cx->CR1 &= ~I2C_NACKPosition_Next; 
-
     _state = I2C_want_SB;
     _error = I2C_ERR_TIMEOUT;
 
+    // Bus got!  enable Acknowledge for our operation
+    _dev->I2Cx->CR1 |= I2C_CR1_ACK; 
+    _dev->I2Cx->CR1 &= ~I2C_NACKPosition_Next; 
     // Send START condition
     _dev->I2Cx->CR1 |= I2C_CR1_START;
 
@@ -422,7 +416,7 @@ uint32_t REVOI2CDevice::i2c_write(uint8_t addr, const uint8_t *tx_buff, uint8_t 
 
     if(_completion_cb) return I2C_PENDING;
         
-    uint32_t timeout = i2c_bit_time * 9 * (len+1) * 3; // time to transfer all data *3
+    uint32_t timeout = i2c_bit_time * 9 * (len+1) * 4 + 100; // time to transfer all data *4 plus 100uS
 
 
     // need to wait until  transfer complete 
@@ -434,7 +428,7 @@ uint32_t REVOI2CDevice::i2c_write(uint8_t addr, const uint8_t *tx_buff, uint8_t 
         _task=0;
     }
     while (hal_micros() - t < timeout) {
-        if(_error!=I2C_ERR_TIMEOUT) break; // error occures
+        if(_error!=I2C_ERR_TIMEOUT) break; // error changed
         
         hal_yield(0);
     }
@@ -447,13 +441,6 @@ uint32_t REVOI2CDevice::i2c_write(uint8_t addr, const uint8_t *tx_buff, uint8_t 
 
 uint32_t REVOI2CDevice::i2c_read(uint8_t addr, const uint8_t *tx_buff, uint8_t txlen, uint8_t *rx_buff, uint8_t rxlen)
 {
-    uint8_t *dma_rx;
-    
-    dma_mode = 0; //(rxlen < DMA_BUFSIZE) || ADDRESS_IN_RAM(rx_buff);
-
-    // in case of DMA transfer
-    dma_stream rx_stream = _dev->dma.stream_rx;
-
     uint32_t ret = wait_stop_done(false); // wait for bus release from previous transfer and force it if needed
     if(ret!=I2C_OK) return ret;
 
@@ -469,58 +456,6 @@ uint32_t REVOI2CDevice::i2c_read(uint8_t addr, const uint8_t *tx_buff, uint8_t t
 
     uint32_t t;
 
-    if(dma_mode) {
-        //  проверить, не занят ли поток DMA перед использованием
-        t = hal_micros();
-        while(dma_is_stream_enabled(rx_stream)/* || dma_is_stream_enabled(_dev->dma.stream_tx)*/ ) {
-            // wait for transfer termination
-            if (hal_micros() - t > I2C_TIMEOUT) {
-                dma_disable(rx_stream);  // something went wrong so let it get stopped
-                dma_disable(_dev->dma.stream_tx);
-                break;                    // DMA stream grabbed
-            }
-            hal_yield(0); 
-        }
-
-        if(ADDRESS_IN_RAM(rx_buff)){
-            dma_rx = rx_buff;
-            _dev->state->len=0; // clear need to memmove            
-        } else {
-            dma_rx = _dev->state->buff;
-            _dev->state->len=rxlen; // need to memmove
-            _dev->state->dst=rx_buff;
-        }
-
-        // init DMA beforehand    
-        dma_init(rx_stream); 
-        dma_clear_isr_bits(rx_stream); 
-
-        DMA_InitTypeDef DMA_InitStructure;
-        DMA_StructInit(&DMA_InitStructure);
-    
-        DMA_InitStructure.DMA_Channel               = _dev->dma.channel;
-        DMA_InitStructure.DMA_Memory0BaseAddr       = (uint32_t)dma_rx;
-        DMA_InitStructure.DMA_BufferSize            = rxlen;
-        DMA_InitStructure.DMA_PeripheralBaseAddr    = (uint32_t)(&(_dev->I2Cx->DR));
-        DMA_InitStructure.DMA_PeripheralDataSize    = DMA_PeripheralDataSize_Byte;
-        DMA_InitStructure.DMA_MemoryDataSize        = DMA_MemoryDataSize_Byte;
-        DMA_InitStructure.DMA_PeripheralInc         = DMA_PeripheralInc_Disable;
-        DMA_InitStructure.DMA_MemoryInc             = DMA_MemoryInc_Enable;
-        DMA_InitStructure.DMA_Mode                  = DMA_Mode_Normal;
-        DMA_InitStructure.DMA_Priority              = DMA_Priority_High;
-        DMA_InitStructure.DMA_FIFOMode              = DMA_FIFOMode_Disable;
-        DMA_InitStructure.DMA_FIFOThreshold         = DMA_FIFOThreshold_Full;
-        DMA_InitStructure.DMA_MemoryBurst           = DMA_MemoryBurst_Single;
-        DMA_InitStructure.DMA_PeripheralBurst       = DMA_PeripheralBurst_Single;
-        DMA_InitStructure.DMA_DIR                   = DMA_DIR_PeripheralToMemory;
-        
-        dma_init_transfer(rx_stream, &DMA_InitStructure);
-
-        dma_attach_interrupt(rx_stream, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&REVOI2CDevice::isr_ioc, void)), DMA_CR_TCIE); 
-
-        dma_enable(rx_stream);        
-    } // DMA mode
-
     _state = I2C_want_SB;
     _error = I2C_ERR_TIMEOUT;
 
@@ -533,7 +468,7 @@ uint32_t REVOI2CDevice::i2c_read(uint8_t addr, const uint8_t *tx_buff, uint8_t t
 
     if(_completion_cb) return I2C_PENDING;
         
-    uint32_t timeout = i2c_bit_time * 9 * (txlen+rxlen) * 3; // time to transfer all data *3
+    uint32_t timeout = i2c_bit_time * 9 * (txlen+rxlen) * 4 + 100; // time to transfer all data *4 plus 100uS
         
     t = hal_micros();
     // need to wait until DMA transfer complete */
@@ -592,18 +527,18 @@ void REVOI2CDevice::isr_ev(){
     
             _dev->I2Cx->CR1 |= I2C_CR1_STOP;          /* Generate Stop */      
         }
-  
-        /* I2C Over-Run/Under-Run interrupt occurred -------------------------------*/
+
+/* only in Slave mode  
+        // I2C Over-Run/Under-Run interrupt occurred
         if(((sr1itflags & I2C_FLAG_OVR) != RESET) && ((itsources & I2C_IT_ERR) != RESET)) {
            _error = I2C_ERR_OVERRUN;
            _dev->I2Cx->SR1 = (uint16_t)(~I2C_SR1_OVR); // reset it
         }
-  
+*/ 
         if(_error) { // смысла ждать больше нет
             finish_transfer();
         }    
     }else{
-        uint32_t sr2itflags   = _dev->I2Cx->SR2;
 
         /* SB Set ----------------------------------------------------------------*/
         if(((sr1itflags & I2C_FLAG_SB & FLAG_MASK) != RESET) && ((itsources & I2C_IT_EVT) != RESET))    {
@@ -620,40 +555,25 @@ void REVOI2CDevice::isr_ev(){
         }
         /* ADDR Set --------------------------------------------------------------*/
         else if(((sr1itflags & I2C_FLAG_ADDR & FLAG_MASK) != RESET) && ((itsources & I2C_IT_EVT) != RESET))    {
-            /* Clear ADDR register by reading SR1 then SR2 register (SR1 and SR2 has already been read) */
+            /* Clear ADDR register by reading SR1 then SR2 register (SR1 has already been read) */
         
             if(_tx_len) { // transmit
                 // all flags set before
                 _state = I2C_want_TXE;
             }else {      // receive
-                if(dma_mode) {
-                    if(_rx_len == 1) {                 // Disable Acknowledge 
-                        _dev->I2Cx->CR1 &= ~I2C_CR1_ACK;
-                        _dev->I2Cx->CR2 &= ~I2C_CR2_LAST; // disable DMA generated NACK
-                    } else if(_rx_len == 2) {              // Disable Acknowledge and change NACK position
-                        _dev->I2Cx->CR1 |= I2C_NACKPosition_Next; // move NACK to next byte
-                        _dev->I2Cx->CR1 &= ~I2C_CR1_ACK;
-                        _dev->I2Cx->CR2 &= ~I2C_CR2_LAST; // disable DMA generated NACK
-                    } else {                             // Enable ACK and Last DMA bit
-                        _dev->I2Cx->CR1 |= I2C_CR1_ACK;
-                        _dev->I2Cx->CR2 |= I2C_CR2_LAST;  
-                    }
-                    _dev->I2Cx->CR2 &= ~I2C_CR2_ITBUFEN;  // disable interrupt by TXE/RXNE
-                    _dev->I2Cx->CR2 |=  I2C_CR2_DMAEN;    // Enable I2C RX request - all reads will be in DMA mode
+                if(_rx_len == 1) {                 // Disable Acknowledge for 1-byte transfer
+                    _dev->I2Cx->CR1 &= ~I2C_CR1_ACK;
+//                } else if(_rx_len == 2) {              // Disable Acknowledge and change NACK position
+//                    _dev->I2Cx->CR1 |= I2C_NACKPosition_Next; // move NACK to next byte
+//                    _dev->I2Cx->CR1 &= ~I2C_CR1_ACK;
                 } else {
-                    if(_rx_len == 1) {                 // Disable Acknowledge 
-                        _dev->I2Cx->CR1 &= ~I2C_CR1_ACK;
-                    } else if(_rx_len == 2) {              // Disable Acknowledge and change NACK position
-                        _dev->I2Cx->CR1 |= I2C_NACKPosition_Next; // move NACK to next byte
-                        _dev->I2Cx->CR1 &= ~I2C_CR1_ACK;
-                    } else {
-                        _dev->I2Cx->CR1 |= I2C_CR1_ACK;
-                    }
+                    _dev->I2Cx->CR1 |= I2C_CR1_ACK;
                 }
                 _state = I2C_want_RXNE;
             }        
         }
     
+        uint32_t sr2itflags   = _dev->I2Cx->SR2; // read SR2 - ADDR is cleared
     
         if((itsources & I2C_IT_BUF) != RESET ){ // data io
 
@@ -664,49 +584,49 @@ void REVOI2CDevice::isr_ev(){
                         _dev->I2Cx->DR = *_tx_buff++; // 1 byte
                         _tx_len--;
                     } else { // tx is over and last byte is sent
-                        if(_rx_len) {
-                            // Send START condition a second time
-                            _dev->I2Cx->CR1 |= I2C_CR1_START;
-                            _state = I2C_want_RX_SB;
-                        } else {   
-                            _dev->I2Cx->CR1 |= I2C_CR1_STOP;     /* Send STOP condition */
-                            _error = I2C_OK;
-                            _state = I2C_done;
-                            finish_transfer();
-                        }
+                        _dev->I2Cx->CR2 &= ~I2C_CR2_ITBUFEN; // disable TXE interrupt
                     }        
                 }
             } 
-            if((sr1itflags & I2C_FLAG_BTF & FLAG_MASK) != RESET) {// TXE set 
-                if((sr2itflags & (I2C_FLAG_TRA>>16) & FLAG_MASK) != RESET) {    // I2C in mode Transmitter
-                    // BTF on transmit
-                } else { // BTF on receive
-                    // 
-                }
-            }
-            if(((sr1itflags & I2C_FLAG_RXNE & FLAG_MASK) != RESET))   {       // RXNE set
-                 if(dma_mode) { // I2C in mode Receiver 
-                    (void)_dev->I2Cx->DR;
-                 }else{
-                    if(_rx_len && !_tx_len) {
-                        *_rx_buff++ = (uint8_t)(_dev->I2Cx->DR);
-                        _rx_len -= 1; // 1 byte done
+            if((sr1itflags & I2C_FLAG_RXNE & FLAG_MASK) != RESET)   {       // RXNE set
+                if(_rx_len && !_tx_len) {
+                    *_rx_buff++ = (uint8_t)(_dev->I2Cx->DR);
+                    _rx_len -= 1; // 1 byte done
 	        
-                        if(_rx_len == 1) { // last second byte
-                            _dev->I2Cx->CR1 &= ~I2C_CR1_ACK;     // Disable Acknowledgement - send NACK for last byte 
-                            _dev->I2Cx->CR1 |= I2C_CR1_STOP;     // Send STOP
-                        } else if(_rx_len==0) {
-                            _error = I2C_OK;
-                            _state = I2C_done;
+                    if(_rx_len == 1) { // last second byte
+                        _dev->I2Cx->CR1 &= ~I2C_CR1_ACK;     // Disable Acknowledgement - send NACK for last byte 
+                        _dev->I2Cx->CR1 |= I2C_CR1_STOP;     // Send STOP
+                    } else if(_rx_len==0) {
+                        _error = I2C_OK;
+                        _state = I2C_done;
 
-                            finish_transfer();
-                        }
-                    } else { // fake byte after enable ITBUF
-                        (void)_dev->I2Cx->DR;
+                        finish_transfer();
                     }
+                } else { // fake byte after enable ITBUF
+                    (void)_dev->I2Cx->DR;
                 }
             }
         }
+        if((sr1itflags & I2C_FLAG_BTF & FLAG_MASK) != RESET) {// TXE set 
+            if((sr2itflags & (I2C_FLAG_TRA>>16) & FLAG_MASK) != RESET) {    // I2C in mode Transmitter
+                // BTF on transmit
+                if(_rx_len) {
+                    // Send START condition a second time
+                    _dev->I2Cx->CR1 |= I2C_CR1_START;
+                    _state = I2C_want_RX_SB;
+                    _dev->I2Cx->CR2 |= I2C_CR2_ITBUFEN; // enable TXE interrupt
+                } else {   
+                    _dev->I2Cx->CR1 |= I2C_CR1_STOP;     // Send STOP condition
+                    _error = I2C_OK;                    // TX is done
+                    _state = I2C_done;
+                    finish_transfer();
+                }
+                
+            } else { // BTF on receive
+                // 
+            }
+        }
+
     }
 }
 
@@ -716,21 +636,6 @@ void REVOI2CDevice::finish_transfer(){
     _dev->I2Cx->CR2 &= ~(I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN);    // Disable interrupts
     i2c_clear_isr_handler(_dev);
 
-    if(dma_get_isr_bits(_dev->dma.stream_rx) & DMA_FLAG_TCIF) { // was receive
-        dma_disable(_dev->dma.stream_rx);
-
-        _dev->I2Cx->CR2 &= ~(I2C_CR2_LAST | I2C_CR2_DMAEN);        /* Disable I2C DMA request */
-
-        dma_clear_isr_bits(_dev->dma.stream_rx); 
-
-        // transfer done!
-        dma_detach_interrupt(_dev->dma.stream_rx);    
-        
-        if(_dev->state->len){    // we need to memmove
-            memmove(_dev->state->dst, _dev->state->buff, _dev->state->len);
-        }
-    }
-    
     Handler h;
     if( (h=_completion_cb) ){    // io completion
         
@@ -743,14 +648,6 @@ void REVOI2CDevice::finish_transfer(){
         REVOMINIScheduler::task_resume(_task);
         _task=NULL;
     }    
-}
-
-void REVOI2CDevice::isr_ioc(){
-    _dev->I2Cx->CR1 |= I2C_CR1_STOP;     /* Send STOP condition */
-    _error = I2C_OK;
-    _state = I2C_done;
-    _rx_len = 0; // no need to receive
-    finish_transfer();
 }
 
 uint32_t REVOI2CDevice::wait_stop_done(bool is_write){

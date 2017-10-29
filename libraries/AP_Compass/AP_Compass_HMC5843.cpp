@@ -258,9 +258,10 @@ void AP_Compass_HMC5843::_timer()
 
 //    if(!_setup_sampling_mode() )
     _take_sample();
+
+    _bus->get_semaphore()->give();  // give bus semaprore ASAP
     
     if (!result) {
-        _sem->give();
         return;
     }
 

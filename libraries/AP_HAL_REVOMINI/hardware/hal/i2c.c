@@ -1,5 +1,5 @@
 #include "i2c.h"
-#include "dma.h"
+//#include "dma.h"
 #include "systick.h"
 #include "stm32f4xx_i2c.h"
 #include "stm32f4xx_dma.h"
@@ -8,8 +8,8 @@
 
 #define I2C_Yield(x) hal_yield(x)
 
-static i2c_state i2c1_state; // not in CCM - DMA buffer!
-static i2c_state i2c2_state;
+static i2c_state i2c1_state IN_CCM;
+static i2c_state i2c2_state IN_CCM;
 
 static const i2c_dev i2c_dev1 = {
     .I2Cx         = I2C1,
@@ -20,7 +20,7 @@ static const i2c_dev i2c_dev1 = {
     .gpio_af	  = GPIO_AF_I2C1,
     .ev_nvic_line = I2C1_EV_IRQn,
     .er_nvic_line = I2C1_ER_IRQn,
-    .dma          = { DMA_CR_CH1, DMA1_STREAM0, DMA1_STREAM6 }, // I2C1
+//    .dma          = { DMA_CR_CH1, DMA1_STREAM0, DMA1_STREAM6 }, // I2C1
     .state        = &i2c1_state,
 };
 /** I2C1 device */
@@ -36,7 +36,7 @@ static const i2c_dev i2c_dev2 = {
     .gpio_af	  = GPIO_AF_I2C2,
     .ev_nvic_line = I2C2_EV_IRQn,
     .er_nvic_line = I2C2_ER_IRQn,
-    .dma          = { DMA_CR_CH7, DMA1_STREAM3 /* intersects with spi2_tx */ , DMA1_STREAM7 }, // I2C2
+//    .dma          = { DMA_CR_CH7, DMA1_STREAM3 /* intersects with spi2_tx */ , DMA1_STREAM7 }, // I2C2
     .state        = &i2c2_state,
 };
 
@@ -148,8 +148,8 @@ void i2c_init(const i2c_dev *dev, uint16_t address, uint32_t speed)
     /* Apply I2C configuration after enabling it */
     I2C_Init(dev->I2Cx, &I2C_InitStructure);
 
-    dma_init(dev->dma.stream_rx);
-    dma_disable(dev->dma.stream_rx);
+//    dma_init(dev->dma.stream_rx);
+//    dma_disable(dev->dma.stream_rx);
 }
 
 /**
