@@ -189,16 +189,9 @@ void boardInit(void);
 
 */    
 
-#ifdef BOARD_NRF_NAME
-   //                                    name            device   bus  mode         cs_pin                       speed_low       speed_high soft   dma
-#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  false, 1 }, \
-                             { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* caller controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, false, 1 },\
-                             { BOARD_NRF_NAME,           _SPI3,   3,  SPI_MODE_3, 254 /* caller controls CS */,  SPI_1_125MHZ,   SPI_9MHZ,  false, 0 },
-#else
-//
-#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  false, 1 }, \
-                             { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* caller controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, false, 1 },
-#endif
+   //                                    name            device   bus  mode         cs_pin                       speed_low       speed_high dma
+#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  1 }, \
+                             { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* caller controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, 2 },
 
 //#define HAL_CONSOLE USB_Driver // console on USB
 //#define HAL_CONSOLE_PORT 0 // USB

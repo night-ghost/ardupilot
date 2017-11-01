@@ -55,7 +55,6 @@ struct SPIDesc {
     uint16_t cs_pin;
     SPIFrequency lowspeed;
     SPIFrequency highspeed;
-    bool  soft;
     uint8_t dma;
 };
 

@@ -31,6 +31,7 @@
 #include "DiscreteRGBLed.h"
 #include "DiscoLED.h"
 #include <stdio.h>
+ #include "AP_BoardLED2.h"
 
 AP_Notify *AP_Notify::_instance;
 
@@ -180,6 +181,14 @@ void AP_Notify::init(bool enable_external_leds)
         _devices[1] = new ToshibaLED_I2C();
         _devices[2] = new ToneAlarm_Linux();
     #endif
+
+
+#elif CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
+
+    _devices[0] = new AP_BoardLED2();
+    _devices[1] = new ToshibaLED_I2C();
+    _devices[2] = new Buzzer();
+    _devices[3] = new Display();
 
 #else
     _devices[0] = new AP_BoardLED();

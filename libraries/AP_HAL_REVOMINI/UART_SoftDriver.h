@@ -117,7 +117,9 @@ private:
     static bool _initialized;
     static bool _blocking;
     
-    static const struct TIM_Channel *channel;
+//    static const struct TIM_Channel *channel;
+    static const timer_dev          *timer;
+    static const uint8_t             channel;
     
     static uint16_t                  bitPeriod;
 
@@ -147,8 +149,8 @@ private:
     // Note: Clears pending interrupt
     static inline void txEnableInterrupts() {
 
-        channel->tim->SR &= ~TIMER_SR_UIF;
-        timer_enable_irq(channel->timer, TIMER_UPDATE_INTERRUPT);
+        timer->regs->SR &= ~TIMER_SR_UIF;
+        timer_enable_irq(timer, TIMER_UPDATE_INTERRUPT);
         
 //          *bb_perip(&(channel->tim->SR), TX_TIMER_PENDING) = 0; // Clear int pending
 //          *bb_perip(&(channel->tim->DIER), TX_TIMER_MASK) = 1; // enable
@@ -157,7 +159,7 @@ private:
     // Mask transmit interrupt
     static inline void txDisableInterrupts() {
 //          *bb_perip(&(channel->tim->DIER), TX_TIMER_MASK) = 0;
-        timer_disable_irq(channel->timer, TIMER_UPDATE_INTERRUPT);
+        timer_disable_irq(timer, TIMER_UPDATE_INTERRUPT);
     }
     
     static void rxSetCapture();

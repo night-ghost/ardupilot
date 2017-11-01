@@ -58,12 +58,10 @@
  #define HAL_MINIMIZE_FEATURES 1
 
  #define AC_TERRAIN             DISABLED // no SD card with POSIX IO
- #define ADSB_ENABLED           DISABLED
  #define PRECISION_LANDING      DISABLED
  #define CONFIG_PUSHBUTTON      DISABLED
  #define SPRAYER                DISABLED
  #define EPM_ENABLED            DISABLED
- #define MOUNT                  DISABLED // don't fit to flash
  #define CLI_ENABLED            DISABLED
  #define GRIPPER_ENABLED        DISABLED // not for large quads
  
@@ -71,7 +69,9 @@
  // disable for debugging with -O0
 // #define FRSKY_TELEM_ENABLED   DISABLED
 // #define CAMERA                DISABLED
-// #define CONFIG_RELAY           DISABLED
+// #define CONFIG_RELAY          DISABLED
+// #define MOUNT                 DISABLED 
+// #define ADSB_ENABLED          DISABLED
 
 
  #define LOGGING_ENABLED ENABLED

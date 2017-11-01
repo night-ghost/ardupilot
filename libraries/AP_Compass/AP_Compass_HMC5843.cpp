@@ -293,12 +293,17 @@ void AP_Compass_HMC5843::_timer()
     if(is_zero(compass_len)) {
         compass_len=len;
     } else {
-        if(abs(compass_len-len)/(compass_len+len)*100 > 25) { // difference more than 50% from mean value
+#define FILTER_KOEF 0.1
+
+        float d = abs(compass_len-len)/(compass_len+len); 
+        if(d*100 > 25) { // difference more than 50% from mean value
             printf("\ncompass len error: mean %f got %f\n", compass_len, len );
             ret= false; 
+            float k = FILTER_KOEF / (d*10); // 2.5 and more, so one bad sample never change mean more than 4%
+            compass_len = compass_len * (1-k) + len*k; // complimentary filter 1/k on bad samples
+        } else {
+            compass_len = compass_len * (1-FILTER_KOEF) + len*FILTER_KOEF; // complimentary filter 1/10 on good samples
         }
-#define FILTER_KOEF 0.1
-        compass_len = compass_len * (1-FILTER_KOEF) + len*FILTER_KOEF; // complimentary filter 1/10 on all samples
     }
     if(ret) {
         if (!_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {

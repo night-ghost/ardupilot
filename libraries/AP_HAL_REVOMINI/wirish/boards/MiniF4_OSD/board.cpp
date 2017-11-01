@@ -128,103 +128,48 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     
 };
 
+/*
+struct TIM_Channel {
+        TIM_TypeDef * tim;
+        uint32_t tim_clk;
+        rcc_clockcmd tim_clkcmd;
+
+        uint16_t tim_channel;
+        uint16_t tim_cc;
+//{ TODO: remove it
+        GPIO_TypeDef * gpio_port;
+        uint32_t gpio_clk;
+        rcc_clockcmd gpio_clkcmd;
+
+        uint16_t gpio_pin;
+        uint8_t  gpio_af;
+        uint8_t  gpio_af_tim;
+//}
+        const timer_dev * timer;// \\
+        uint8_t channel_n;         // for work with Timer driver
+        uint8_t pin;       // pin number - to remove all GPIO-related data
+};
+*/
+
 extern const struct TIM_Channel PWM_Channels[] __FLASH__ =   {
     //CH1 and CH2 also for PPMSUM / SBUS / DSM
 	    { // 0 RC_IN1
-		    TIM4,
-		    RCC_APB1Periph_TIM4,
-		    RCC_APB1PeriphClockCmd,
-		    TIM4_IRQn,
-		    TIM_Channel_3,
-		    TIM_IT_CC3,
-		    GPIOB,
-		    RCC_AHB1Periph_GPIOB,
-		    RCC_AHB1PeriphClockCmd,
-		    GPIO_Pin_8,
-		    GPIO_PinSource8,
-		    GPIO_AF_TIM4,
-		    &timer4,
-		    TIMER_CH3
+		.pin         =     101,
 	    },
 	    { // 1 RC_IN2
-		    TIM4,
-		    RCC_APB1Periph_TIM4,
-		    RCC_APB1PeriphClockCmd,
-		    TIM4_IRQn,
-		    TIM_Channel_4,
-		    TIM_IT_CC4,
-		    GPIOB,
-		    RCC_AHB1Periph_GPIOB,
-		    RCC_AHB1PeriphClockCmd,
-		    GPIO_Pin_9,
-		    GPIO_PinSource9,
-		    GPIO_AF_TIM4,
-		    &timer4,
-		    TIMER_CH4
+		.pin         =     25,
 	    },
 	    { // 2 RC_IN3
-		    TIM8,
-		    RCC_APB2Periph_TIM8,
-		    RCC_APB2PeriphClockCmd,
-		    TIM8_CC_IRQn,
-		    TIM_Channel_1,
-		    TIM_IT_CC1,
-		    GPIOC,
-		    RCC_AHB1Periph_GPIOC,
-		    RCC_AHB1PeriphClockCmd,
-		    GPIO_Pin_6,
-		    GPIO_PinSource6,
-		    GPIO_AF_TIM8,
-		    &timer8,
-		    TIMER_CH1
+		.pin         =     12,
 	    },
 	    { // 3 RC_IN4
-		    TIM8,
-		    RCC_APB2Periph_TIM8,
-		    RCC_APB2PeriphClockCmd,
-		    TIM8_CC_IRQn,
-		    TIM_Channel_2,
-		    TIM_IT_CC2,
-		    GPIOC,
-		    RCC_AHB1Periph_GPIOC,
-		    RCC_AHB1PeriphClockCmd,
-		    GPIO_Pin_7,
-		    GPIO_PinSource7,
-		    GPIO_AF_TIM8,
-		    &timer8,
-		    TIMER_CH2
+		.pin         =     13,
 	    },
 	    { // 4 RC_IN5
-		    TIM8,
-		    RCC_APB2Periph_TIM8,
-		    RCC_APB2PeriphClockCmd,
-		    TIM8_CC_IRQn,
-		    TIM_Channel_3,
-		    TIM_IT_CC3,
-		    GPIOC,
-		    RCC_AHB1Periph_GPIOC,
-		    RCC_AHB1PeriphClockCmd,
-		    GPIO_Pin_8,
-		    GPIO_PinSource8,
-		    GPIO_AF_TIM8,
-		    &timer8,
-		    TIMER_CH3
+		.pin         =     14,
 	    },
 	    { // 5 RC_IN6
-		    TIM8,
-		    RCC_APB2Periph_TIM8,
-		    RCC_APB2PeriphClockCmd,
-		    TIM8_CC_IRQn,
-		    TIM_Channel_4,
-		    TIM_IT_CC4,
-		    GPIOC,
-		    RCC_AHB1Periph_GPIOC,
-		    RCC_AHB1PeriphClockCmd,
-		    GPIO_Pin_9,
-		    GPIO_PinSource9,
-		    GPIO_AF_TIM8,
-		    &timer8,
-		    TIMER_CH4
+		.pin         =     15,
 	    },
     };
 

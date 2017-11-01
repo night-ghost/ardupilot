@@ -22,45 +22,28 @@
 #define SHED_PROF 
 #define MTASK_PROF
 //#define SHED_DEBUG
-
-
 //#define SEM_DEBUG
-
 //#define MPU_DEBUG
 
 #endif
 
 /*
 interrupts priorities:
-0 PWM input (10uS between interrupts)
-1 soft_uart
-2 i2c 
-3 micros() Timer5 / MPU DataReady
-4 timer_i2C
-5 SysTick
-6 uart
-7 gpio pin
-8 OSD VSI
-9 dma IO complete
-a
-b usb
-c driver's io_completion
-d
-e scheduler - Timer7, tail timer, svc
-f Pend_Sw
 */
 
-#define PWM_INT_PRIORITY       0
-#define SOFT_UART_INT_PRIORITY 1
-#define I2C_INT_PRIORITY       2 
-#define MPU_INT_PRIORITY       3
-#define TIMER_I2C_INT_PRIORITY 4
-#define SYSTICK_INT_PRIORITY   5
-#define UART_INT_PRIORITY      6
-#define GPIO_INT_PRIORITY      7
-#define VSI_INT_PRIORITY       8
-#define DMA_IOC_INT_PRIORITY   9
-#define USB_INT_PRIORITY      11
-#define IOC_INT_PRIORITY      12
-#define SVC_INT_PRIORITY      14
-#define PENDSV_INT_PRIORITY   15
+#define PWM_INT_PRIORITY       0 // PWM input (10uS between interrupts)
+#define SOFT_UART_INT_PRIORITY 1 // soft_uart
+#define I2C_INT_PRIORITY       2 // i2c 
+#define MPU_INT_PRIORITY       3 // micros() Timer5 / MPU DataReady
+#define TIMER_I2C_INT_PRIORITY 4 // timer_i2C (2uS between interrupts)
+#define SYSTICK_INT_PRIORITY   5 // SysTick
+#define UART_INT_PRIORITY      6 // uart
+#define GPIO_INT_PRIORITY      7 // gpio pin
+#define VSI_INT_PRIORITY       8 // OSD VSI
+#define DMA_IOC_INT_PRIORITY   9 // dma IO complete
+//                            10
+#define USB_INT_PRIORITY      11 // usb
+#define IOC_INT_PRIORITY      12 // driver's io_completion
+//                            13
+#define SVC_INT_PRIORITY      14 // scheduler - Timer7, tail timer, svc
+#define PENDSV_INT_PRIORITY   15 // Pend_Sw

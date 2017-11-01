@@ -41,7 +41,7 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     {&gpioa, &timer1,NULL,  8, 1, ADCx}, /* D22/PA8  2 SERVO6 */
     {&gpioa, &timer1,NULL,  9, 2, ADCx}, /* D23/PA9  3 USART1_TX */
     {&gpioa, &timer1,NULL, 10, 3, ADCx}, /* D24/PA10 4 USART1_RX */
-    {&gpiob,   NULL, NULL,  9, 4, ADCx}, /* D25/PB9  5 I2C1_SDA */
+    {&gpiob, &timer4,NULL,  9, 4, ADCx}, /* D25/PB9  5 I2C1_SDA */
     {&gpiod,   NULL, NULL,  2, 0, ADCx}, /* D26/PD2  6 EXTI_RFM22B / UART5_RX */
     {&gpiod,   NULL, NULL,  3, 0, ADCx}, /* D27/PD3  7*/
     {&gpiod,   NULL, NULL,  6, 0, ADCx}, /* D28/PD6  8*/
@@ -117,7 +117,7 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     {&gpiog,   NULL, NULL,  5, 0, ADCx}, /* D98/PG5  8*/
     {&gpiod,   NULL, NULL, 10, 0, ADCx}, /* D99/PD10 9*/
     {&gpiob,   NULL, NULL, 11, 0, ADCx}, /* D100/PB11 100 USART3_RX/I2C2-SDA */
-    {&gpiob,   NULL, NULL,  8, 0, ADCx}, /* D101/PB8  I2C1_SCL  */
+    {&gpiob, &timer4,NULL,  8, 3, ADCx}, /* D101/PB8  I2C1_SCL  PPM_IN */
     {&gpioe,   NULL, NULL,  2, 0, ADCx}, /* D102/PE2 */
     {&gpioa,   NULL, NULL, 15, 0, ADCx}, /* D103/PA15 CS_OSD */
     {&gpiob,   NULL, NULL,  3, 0, ADCx}, /* D104/PB3  CS_BARO */
@@ -128,103 +128,26 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     
 };
 
+
 extern const struct TIM_Channel PWM_Channels[] __FLASH__ =   {
     //CH1 and CH2 also for PPMSUM / SBUS / DSM
 	    { // 0 RC_IN1
-		    TIM4,
-		    RCC_APB1Periph_TIM4,
-		    RCC_APB1PeriphClockCmd,
-		    TIM4_IRQn,
-		    TIM_Channel_3,
-		    TIM_IT_CC3,
-		    GPIOB,
-		    RCC_AHB1Periph_GPIOB,
-		    RCC_AHB1PeriphClockCmd,
-		    GPIO_Pin_8,
-		    GPIO_PinSource8,
-		    GPIO_AF_TIM4,
-		    &timer4,
-		    TIMER_CH3
+		.pin         = 101,
 	    },
 	    { // 1 RC_IN2
-		    TIM4,
-		    RCC_APB1Periph_TIM4,
-		    RCC_APB1PeriphClockCmd,
-		    TIM4_IRQn,
-		    TIM_Channel_4,
-		    TIM_IT_CC4,
-		    GPIOB,
-		    RCC_AHB1Periph_GPIOB,
-		    RCC_AHB1PeriphClockCmd,
-		    GPIO_Pin_9,
-		    GPIO_PinSource9,
-		    GPIO_AF_TIM4,
-		    &timer4,
-		    TIMER_CH4
+		.pin         = 25,
 	    },
 	    { // 2 RC_IN3
-		    TIM8,
-		    RCC_APB2Periph_TIM8,
-		    RCC_APB2PeriphClockCmd,
-		    TIM8_CC_IRQn,
-		    TIM_Channel_1,
-		    TIM_IT_CC1,
-		    GPIOC,
-		    RCC_AHB1Periph_GPIOC,
-		    RCC_AHB1PeriphClockCmd,
-		    GPIO_Pin_6,
-		    GPIO_PinSource6,
-		    GPIO_AF_TIM8,
-		    &timer8,
-		    TIMER_CH1
+		.pin         = 12,
 	    },
 	    { // 3 RC_IN4
-		    TIM8,
-		    RCC_APB2Periph_TIM8,
-		    RCC_APB2PeriphClockCmd,
-		    TIM8_CC_IRQn,
-		    TIM_Channel_2,
-		    TIM_IT_CC2,
-		    GPIOC,
-		    RCC_AHB1Periph_GPIOC,
-		    RCC_AHB1PeriphClockCmd,
-		    GPIO_Pin_7,
-		    GPIO_PinSource7,
-		    GPIO_AF_TIM8,
-		    &timer8,
-		    TIMER_CH2
+		.pin         = 13,
 	    },
 	    { // 4 RC_IN5
-		    TIM8,
-		    RCC_APB2Periph_TIM8,
-		    RCC_APB2PeriphClockCmd,
-		    TIM8_CC_IRQn,
-		    TIM_Channel_3,
-		    TIM_IT_CC3,
-		    GPIOC,
-		    RCC_AHB1Periph_GPIOC,
-		    RCC_AHB1PeriphClockCmd,
-		    GPIO_Pin_8,
-		    GPIO_PinSource8,
-		    GPIO_AF_TIM8,
-		    &timer8,
-		    TIMER_CH3
+		.pin         = 14,
 	    },
 	    { // 5 RC_IN6
-		    TIM8,
-		    RCC_APB2Periph_TIM8,
-		    RCC_APB2PeriphClockCmd,
-		    TIM8_CC_IRQn,
-		    TIM_Channel_4,
-		    TIM_IT_CC4,
-		    GPIOC,
-		    RCC_AHB1Periph_GPIOC,
-		    RCC_AHB1PeriphClockCmd,
-		    GPIO_Pin_9,
-		    GPIO_PinSource9,
-		    GPIO_AF_TIM8,
-		    &timer8,
-		    TIMER_CH4
+		.pin         = 15,
 	    },
     };
 

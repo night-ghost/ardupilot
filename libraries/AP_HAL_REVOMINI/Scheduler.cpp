@@ -208,10 +208,10 @@ void REVOMINIScheduler::init()
 
     { // timer to generate more precise delays via quant termination
                 // dev    period   freq, kHz
-        configTimeBase(TIMER11, 0, 1000);       //1MHz 1us ticks
+        configTimeBase(TIMER14, 0, 1000);       //1MHz 1us ticks
         Revo_handler h = { .isr = _tail_timer_event };
-        timer_attach_interrupt(TIMER11, TIMER_UPDATE_INTERRUPT, h.h , SVC_INT_PRIORITY); // priority 14 - the same as Timer7 and SVC
-        TIMER11->regs->CR1 &= ~(TIMER_CR1_ARPE | TIMER_CR1_URS); // not buffered preload, interrupt by overflow or by UG set
+        timer_attach_interrupt(TIMER14, TIMER_UPDATE_INTERRUPT, h.h , SVC_INT_PRIORITY); // priority 14 - the same as Timer7 and SVC
+        TIMER14->regs->CR1 &= ~(TIMER_CR1_ARPE | TIMER_CR1_URS); // not buffered preload, interrupt by overflow or by UG set
     }
 
 
@@ -1123,9 +1123,9 @@ skip_task:
 
     if(want_tail) { // we have a task that want to be started next in the middle of tick
         if(partial_quant < TIMER_PERIOD-10) { // if time less than tick
-            timer_set_count(TIMER11, 0);
-            timer_set_reload(TIMER11, partial_quant+2); // +2 to garantee
-            timer_resume(TIMER11);
+            timer_set_count(TIMER14, 0);
+            timer_set_reload(TIMER14, partial_quant+2); // +2 to garantee
+            timer_resume(TIMER14);
         }
     }
 
@@ -1134,7 +1134,7 @@ skip_task:
 
 
 void REVOMINIScheduler::context_switch_isr(){
-    timer_generate_update(TIMER11); 
+    timer_generate_update(TIMER14); 
 }
 
 
@@ -1142,7 +1142,7 @@ void REVOMINIScheduler::context_switch_isr(){
     interrupt to reduce timeslice quant
 */
 void REVOMINIScheduler::_tail_timer_event(uint32_t v /*TIM_TypeDef *tim */){
-    timer_pause(TIMER11);
+    timer_pause(TIMER14);
     timer_generate_update(TIMER7); // tick is over
 #ifndef MTASK_PROF
     _switch_task();
@@ -1355,7 +1355,7 @@ void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
 
 // prepare task switch and plan it if needed. This function called only on ISR level 14
 void REVOMINIScheduler::switch_task(){
-    timer_pause(TIMER11);          // we will recalculate scheduling
+    timer_pause(TIMER14);          // we will recalculate scheduling
     timer_generate_update(TIMER7); // tick is over
     _switch_task();
 }

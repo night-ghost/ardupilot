@@ -521,20 +521,6 @@ void timer_foreach(void (*fn)(const timer_dev*)) {
     for(i=0; i<(sizeof(timers)/sizeof(timer_dev)); i++){
         fn(&timers[i]);
     }
-
-/*
-    //fn(TIMER1);
-    fn(TIMER2); // RC_Out
-    fn(TIMER3); // RC_Out
-    fn(TIMER4); // used for software i2c
-    fn(TIMER5); // used for micros()
-    fn(TIMER6); // used for event generation for WFE
-    fn(TIMER7); // used for scheduler
-    fn(TIMER8); // used in PWM_IN
-    fn(TIMER9); // used for software i2c
-    fn(TIMER10);// used for software i2c
-    fn(TIMER12); // used in PWM_IN
-*/
 }
 
 /**
@@ -610,7 +596,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void);
 
 
 
-//*
+
 void TIM1_BRK_TIM9_IRQHandler(void)
 {
     dispatch_adv_brk(TIMER1);
@@ -687,13 +673,9 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void) {
  * is enabled and if it has occurred simultaneously.
  */
 
-/* A special-case dispatch routine for single-interrupt NVIC lines.
- * This function assumes that the interrupt corresponding to `iid' has
- * in fact occurred (i.e., it doesn't check DIER & SR). */
 static INLINE  void dispatch_single_irq(const timer_dev *dev,
                                        timer_interrupt_id iid,
                                        uint32_t irq_mask) {
-
     
     uint32_t dsr = dev->regs->DIER & dev->regs->SR & irq_mask;
     if (dsr) {
@@ -710,7 +692,7 @@ static INLINE  void dispatch_single_irq(const timer_dev *dev,
 
 /* For dispatch routines which service multiple interrupts. */
 static INLINE void handle_irq(const timer_dev *dev, uint32_t dier_sr, uint32_t irq_mask, uint32_t iid) {
-    if ((dier_sr) & (irq_mask)) {                                 
+    if (dier_sr & irq_mask) {                                 
         Handler handler = (dev->handlers)[iid];                
         if (handler) {                                          
             revo_call_handler(handler, (uint32_t)dev->regs);
@@ -753,11 +735,10 @@ static inline void dispatch_adv_trg_com(const timer_dev *dev) {
                              * must clear overcapture flags, to avoid
                              * wasting time in output mode. */
 
-
     handle_irq(dev, dsr, TIMER_SR_TIF,   TIMER_TRG_INTERRUPT);
     handle_irq(dev, dsr, TIMER_SR_COMIF, TIMER_COM_INTERRUPT);
 
-    dev->regs->SR &= ~dsr;     // handled ALL enabled interrupts! BEFORE ISR itself!
+    dev->regs->SR &= ~dsr;     // handled ALL enabled interrupts! AFTER ISR itself!
 
 #ifdef ISR_PERF
     t = stopwatch_getticks() - t;
@@ -778,7 +759,7 @@ static inline void dispatch_adv_cc(const timer_dev *dev) {
     handle_irq(dev, dsr, TIMER_SR_CC2IF, TIMER_CC2_INTERRUPT);
     handle_irq(dev, dsr, TIMER_SR_CC1IF, TIMER_CC1_INTERRUPT);
 
-    dev->regs->SR &= ~dsr;      // handled ALL enabled interrupts! BEFORE ISR itself!
+    dev->regs->SR &= ~dsr;      // handled ALL enabled interrupts! AFTER ISR itself!
 
 #ifdef ISR_PERF
     t = stopwatch_getticks() - t;
@@ -802,7 +783,7 @@ static inline void dispatch_general(const timer_dev *dev) {
     handle_irq(dev, dsr, TIMER_SR_CC1IF, TIMER_CC1_INTERRUPT);
     handle_irq(dev, dsr, TIMER_SR_UIF,   TIMER_UPDATE_INTERRUPT);
 
-    dev->regs->SR &= ~dsr; // handled ALL enabled interrupts! BEFORE ISR itself!
+    dev->regs->SR &= ~dsr; // handled ALL enabled interrupts! AFTER ISR itself!
 
 #ifdef ISR_PERF
     t = stopwatch_getticks() - t;
@@ -824,7 +805,7 @@ static inline void dispatch_general_h(const timer_dev *dev) {
     handle_irq(dev, dsr, TIMER_SR_CC1IF, TIMER_CC1_INTERRUPT);
     handle_irq(dev, dsr, TIMER_SR_UIF,   TIMER_UPDATE_INTERRUPT);
 
-    dev->regs->SR &= ~dsr; // handled ALL enabled interrupts! BEFORE ISR itself!
+    dev->regs->SR &= ~dsr; // handled ALL enabled interrupts! AFTER ISR itself!
 
 #ifdef ISR_PERF
     t = stopwatch_getticks() - t;
@@ -911,90 +892,6 @@ static void enable_advanced_irq(const timer_dev *dev, timer_interrupt_id id, uin
         NVIC_SetPriority(irq,priority);
     }
 }
-
-/**
- * @brief Enable a timer interrupt.
- * @param dev Timer device.
- * @param interrupt Interrupt number to enable; this may be any
- *                  timer_interrupt_id value appropriate for the timer.
- * @see timer_interrupt_id
- * @see timer_channel
- */
-void timer_enable_irq(const timer_dev *dev, uint8_t interrupt) {
-#if 1
-    *bb_perip(&(dev->regs->DIER), interrupt) = 1;
-#else
-	switch(interrupt) {
-	case TIMER_UPDATE_INTERRUPT:
-	    TIM_ITConfig(dev->regs, TIM_IT_Update, ENABLE);
-	    break;		
-	case TIMER_CC1_INTERRUPT: 
-	    TIM_ITConfig(dev->regs, TIM_IT_CC1, ENABLE);
-	    break;		
-	case TIMER_CC2_INTERRUPT:
-	    TIM_ITConfig(dev->regs, TIM_IT_CC2, ENABLE);
-	    break;		
-	case TIMER_CC3_INTERRUPT:
-	    TIM_ITConfig(dev->regs, TIM_IT_CC3, ENABLE);
-	    break;		
-	case TIMER_CC4_INTERRUPT:
-	    TIM_ITConfig(dev->regs, TIM_IT_CC4, ENABLE);
-	    break;		
-	case TIMER_COM_INTERRUPT:
-	    TIM_ITConfig(dev->regs, TIM_IT_COM, ENABLE);
-	    break;		
-	case TIMER_TRG_INTERRUPT:
-	    TIM_ITConfig(dev->regs, TIM_IT_Trigger, ENABLE);
-            break;		
-	case TIMER_BREAK_INTERRUPT:
-	    TIM_ITConfig(dev->regs, TIM_IT_Break, ENABLE);
-	    break;
-	}
-#endif
-	
-}
-
-/**
- * @brief Disable a timer interrupt.
- * @param dev Timer device.
- * @param interrupt Interrupt number to disable; this may be any
- *                  timer_interrupt_id value appropriate for the timer.
- * @see timer_interrupt_id
- * @see timer_channel
- */
-void timer_disable_irq(const timer_dev *dev, uint8_t interrupt) {
-#if 1
-    *bb_perip(&(dev->regs->DIER), interrupt) = 0;
-#else
-    switch(interrupt) {
-    case TIMER_UPDATE_INTERRUPT:
-	TIM_ITConfig(dev->regs, TIM_IT_Update, DISABLE);
-	break;		
-    case TIMER_CC1_INTERRUPT: 
-	TIM_ITConfig(dev->regs, TIM_IT_CC1, DISABLE);
-	break;		
-    case TIMER_CC2_INTERRUPT:
-	TIM_ITConfig(dev->regs, TIM_IT_CC2, DISABLE);
-	break;		
-    case TIMER_CC3_INTERRUPT:
-	TIM_ITConfig(dev->regs, TIM_IT_CC3, DISABLE);
-	break;		
-    case TIMER_CC4_INTERRUPT:
-    	TIM_ITConfig(dev->regs, TIM_IT_CC4, DISABLE);
-	break;		
-    case TIMER_COM_INTERRUPT:
-	TIM_ITConfig(dev->regs, TIM_IT_COM, DISABLE);
-	break;		
-    case TIMER_TRG_INTERRUPT:
-	TIM_ITConfig(dev->regs, TIM_IT_Trigger, DISABLE);
-	break;		
-    case TIMER_BREAK_INTERRUPT:
-	TIM_ITConfig(dev->regs, TIM_IT_Break, DISABLE);
-	break;
-    } 
-#endif
-}
-
 
 
 void timer_enable_NVICirq(const timer_dev *dev, uint8_t interrupt, uint8_t priority) {

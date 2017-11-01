@@ -1,7 +1,6 @@
 /******************************************************************************
- * The MIT License
+ * The GPLv3 License
  *
- * Copyright (c) 2010 Perry Hung.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -24,12 +23,6 @@
  * SOFTWARE.
  *****************************************************************************/
 
-/**
- *  @file pwm.h
- *
- *  @brief Arduino-compatible PWM interface.
- */
-
 #ifndef _PWM_IN_H_
 #define _PWM_IN_H_
 
@@ -39,7 +32,7 @@
 #include <strings.h>
 #include "timer.h"
 
-typedef void (*rcc_clockcmd)(uint32_t, FunctionalState);
+//typedef void (*rcc_clockcmd)(uint32_t, FunctionalState);
 
 #ifdef __cplusplus
   extern "C" {
@@ -55,7 +48,6 @@ typedef struct PULSE {
 #include "ring_buffer_pulse.h"
 
 
-
 struct PPM_State  {
     Handler handler;
     uint32_t last_pulse;    // time of edge
@@ -69,13 +61,17 @@ extern struct PPM_State PPM_Inputs[];
 
 
 struct TIM_Channel {
+
+#if 0 //{ TODO: remove it
+        uint16_t tim_cc;
+
         TIM_TypeDef * tim;
+        const timer_dev * timer;// 
+        uint16_t tim_channel;
+        uint8_t channel_n;      // for work with Timer driver
+
         uint32_t tim_clk;
         rcc_clockcmd tim_clkcmd;
-        IRQn_Type tim_irq;
-
-        uint16_t tim_channel;
-        uint16_t tim_cc;
 
         GPIO_TypeDef * gpio_port;
         uint32_t gpio_clk;
@@ -84,8 +80,9 @@ struct TIM_Channel {
         uint16_t gpio_pin;
         uint8_t  gpio_af;
         uint8_t  gpio_af_tim;
-        const timer_dev * timer;
-        uint8_t channel_n; // for work with Timer driver
+#endif //}
+
+        uint8_t pin;       // pin number - to remove all GPIO-related data
 }; 
 
 extern const struct TIM_Channel PWM_Channels[];

@@ -1,7 +1,6 @@
 /******************************************************************************
- * The MIT License
+ * The GPLv3 License
  *
- * Copyright (c) 2010 Perry Hung.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,9 +24,8 @@
  *****************************************************************************/
 
 /**
- *  @brief Arduino-style PWM implementation.
  
-see https://github.com/mahowik/MahoRotorF4-Discovery/blob/master/src/drv/drv_pwm_fy90q.c
+also see https://github.com/mahowik/MahoRotorF4-Discovery/blob/master/src/drv/drv_pwm_fy90q.c
  
  */
 
@@ -36,7 +34,7 @@ see https://github.com/mahowik/MahoRotorF4-Discovery/blob/master/src/drv/drv_pwm
 #include "hal_types.h"
 #include "timer.h"
 #include <systick.h>
-
+#include "gpio_hal.h"
 #include <boards.h>
 #include "ring_buffer_pulse.h"
 
@@ -50,14 +48,12 @@ see https://github.com/mahowik/MahoRotorF4-Discovery/blob/master/src/drv/drv_pwm
 #define PPM_CHANNELS 2 // independent input pins
 
 
-typedef void (*rcc_clockcmd)( uint32_t, FunctionalState);
 /**************** PWM INPUT **************************************/
 
 // Forward declaration
 static inline void pwmIRQHandler(uint32_t v/*TIM_TypeDef *tim */);
 
 static void pwmInitializeInput(uint8_t ppmsum);
-
 
 extern const struct TIM_Channel PWM_Channels[];
 
@@ -76,6 +72,9 @@ static void pwmIRQHandler(uint32_t v /* TIM_TypeDef *tim */){
             const struct TIM_Channel *channel = &PWM_Channels[i]; 
 	    struct PPM_State         *input   = &PPM_Inputs[i];
 
+            const stm32_pin_info     *p       = &PIN_MAP[channel->pin];
+            const timer_dev          *timer   = p->timer_device;
+
 /*
 struct PPM_State  {
     uint8_t state;          // 1 or 0
@@ -85,34 +84,12 @@ struct PPM_State  {
     Pulse pulse_mem[PULSES_QUEUE_SIZE]; // memory
 };
 */
-	    if (channel->tim == tim && (TIM_GetITStatus(tim, channel->tim_cc) == SET)) {
+	    if (timer->regs == tim && (TIM_GetITStatus(tim, 1<<p->timer_channel) == SET)) {
 
-                switch (channel->tim_channel)   {
-	        case TIM_Channel_1:
-	            val = TIM_GetCapture1(channel->tim);
-	            break;
-	        case TIM_Channel_2:
-	            val = TIM_GetCapture2(channel->tim);
-	            break;
-	        case TIM_Channel_3:
-	            val = TIM_GetCapture3(channel->tim);
-	            break;
-	        case TIM_Channel_4:
-	            val = TIM_GetCapture4(channel->tim);
-	            break;
-	        }
-
+                val = timer_get_capture(timer, p->timer_channel);
 
 	        input->last_pulse = systick_uptime();
         
-
-                TIM_ICInitTypeDef TIM_ICInitStructure;
-
-                TIM_ICInitStructure.TIM_Channel = channel->tim_channel;
-                TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
-                TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
-	        TIM_ICInitStructure.TIM_ICFilter = 0x0;
-
                 uint16_t time;
 
                 if (val > input->last_val)  {
@@ -124,108 +101,76 @@ struct PPM_State  {
 
                 if(time>0x7fff) time=0x7fff; // limit to 15 bit
 
-                Pulse p={
-                    .length  = time, 
-                    .state = input->state // we store last state, so state reflects input line
-                };
+                {
+                    Pulse pl={
+                        .length  = time, 
+                        .state = input->state // we store last state, so state reflects input line
+                    };
 
-                if(!pb_is_full(&input->pulses)){ // save pulse length and state 
-                    pb_insert(&input->pulses, p);
+                    if(!pb_is_full(&input->pulses)){ // save pulse length and state 
+                        pb_insert(&input->pulses, pl);
+                    }
                 }
-
 
                 if (input->state == 0) { // rising edge
 	            input->state = 1;
-
-	            TIM_ICInitStructure.TIM_ICPolarity = TIM_ICPolarity_Falling; // reprogram timer to falling
-//	            timer_cc_set_pol(channel->timer, channel->channel_n, 1);
+	            timer_cc_set_pol(timer, p->timer_channel, 1);
 	        } else  {               // falling edge
 	            input->state = 0;
-	
-	            TIM_ICInitStructure.TIM_ICPolarity = TIM_ICPolarity_Rising; // reprogram timer to rising
-//	            timer_cc_set_pol(channel->timer, channel->channel_n, 0);
+	            timer_cc_set_pol(timer, p->timer_channel, 0);
 	        }
-	        TIM_ICInit(channel->tim, &TIM_ICInitStructure);
                 
-                if(input->handler) revo_call_handler(input->handler, 0); // call callback on each edge, SBUS decoding requires only  1.4% of CPU (2.5 for full io_completion)
+                if(input->handler) revo_call_handler(input->handler, i); // call callback on each edge, SBUS decoding requires only  1.4% of CPU (2.5 for full io_completion)
 	    }
 	}
 }
 
 static inline void pwmInitializeInput(uint8_t ppmsum){
-    GPIO_InitTypeDef GPIO_InitStructure;
-    TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
     TIM_ICInitTypeDef TIM_ICInitStructure;
 
     { // ppm mode
         uint8_t i;
-        TIM_TypeDef * last_tim=0;
-
+        uint8_t last_tim=99;
 
 	for (i = 0; i < num_ppm_channels; i++)   {
             const struct TIM_Channel *channel = &PWM_Channels[i];
+
+            const stm32_pin_info *p     = &PIN_MAP[channel->pin];
+
+            const gpio_dev       *dev   = p->gpio_device;
+            uint8_t               bit   = p->gpio_bit;
+            const timer_dev      *timer = p->timer_device;
 	
-            TIM_Cmd(channel->tim, DISABLE);
+            gpio_set_mode(dev, bit, GPIO_AF_OUTPUT_OD_PU);
+            GPIO_PinAFConfig(dev->GPIOx, bit, timer->af); // connect pin to timer 
 
-            NVIC_EnableIRQ(channel->tim_irq);
-            NVIC_SetPriority(channel->tim_irq, PWM_INT_PRIORITY); // almost highest - bit time is ~10uS only - ~1680 commands	
+            timer_pause(timer);
 
-	    if(last_tim != channel->tim) {
+	    if(last_tim != timer->id) {
+                configTimeBase(timer, 0, 2000); // 2MHz
+
 	        Revo_hal_handler h = { .isr = pwmIRQHandler };
-                timer_attach_all_interrupts(channel->timer, h.h); 
+                timer_attach_all_interrupts(timer, h.h); 
+                timer_enable_NVICirq(timer, p->timer_channel, PWM_INT_PRIORITY); // almost highest - bit time is ~10uS only - ~1680 commands	
 
-                // timer_reset ******************************************************************
-                channel->tim_clkcmd(channel->tim_clk, ENABLE);
-
-                channel->tim->CR1 = TIMER_CR1_ARPE;
-                channel->tim->PSC = 1;
-                channel->tim->SR = 0;
-                channel->tim->DIER = 0;
-                channel->tim->EGR = TIMER_EGR_UG;
-
-	        // TIM configuration base *******************************************************
-	        TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
-
-                if (channel->tim == TIM1 || channel->tim == TIM8 || channel->tim == TIM9 || channel->tim == TIM10 || channel->tim == TIM11){
-	            TIM_TimeBaseStructure.TIM_Prescaler = 84-1; //2MHz
-	        }else{
-	            TIM_TimeBaseStructure.TIM_Prescaler = 42-1; //2MHz
-	        }
-                TIM_TimeBaseStructure.TIM_Period = 0xFFFF;
-	        TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-	        TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
-	        TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
-	        TIM_TimeBaseInit(channel->tim, &TIM_TimeBaseStructure);
-	        
-	        last_tim = channel->tim;
+	        last_tim = timer->id;
             }
             
 	    // PWM input capture ************************************************************
-	    TIM_ICInitStructure.TIM_Channel = channel->tim_channel;
+	    TIM_ICInitStructure.TIM_Channel = (p->timer_channel-1)*4;
 	    TIM_ICInitStructure.TIM_ICPolarity  = TIM_ICPolarity_Falling;
 	    TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
 	    TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
 	    TIM_ICInitStructure.TIM_ICFilter = 0x0;
-	    TIM_ICInit(channel->tim, &TIM_ICInitStructure);
+	    TIM_ICInit(timer->regs, &TIM_ICInitStructure);
+
+	    timer_cc_enable( timer, p->timer_channel); // enable capture
 
 	    // timer_enable *****************************************************************
-	    TIM_Cmd(channel->tim, ENABLE);
+            timer_resume(timer);
 
 	    // enable the CC interrupt request **********************************************
-	    TIM_ITConfig(channel->tim, channel->tim_cc, ENABLE);
-
-	    // gpio_set_mode ****************************************************************
-	    channel->gpio_clkcmd(channel->gpio_clk, ENABLE);
-
-	    GPIO_InitStructure.GPIO_Pin = channel->gpio_pin;
-	    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-	    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
-	    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-	    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-	    GPIO_Init(channel->gpio_port, &GPIO_InitStructure);
-	
-	    // connect pin to timer -  gpio_set_af_mode *************************************************************
-	    GPIO_PinAFConfig(channel->gpio_port, channel->gpio_af, channel->gpio_af_tim);
+            timer_enable_irq(timer, p->timer_channel);
         }
     }
 }

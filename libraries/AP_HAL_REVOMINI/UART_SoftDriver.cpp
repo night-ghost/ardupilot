@@ -49,17 +49,16 @@ bool                    SerialDriver::rxSkip=false;
 bool                    SerialDriver::activeRX=false;
 bool                    SerialDriver::activeTX=false;
 
-const struct TIM_Channel *SerialDriver::channel;
+const timer_dev *timer  = PIN_MAP[PWM_Channels[RX_RC_CHANNEL].pin].timer_device;
+const uint8_t   channel = PIN_MAP[PWM_Channels[RX_RC_CHANNEL].pin].timer_channel;
+
 
 void SerialDriver::begin(uint32_t baud) {
     REVOMINIGPIO::_write(TX_PIN, _inverse?LOW:HIGH);
     REVOMINIGPIO::_pinMode(RX_PIN, INPUT_PULLUP);
     REVOMINIGPIO::_pinMode(TX_PIN, OUTPUT);
 
-    channel = &PWM_Channels[RX_RC_CHANNEL]; // setup like in PWM capture - on this pin
-
-    
-    timer_pause(channel->timer);
+    timer_pause(timer);
     uint32_t prescaler;
     
     if (baud > 2400) {
@@ -71,12 +70,13 @@ void SerialDriver::begin(uint32_t baud) {
     }
 
 
-    timer_set_prescaler(channel->timer, prescaler-1);
+    timer_set_prescaler(timer, prescaler-1);
     
-    timer_set_reload(channel->timer, bitPeriod/2); // for TX needs
+    timer_set_reload(timer, bitPeriod/2); // for TX needs
         
     transmitBufferRead = transmitBufferWrite = 0;
-    txBitCount = 9;
+    txBitCount = 8; // 1st interrupt will generate STOP
+    txSkip=true;
 
     // Set rx State machine start state, attach the bit interrupt and mask it until start bit is received
     receiveBufferRead = receiveBufferWrite = 0;
@@ -85,18 +85,16 @@ void SerialDriver::begin(uint32_t baud) {
     rxSetCapture(); // wait for start bit
     {
         Revo_handler h = { .isr = rxNextBit };
-        timer_attach_interrupt(channel->timer, TIMER_RX_INTERRUPT,   h.h, SOFT_UART_INT_PRIORITY);
+        timer_attach_interrupt(timer, TIMER_RX_INTERRUPT,   h.h, SOFT_UART_INT_PRIORITY);
     }
     {
         Revo_handler h = { .isr = txNextBit };
-        timer_attach_interrupt(channel->timer, TIMER_UPDATE_INTERRUPT, h.h, SOFT_UART_INT_PRIORITY); // also enables interrupt
+        timer_attach_interrupt(timer, TIMER_UPDATE_INTERRUPT, h.h, SOFT_UART_INT_PRIORITY); // also enables interrupt, so 1st interrupt will be ASAP
     }
-    txDisableInterrupts();     // so disable it
-
     
     // Load the timer values and start it
-    timer_generate_update(channel->timer);
-    timer_resume(channel->timer);
+    timer_generate_update(timer);
+    timer_resume(timer);
     
     _initialized = true;
 }
@@ -106,22 +104,21 @@ void SerialDriver::rxSetCapture(){
     TIM_ICInitTypeDef TIM_ICInitStructure;
 
     // input capture ************************************************************/
-    TIM_ICInitStructure.TIM_Channel     = channel->tim_channel;
+    TIM_ICInitStructure.TIM_Channel     = (channel-1)*4;
     TIM_ICInitStructure.TIM_ICPolarity  = _inverse?TIM_ICPolarity_Rising:TIM_ICPolarity_Falling; // wait for start bit
     TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
     TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
     TIM_ICInitStructure.TIM_ICFilter    = 0x3;
-    TIM_ICInit(channel->tim, &TIM_ICInitStructure);
+    TIM_ICInit(timer->regs, &TIM_ICInitStructure);
 }
 
 void SerialDriver::rxSetCompare(){
-    timer_set_mode(channel->timer, channel->channel_n, TIMER_OUTPUT_COMPARE); // for RX needs, capture mode by hands
+    timer_set_mode(timer, channel, TIMER_OUTPUT_COMPARE); // for RX needs, capture mode by hands
 }
 
 
-
 void SerialDriver::end() {
-    timer_pause(channel->timer);
+    timer_pause(timer);
     REVOMINIGPIO::_write(TX_PIN, 1);
     _initialized = false;
 
@@ -166,40 +163,31 @@ int16_t SerialDriver::read() {
 size_t SerialDriver::write(uint8_t c) {
     if (!_initialized) return 0;
 
-    if (REVOMINIScheduler::_in_timerprocess()) {
-        // not allowed from timers
-        return 0;
-    }
+
+    // Blocks if buffer full
+    uint16_t n_try=3;
+    do { // wait for free space
+        if( ((transmitBufferWrite + 1) % SS_MAX_TX_BUFF) == transmitBufferRead ){
+            REVOMINIScheduler::yield(); // пока ожидаем - пусть другие работают
+            if(! _blocking) n_try--;    // при неблокированном выводе уменьшим счетчик попыток
+        } else break; // дождались        
+    } while(n_try);
+
+    // Save new data in buffer and bump the write pointer
+    transmitBuffer[transmitBufferWrite] = c;
+
+    transmitBufferWrite = (transmitBufferWrite == SS_MAX_TX_BUFF) ? 0 : transmitBufferWrite + 1;
+
 
     // Check if transmit timer interrupt enabled and if not unmask it
     // transmit timer interrupt will get masked by transmit ISR when buffer becomes empty
     if (!activeTX) {
         activeTX=true;
         
-        // Save new data in buffer
-        transmitBuffer[transmitBufferWrite] = c;
-        transmitBufferWrite = (transmitBufferWrite == SS_MAX_TX_BUFF) ? 0 : transmitBufferWrite + 1;
-
         // Set state to 10 (send start bit) and re-enable transmit interrupt
         txBitCount = 10;
 
         txEnableInterrupts(); // enable
-
-    } else {
-
-      // Blocks if buffer full
-      uint16_t n_try=3;
-      do { // wait for free space
-        if( ((transmitBufferWrite + 1) % SS_MAX_TX_BUFF) == transmitBufferRead ){
-            REVOMINIScheduler::yield(); // пока ожидаем - пусть другие работают
-            if(! _blocking) n_try--;    // при неблокированном выводе уменьшим счетчик попыток
-        } else break; // дождались        
-      } while(n_try);
-
-      // Save new data in buffer and bump the write pointer
-      transmitBuffer[transmitBufferWrite] = c;
-
-      transmitBufferWrite = (transmitBufferWrite == SS_MAX_TX_BUFF) ? 0 : transmitBufferWrite + 1;
     }
 
     return 1;
@@ -225,45 +213,45 @@ void SerialDriver::txNextBit(uint32_t v /* TIM_TypeDef *tim */) { // ISR
     if(txSkip) return; // one bit per 2 periods
 
 
-  // State 0 through 7 - transmit bits
-  if (txBitCount <= 7) {
-    if (bitRead(transmitBuffer[transmitBufferRead], txBitCount) == (_inverse?0:1)) {
-      REVOMINIGPIO::_write(TX_PIN,HIGH); 
-    } else {
-      REVOMINIGPIO::_write(TX_PIN,LOW);
-    }
+    // State 0 through 7 - transmit bits
+    if (txBitCount <= 7) {
+        if (bitRead(transmitBuffer[transmitBufferRead], txBitCount) == (_inverse?0:1)) {
+            REVOMINIGPIO::_write(TX_PIN,HIGH); 
+        } else {
+            REVOMINIGPIO::_write(TX_PIN,LOW);
+        }
 
-    // Bump the bit/state counter to state 8
-    txBitCount++; 
+        // Bump the bit/state counter to state 8
+        txBitCount++; 
 
 #if DEBUG_DELAY && defined(DEBUG_PIN1)
-    REVOMINIGPIO::_write(DEBUG_PIN1,1);
-    REVOMINIGPIO::_write(DEBUG_PIN1,0);
+        REVOMINIGPIO::_write(DEBUG_PIN1,1);
+        REVOMINIGPIO::_write(DEBUG_PIN1,0);
 #endif
 
-  // State 8 - Send the stop bit and reset state to state -1
-  //          Shutdown timer interrupt if buffer empty
-  } else if (txBitCount == 8) {
+    // State 8 - Send the stop bit and reset state to state -1
+    //          Shutdown timer interrupt if buffer empty
+    } else if (txBitCount == 8) {
 
-    // Send the stop bit
-    REVOMINIGPIO::_write(TX_PIN, _inverse?LOW:HIGH); 
+        // Send the stop bit
+        REVOMINIGPIO::_write(TX_PIN, _inverse?LOW:HIGH); 
 
-    transmitBufferRead = (transmitBufferRead == SS_MAX_TX_BUFF ) ? 0 : transmitBufferRead + 1;
+        transmitBufferRead = (transmitBufferRead == SS_MAX_TX_BUFF ) ? 0 : transmitBufferRead + 1;
 
-    if (transmitBufferRead != transmitBufferWrite) { // we have data do transmit
-        txBitCount = 10;
-    } else {
-      // Buffer empty so shutdown timer until "write" puts data in
-      txDisableInterrupts();
-      activeTX=false;
+        if (transmitBufferRead != transmitBufferWrite) { // we have data do transmit
+            txBitCount = 10;
+        } else {
+            // Buffer empty so shutdown timer until write() puts data in
+            txDisableInterrupts();
+            activeTX=false;
+        }
+
+    // Send  start bit for new byte
+    } else if (txBitCount >= 10) {
+        REVOMINIGPIO::_write(TX_PIN, _inverse?HIGH:LOW);
+
+        txBitCount = 0;                    
     }
-
-  // Send  start bit for new byte
-  } else if (txBitCount >= 10) {
-    REVOMINIGPIO::_write(TX_PIN, _inverse?HIGH:LOW);
-
-    txBitCount = 0;                    
-  }
   
 }
 
@@ -278,11 +266,11 @@ void SerialDriver::rxNextBit(uint32_t v /* TIM_TypeDef *tim */) { // ISR
         // Test if this is really the start bit and not a spurious edge
         if (rxBitCount == 9) {  
 
-            uint16_t pos = timer_get_capture(channel->timer, channel->channel_n);
+            uint16_t pos = timer_get_capture(timer, channel);
 
             rxSetCompare(); // turn to compare mode
             
-            timer_set_compare(channel->timer, channel->channel_n, pos); // captured value
+            timer_set_compare(timer, channel, pos); // captured value
     
             // Set state/bit to first bit
             rxSkip=false; // next half bit will OK

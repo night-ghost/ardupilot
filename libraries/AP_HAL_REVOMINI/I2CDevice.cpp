@@ -20,9 +20,9 @@ extern const AP_HAL::HAL& hal;
 REVOMINI::Semaphore REVOI2CDevice::_semaphores[3]; // 2 HW and 1 SW
 
 const timer_dev * REVOI2CDevice::_timers[3] = { // one timer per bus for all devices
-    TIMER9,
+    TIMER4, // for bus 0 so not will be used on AirbotV2 boards when it used for PPM_IN
     TIMER10,
-    TIMER4,
+    TIMER9,
 };
 
 bool REVOI2CDevice::lateInitDone=false;
@@ -94,25 +94,28 @@ void REVOI2CDevice::init(){
 
     switch(_bus) {
     case 0:         // this is always internal bus
+#ifndef BOARD_I2C1_DISABLE
 	    _offs =0;
-#if defined(BOARD_I2C_BUS_SLOW) && BOARD_I2C_BUS_SLOW==0
+ #if defined(BOARD_I2C_BUS_SLOW) && BOARD_I2C_BUS_SLOW==0
             _slow=true;
-#endif
+ #endif
 
-#if defined(BOARD_SOFT_I2C) || defined(BOARD_SOFT_I2C1)
+ #if defined(BOARD_SOFT_I2C) || defined(BOARD_SOFT_I2C1)
             s_i2c.init_hw( 
                 _I2C1->gpio_port, _I2C1->scl_pin,
                 _I2C1->gpio_port, _I2C1->sda_pin,
                 _timers[_bus]
             );
-#else
+ #else
 	    dev = _I2C1;
-#endif
+ #endif
 	    break;
-
+#else
+        return;
+#endif
 
     case 1:     // flexi port - I2C2
-#if !defined(BOARD_HAS_UART3) // in this case I2C on FlexiPort will be bus 2
+#if !defined( BOARD_I2C2_DISABLE) &&  !defined(BOARD_HAS_UART3) // in this case I2C on FlexiPort will be bus 2
 
 	    _offs = 2;
  #if defined(BOARD_I2C_BUS_SLOW) && BOARD_I2C_BUS_SLOW==1
@@ -131,7 +134,6 @@ void REVOI2CDevice::init(){
 	    break;
 #else
             return; // not initialized so always returns false
-
 #endif
 
 #if defined(BOARD_SOFT_SCL) && defined(BOARD_SOFT_SDA)
@@ -166,8 +168,6 @@ void REVOI2CDevice::init(){
 
     
     if(_dev) {
-//        i2c_init(_dev, _offs, _slow?I2C_125KHz_SPEED:I2C_250KHz_SPEED);
-//        i2c_init(_dev, _offs, _slow?I2C_75KHz_SPEED:I2C_250KHz_SPEED);
         i2c_init(_dev, _offs, _slow?I2C_250KHz_SPEED:I2C_400KHz_SPEED);
 
     }else {

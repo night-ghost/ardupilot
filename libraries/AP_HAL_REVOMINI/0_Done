@@ -119,6 +119,11 @@
 * greatly reduced time of reformatting of DataFlash to FAT
 * I2C driver fully rewritten to work via interrupts - no DMA, no polling
 * compass and baro gives bus semaphore ASAP to allow bus operations when calculations does
+* buzzer support
+* full status on only 2 leds - GPS sats count, failsafe etc
+* support for SBUS on any UART
+* PWM_IN is rewritten to use another HAL drivers, as result its size decreased four times (!)
+* working PPM on AirbotV2/V3
 * ...
 * a lot of minor enhancements
 
@@ -150,6 +155,17 @@ in yield 79.97% sw 97.13%  добровольное завершение ква�
 in tails  7.98% sw 71.75%  переключение по таймеру до истечения кванта - 8%, вероятность 72%, итог - 5.8%
 вывод: кооперативная многозадачность на 77% :)
 
+new I2C driver stats:
+sched time: by timer 10.53% sw 12.38% in yield 82.38% sw 99.62% in tails  7.09% sw 65.64%
+task 0 (0x0000000080ACA3D) time:   12.23% mean     78.4uS max   121uS full       0uS wait sem.     28uS
+task 1 (0x0000000080AD369) time:   81.32% mean      4.3uS max    33uS full       0uS wait sem.      0uS
+task 2 (0x80AE02120004C9C) time:    0.28% mean     13.9uS max    37uS full      40uS wait sem.      0uS
+task 3 (0x8049CE920007E38) time:    0.38% mean     12.0uS max    40uS full     900uS wait sem.    557uS
+task 4 (0x0000000080AD705) time:    1.94% mean      9.7uS max    35uS full     444uS wait sem.      0uS
+task 5 (0x804CD492000CF20) time:    0.34% mean     14.0uS max    43uS full     856uS wait sem.    378uS
+task 6 (0x80547D92000CFA0) time:    3.38% mean     33.2uS max    49uS full     168uS wait sem.      8uS
+task 7 (0x0000000080ADE5D) time:    0.01% mean     84.5uS max   107uS full    7044uS wait sem.      0uS
+
 
 Timer usage:
 
@@ -162,11 +178,11 @@ Timer usage:
 7 scheduler
 8 PPM_IN
 9 soft_i2c1
-10 soft_i2c2
-11 schedule tail timer
+10 soft_i2c2 or PPM_IN on AirbotV2
+11 PPM_IN on AirbotV2
 12 PPM_IN
 13 driver's io_completion
-14
+14 schedule tail timer
 
 
 stacks:

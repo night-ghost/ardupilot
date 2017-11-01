@@ -23,6 +23,8 @@
 
 extern const AP_HAL::HAL& hal;
 
+#if defined(BUZZER_PIN)
+
 bool Buzzer::init()
 {
     // return immediately if disabled
@@ -217,3 +219,4 @@ void Buzzer::play_pattern(BuzzerPattern pattern_id)
     _pattern = pattern_id;
     _pattern_counter = 0;
 }
+#endif

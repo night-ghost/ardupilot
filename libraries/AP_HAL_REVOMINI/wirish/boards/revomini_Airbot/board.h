@@ -175,9 +175,9 @@ void boardInit(void);
 2 - enable alaways
 
 */
-   //                                    name            device   bus  mode         cs_pin                       speed_low       speed_high soft   dma
-#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  false,  1 }, \
-                             { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* device controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, false,  1  },
+   //                                    name            device   bus  mode         cs_pin                       speed_low       speed_high dma
+#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  1 }, \
+                             { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* device controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, 2 },
 
 
 /*

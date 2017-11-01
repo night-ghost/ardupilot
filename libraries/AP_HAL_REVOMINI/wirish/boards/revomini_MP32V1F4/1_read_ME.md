@@ -12,7 +12,7 @@ pin 2 of Input port is +5
 pin 3 of Input port is 1st PPM/SBUS/DSM input or Servo9 (if you use RC via UART)
 pin 4 of Input port is 2nd PPM/SBUS/DSM input or Servo10 - same
 pins 5&6 of Input port are Tx and Rx of Serial3 (for GPS)
-pins 7&8 of Input port are SCL and SDA of external I2C (or Tx and Rx for SoftSerial) - or Servos 7&8
+pins 7&8 of Input port are SCL and SDA of external I2C (or Tx and Rx for SoftSerial if I2C moved to FlexiPort) - or Servos 7&8
 
 
 Output Port for MOTORs
@@ -48,3 +48,19 @@ Pins Servo5 & Servo6 can be used as Analog Input for Airspeed sensor and/or RSSI
 
 Servo5 = 48
 Servo6 = 47
+
+
+LEDs
+
+All valuable info indicated by 2 LEDs of RevoMini
+Blue led: system state
+Very fast blinking - initializing
+Blinking        - ready to arm
+Double blinging - pre-arm check failed
+Solid           - armed
+blinking in flight - failsafe
+
+Green led: GPS state
+Dark: no fix
+Blinking: number of blinks shows number of sats minus 6, so if there is 10 sats LED will blink in 4 pulses
+

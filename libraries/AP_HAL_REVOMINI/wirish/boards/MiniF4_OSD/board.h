@@ -152,11 +152,11 @@ void boardInit(void);
 
 */
 
-   //                                    name            device   bus  mode         cs_pin                 speed_low       speed_high soft   dma
-#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,    SPI_1_125MHZ,   SPI_9MHZ,  false, 1 }, \
-                             { HAL_BARO_BMP280_NAME,     _SPI3,   3,  SPI_MODE_3, BOARD_BMP280_CS_PIN,     SPI_1_125MHZ,   SPI_9MHZ,  false, 0 }, \
-                             { BOARD_SDCARD_NAME,        _SPI2,   2,  SPI_MODE_0, 255,                     SPI_1_125MHZ,   SPI_18MHZ, false, 2  }, \
-                             { BOARD_OSD_NAME,           _SPI3,   3,  SPI_MODE_3, 255,                     SPI_1_125MHZ,   SPI_18MHZ, false, 1  },
+   //                                    name            device   bus  mode         cs_pin                 speed_low       speed_high dma
+#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,    SPI_1_125MHZ,   SPI_9MHZ,  1 }, \
+                             { HAL_BARO_BMP280_NAME,     _SPI3,   3,  SPI_MODE_3, BOARD_BMP280_CS_PIN,     SPI_1_125MHZ,   SPI_9MHZ,  0 }, \
+                             { BOARD_SDCARD_NAME,        _SPI2,   2,  SPI_MODE_0, 255,                     SPI_1_125MHZ,   SPI_18MHZ, 2  }, \
+                             { BOARD_OSD_NAME,           _SPI3,   3,  SPI_MODE_3, 255,                     SPI_1_125MHZ,   SPI_18MHZ, 1  },
 
 /*
 

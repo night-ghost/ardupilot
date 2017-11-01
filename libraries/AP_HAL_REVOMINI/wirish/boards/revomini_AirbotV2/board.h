@@ -23,7 +23,7 @@ void boardInit(void);
 
 #define BOARD_BUTTON_PIN     254
 
-//#define BOARD_BUZZER_PIN        5 // PB15, PWM2 - used as PPM2
+#define BOARD_BUZZER_PIN        105 // PB15, PWM2 - used as PPM2
 
 #define BOARD_NR_USARTS         5
 #define BOARD_USART1_TX_PIN     23 
@@ -88,6 +88,7 @@ void boardInit(void);
 //#define BOARD_I2C_BUS_EXT 1  // external I2C
 #define BOARD_I2C_BUS_SLOW 1 // slow down bus with this number
 
+#define BOARD_I2C1_DISABLE
 
 #define BOARD_BARO_DEFAULT HAL_BARO_BMP280_SPI
 #define HAL_BARO_BMP280_NAME "bmp280"
@@ -117,6 +118,7 @@ void boardInit(void);
 #define HAL_BOARD_LOG_DIRECTORY "0:/APM/LOGS"
 #define HAL_BOARD_TERRAIN_DIRECTORY "0:/APM/TERRAIN"
 //#define HAL_PARAM_DEFAULTS_PATH "0:/APM/defaults.parm"
+#define USB_MASSSTORAGE 
 
 #define BOARD_OSD_NAME "osd"
 #define BOARD_OSD_CS_PIN   103
@@ -160,11 +162,11 @@ void boardInit(void);
 
 */
 
-   //                                    name            device   bus  mode         cs_pin                 speed_low       speed_high soft   dma
-#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,    SPI_1_125MHZ,   SPI_9MHZ,  false, 1 }, \
-                             { HAL_BARO_BMP280_NAME,     _SPI3,   3,  SPI_MODE_3, BOARD_BMP280_CS_PIN,     SPI_1_125MHZ,   SPI_9MHZ,  false, 0 }, \
-                             { BOARD_SDCARD_NAME,        _SPI2,   2,  SPI_MODE_0, 255,                     SPI_1_125MHZ,   SPI_18MHZ, false, 2 }, \
-                             { BOARD_OSD_NAME,           _SPI3,   3,  SPI_MODE_3, 255,                     SPI_1_125MHZ,   SPI_18MHZ, false, 1  },
+   //                                    name            device   bus  mode         cs_pin                 speed_low       speed_high dma
+#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,    SPI_1_125MHZ,   SPI_9MHZ,  1 }, \
+                             { HAL_BARO_BMP280_NAME,     _SPI3,   3,  SPI_MODE_3, BOARD_BMP280_CS_PIN,     SPI_1_125MHZ,   SPI_9MHZ,  0 }, \
+                             { BOARD_SDCARD_NAME,        _SPI2,   2,  SPI_MODE_0, 255,                     SPI_1_125MHZ,   SPI_18MHZ, 2 }, \
+                             { BOARD_OSD_NAME,           _SPI3,   3,  SPI_MODE_3, 255,                     SPI_1_125MHZ,   SPI_18MHZ, 1 },
 
 /*
 
@@ -292,5 +294,4 @@ void boardInit(void);
     
 #endif
 
-#define USB_MASSSTORAGE 
 

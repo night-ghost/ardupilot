@@ -451,18 +451,13 @@ enum {
  * for each value.
  */
 typedef enum timer_interrupt_id {
-    TIMER_UPDATE_INTERRUPT, /**< Update interrupt, available on all timers. */
-    TIMER_CC1_INTERRUPT, /**< Capture/compare 1 interrupt, available
-                              on general and advanced timers only. */
-    TIMER_CC2_INTERRUPT, /**< Capture/compare 2 interrupt, general and
-                              advanced timers only. */
-    TIMER_CC3_INTERRUPT, /**< Capture/compare 3 interrupt, general and
-                              advanced timers only. */
-    TIMER_CC4_INTERRUPT, /**< Capture/compare 4 interrupt, general and
-                              advanced timers only. */
+    TIMER_UPDATE_INTERRUPT=0, /**< Update interrupt, available on all timers. */
+    TIMER_CC1_INTERRUPT, /**< Capture/compare 1 interrupt, available on general and advanced timers only. */
+    TIMER_CC2_INTERRUPT, /**< Capture/compare 2 interrupt, general and advanced timers only. */
+    TIMER_CC3_INTERRUPT, /**< Capture/compare 3 interrupt, general and advanced timers only. */
+    TIMER_CC4_INTERRUPT, /**< Capture/compare 4 interrupt, general and advanced timers only. */
     TIMER_COM_INTERRUPT, /**< COM interrupt, advanced timers only */
-    TIMER_TRG_INTERRUPT, /**< Trigger interrupt, general and advanced
-                              timers only */
+    TIMER_TRG_INTERRUPT, /**< Trigger interrupt, general and advanced timers only */
     TIMER_BREAK_INTERRUPT /**< Break interrupt, advanced timers only. */
 } timer_interrupt_id;
 
@@ -527,14 +522,21 @@ struct Timer_dev {
     TIM_TypeDef *regs;
     uint32_t clk;
     Handler *handlers;          // < User IRQ handlers
-    uint16_t af;                // GPIO AF number
-    Tim_dma ch_dma[4];
     timerState *state;
+    Tim_dma ch_dma[4];
+    uint16_t af;                // GPIO AF number
     //
+#if 0
     timer_type         type:3;         // < Timer's type 
     unsigned int n_handlers:5;         // number of handlers
     unsigned int        bus:1;         // APB1 or APB2
     unsigned int         id:5;         // timer's number
+#else
+    timer_type         type;         // < Timer's type 
+    uint8_t      n_handlers;         // number of handlers
+    uint8_t             bus;         // APB1 or APB2
+    uint8_t              id;         // timer's number
+#endif
     //
 };
 
@@ -628,9 +630,6 @@ void timer_detach_interrupt(const timer_dev *dev, uint8_t interrupt);
 void timer_attach_all_interrupts(const timer_dev *dev,  Handler handler);
 
 uint32_t configTimeBase(const timer_dev *dev , uint16_t period, uint16_t khz);
-
-void timer_enable_irq(const timer_dev *dev, uint8_t interrupt);
-void timer_disable_irq(const timer_dev *dev, uint8_t interrupt);
 
 void timer_enable_NVICirq(const timer_dev *dev, uint8_t interrupt, uint8_t priority);
 void timer_disable_NVICirq(const timer_dev *dev, uint8_t interrupt);
@@ -903,7 +902,7 @@ static inline void timer_cc_disable(const timer_dev *dev, uint8_t channel) {
  * @see timer_cc_set_polarity()
  */
 static inline uint8_t timer_cc_get_pol(const timer_dev *dev, uint8_t channel) {
-    return *bb_perip(&(dev->regs->CCER), 4 * (channel - 1) + 1);
+    return *bb_perip(&(dev->regs->CCER), 4 * (channel-1) + 1);
 }
 
 /**
@@ -996,7 +995,7 @@ typedef enum timer_dma_base_addr {
 /**
  * @brief Get the timer's DMA base address.
  *
- * Some restrictions apply; see ST RM0008.
+ * Some restrictions apply; see ST RM0008. (http://www.st.com/content/ccc/resource/technical/document/reference_manual/59/b9/ba/7f/11/af/43/d5/CD00171190.pdf/files/CD00171190.pdf/jcr:content/translations/en.CD00171190.pdf)
  *
  * @param dev Timer device, must have type TIMER_ADVANCED or TIMER_GENERAL.
  * @return DMA base address
@@ -1054,12 +1053,34 @@ static inline void timer_oc_set_mode(const timer_dev *dev,
     *ccmr = tmp;
 }
 
-/*
 
-Note2: In case of PWM mode, this function is mandatory:
-00646               TIM_OCxPreloadConfig(TIMx, TIM_OCPreload_ENABLE); 
-					
-*/
+/**
+ * @brief Enable a timer interrupt.
+ * @param dev Timer device.
+ * @param interrupt Interrupt number to enable; this may be any
+ *                  timer_interrupt_id value appropriate for the timer.
+ * @see timer_interrupt_id
+ * @see timer_channel
+ */
+static inline void timer_enable_irq(const timer_dev *dev, uint8_t interrupt) {
+//    *bb_perip(&(dev->regs->DIER), interrupt) = 1;
+    dev->regs->DIER |= 1<<interrupt;
+}
+
+/**
+ * @brief Disable a timer interrupt.
+ * @param dev Timer device.
+ * @param interrupt Interrupt number to disable; this may be any
+ *                  timer_interrupt_id value appropriate for the timer.
+ * @see timer_interrupt_id
+ * @see timer_channel
+ */
+static inline void timer_disable_irq(const timer_dev *dev, uint8_t interrupt) {
+//    *bb_perip(&(dev->regs->DIER), interrupt) = 0;
+    dev->regs->DIER &= ~(1<<interrupt);
+}
+
+
 #ifdef __cplusplus
   }
 #endif
