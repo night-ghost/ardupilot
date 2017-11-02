@@ -1,0 +1,100 @@
+Air Speed
+Altitude
+Auto Mode
+Auto Screen Switch
+batt_a_k
+BattB
+batt_b_k
+Battery
+Battery A
+Battery B
+Battery Percent
+Battery Warning Level
+Call Sign
+Chanel Rotation Switching
+Channel Raw
+Channel Scale
+Channel state
+Channel Value
+Configuration
+Current
+curr_k
+Efficiency
+fBattA
+fBattB
+fCurr
+fILS
+flgHUD
+flgOnce
+flgTrack
+Flight Data
+Flight Mode
+fRussianHUD
+GPS Coord
+GPS HDOP
+Heading
+Heading Rose
+Home Altitude
+Home Direction
+Home Distance
+Horizon
+HOS
+Message
+Model Type
+NSCREENS
+OSD Brightness
+Overspeed
+Panel
+Pitch
+pitch_k
+pitch_kn
+PWMDST
+PWMSRC
+Radar Scale
+Real heading
+Roll
+roll_k
+roll_kn
+RSSI
+RSSI Enable Raw
+RSSI High
+rssi_k
+RSSI Low
+RSSI Warning Level
+SAdd1
+SAdd2
+SAdd3
+SAdd4
+Sensor 1
+Sensor 2
+Sensor 3
+Sensor 4
+SFactor1
+SFactor2
+SFactor3
+SFactor4
+SFormat1
+SFormat2
+SFormat3
+SFormat4
+Stall
+Temperature
+Throttle
+Time
+Toggle Channel
+Trip Distance
+Tune
+txtTime0
+txtTime1
+txtTime2
+txtTime3
+Units
+Velocity
+Vertical Speed
+Video Mode
+Visible Sats
+VOS
+Warnings
+Wind Speed
+WP Direction
+WP Distance

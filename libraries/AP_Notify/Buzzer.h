@@ -82,4 +82,5 @@ private:
     BuzzerPattern   _pattern;           // current pattern
     uint8_t         _pattern_counter;   // used to time on/off of current patter
     uint32_t        _arming_buzz_start_ms;  // arming_buzz start time in milliseconds
+    uint8_t         _pin;
 };

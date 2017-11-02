@@ -41,9 +41,247 @@ OSD osd; //OSD object
 #include "osd_core/misc.h"
 #include "osd_core/Panels.h"
 
+#include <sd/SD.h>
 
 // TODO: чтение конфига и еепром с карты памяти, чтобы закинуть .mcm и .osd и все       
+static const char * const words[] = {
+    "Air Speed",        // 1
+    "Altitude",         // 2
+    "Auto Mode",        // 3
+    "Auto Screen Switch", // 4 
+    "batt_a_k",         // 5
+    "BattB",            // 6
+    "batt_b_k",         // 7
+    "Battery",          // 8
+    "Battery A",        // 9
+    "Battery B",        // 10
+    "Battery Percent",  // 11
+    "Battery Warning Level", // 12
+    "Call Sign",        // 13
+    "Chanel Rotation Switching", // 14
+    "Channel Raw",      // 15
+    "Channel Scale",    // 16
+    "Channel state",    // 17
+    "Channel Value",    // 18
 
+    "Configuration",    // 19
+    "Current",          // 20
+    "curr_k",           // 21
+    "Efficiency",       // 22
+    "fBattA",           // 23
+    "fBattB",           // 24      
+    "fCurr",            // 25
+    "fILS",             // 26
+    "flgHUD",           // 27
+    "flgOnce",          // 28
+    "flgTrack",         // 29
+    "Flight Data",      // 30
+    "Flight Mode",      // 31
+    "fRussianHUD",      // 32
+    "GPS Coord",        // 33
+    "GPS HDOP",         // 34
+    "Heading",          // 35
+    "Heading Rose",     // 36
+    "Home Altitude",    // 37
+    "Home Direction",   // 38
+    "Home Distance",    // 39
+    "Horizon",          // 40
+    "HOS",              // 41
+    "Message",          // 42
+    "Model Type",       // 43
+    "NSCREENS",         // 44
+    "OSD Brightness",   // 45
+    "Overspeed",        // 46
+
+   "Panel",             // 47
+    "Pitch",            // 48
+    "pitch_k",          // 49
+    "pitch_kn",         // 50
+    "PWMDST",           // 51
+    "PWMSRC",           // 52
+    "Radar Scale",      // 53
+    "Real heading",     // 54
+    "Roll",             // 55
+    "roll_k",           // 56
+    "roll_kn",          // 57
+    "RSSI",             // 58
+    "RSSI Enable Raw",  // 59
+    "RSSI High",        // 60
+    "rssi_k",           // 61
+    "RSSI Low",         // 62
+    "RSSI Warning Level", // 63
+    "SAdd1",            // 64
+    "SAdd2",            // 65
+    "SAdd3",            // 66
+    "SAdd4",            // 67
+    "Sensor 1",         // 68
+    "Sensor 2",         // 69
+    "Sensor 3",         // 70
+    "Sensor 4",         // 71
+    "SFactor1",         // 72
+    "SFactor2",         // 73
+    "SFactor3",         // 74
+    "SFactor4",         // 75
+    "SFormat1",         // 76
+    "SFormat2",         // 77
+    "SFormat3",         // 78
+    "SFormat4",         // 79
+    "Stall",            // 80
+    "Temperature",      // 81
+    "Throttle",         // 82
+    "Time",             // 83
+    "Toggle Channel",   // 84
+    "Trip Distance",    // 85
+    "Tune",             // 86
+    "txtTime0",         // 87
+    "txtTime1",         // 88
+    "txtTime2",         // 89
+    "txtTime3",         // 90
+    "Units",            // 91
+    "Velocity",         // 92
+    "Vertical Speed",   // 93
+    "Video Mode",       // 94
+    "Visible Sats",     // 95
+    "VOS",              // 96
+    "Warnings",         // 97
+    "Wind Speed",       // 98
+    "WP Direction",     // 99
+    "WP Distance",      // 100
+    "#",                // 101
+    "Power",            // 102
+    "Date",             // 103
+    "Time of day",      // 104
+    "Motors",           // 105
+    "Vibrations",       // 106
+    "Variometer",       // 107
+    "GPS Coord Lat",    // 108
+    "GPS Coord Lon",    // 109
+};
+    
+typedef struct OSD_PAN {
+    uint8_t dst;
+    uint8_t size;
+    char fmt;
+    uint8_t pan_n;
+} OSD_pan;
+
+static OSD_pan pan_tbl[]={
+    { 0, 0, 0, 0, },
+    { 0, 0,  0, ID_of(airSpeed), },     //    "Air Speed",        // 1
+    { 0, 0, 0, ID_of(alt), },          //    "Altitude",         // 2
+    { 9,    -1, 0, 0, },               //        "Auto Mode",        // 3 - bit in flags
+    { 7,    -1, 0, 0, },               //        "Auto Screen Switch", // 4 
+    { offsetof(Settings,evBattA_koef),    sizeof(Settings.evBattA_koef),   'f', 0, }, //        "batt_a_k",         
+    { offsetof(Settings,battBv),          sizeof(Settings.battBv),         'b', 0, },  //        "BattB",            
+    { offsetof(Settings,evBattB_koef),    sizeof(Settings.evBattB_koef),   'f', 0, }, //        "batt_b_k",         
+    { offsetof(Settings,battv),           sizeof(Settings.battv),          'b', 0, },  //        "Battery",          
+    { 0, 0, 0, ID_of(batt_A), },       //        "Battery A",        // 9
+    { 0, 0, 0, ID_of(batt_B), },       //        "Battery B",        // 10
+    { 0, 0, 0, ID_of(batteryPercent), },//       "Battery Percent",  // 11
+    { offsetof(Settings,batt_warn_level), sizeof(Settings.batt_warn_level),'b', 0, },  //        "Battery Warning Level", // 12
+    { offsetof(Settings,OSD_CALL_SIGN),   sizeof(Settings,OSD_CALL_SIGN),  'c', 0, },  //        "Call Sign",        // 13
+    { offsetof(Settings,switch_mode),     sizeof(Settings.switch_mode),    'b', 0, },  //        "Chanel Rotation Switching", // 14
+    { 0, 0, 0, ID_of(ch), },          //        "Channel Raw",      // 15
+    { 0, 0, 0, ID_of(Scal(), },       //        "Channel Scale",    // 16
+    { 0, 0, 0, ID_of(State), },       //        "Channel state",    // 17
+    { 0, 0, 0, ID_of(CValue), },      //        "Channel Value",    // 18
+
+    { 0, 0, 0, 0, },                  //         "Configuration",    // 19
+    { 0, 0, 0, ID_of(curr_A), },      //        "Current",          // 20
+    { offsetof(Settings,eCurrent_koef),   sizeof(Settings.eCurrent_koef),  'f', 0, },      //        "curr_k",           // 21
+    { 0, 0, 0, 0, ID_of(eff), },      //        "Efficiency",       // 22
+    { 4, -1,   0, 0, },               //        "fBattA",           // 23
+    { 5, -1,   0, 0, },               //        "fBattB",           // 24      
+    { 6, -1,   0, 0, },               //        "fCurr",            // 25
+    { 0, 0,    0, 0, },               // 26
+    { 0, 0,    0, 0, },               // 27
+    { 0, -1,   0, 0, },               //        "flgOnce",          // 28
+    { 0, 0,    0, 0, },         //29
+    { 0, 0, 0, ID_of(Fdata), },       //        "Flight Data",      // 30
+    { 0, 0, 0, ID_of(FMod), },        //        "Flight Mode",      // 31
+    { 0, 0, 0, 0, },                  //        "fRussianHUD",      // 32
+    { 0, 0, 0, ID_of(GPS), },         //        "GPS Coord",        // 33
+    { 0, 0, 0, ID_of(Hdop), },        //        "GPS HDOP",         // 34
+    { 0, 0, 0, ID_of(heading), },     //        "Heading",          // 35
+    { 0, 0, 0, ID_of(rose), },        //        "Heading Rose",     // 36
+    { 0, 0, 0, ID_of(homeAlt), },     //        "Home Altitude",    // 37
+    { 0, 0, 0, ID_of(homeDir), },     //        "Home Direction",   // 38
+    { 0, 0, 0, ID_of(homeDist), },    //        "Home Distance",    // 39
+    { 0, 0, 0, ID_of(horizon), },     //        "Horizon",          // 40
+    { offsetof(Settings,horiz_offs),      sizeof(Settings.horiz_offs),    'b', 0, },  //        "HOS",              // 41
+    { 0, 0, 0, ID_of(message), },         //        "Message",          // 42
+    { offsetof(Settings,model_type),      sizeof(Settings.model_type),    'b', 0, },  //        "Model Type",       // 43
+    { offsetof(Settings,n_screens),       sizeof(Settings.n_screens),     'b', 0, },  //        "NSCREENS",         // 44
+    { offsetof(Settings,OSD_BRIGHTNESS),  sizeof(Settings.OSD_BRIGHTNESS),'b', 0, },  //        "OSD Brightness",   // 45
+    { offsetof(Settings,overspeed),       sizeof(Settings,overspeed),     'b', 0, },  //        "Overspeed",        // 46
+
+    { 0, 0, 0, 0, },                      //       "Panel",             // 47
+    { 0, 0, 0, ID_of(pitch), },           //        "Pitch",            // 48
+    { offsetof(Settings,horiz_kPitch),    sizeof(Settings.horiz_kPitch),  'f', 0, }, //        "pitch_k",          // 49
+    { offsetof(Settings,horiz_kPitch_a),  sizeof(Settings.horiz_kPitch_a),'f', 0, }, //        "pitch_kn",         // 50
+    { offsetof(Settings,pwm_dst),         sizeof(Settings.pwm_dst),       'b', 0, }, //        "PWMDST",           // 51
+    { offsetof(Settings,pwm_src),         sizeof(Settings.pwm_src),       'b', 0, }, //        "PWMSRC",           // 52
+    { 0, 0, ID_of(RadarScale), },         //        "Radar Scale",      // 53
+    { 0, 0, ID_of(COG), },                //        "Real heading",     // 54
+    { 0, 0, ID_of(roll), },               //        "Roll",             // 55
+    { offsetof(Settings,horiz_kRoll),    sizeof(Settings.horiz_kRoll),    'f', 0, }, //        "roll_k",           // 56
+    { offsetof(Settings,horiz_kRoll_a),  sizeof(Settings.horiz_kRoll_a),  'f', 0, }, //        "roll_kn",          // 57
+    { 0, 0, ID_of(RSSI), },               //        "RSSI",             // 58
+    { offsetof(Settings,RSSI_raw),       sizeof(Settings.RSSI_raw),       'b', 0, }, //        "RSSI Enable Raw",  // 59
+    { offsetof(Settings,RSSI_16_high),   sizeof(Settings.RSSI_16_high),   'w', 0, }, //        "RSSI High",        // 60
+    { offsetof(Settings,eRSSI_koef),     sizeof(Settings.eRSSI_koef),     'f', 0, }, //        "rssi_k",           // 61
+    { offsetof(Settings,RSSI_16_low),    sizeof(Settings.RSSI_16_low),    'w', 0, }, //        "RSSI Low",         // 62
+    { offsetof(Settings,rssi_warn_level),sizeof(Settings.rssi_warn_level),'b', 0, }, //        "RSSI Warning Level", // 63
+    { 0, 0, 0, 0, },         //        "SAdd1",            // 64     // sensors not supported
+    { 0, 0, 0, 0, },         //        "SAdd2",            // 65
+    { 0, 0, 0, 0, },         //        "SAdd3",            // 66
+    { 0, 0, 0, 0, },         //        "SAdd4",            // 67
+    { 0, 0, 0, ID_of(sensor1), },         //        "Sensor 1",         // 68
+    { 0, 0, 0, ID_of(sensor2), },         //        "Sensor 2",         // 69
+    { 0, 0, 0, ID_of(sensor3), },         //        "Sensor 3",         // 70
+    { 0, 0, 0, ID_of(sensor4), },         //        "Sensor 4",         // 71
+    { 0, 0, 0, 0, },         //        "SFactor1",         // 72
+    { 0, 0, 0, 0, },         //        "SFactor2",         // 73
+    { 0, 0, 0, 0, },         //        "SFactor3",         // 74
+    { 0, 0, 0, 0, },         //        "SFactor4",         // 75
+    { 0, 0, 0, 0, },         //        "SFormat1",         // 76
+    { 0, 0, 0, 0, },         //        "SFormat2",         // 77
+    { 0, 0, 0, 0, },         //        "SFormat3",         // 78
+    { 0, 0, 0, 0, },         //        "SFormat4",         // 79
+    { offsetof(Settings,stall),         sizeof(Settings.stall),           'b', 0, },         //        "Stall",            // 80
+    { 0, 0, 0, ID_of(temp), },         //        "Temperature",      // 81
+    { 0, 0, 0, ID_of(throttle), },     //        "Throttle",         // 82
+    { 0, 0, 0, ID_of(time), },         //        "Time",             // 83
+    { offsetof(Settings,ch_toggle),     sizeof(Settings.ch_toggle),       'b', 0, },         //        "Toggle Channel",   // 84
+    { 0, 0, 0, ID_of(distance), },     //        "Trip Distance",    // 85
+    { 0, 0, 0, ID_of(tune), },         //        "Tune",             // 86
+    { 0, 0, 0, 0, },         //        "txtTime0",         // 87
+    { 0, 0, 0, 0, },         //        "txtTime1",         // 88
+    { 0, 0, 0, 0, },                        //        "txtTime2",         // 89
+    { 0, 0, 0, 0, },                        //        "txtTime3",         // 90
+    { 1, -1, 0, 0, },                       //        "Units",            // 91
+    { 0, 0, 0, ID_of(vel), },               //        "Velocity",         // 92
+    { 0, 0, 0, ID_of(climb), },             //        "Vertical Speed",   // 93
+    { 3, -1, 0, 0, },                       //        "Video Mode",       // 94
+    { 0, 0, 0, ID_of(GPS_sats), },          //        "Visible Sats",     // 95
+    { offsetof(Settings,vert_offs),     sizeof(Settings.vert_offs),       'b', 0, },         //        "VOS",              // 96
+    { 0, 0, 0, ID_of(warn), },              //        "Warnings",         // 97
+    { 0, 0, 0, ID_of(windSpeed), },         //        "Wind Speed",       // 98
+    { 0, 0, 0, ID_of(WP_dir), },            //        "WP Direction",     // 99
+    { 0, 0, 0, ID_of(WP_dist), },           //        "WP Distance",      // 100
+    { 0, 0, 0, ID_of(), },                  // #
+    { 0, 0, 0, ID_of(Power), },             //        "Power",            // 102
+    { 0, 0, 0, ID_of(fDate), },             //        "Date",             // 103
+    { 0, 0, 0, ID_of(dayTime), },           //        "Time of day",      // 104
+    { 0, 0, 0, ID_of(pMotor), },            //        "Motors",           // 105
+    { 0, 0, 0, ID_of(fVibe), },             //        "Vibrations",       // 106
+    { 0, 0, 0, ID_of(fVario), },            //        "Variometer",       // 107
+    { 0, 0, 0, ID_of(coordLat), },          //        "GPS Coord Lat",    // 108
+    { 0, 0, 0, ID_of(coordLon), },          //        "GPS Coord Lon",    // 109
+
+};
+
+static 
 
 static ring_buffer osd_rxrb IN_CCM;
 static uint8_t osd_rx_buf[OSD_RX_BUF_SIZE] IN_CCM;
@@ -69,6 +307,59 @@ void vsync_ISR();
 void max_do_transfer(const char *buffer, uint16_t len);
 
 
+uint32_t get_word(char *buf, char * &ptr){
+    for(uint32_t i=0; i<ARRAY_SIZE(words); i++){
+        uint32_t=strlen(words[i]);
+        if(strncmp(buf, words[i],len)==0){
+            ptr=buf+len;
+            return i+1;
+        }
+    }
+    return 0;  // not found
+}
+
+char * get_lex(char *buf, char * &ptro){
+    char *ptr;
+    while(*buf && (*buf=='\t' || *buf == ' ')) buf++;
+    ptr=buf;
+    while(*ptr && *ptr!='\t') ptr++;
+    if(*ptr==0) {
+        ptro=NULL;
+    } else {
+        *ptr=0;
+        ptro=ptr+1;
+    }
+    return buf;
+    
+}
+
+static bool get_flag(char *p) {
+    if(!p) return false;
+    
+    if(*p=='T' || *p=='t' || *p='1') return true;
+    return false;
+}
+
+//                          x, y,   vis,  sign,    Altf,  Alt2,  Alt3,  Alt4, strings
+//                         30   15  False   0       1       1     1      1    A||||
+static point create_point(px,   py, pVis,  pSign, pAlt,  pAlt2, pAlt3, pAlt4,  ps ){
+    point p;
+    p.x = strtoul(px);
+    p.y = strtoul(px);
+    p = do_on(p,   get_flag(pVis));
+    p = do_sign(p, get_flag(pSign));
+    if(get_flag(pAlt))  p=do_alt(p);
+    if(get_flag(pAlt2)) p=do_alt2(p);
+    if(get_flag(pAlt3)) p=do_alt3(p);
+    if(get_flag(pAlt4)) p=do_alt4(p);
+
+//    if(ps) collect_strings(ps); not supported
+    return p;
+}
+
+#define write_point(n,p) eeprom_write_len((byte *)&p,  OffsetBITpanel * (int)panel_num + n * sizeof(Point),  sizeof(Point) );
+
+
 static bool osd_need_redraw = false;
 static void * task_handle;
 
@@ -84,15 +375,107 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 
 
     if(osd_spi_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER) ) {
-        osd_spi->set_speed(AP_HAL::Device::SPEED_HIGH);
+//        osd_spi->set_speed(AP_HAL::Device::SPEED_HIGH);
         osd_spi_sem->give();
     }
-//    max7456_on();
 
     rb_init(&osd_rxrb, OSD_RX_BUF_SIZE, osd_rx_buf);
     rb_init(&osd_txrb, OSD_TX_BUF_SIZE, osd_tx_buf);
 
+    OSD_EEPROM::init();
+
+/*
+    lets try to load settings from SD card
+*/
     readSettings();
+    
+    File fd = SD.open("eeprom.osd", FILE_READ);
+    if (fd) {
+        char buf[80];
+//        memset(buf, 0, sizeof(buf));
+        uint32_t panel_num=-1;
+        bool is_config=false;
+        
+        while(fd.gets(buf, sizeof(buf)-1) > 0) {
+            // we readed one line
+            char *ptr;
+            char *p[10]
+
+            uint8_t word=get_word(buf,ptr);
+            switch(word) {
+            case 0: // not found
+            case 101: // #
+                continue;
+                
+            case 47: { // panel
+                    p2=get_lex(ptr)
+                    panel_num=strtoul(p2);
+                    uint16_t flags=strtoul(ptr);
+                    write_point(0,flags);
+                }break;
+                
+            case 19: // config
+                is_config=true;
+                break;
+                
+            default:
+                char **pp = p;
+                memset(p,0,sizeof(p));
+                do {
+                    *pp++ = get_lex(buf, ptr);
+                }while(ptr);
+                
+                                
+                if(is_config){
+                    if(pan_tbl[word].size == (uint8_t)-1){ // bit flags
+                        uint32_t flags = Sets.flags;
+                        if(get_flag(p[0]) flags |=  (1<<pan_tbl[word].dst);
+                        else              flags &= ~(1<<pan_tbl[word].dst);
+                    } else {
+                        union {
+                            float f;
+                            uint8_t b;
+                            char buf[8];
+                            uint16_t w;
+                        } val;
+                        
+                        switch(pan_tbl[word].fmt){
+                        case 'f': // float
+                            val.f = atof(p[0]);
+                            break;
+                        case 'b': // byte
+                            val.b=(uint8_t)strtoul(p[0]);
+                            break;
+                        case 'c': // char
+                            strncpy(val.buf, p[0], 8);
+                            break;
+                        case 'w':
+                            val.w==(uint16_t)strtoul(p[0]);
+                            break;                    
+                        }                    
+                        memmove((&sets) + dst, &val, pan_tbl[word].size);
+                        eeprom_write_len( (&sets) + dst,  EEPROM_offs(sets) + dst,  pan_tbl[word].size);
+                    }
+                }else{ // panel
+                    uint8_t id = pan_tbl[word].pan_n;
+                    if(id) {
+                //                           30    15    False   0     1     1     1     1   A||||
+                        point p=create_point(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8] );
+                    
+                        write_point(id, p); // save to eeprom
+                    }
+                }
+                
+                break;
+            }
+            
+        }
+        fd.close();
+        readSettings();
+
+    }
+
+
 
     if( sets.CHK1_VERSION != VER || sets.CHK2_VERSION != (VER ^ 0x55)) { // wrong version
         lflags.bad_config=1;
@@ -251,15 +634,6 @@ void osd_loop() {
             vsync_count=0;
 
             heartBeat();
-
-#ifdef DEBUG
-            if(seconds % 30 == 0) {
-                extern volatile uint16_t lost_bytes;
-                Serial.printf_P(PSTR("loop time = %dms lost bytes=%d\n"),max_dly, lost_bytes);
-                Serial.printf_P(PSTR("stack bottom = %x\n"),stack_bottom);
-//    serial_hex_dump((byte *)0x100, 2048);    // memory 2k, user's from &flags to stack
-            }
-#endif
         }
     }
 }

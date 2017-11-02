@@ -98,7 +98,6 @@
 * added time syncronization between board's time and GPS time - so logs now will show real local date&time
 * i2c driver is fully rewritten, added parsing of bus error flags - ARLO & BERR
 * errors at STOP don't cause data loss or time errors - bus reset scheduled as once io_task
-* ALL I2C reads does via DMA!
 * added parsing of TIMEOUT bus flag
 * added asyncronous bus reset in case when loockup occures after STOP generation
 * full BusReset changed to SoftReset on 1st try
@@ -117,13 +116,14 @@
 * now task having started any IO (DMA or interrupts) goes to pause and resumes in IO_Completion ISR, not eating CPU time in wait loop
 * optimized I2C wait times to work on noisy lines
 * greatly reduced time of reformatting of DataFlash to FAT
-* I2C driver fully rewritten to work via interrupts - no DMA, no polling
+* I2C driver fully rewritten again to work via interrupts - no DMA, no polling
 * compass and baro gives bus semaphore ASAP to allow bus operations when calculations does
 * buzzer support
-* full status on only 2 leds - GPS sats count, failsafe etc
+* full status on only 2 leds - GPS sats count, failsafe, compass calibration, autotune etc
 * support for SBUS on any UART
-* PWM_IN is rewritten to use another HAL drivers, as result its size decreased four times (!)
+* PWM_IN is rewritten to use HAL drivers, as result its size decreased four times (!)
 * working PPM on AirbotV2/V3
+* added ability to connect buzzer to arbitrary pin (parameter BUZZ_PIN)
 * ...
 * a lot of minor enhancements
 

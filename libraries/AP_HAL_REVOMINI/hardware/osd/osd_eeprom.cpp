@@ -11,12 +11,27 @@ extern const AP_HAL::HAL& hal;
 #include <stdlib.h>
 
 uint32_t OSD_EEPROM::ee_ptr=0;
+static uint8_t data[EEPROM_SIZE] IN_CCM; // don't use malloc() because memory can be eated out by AP_Wayback
+
 
 void OSD_EEPROM::init(){
 
+    for(uint16_t i=0;i<EEPROM_SIZE; i++){ // read out all to buffer
+        data[i] = _read(i);
+    }
 }
 
 uint8_t OSD_EEPROM::read(uint16_t addr){
+    return data[addr];
+} 
+
+void OSD_EEPROM::write(uint16_t addr, uint8_t val){
+    data[addr]=val;
+    _write(addr, val); // 
+}
+
+
+uint8_t OSD_EEPROM::_read(uint16_t addr){
     
     for(uint8_t i=PAGE_SIZE/EEPROM_SIZE; i!=0;){
         // look most recent value from last stage
@@ -32,10 +47,9 @@ uint8_t OSD_EEPROM::read(uint16_t addr){
     return 0xff; // got to begin and still FF - really FF
 }
 
-static uint8_t data[EEPROM_SIZE] IN_CCM; // don't use malloc() because memory can be eated out by AP_Wayback
 
-void OSD_EEPROM::write(uint16_t addr, uint8_t val){
-    uint8_t cv = read(addr);
+void OSD_EEPROM::_write(uint16_t addr, uint8_t val){
+    uint8_t cv = _read(addr);
     if(cv == val) return; // already is
 
     
@@ -58,27 +72,18 @@ void OSD_EEPROM::write(uint16_t addr, uint8_t val){
     }
 
     // no empty slots - so need to erase page
-    { // isolate "data"
-// 1st copy all data to RAM
-        if(data==NULL) goto done; // no memory
     
-        for(uint16_t i=0;i<EEPROM_SIZE; i++){ // read out all to buffer
-            data[i] = read(i);
-        }
     
-        data[addr] = val; // write value
-    
-// 2nd - erase page. power loss here cause data loss! In execution time CPU is frozen!
-        hal.console->printf("\nEEprom_OSD erase page %d\n ", (uint16_t)((EEPROM_PAGE & 0x00ffffff) / 0x4000) ); // clear high byte of address and count 16K blocks
-        FLASH_Unlock_dis();
-        erasePageByAddress(EEPROM_PAGE); 
+// 1st - erase page. power loss here cause data loss! In execution time CPU is frozen!
+    hal.console->printf("\nEEprom_OSD erase page %d\n ", (uint16_t)((EEPROM_PAGE & 0x00ffffff) / 0x4000) ); // clear high byte of address and count 16K blocks
+    FLASH_Unlock_dis();
+    erasePageByAddress(EEPROM_PAGE); 
 
-// 3rd write data back to the beginning of Flash page
-        for(uint16_t i=0;i<EEPROM_SIZE; i++){
-            write_8(EEPROM_PAGE+i, data[i]);
-        }
-    
+// 2rd write data back to the beginning of Flash page
+    for(uint16_t i=0;i<EEPROM_SIZE; i++){
+        write_8(EEPROM_PAGE+i, data[i]);
     }
+    
 done:
     FLASH_Lock_check();
 }

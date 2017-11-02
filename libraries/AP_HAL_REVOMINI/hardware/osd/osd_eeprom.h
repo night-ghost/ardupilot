@@ -25,6 +25,9 @@ public:
 private:
     static uint32_t ee_ptr; // address of current bank
 
+    static uint8_t _read(uint16_t addr);
+    static void _write(uint16_t addr, uint8_t val);
+
     static void init();
     static inline uint32_t read_16(uint32_t addr){
         return *(__IO uint16_t*)addr;

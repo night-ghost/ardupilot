@@ -128,24 +128,12 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] = {
 
 extern const struct TIM_Channel PWM_Channels[] =   {
     //CH1 and CH2 also for PPMSUM / SBUS / DSM
-    { // 0 RC_IN1
-	.pin         =     4,	    
-    },
-    { // 1 RC_IN2
-	.pin         =     5,
-    },
-    { // 2 RC_IN3
-	.pin         =     12,
-    },
-    { // 3 RC_IN4
-	.pin         =     13,
-    },
-    { // 4 RC_IN5
-	.pin         =     14,
-    },
-    { // 5 RC_IN6
-	.pin         =     15,
-    },
+    { 	.pin =  4,  },// 0 RC_IN1
+    {	.pin =  5,  },// 1 RC_IN2
+    { 	.pin = 12,  },// 2 RC_IN3
+    { 	.pin = 13,  },// 3 RC_IN4
+    { 	.pin = 14,  },// 4 RC_IN5
+    { 	.pin = 15,  },// 5 RC_IN6
 };
 
 
