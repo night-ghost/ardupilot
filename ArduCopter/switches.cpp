@@ -196,6 +196,8 @@ void Copter::init_aux_switch_function(int8_t ch_option, uint8_t ch_flag)
         case AUXSW_AVOID_ADSB:
         case AUXSW_PRECISION_LOITER:
         case AUXSW_AVOID_PROXIMITY:
+        case AUXSW_INVERTED:
+        case AUXSW_WINCH_ENABLE:
             do_aux_switch_function(ch_option, ch_flag);
             break;
     }
@@ -593,6 +595,67 @@ void Copter::do_aux_switch_function(int8_t ch_function, uint8_t ch_flag)
                 init_disarm_motors();
                 break;
             }
+            break;
+
+        case AUXSW_SMART_RTL:
+            if (ch_flag == AUX_SWITCH_HIGH) {
+                // engage SmartRTL (if not possible we remain in current flight mode)
+                set_mode(SMART_RTL, MODE_REASON_TX_COMMAND);
+            } else {
+                // return to flight mode switch's flight mode if we are currently in RTL
+                if (control_mode == SMART_RTL) {
+                    reset_control_switch();
+                }
+            }
+            break;
+            
+        case AUXSW_INVERTED:
+#if FRAME_CONFIG == HELI_FRAME
+            switch (ch_flag) {
+            case AUX_SWITCH_HIGH:
+                motors->set_inverted_flight(true);
+                attitude_control->set_inverted_flight(true);
+                heli_flags.inverted_flight = true;
+                break;
+            case AUX_SWITCH_LOW:
+                motors->set_inverted_flight(false);
+                attitude_control->set_inverted_flight(false);
+                heli_flags.inverted_flight = false;
+                break;
+            }
+#endif
+            break;
+
+        case AUXSW_WINCH_ENABLE:
+            switch (ch_flag) {
+                case AUX_SWITCH_HIGH:
+                    // high switch maintains current position
+                    g2.winch.release_length(0.0f);
+                    Log_Write_Event(DATA_WINCH_LENGTH_CONTROL);
+                    break;
+                default:
+                    // all other position relax winch
+                    g2.winch.relax();
+                    Log_Write_Event(DATA_WINCH_RELAXED);
+                    break;
+                }
+            break;
+
+        case AUXSW_WINCH_CONTROL:
+            switch (ch_flag) {
+                case AUX_SWITCH_LOW:
+                    // raise winch at maximum speed
+                    g2.winch.set_desired_rate(-g2.winch.get_rate_max());
+                    break;
+                case AUX_SWITCH_HIGH:
+                    // lower winch at maximum speed
+                    g2.winch.set_desired_rate(g2.winch.get_rate_max());
+                    break;
+                case AUX_SWITCH_MIDDLE:
+                default:
+                    g2.winch.set_desired_rate(0.0f);
+                    break;
+                }
             break;
     }
 }

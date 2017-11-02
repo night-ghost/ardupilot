@@ -1,7 +1,6 @@
 #include "GCS_Mavlink.h"
 
 #include "Tracker.h"
-#include "version.h"
 
 // default sensors are present and healthy: gyro, accelerometer, barometer, rate_control, attitude_stabilization, yaw_position, altitude control, x/y position control, motor_control
 #define MAVLINK_SENSOR_PRESENT_DEFAULT (MAV_SYS_STATUS_SENSOR_3D_GYRO | MAV_SYS_STATUS_SENSOR_3D_ACCEL | MAV_SYS_STATUS_SENSOR_ABSOLUTE_PRESSURE | MAV_SYS_STATUS_SENSOR_ANGULAR_RATE_CONTROL | MAV_SYS_STATUS_SENSOR_ATTITUDE_STABILIZATION | MAV_SYS_STATUS_SENSOR_YAW_POSITION | MAV_SYS_STATUS_SENSOR_Z_ALTITUDE_CONTROL | MAV_SYS_STATUS_SENSOR_XY_POSITION_CONTROL | MAV_SYS_STATUS_SENSOR_MOTOR_OUTPUTS)
@@ -526,26 +525,11 @@ void GCS_MAVLINK_Tracker::handleMessage(mavlink_message_t* msg)
 
             case MAV_CMD_GET_HOME_POSITION:
                 send_home(tracker.ahrs.get_home());
-                result = MAV_RESULT_ACCEPTED;
-                break;
-
-            case MAV_CMD_DO_SET_MODE:
-                switch ((uint16_t)packet.param1) {
-                    case MAV_MODE_MANUAL_ARMED:
-                    case MAV_MODE_MANUAL_DISARMED:
-                        tracker.set_mode(MANUAL);
-                        result = MAV_RESULT_ACCEPTED;
-                        break;
-
-                    case MAV_MODE_AUTO_ARMED:
-                    case MAV_MODE_AUTO_DISARMED:
-                        tracker.set_mode(AUTO);
-                        result = MAV_RESULT_ACCEPTED;
-                        break;
-
-                    default:
-                        result = MAV_RESULT_UNSUPPORTED;
+                Location ekf_origin;
+                if (tracker.ahrs.get_origin(ekf_origin)) {
+                    send_ekf_origin(ekf_origin);
                 }
+                result = MAV_RESULT_ACCEPTED;
                 break;
 
             case MAV_CMD_DO_SET_SERVO:
@@ -817,6 +801,11 @@ bool GCS_MAVLINK_Tracker::set_mode(uint8_t mode)
 const AP_FWVersion &GCS_MAVLINK_Tracker::get_fwver() const
 {
     return tracker.fwver;
+}
+
+void GCS_MAVLINK_Tracker::set_ekf_origin(const Location& loc)
+{
+    tracker.set_ekf_origin(loc);
 }
 
 /* dummy methods to avoid having to link against AP_Camera */

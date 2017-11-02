@@ -172,10 +172,11 @@ public:
 #if AP_AHRS_NAVEKF_AVAILABLE
     void send_opticalflow(AP_AHRS_NavEKF &ahrs, const OpticalFlow &optflow);
 #endif
-    void send_autopilot_version(uint8_t major_version, uint8_t minor_version, uint8_t patch_version, uint8_t version_type) const;
+    void send_autopilot_version() const;
     void send_local_position(const AP_AHRS &ahrs) const;
     void send_vibration(const AP_InertialSensor &ins) const;
     void send_home(const Location &home) const;
+    void send_ekf_origin(const Location &ekf_origin) const;
     void send_heartbeat(uint8_t type, uint8_t base_mode, uint32_t custom_mode, uint8_t system_status);
     void send_servo_output_raw(bool hil);
     static void send_collision_all(const AP_Avoidance::Obstacle &threat, MAV_COLLISION_ACTION behaviour);
@@ -234,6 +235,7 @@ protected:
     virtual AP_AdvancedFailsafe *get_advanced_failsafe() const { return nullptr; };
     virtual bool set_mode(uint8_t mode) = 0;
     virtual const AP_FWVersion &get_fwver() const = 0;
+    virtual void set_ekf_origin(const Location& loc) = 0;
 
     bool            waypoint_receiving; // currently receiving
     // the following two variables are only here because of Tracker
@@ -275,6 +277,7 @@ protected:
     void handle_serial_control(const mavlink_message_t *msg);
 
     void handle_common_message(mavlink_message_t *msg);
+    void handle_set_gps_global_origin(const mavlink_message_t *msg);
     void handle_setup_signing(const mavlink_message_t *msg);
     uint8_t handle_preflight_reboot(const mavlink_command_long_t &packet, bool disable_overrides);
     MAV_RESULT handle_rc_bind(const mavlink_command_long_t &packet);
@@ -299,6 +302,7 @@ protected:
     MAV_RESULT handle_command_long_message(mavlink_command_long_t &packet);
     MAV_RESULT handle_command_camera(const mavlink_command_long_t &packet);
     MAV_RESULT handle_command_do_send_banner(const mavlink_command_long_t &packet);
+    MAV_RESULT handle_command_do_set_mode(const mavlink_command_long_t &packet);
 
     // vehicle-overridable message send function
     virtual bool try_send_message(enum ap_message id);
@@ -313,6 +317,8 @@ protected:
 private:
 
     float       adjust_rate_for_stream_trigger(enum streams stream_num);
+
+    MAV_RESULT _set_mode_common(const MAV_MODE base_mode, const uint32_t custom_mode);
 
     virtual void        handleMessage(mavlink_message_t * msg) = 0;
 
@@ -361,9 +367,11 @@ private:
     uint8_t         stream_slowdown;
 
     // perf counters
-    static AP_HAL::Util::perf_counter_t _perf_packet;
-    static AP_HAL::Util::perf_counter_t _perf_update;
-            
+    AP_HAL::Util::perf_counter_t _perf_packet;
+    AP_HAL::Util::perf_counter_t _perf_update;
+    char _perf_packet_name[16];
+    char _perf_update_name[16];
+
     // deferred message handling.  We size the deferred_message
     // ringbuffer so we can defer every message type
     enum ap_message deferred_messages[MSG_LAST];
@@ -471,11 +479,19 @@ public:
     void send_message(enum ap_message id);
     void send_mission_item_reached_message(uint16_t mission_index);
     void send_home(const Location &home) const;
+    void send_ekf_origin(const Location &ekf_origin) const;
     // push send_message() messages and queued statustext messages etc:
     void retry_deferred();
     void data_stream_send();
     void update();
     virtual void setup_uarts(AP_SerialManager &serial_manager);
+
+    bool out_of_time() const {
+        return _out_of_time;
+    }
+    void set_out_of_time(bool val) {
+        _out_of_time = val;
+    }
 
     /*
       set a dataflash pointer for logging
@@ -514,6 +530,9 @@ private:
 #endif
 
     ObjectArray<statustext_t> _statustext_queue{_status_capacity};
+
+    // true if we are running short on time in our main loop
+    bool _out_of_time;
 
 };
 

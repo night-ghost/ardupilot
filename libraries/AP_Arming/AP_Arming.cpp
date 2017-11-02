@@ -23,6 +23,7 @@
 #define AP_ARMING_BOARD_VOLTAGE_MIN     4.3f
 #define AP_ARMING_BOARD_VOLTAGE_MAX     5.8f
 #define AP_ARMING_ACCEL_ERROR_THRESHOLD 0.75f
+#define AP_ARMING_AHRS_GPS_ERROR_MAX    10      // accept up to 10m difference between AHRS and GPS
 
 extern const AP_HAL::HAL& hal;
 
@@ -55,7 +56,7 @@ const AP_Param::GroupInfo AP_Arming::var_info[] = {
 
     // @Param: VOLT_MIN
     // @DisplayName: Arming voltage minimum on the first battery
-    // @Description: The minimum voltage on the first battery to arm, 0 disables the check
+    // @Description: The minimum voltage of the first battery required to arm, 0 disables the check
     // @Units: V
     // @Increment: 0.1 
     // @User: Standard
@@ -63,7 +64,7 @@ const AP_Param::GroupInfo AP_Arming::var_info[] = {
 
     // @Param: VOLT2_MIN
     // @DisplayName: Arming voltage minimum on the second battery
-    // @Description: The minimum voltage on the first battery to arm, 0 disables the check
+    // @Description: The minimum voltage of the second battery required to arm, 0 disables the check
     // @Units: V
     // @Increment: 0.1 
     // @User: Standard
@@ -349,23 +350,16 @@ bool AP_Arming::gps_checks(bool report)
             }
             return false;
         }
-    }
 
-    if ((checks_to_perform & ARMING_CHECK_ALL) || (checks_to_perform & ARMING_CHECK_GPS_CONFIG)) {
-        uint8_t first_unconfigured = gps.first_unconfigured_gps();
-        if (first_unconfigured != AP_GPS::GPS_ALL_CONFIGURED) {
+        //GPS update rate acceptable
+        if (!gps.is_healthy()) {
             if (report) {
-                gcs().send_text(MAV_SEVERITY_CRITICAL,
-                                                 "PreArm: GPS %d failing configuration checks",
-                                                  first_unconfigured + 1);
-                gps.broadcast_first_configuration_failure_reason();
+                gcs().send_text(MAV_SEVERITY_CRITICAL, "PreArm: GPS is not healthy");
             }
             return false;
         }
-    }
 
-    // check GPSs are within 50m of each other and that blending is healthy
-    if ((checks_to_perform & ARMING_CHECK_ALL) || (checks_to_perform & ARMING_CHECK_GPS)) {
+        // check GPSs are within 50m of each other and that blending is healthy
         float distance_m;
         if (!gps.all_consistent(distance_m)) {
             if (report) {
@@ -378,6 +372,32 @@ bool AP_Arming::gps_checks(bool report)
         if (!gps.blend_health_check()) {
             if (report) {
                 gcs().send_text(MAV_SEVERITY_CRITICAL, "PreArm: GPS blending unhealthy");
+            }
+            return false;
+        }
+
+        // check AHRS and GPS are within 10m of each other
+        Location gps_loc = ahrs.get_gps().location();
+        Location ahrs_loc;
+        if (ahrs.get_position(ahrs_loc)) {
+            float distance = location_3d_diff_NED(gps_loc, ahrs_loc).length();
+            if (distance > AP_ARMING_AHRS_GPS_ERROR_MAX) {
+                if (report) {
+                    gcs().send_text(MAV_SEVERITY_CRITICAL, "PreArm: GPS and AHRS differ by %4.1fm", (double)distance);
+                }
+                return false;
+            }
+        }
+    }
+
+    if ((checks_to_perform & ARMING_CHECK_ALL) || (checks_to_perform & ARMING_CHECK_GPS_CONFIG)) {
+        uint8_t first_unconfigured = gps.first_unconfigured_gps();
+        if (first_unconfigured != AP_GPS::GPS_ALL_CONFIGURED) {
+            if (report) {
+                gcs().send_text(MAV_SEVERITY_CRITICAL,
+                                                 "PreArm: GPS %d failing configuration checks",
+                                                  first_unconfigured + 1);
+                gps.broadcast_first_configuration_failure_reason();
             }
             return false;
         }

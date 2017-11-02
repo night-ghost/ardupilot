@@ -64,6 +64,7 @@
  *  Roberto Navoni      :Library testing, Porting to VRBrain
  *  Sandro Benigno      :Camera support, MinimOSD
  *  Sandro Tognana      :PosHold flight mode
+ *  Sebastian Quilter   :SmartRTL
  *  ..and many more.
  *
  *  Code commit statistics can be found here: https://github.com/ArduPilot/ardupilot/graphs/contributors
@@ -100,6 +101,7 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     SCHED_TASK(update_altitude,       10,    100),
     SCHED_TASK(run_nav_updates,       50,    100),
     SCHED_TASK(update_throttle_hover,100,     90),
+    SCHED_TASK(smart_rtl_save_position, 3,    100),
     SCHED_TASK(three_hz_loop,          3,     75),
     SCHED_TASK(compass_accumulate,   100,    100),
     SCHED_TASK(barometer_accumulate,  50,     90),
@@ -124,7 +126,8 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     SCHED_TASK(update_trigger,        50,     75),
     SCHED_TASK(ten_hz_logging_loop,   10,    350),
     SCHED_TASK(twentyfive_hz_logging, 25,    110),
-    SCHED_TASK(dataflash_periodic,    400,   300),
+    SCHED_TASK(dataflash_periodic,    400,    300),
+    SCHED_TASK(ins_periodic,         400,     50),
     SCHED_TASK(perf_update,           0.1,    75),
     SCHED_TASK(read_receiver_rssi,    10,     75),
     SCHED_TASK(rpm_update,            10,    200),
@@ -140,6 +143,7 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
 #if GRIPPER_ENABLED == ENABLED
     SCHED_TASK(gripper_update,        10,     75),
 #endif
+    SCHED_TASK(winch_update,          10,     50),
 #ifdef USERHOOK_FASTLOOP
     SCHED_TASK(userhook_FastLoop,    100,     75),
 #endif
@@ -435,6 +439,11 @@ void Copter::twentyfive_hz_logging()
 void Copter::dataflash_periodic(void)
 {
     DataFlash.periodic_tasks();
+}
+
+void Copter::ins_periodic(void)
+{
+    ins.periodic();
 }
 
 // three_hz_loop - 3.3hz loop

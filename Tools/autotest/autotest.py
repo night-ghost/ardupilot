@@ -77,15 +77,20 @@ def build_all():
 
 
 def build_binaries():
-    """Run the build_binaries.sh script."""
-    print("Running build_binaries.sh")
+    """Run the build_binaries.py script."""
+    print("Running build_binaries.py")
     # copy the script as it changes git branch, which can change the script while running
-    orig = util.reltopdir('Tools/scripts/build_binaries.sh')
-    copy = util.reltopdir('./build_binaries.sh')
+    orig = util.reltopdir('Tools/scripts/build_binaries.py')
+    copy = util.reltopdir('./build_binaries.py')
     shutil.copy2(orig, copy)
 
+    # also copy generate_manifest library:
+    orig_gm = util.reltopdir('Tools/scripts/generate_manifest.py')
+    copy_gm = util.reltopdir('./generate_manifest.py')
+    shutil.copy2(orig_gm, copy_gm)
+
     if util.run_cmd(copy, directory=util.reltopdir('.')) != 0:
-        print("Failed build_binaries.sh")
+        print("Failed build_binaries.py")
         return False
     return True
 
@@ -178,7 +183,10 @@ __bin_names = {
 }
 
 def binary_path(step, debug=False):
-    vehicle = step.split(".")[1]
+    try:
+        vehicle = step.split(".")[1]
+    except Exception:
+        return None
 
     if vehicle in __bin_names:
         binary_name = __bin_names[vehicle]
@@ -210,23 +218,29 @@ def run_step(step):
     if step == "prerequisites":
         return test_prerequisites()
 
+    build_opts = {
+        "j": opts.j,
+        "debug": opts.debug,
+        "clean": not opts.no_clean,
+        "configure": not opts.no_configure,
+    }
     if step == 'build.ArduPlane':
-        return util.build_SITL('bin/arduplane', j=opts.j, debug=opts.debug)
+        return util.build_SITL('bin/arduplane', **build_opts)
 
     if step == 'build.APMrover2':
-        return util.build_SITL('bin/ardurover', j=opts.j, debug=opts.debug)
+        return util.build_SITL('bin/ardurover', **build_opts)
 
     if step == 'build.ArduCopter':
-        return util.build_SITL('bin/arducopter', j=opts.j, debug=opts.debug)
+        return util.build_SITL('bin/arducopter', **build_opts)
 
     if step == 'build.AntennaTracker':
-        return util.build_SITL('bin/antennatracker', j=opts.j, debug=opts.debug)
+        return util.build_SITL('bin/antennatracker', **build_opts)
 
     if step == 'build.Helicopter':
-        return util.build_SITL('bin/arducopter-heli', j=opts.j, debug=opts.debug)
+        return util.build_SITL('bin/arducopter-heli', **build_opts)
     
     if step == 'build.ArduSub':
-        return util.build_SITL('bin/ardusub', j=opts.j, debug=opts.debug)
+        return util.build_SITL('bin/ardusub', **build_opts)
 
     binary = binary_path(step, debug=opts.debug)
 
@@ -465,6 +479,8 @@ if __name__ == "__main__":
     parser.add_option("-j", default=None, type='int', help='build CPUs')
     parser.add_option("--frame", type='string', default=None, help='specify frame type')
     parser.add_option("--gdbserver", default=False, action='store_true', help='run ArduPilot binaries under gdbserver')
+    parser.add_option("--no-clean", default=False, action='store_true', help='do not clean before building', dest="no_clean")
+    parser.add_option("--no-configure", default=False, action='store_true', help='do not configure before building', dest="no_configure")
 
     opts, args = parser.parse_args()
 
@@ -532,16 +548,17 @@ if __name__ == "__main__":
             matches = [step for step in steps if fnmatch.fnmatch(step.lower(), a.lower())]
             if not len(matches):
                 print("No steps matched {}".format(a))
+                sys.exit(1)
             matched.extend(matches)
         steps = matched
 
     # skip steps according to --skip option:
-    steps = [ s for s in steps if should_run_step(s) ]
+    steps_to_run = [ s for s in steps if should_run_step(s) ]
 
     results = TestResults()
 
     try:
-        if not run_tests(steps):
+        if not run_tests(steps_to_run):
             sys.exit(1)
     except KeyboardInterrupt:
         util.pexpect_close_all()

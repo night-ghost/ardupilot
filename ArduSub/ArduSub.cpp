@@ -50,6 +50,7 @@ const AP_Scheduler::Task Sub::scheduler_tasks[] = {
     SCHED_TASK(ten_hz_logging_loop,   10,    350),
     SCHED_TASK(twentyfive_hz_logging, 25,    110),
     SCHED_TASK(dataflash_periodic,    400,    300),
+    SCHED_TASK(ins_periodic,          400,    50),
     SCHED_TASK(perf_update,           0.1,    75),
 #if RPM_ENABLED == ENABLED
     SCHED_TASK(rpm_update,            10,    200),
@@ -209,12 +210,8 @@ void Sub::fifty_hz_loop()
 
     failsafe_sensors_check();
 
-    // Update servo output
+    // Update rc input/output
     RC_Channels::set_pwm_all();
-    // wait for outputs to initialize: TODO find a better way to do this
-    if (millis() > 10000) {
-        SRV_Channels::limit_slew_rate(SRV_Channel::k_mount_tilt, g.cam_slew_limit, 0.02f);
-    }
     SRV_Channels::output_ch_all();
 }
 
@@ -320,6 +317,11 @@ void Sub::twentyfive_hz_logging()
 void Sub::dataflash_periodic(void)
 {
     DataFlash.periodic_tasks();
+}
+
+void Sub::ins_periodic()
+{
+    ins.periodic();
 }
 
 // three_hz_loop - 3.3hz loop

@@ -152,9 +152,7 @@ void Plane::update_is_flying_5Hz(void)
 
     crash_detection_update();
 
-    if (should_log(MASK_LOG_MODE)) {
-        Log_Write_Status();
-    }
+    Log_Write_Status();
 
     // tell AHRS flying state
     ahrs.set_likely_flying(new_is_flying);
@@ -305,7 +303,8 @@ bool Plane::in_preLaunch_flight_stage(void) {
     return (control_mode == AUTO &&
             throttle_suppressed &&
             flight_stage == AP_Vehicle::FixedWing::FLIGHT_NORMAL &&
-            mission.get_current_nav_cmd().id == MAV_CMD_NAV_TAKEOFF);
+            mission.get_current_nav_cmd().id == MAV_CMD_NAV_TAKEOFF &&
+            !quadplane.is_vtol_takeoff(mission.get_current_nav_cmd().id));
 }
 
 

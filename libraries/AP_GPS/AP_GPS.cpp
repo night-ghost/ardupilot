@@ -44,6 +44,7 @@
 #endif
 
 #define GPS_BAUD_TIME_MS 1200
+#define GPS_TIMEOUT_MS 4000u
 
 // defines used to specify the mask position for use of different accuracy metrics in the blending algorithm
 #define BLEND_MASK_USE_HPOS_ACC     1
@@ -402,7 +403,7 @@ void AP_GPS::detect_instance(uint8_t instance)
 {
     AP_GPS_Backend *new_gps = nullptr;
     struct detect_state *dstate = &detect_state[instance];
-    uint32_t now = AP_HAL::millis();
+    const uint32_t now = AP_HAL::millis();
 
     state[instance].status = NO_GPS;
     state[instance].hdop = GPS_UNKNOWN_DOP;
@@ -500,12 +501,12 @@ void AP_GPS::detect_instance(uint8_t instance)
         _port[instance]->set_flow_control(AP_HAL::UARTDriver::FLOW_CONTROL_DISABLE);
         dstate->last_baud_change_ms = now;
 
-        if (_auto_config == GPS_AUTO_CONFIG_ENABLE) {
+        if (_auto_config == GPS_AUTO_CONFIG_ENABLE && new_gps == nullptr) {
             send_blob_start(instance, _initialisation_blob, sizeof(_initialisation_blob));
         }
     }
 
-    if (_auto_config == GPS_AUTO_CONFIG_ENABLE) {
+    if (_auto_config == GPS_AUTO_CONFIG_ENABLE && new_gps == nullptr) {
         send_blob_update(instance);
     }
 
@@ -564,6 +565,7 @@ found_gps:
         state[instance].status = NO_FIX;
         drivers[instance] = new_gps;
         timing[instance].last_message_time_ms = now;
+        timing[instance].delta_time_ms = GPS_TIMEOUT_MS;
         new_gps->broadcast_gps_type();
     }
 }
@@ -610,24 +612,28 @@ void AP_GPS::update_instance(uint8_t instance)
 
     // we have an active driver for this instance
     bool result = drivers[instance]->read();
-    uint32_t tnow = AP_HAL::millis();
+    const uint32_t tnow = AP_HAL::millis();
 
     // if we did not get a message, and the idle timer of 2 seconds
     // has expired, re-initialise the GPS. This will cause GPS
     // detection to run again
     if (!result) {
-        if (tnow - timing[instance].last_message_time_ms > 4000) {
+        if (tnow - timing[instance].last_message_time_ms > GPS_TIMEOUT_MS) {
             // free the driver before we run the next detection, so we
             // don't end up with two allocated at any time
             delete drivers[instance];
             drivers[instance] = nullptr;
             memset(&state[instance], 0, sizeof(state[instance]));
+            state[instance].instance = instance;
             state[instance].status = NO_GPS;
             state[instance].hdop = GPS_UNKNOWN_DOP;
             state[instance].vdop = GPS_UNKNOWN_DOP;
             timing[instance].last_message_time_ms = tnow;
+            timing[instance].delta_time_ms = GPS_TIMEOUT_MS;
         }
     } else {
+        // delta will only be correct after parsing two messages
+        timing[instance].delta_time_ms = tnow - timing[instance].last_message_time_ms;
         timing[instance].last_message_time_ms = tnow;
         if (state[instance].status >= GPS_OK_FIX_2D) {
             timing[instance].last_fix_time_ms = tnow;
@@ -781,7 +787,7 @@ void AP_GPS::setHIL(uint8_t instance, GPS_Status _status, uint64_t time_epoch_ms
     if (instance >= GPS_MAX_RECEIVERS) {
         return;
     }
-    uint32_t tnow = AP_HAL::millis();
+    const uint32_t tnow = AP_HAL::millis();
     GPS_State &istate = state[instance];
     istate.status = _status;
     istate.location = _location;
@@ -920,17 +926,13 @@ void AP_GPS::send_mavlink_gps2_raw(mavlink_channel_t chan)
         rtk_age_ms(1));
 }
 
-void AP_GPS::send_mavlink_gps_rtk(mavlink_channel_t chan)
+void AP_GPS::send_mavlink_gps_rtk(mavlink_channel_t chan, uint8_t inst)
 {
-    if (drivers[0] != nullptr && drivers[0]->highest_supported_status() > AP_GPS::GPS_OK_FIX_3D) {
-        drivers[0]->send_mavlink_gps_rtk(chan);
+    if (inst >= GPS_MAX_RECEIVERS) {
+        return;
     }
-}
-
-void AP_GPS::send_mavlink_gps2_rtk(mavlink_channel_t chan)
-{
-    if (drivers[1] != nullptr && drivers[1]->highest_supported_status() > AP_GPS::GPS_OK_FIX_3D) {
-        drivers[1]->send_mavlink_gps_rtk(chan);
+    if (drivers[inst] != nullptr && drivers[inst]->supports_mavlink_gps_rtk_message()) {
+        drivers[inst]->send_mavlink_gps_rtk(chan);
     }
 }
 
@@ -946,7 +948,7 @@ uint8_t AP_GPS::first_unconfigured_gps(void) const
 
 void AP_GPS::broadcast_first_configuration_failure_reason(void) const
 {
-    uint8_t unconfigured = first_unconfigured_gps();
+    const uint8_t unconfigured = first_unconfigured_gps();
     if (drivers[unconfigured] == nullptr) {
         gcs().send_text(MAV_SEVERITY_INFO, "GPS %d: was not found", unconfigured + 1);
     } else {
@@ -1102,7 +1104,7 @@ const Vector3f &AP_GPS::get_antenna_offset(uint8_t instance) const
 
 /*
   returns the desired gps update rate in milliseconds
-  this does not provide any gurantee that the GPS is updating at the requested
+  this does not provide any guarantee that the GPS is updating at the requested
   rate it is simply a helper for use in the backends for determining what rate
   they should be configuring the GPS to run at
 */
@@ -1116,7 +1118,7 @@ uint16_t AP_GPS::get_rate_ms(uint8_t instance) const
 }
 
 /*
- calculate the weightings used to blend GPs location and velocity data
+ calculate the weightings used to blend GPSs location and velocity data
 */
 bool AP_GPS::calc_blend_weights(void)
 {
@@ -1300,7 +1302,6 @@ void AP_GPS::calc_blended_state(void)
     state[GPS_BLENDED_INSTANCE].have_speed_accuracy = false;
     state[GPS_BLENDED_INSTANCE].have_horizontal_accuracy = false;
     state[GPS_BLENDED_INSTANCE].have_vertical_accuracy = false;
-    state[GPS_BLENDED_INSTANCE].last_gps_time_ms = 0;
     memset(&state[GPS_BLENDED_INSTANCE].location, 0, sizeof(state[GPS_BLENDED_INSTANCE].location));
 
     _blended_antenna_offset.zero();
@@ -1369,7 +1370,7 @@ void AP_GPS::calc_blended_state(void)
 
     /*
      * Calculate an instantaneous weighted/blended average location from the available GPS instances and store in the _output_state.
-     * This will be statisticaly the most likely location, but will be not stable enough for direct use by the autopilot.
+     * This will be statistically the most likely location, but will be not stable enough for direct use by the autopilot.
     */
 
     // Use the GPS with the highest weighting as the reference position
@@ -1494,4 +1495,10 @@ void AP_GPS::calc_blended_state(void)
     }
     timing[GPS_BLENDED_INSTANCE].last_fix_time_ms = (uint32_t)temp_time_1;
     timing[GPS_BLENDED_INSTANCE].last_message_time_ms = (uint32_t)temp_time_2;
+}
+
+bool AP_GPS::is_healthy(uint8_t instance) const {
+    return drivers[instance] != nullptr &&
+           last_message_delta_time_ms(instance) < GPS_MAX_DELTA_MS &&
+           drivers[instance]->is_healthy();
 }

@@ -24,6 +24,15 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
         return true;
     }
 
+
+#if FRAME_CONFIG == HELI_FRAME
+    // do not allow helis to enter a non-manual throttle mode if the
+    // rotor runup is not complete
+    if (!ignore_checks && !mode_has_manual_throttle(mode) && !motors->rotor_runup_complete()){
+        goto failed;
+    }
+#endif
+
     switch (mode) {
         case ACRO:
             #if FRAME_CONFIG == HELI_FRAME
@@ -109,11 +118,19 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
             success = guided_nogps_init(ignore_checks);
             break;
 
+        case SMART_RTL:
+            success = smart_rtl_init(ignore_checks);
+            break;
+
         default:
             success = false;
             break;
     }
 
+#if FRAME_CONFIG == HELI_FRAME
+failed:
+#endif
+    
     // update flight mode
     if (success) {
         // perform any cleanup required by previous flight mode
@@ -246,6 +263,11 @@ void Copter::update_flight_mode()
             guided_nogps_run();
             break;
 
+
+        case SMART_RTL:
+            smart_rtl_run();
+            break;
+
         default:
             break;
     }
@@ -279,6 +301,11 @@ void Copter::exit_mode(control_mode_t old_control_mode, control_mode_t new_contr
     // cancel any takeoffs in progress
     takeoff_stop();
 
+    // call smart_rtl cleanup
+    if (old_control_mode == SMART_RTL) {
+        smart_rtl_exit();
+    }
+
 #if FRAME_CONFIG == HELI_FRAME
     // firmly reset the flybar passthrough to false when exiting acro mode.
     if (old_control_mode == ACRO) {
@@ -307,6 +334,7 @@ bool Copter::mode_requires_GPS(control_mode_t mode)
         case GUIDED:
         case LOITER:
         case RTL:
+        case SMART_RTL:
         case CIRCLE:
         case DRIFT:
         case POSHOLD:
@@ -354,6 +382,7 @@ void Copter::notify_flight_mode(control_mode_t mode)
         case AVOID_ADSB:
         case GUIDED_NOGPS:
         case LAND:
+        case SMART_RTL:
             // autopilot modes
             AP_Notify::flags.autopilot_mode = true;
             break;

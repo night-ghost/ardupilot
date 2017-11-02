@@ -360,6 +360,7 @@ void Copter::update_sensor_status_flags(void)
     case POSHOLD:
     case BRAKE:
     case THROW:
+    case SMART_RTL:
         control_sensors_enabled |= MAV_SYS_STATUS_SENSOR_Z_ALTITUDE_CONTROL;
         control_sensors_enabled |= MAV_SYS_STATUS_SENSOR_XY_POSITION_CONTROL;
         break;
@@ -398,7 +399,7 @@ void Copter::update_sensor_status_flags(void)
     if (!g.compass_enabled || !compass.healthy() || !ahrs.use_compass()) {
         control_sensors_health &= ~MAV_SYS_STATUS_SENSOR_3D_MAG;
     }
-    if (gps.status() == AP_GPS::NO_GPS) {
+    if (!gps.is_healthy()) {
         control_sensors_health &= ~MAV_SYS_STATUS_SENSOR_GPS;
     }
     if (!ap.rc_receiver_present || failsafe.radio) {
@@ -524,4 +525,18 @@ void Copter::update_visual_odom()
                                        g2.visual_odom.get_confidence());
     }
 #endif
+}
+
+// winch and wheel encoder initialisation
+void Copter::winch_init()
+{
+    g2.wheel_encoder.init();
+    g2.winch.init(&g2.wheel_encoder);
+}
+
+// winch and wheel encoder update
+void Copter::winch_update()
+{
+    g2.wheel_encoder.update();
+    g2.winch.update();
 }

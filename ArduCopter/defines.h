@@ -70,6 +70,10 @@ enum aux_sw_func {
     AUXSW_PRECISION_LOITER =    39,  // enable precision loiter
     AUXSW_AVOID_PROXIMITY =     40,  // enable object avoidance using proximity sensors (ie. horizontal lidar)
     AUXSW_ARMDISARM =           41,  // arm or disarm vehicle
+    AUXSW_SMART_RTL =           42, // change to SmartRTL flight mode
+    AUXSW_INVERTED  =           43,  // enable inverted flight
+    AUXSW_WINCH_ENABLE =        44, // winch enable/disable
+    AUXSW_WINCH_CONTROL =       45, // winch control
     AUXSW_SWITCH_MAX,
 };
 
@@ -102,6 +106,7 @@ enum control_mode_t {
     THROW =        18,  // throw to launch mode using inertial/GPS system, no pilot input
     AVOID_ADSB =   19,  // automatic avoidance of obstacles in the macro scale - e.g. full-sized aircraft
     GUIDED_NOGPS = 20,  // guided mode but only accepts attitude and altitude
+    SMART_RTL =    21,  // SMART_RTL returns to home by retracing its steps
 };
 
 enum mode_reason_t {
@@ -122,6 +127,7 @@ enum mode_reason_t {
     MODE_REASON_AVOIDANCE,
     MODE_REASON_AVOIDANCE_RECOVERY,
     MODE_REASON_THROW_COMPLETE,
+    MODE_REASON_TERMINATE,
 };
 
 // Tuning enumeration
@@ -165,7 +171,8 @@ enum tuning_func {
     TUNING_RATE_ROLL_FF =               53, // body frame roll rate controller FF term
     TUNING_RATE_YAW_FF =                54, // body frame yaw rate controller FF term
     TUNING_RATE_MOT_YAW_HEADROOM =      55, // motors yaw headroom minimum
-    TUNING_RATE_YAW_FILT =              56  // yaw rate input filter
+    TUNING_RATE_YAW_FILT =              56, // yaw rate input filter
+    TUNING_WINCH =                      57  // winch control (not actually a value to be tuned)
 };
 
 // Acro Trainer types
@@ -216,6 +223,15 @@ enum RTLState {
     RTL_LoiterAtHome,
     RTL_FinalDescent,
     RTL_Land
+};
+
+// Safe RTL states
+enum SmartRTLState {
+    SmartRTL_WaitForPathCleanup,
+    SmartRTL_PathFollow,
+    SmartRTL_PreLandPosition,
+    SmartRTL_Descend,
+    SmartRTL_Land
 };
 
 // Alt_Hold states
@@ -391,6 +407,9 @@ enum DevOptions {
 #define DATA_AVOIDANCE_PROXIMITY_ENABLE     65
 #define DATA_AVOIDANCE_PROXIMITY_DISABLE    66
 #define DATA_GPS_PRIMARY_CHANGED            67
+#define DATA_WINCH_RELAXED                  68
+#define DATA_WINCH_LENGTH_CONTROL           69
+#define DATA_WINCH_RATE_CONTROL             70
 
 // Centi-degrees to radians
 #define DEGX100 5729.57795f

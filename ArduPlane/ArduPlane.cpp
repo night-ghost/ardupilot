@@ -80,6 +80,7 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
     SCHED_TASK(terrain_update,         10,    200),
     SCHED_TASK(update_is_flying_5Hz,    5,    100),
     SCHED_TASK(dataflash_periodic,     50,    400),
+    SCHED_TASK(ins_periodic,           50,     50),
     SCHED_TASK(avoidance_adsb_update,  10,    100),
     SCHED_TASK(button_update,           5,    100),
     SCHED_TASK(stats_update,            1,    100),
@@ -404,6 +405,11 @@ void Plane::terrain_update(void)
 #endif
 }
 
+
+void Plane::ins_periodic(void)
+{
+    ins.periodic();
+}
 
 void Plane::dataflash_periodic(void)
 {
@@ -791,6 +797,10 @@ void Plane::update_navigation()
     // ------------------------------------------------------------------------
 
     uint16_t radius = 0;
+    uint16_t qrtl_radius = abs(g.rtl_radius);
+    if (qrtl_radius == 0) {
+        qrtl_radius = abs(aparm.loiter_radius);
+    }
     
     switch(control_mode) {
     case AUTO:
@@ -801,7 +811,9 @@ void Plane::update_navigation()
             
     case RTL:
         if (quadplane.available() && quadplane.rtl_mode == 1 &&
-            nav_controller->reached_loiter_target() &&
+            (nav_controller->reached_loiter_target() ||
+             location_passed_point(current_loc, prev_WP_loc, next_WP_loc) ||
+             auto_state.wp_distance < qrtl_radius) &&
             AP_HAL::millis() - last_mode_change_ms > 1000) {
             set_mode(QRTL, MODE_REASON_UNKNOWN);
             break;
@@ -884,10 +896,7 @@ void Plane::set_flight_stage(AP_Vehicle::FixedWing::FlightStage fs)
     }
 
     flight_stage = fs;
-
-    if (should_log(MASK_LOG_MODE)) {
-        Log_Write_Status();
-    }
+    Log_Write_Status();
 }
 
 void Plane::update_alt()

@@ -20,9 +20,9 @@
 #include <AP_Vehicle/AP_Vehicle.h>
 #include <AP_RangeFinder/RangeFinder_Backend.h>
 
-#include "AP_Common/AP_FWVersion.h"
 #include "GCS.h"
 
+#include <stdio.h>
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4 || CONFIG_HAL_BOARD == HAL_BOARD_VRBRAIN
 #include <drivers/drv_pwm_output.h>
 #include <sys/types.h>
@@ -36,9 +36,6 @@ uint32_t GCS_MAVLINK::last_radio_status_remrssi_ms;
 uint8_t GCS_MAVLINK::mavlink_active = 0;
 uint8_t GCS_MAVLINK::chan_is_streaming = 0;
 uint32_t GCS_MAVLINK::reserve_param_space_start_ms;
-
-AP_HAL::Util::perf_counter_t GCS_MAVLINK::_perf_packet;
-AP_HAL::Util::perf_counter_t GCS_MAVLINK::_perf_update;
 
 GCS *GCS::_singleton = nullptr;
 
@@ -61,12 +58,11 @@ GCS_MAVLINK::init(AP_HAL::UARTDriver *port, mavlink_channel_t mav_chan)
     initialised = true;
     _queued_parameter = nullptr;
 
-    if (!_perf_packet) {
-        _perf_packet = hal.util->perf_alloc(AP_HAL::Util::PC_ELAPSED, "GCS_Packet");
-    }
-    if (!_perf_update) {
-        _perf_update = hal.util->perf_alloc(AP_HAL::Util::PC_ELAPSED, "GCS_Update");
-    }
+    snprintf(_perf_packet_name, sizeof(_perf_packet_name), "GCS_Packet_%u", chan);
+    _perf_packet = hal.util->perf_alloc(AP_HAL::Util::PC_ELAPSED, _perf_packet_name);
+
+    snprintf(_perf_update_name, sizeof(_perf_update_name), "GCS_Update_%u", chan);
+    _perf_update = hal.util->perf_alloc(AP_HAL::Util::PC_ELAPSED, _perf_update_name);
 }
 
 
@@ -360,8 +356,6 @@ void GCS_MAVLINK::handle_mission_request_list(AP_Mission &mission, mavlink_messa
 
     // set variables to help handle the expected sending of commands to the GCS
     waypoint_receiving = false;             // record that we are sending commands (i.e. not receiving)
-    waypoint_dest_sysid = msg->sysid;       // record system id of GCS who has requested the commands
-    waypoint_dest_compid = msg->compid;     // record component id of GCS who has requested the commands
 }
 
 /*
@@ -514,6 +508,9 @@ void GCS_MAVLINK::handle_mission_count(AP_Mission &mission, mavlink_message_t *m
     waypoint_request_i = 0;                 // reset the next expected command number to zero
     waypoint_request_last = packet.count;   // record how many commands we expect to receive
     waypoint_timelast_request = 0;          // set time we last requested commands to zero
+
+    waypoint_dest_sysid = msg->sysid;       // record system id of GCS who wants to upload the mission
+    waypoint_dest_compid = msg->compid;     // record component id of GCS who wants to upload the mission
 }
 
 /*
@@ -1294,22 +1291,36 @@ void GCS_MAVLINK::send_battery2(const AP_BattMonitor &battery)
  */
 void GCS_MAVLINK::handle_set_mode(mavlink_message_t* msg)
 {
-    uint8_t result = MAV_RESULT_FAILED;
     mavlink_set_mode_t packet;
     mavlink_msg_set_mode_decode(msg, &packet);
 
+    const MAV_MODE base_mode = (MAV_MODE)packet.base_mode;
+    const uint32_t custom_mode = packet.custom_mode;
+
+    const MAV_RESULT result = _set_mode_common(base_mode, custom_mode);
+
+    // send ACK or NAK
+    mavlink_msg_command_ack_send_buf(msg, chan, MAVLINK_MSG_ID_SET_MODE, result);
+}
+
+/*
+  code common to both SET_MODE mavlink message and command long set_mode msg
+*/
+MAV_RESULT GCS_MAVLINK::_set_mode_common(const MAV_MODE base_mode, const uint32_t custom_mode)
+{
+    MAV_RESULT result = MAV_RESULT_UNSUPPORTED;
     // only accept custom modes because there is no easy mapping from Mavlink flight modes to AC flight modes
-    if (packet.base_mode & MAV_MODE_FLAG_CUSTOM_MODE_ENABLED) {
-        if (set_mode(packet.custom_mode)) {
+    if (base_mode & MAV_MODE_FLAG_CUSTOM_MODE_ENABLED) {
+        if (set_mode(custom_mode)) {
             result = MAV_RESULT_ACCEPTED;
         }
-    } else if (packet.base_mode == MAV_MODE_FLAG_DECODE_POSITION_SAFETY) {
+    } else if (base_mode == (MAV_MODE)MAV_MODE_FLAG_DECODE_POSITION_SAFETY) {
         // set the safety switch position. Must be in a command by itself
-        if (packet.custom_mode == 0) {
+        if (custom_mode == 0) {
             // turn safety off (pwm outputs flow to the motors)
             hal.rcout->force_safety_off();
             result = MAV_RESULT_ACCEPTED;
-        } else if (packet.custom_mode == 1) {
+        } else if (custom_mode == 1) {
             // turn safety on (no pwm outputs to the motors)
             if (hal.rcout->force_safety_on()) {
                 result = MAV_RESULT_ACCEPTED;
@@ -1317,8 +1328,7 @@ void GCS_MAVLINK::handle_set_mode(mavlink_message_t* msg)
         }
     }
 
-    // send ACK or NAK
-    mavlink_msg_command_ack_send_buf(msg, chan, MAVLINK_MSG_ID_SET_MODE, result);
+    return result;
 }
 
 #if AP_AHRS_NAVEKF_AVAILABLE
@@ -1361,42 +1371,40 @@ void GCS_MAVLINK::send_opticalflow(AP_AHRS_NavEKF &ahrs, const OpticalFlow &optf
 /*
   send AUTOPILOT_VERSION packet
  */
-void GCS_MAVLINK::send_autopilot_version(uint8_t major_version, uint8_t minor_version, uint8_t patch_version, uint8_t version_type) const
+void GCS_MAVLINK::send_autopilot_version() const
 {
-    uint32_t flight_sw_version = 0;
+    uint32_t flight_sw_version;
     uint32_t middleware_sw_version = 0;
     uint32_t os_sw_version = 0;
     uint32_t board_version = 0;
-    uint8_t flight_custom_version[8];
-    uint8_t middleware_custom_version[8];
-    uint8_t os_custom_version[8];
+    char flight_custom_version[8]{};
+    char middleware_custom_version[8]{};
+    char os_custom_version[8]{};
     uint16_t vendor_id = 0;
     uint16_t product_id = 0;
     uint64_t uid = 0;
-    
-    flight_sw_version = major_version << (8*3) | \
-                        minor_version << (8*2) | \
-                        patch_version << (8*1) | \
-                        version_type  << (8*0);
+    const AP_FWVersion &version = get_fwver();
 
-#if defined(GIT_VERSION)
-    strncpy((char *)flight_custom_version, GIT_VERSION, 8);
-#else
-    memset(middleware_custom_version,0,8);
-#endif
+    flight_sw_version = version.major << (8 * 3) | \
+                        version.minor << (8 * 2) | \
+                        version.patch << (8 * 1) | \
+                        (uint32_t)(version.fw_type) << (8 * 0);
 
-#if defined(PX4_GIT_VERSION)
-    strncpy((char *)middleware_custom_version, PX4_GIT_VERSION, 8);
-#else
-    memset(middleware_custom_version,0,8);
-#endif
-    
-#if defined(NUTTX_GIT_VERSION)
-    strncpy((char *)os_custom_version, NUTTX_GIT_VERSION, 8);
-#else
-    memset(os_custom_version,0,8);
-#endif
-    
+    if (version.fw_hash_str) {
+        strncpy(flight_custom_version, version.fw_hash_str, sizeof(flight_custom_version) - 1);
+        flight_custom_version[sizeof(flight_custom_version) - 1] = '\0';
+    }
+
+    if (version.middleware_hash_str) {
+        strncpy(middleware_custom_version, version.middleware_hash_str, sizeof(middleware_custom_version) - 1);
+        middleware_custom_version[sizeof(middleware_custom_version) - 1] = '\0';
+    }
+
+    if (version.os_hash_str) {
+        strncpy(os_custom_version, version.os_hash_str, sizeof(os_custom_version) - 1);
+        os_custom_version[sizeof(os_custom_version) - 1] = '\0';
+    }
+
     mavlink_msg_autopilot_version_send(
         chan,
         hal.util->get_capabilities(),
@@ -1404,9 +1412,9 @@ void GCS_MAVLINK::send_autopilot_version(uint8_t major_version, uint8_t minor_ve
         middleware_sw_version,
         os_sw_version,
         board_version,
-        flight_custom_version,
-        middleware_custom_version,
-        os_custom_version,
+        (uint8_t *)flight_custom_version,
+        (uint8_t *)middleware_custom_version,
+        (uint8_t *)os_custom_version,
         vendor_id,
         product_id,
         uid
@@ -1467,6 +1475,17 @@ void GCS_MAVLINK::send_home(const Location &home) const
             0.0f, 0.0f, 0.0f,
             q,
             0.0f, 0.0f, 0.0f);
+    }
+}
+
+void GCS_MAVLINK::send_ekf_origin(const Location &ekf_origin) const
+{
+    if (HAVE_PAYLOAD_SPACE(chan, GPS_GLOBAL_ORIGIN)) {
+        mavlink_msg_gps_global_origin_send(
+            chan,
+            ekf_origin.lat,
+            ekf_origin.lng,
+            ekf_origin.alt * 10);
     }
 }
 
@@ -1771,8 +1790,27 @@ MAV_RESULT GCS_MAVLINK::handle_command_camera(const mavlink_command_long_t &pack
         break;
     default:
         result = MAV_RESULT_UNSUPPORTED;
+        break;
     }
     return result;
+}
+
+void GCS_MAVLINK::handle_set_gps_global_origin(const mavlink_message_t *msg)
+{
+    mavlink_set_gps_global_origin_t packet;
+    mavlink_msg_set_gps_global_origin_decode(msg, &packet);
+
+    // sanity check location
+    if (!check_latlng(packet.latitude, packet.longitude)) {
+        // silently drop the request
+        return;
+    }
+
+    Location ekf_origin {};
+    ekf_origin.lat = packet.latitude;
+    ekf_origin.lng = packet.longitude;
+    ekf_origin.alt = packet.altitude / 10;
+    set_ekf_origin(ekf_origin);
 }
 
 /*
@@ -1791,6 +1829,10 @@ void GCS_MAVLINK::handle_common_message(mavlink_message_t *msg)
         /* fall through */
     case MAVLINK_MSG_ID_PARAM_REQUEST_READ:
         handle_common_param_message(msg);
+        break;
+
+    case MAVLINK_MSG_ID_SET_GPS_GLOBAL_ORIGIN:
+        handle_set_gps_global_origin(msg);
         break;
 
     case MAVLINK_MSG_ID_DEVICE_OP_READ:
@@ -1955,8 +1997,7 @@ void GCS_MAVLINK::handle_common_mission_message(mavlink_message_t *msg)
 
 void GCS_MAVLINK::handle_send_autopilot_version(const mavlink_message_t *msg)
 {
-    const AP_FWVersion &fwver = get_fwver();
-    send_autopilot_version(fwver.major, fwver.minor, fwver.patch, fwver.fw_type);
+    send_autopilot_version();
 }
 
 void GCS_MAVLINK::send_banner()
@@ -1965,9 +2006,10 @@ void GCS_MAVLINK::send_banner()
     const AP_FWVersion &fwver = get_fwver();
     send_text(MAV_SEVERITY_INFO, fwver.fw_string);
 
-#if defined(PX4_GIT_VERSION) && defined(NUTTX_GIT_VERSION)
-    send_text(MAV_SEVERITY_INFO, "PX4: " PX4_GIT_VERSION " NuttX: " NUTTX_GIT_VERSION);
-#endif
+    if (fwver.middleware_hash_str && fwver.os_hash_str) {
+        send_text(MAV_SEVERITY_INFO, "PX4: %s NuttX: %s",
+                  fwver.middleware_hash_str, fwver.os_hash_str);
+    }
 
     // send system ID if we can
     char sysid[40];
@@ -2014,8 +2056,8 @@ MAV_RESULT GCS_MAVLINK::handle_command_request_autopilot_capabilities(const mavl
         return MAV_RESULT_FAILED;
     }
 
-    const AP_FWVersion &fwver = get_fwver();
-    send_autopilot_version(fwver.major, fwver.minor, fwver.patch, fwver.fw_type);
+    send_autopilot_version();
+
     return MAV_RESULT_ACCEPTED;
 }
 
@@ -2026,11 +2068,23 @@ MAV_RESULT GCS_MAVLINK::handle_command_do_send_banner(const mavlink_command_long
     return MAV_RESULT_ACCEPTED;
 }
 
+MAV_RESULT GCS_MAVLINK::handle_command_do_set_mode(const mavlink_command_long_t &packet)
+{
+    const MAV_MODE base_mode = (MAV_MODE)packet.param1;
+    const uint32_t custom_mode = (uint32_t)packet.param2;
+
+    return _set_mode_common(base_mode, custom_mode);
+}
+
 MAV_RESULT GCS_MAVLINK::handle_command_long_message(mavlink_command_long_t &packet)
 {
     MAV_RESULT result = MAV_RESULT_FAILED;
 
     switch (packet.command) {
+
+    case MAV_CMD_DO_SET_MODE:
+        result = handle_command_do_set_mode(packet);
+        break;
 
     case MAV_CMD_DO_SEND_BANNER:
         result = handle_command_do_send_banner(packet);
@@ -2082,6 +2136,7 @@ MAV_RESULT GCS_MAVLINK::handle_command_long_message(mavlink_command_long_t &pack
 
     default:
         result = MAV_RESULT_UNSUPPORTED;
+        break;
     }
 
     return result;
@@ -2170,7 +2225,7 @@ bool GCS_MAVLINK::try_send_gps_message(const enum ap_message id)
         break;
     case MSG_GPS_RTK:
         CHECK_PAYLOAD_SIZE(GPS_RTK);
-        gps->send_mavlink_gps_rtk(chan);
+        gps->send_mavlink_gps_rtk(chan, 0);
         ret = true;
         break;
     case MSG_GPS2_RAW:
@@ -2180,7 +2235,7 @@ bool GCS_MAVLINK::try_send_gps_message(const enum ap_message id)
         break;
     case MSG_GPS2_RTK:
         CHECK_PAYLOAD_SIZE(GPS2_RTK);
-        gps->send_mavlink_gps2_rtk(chan);
+        gps->send_mavlink_gps_rtk(chan, 1);
         ret = true;
         break;
     default:

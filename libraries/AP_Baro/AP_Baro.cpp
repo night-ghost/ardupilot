@@ -34,6 +34,7 @@
 #include "AP_Baro_HIL.h"
 #include "AP_Baro_KellerLD.h"
 #include "AP_Baro_MS5611.h"
+#include "AP_Baro_LPS25H.h"
 #include "AP_Baro_qflight.h"
 #include "AP_Baro_QURT.h"
 #if HAL_WITH_UAVCAN
@@ -476,6 +477,9 @@ void AP_Baro::init(void)
 #elif HAL_BARO_DEFAULT == HAL_BARO_QURT
     drivers[0] = new AP_Baro_QURT(*this);
     _num_drivers = 1;
+#elif HAL_BARO_DEFAULT == HAL_BARO_LPS25H
+	ADD_BACKEND(AP_Baro_LPS25H::probe(*this,
+                                      std::move(hal.i2c_mgr->get_device(HAL_BARO_LPS25H_I2C_BUS, HAL_BARO_LPS25H_I2C_ADDR))));
 #endif
 
 #ifdef HAL_BARO_MS5611_I2C_BUS

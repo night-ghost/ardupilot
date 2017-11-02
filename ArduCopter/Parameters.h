@@ -568,6 +568,13 @@ public:
     
     // control over servo output ranges
     SRV_Channels servo_channels;
+
+    // Safe RTL library
+    AP_SmartRTL smart_rtl;
+
+    // wheel encoder and winch
+    AP_WheelEncoder wheel_encoder;
+    AP_Winch winch;
 };
 
 extern const AP_Param::Info        var_info[];

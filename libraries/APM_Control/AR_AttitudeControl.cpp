@@ -173,9 +173,11 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool skid_st
     float dt = (now - _steer_turn_last_ms) / 1000.0f;
     if (_steer_turn_last_ms == 0 || dt > 0.1) {
         dt = 0.0f;
+        _steer_rate_pid.reset_filter();
+    } else {
+        _steer_rate_pid.set_dt(dt);
     }
     _steer_turn_last_ms = now;
-    _steer_rate_pid.set_dt(dt);
 
     // get speed forward
     float speed;
@@ -202,7 +204,7 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool skid_st
         scaler = 1.0f / fabsf(speed);
     }
 
-    // Calculate the steering rate error (deg/sec) and apply gain scaler
+    // Calculate the steering rate error (rad/sec) and apply gain scaler
     // We do this in earth frame to allow for rover leaning over in hard corners
     float yaw_rate_earth = _ahrs.get_yaw_rate_earth();
     // check if reversing
@@ -211,15 +213,18 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool skid_st
     }
     float rate_error = (desired_rate - yaw_rate_earth) * scaler;
 
+    // record desired rate for logging purposes only
+    _steer_rate_pid.set_desired_rate(desired_rate);
+
     // pass error to PID controller
     _steer_rate_pid.set_input_filter_all(rate_error);
 
     // get p
     float p = _steer_rate_pid.get_p();
 
-    // get i unless moving at low speed or steering output has hit a limit
-    float i = 0.0f;
-    if (!low_speed && ((is_negative(rate_error) && !motor_limit_left) || (is_positive(rate_error) && !motor_limit_right))) {
+    // get i unless non-skid-steering rover at low speed or steering output has hit a limit
+    float i = _steer_rate_pid.get_integrator();
+    if ((!low_speed || skid_steering) && ((is_negative(rate_error) && !motor_limit_left) || (is_positive(rate_error) && !motor_limit_right))) {
         i = _steer_rate_pid.get_i();
     }
 
@@ -249,6 +254,7 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool skid_
     float dt = (now - _speed_last_ms) / 1000.0f;
     if (_speed_last_ms == 0 || dt > 0.1) {
         dt = 0.0f;
+        _throttle_speed_pid.reset_filter();
     }
     _speed_last_ms = now;
 
@@ -269,11 +275,14 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool skid_
     float speed_error = desired_speed - speed;
     _throttle_speed_pid.set_input_filter_all(speed_error);
 
+    // record desired speed for logging purposes only
+    _throttle_speed_pid.set_desired_rate(desired_speed);
+
     // get p
     float p = _throttle_speed_pid.get_p();
 
     // get i unless moving at low speed or motors have hit a limit
-    float i = 0.0f;
+    float i = _throttle_speed_pid.get_integrator();
     if ((is_negative(speed_error) && !motor_limit_low && !_throttle_limit_low) || (is_positive(speed_error) && !motor_limit_high && !_throttle_limit_high)) {
         i = _throttle_speed_pid.get_i();
     }
@@ -297,11 +306,11 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool skid_
     // protect against reverse output being sent to the motors unless braking has been enabled
     if (!_brake_enable) {
         // if both desired speed and actual speed are positive, do not allow negative values
-        if (is_positive(speed) && is_positive(desired_speed) && !is_positive(throttle_out)) {
+        if ((desired_speed >= 0.0f) && (throttle_out <= 0.0f)) {
             throttle_out = 0.0f;
             _throttle_limit_low = true;
         }
-        if (is_negative(speed) && is_negative(desired_speed) && !is_negative(throttle_out)) {
+        if ((desired_speed <= 0.0f) && (throttle_out >= 0.0f)) {
             throttle_out = 0.0f;
             _throttle_limit_high = true;
         }

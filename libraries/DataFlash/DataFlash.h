@@ -22,6 +22,8 @@
 #include <AP_Rally/AP_Rally.h>
 #include <AP_Beacon/AP_Beacon.h>
 #include <AP_Proximity/AP_Proximity.h>
+#include <AP_InertialSensor/AP_InertialSensor_Backend.h>
+
 #include <stdint.h>
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4
@@ -50,22 +52,22 @@ class DataFlash_Class
 public:
     FUNCTOR_TYPEDEF(print_mode_fn, void, AP_HAL::BetterStream*, uint8_t);
     FUNCTOR_TYPEDEF(vehicle_startup_message_Log_Writer, void);
-    DataFlash_Class(const char *firmware_string, const AP_Int32 &log_bitmask) :
-        _firmware_string(firmware_string),
-        _log_bitmask(log_bitmask)
-        {
-            AP_Param::setup_object_defaults(this, var_info);
-            if (_instance != nullptr) {
-                AP_HAL::panic("DataFlash must be singleton");
-            }
-            _instance = this;
-        }
+
+    static DataFlash_Class create(const char *firmware_string, const AP_Int32 &log_bitmask) {
+        return DataFlash_Class{firmware_string, log_bitmask};
+    }
 
     // get singleton instance
     static DataFlash_Class *instance(void) {
         return _instance;
     }
-    
+
+    constexpr DataFlash_Class(DataFlash_Class &&other) = default;
+
+    /* Do not allow copies */
+    DataFlash_Class(const DataFlash_Class &other) = delete;
+    DataFlash_Class &operator=(const DataFlash_Class&) = delete;
+
     void set_mission(const AP_Mission *mission);
 
     // initialisation
@@ -106,6 +108,18 @@ public:
     void Log_Write_RFND(const RangeFinder &rangefinder);
     void Log_Write_IMU(const AP_InertialSensor &ins);
     void Log_Write_IMUDT(const AP_InertialSensor &ins, uint64_t time_us, uint8_t imu_mask);
+    bool Log_Write_ISBH(uint16_t seqno,
+                        AP_InertialSensor::IMU_SENSOR_TYPE sensor_type,
+                        uint8_t instance,
+                        uint16_t multiplier,
+                        uint16_t sample_count,
+                        uint64_t sample_us,
+                        float sample_rate_hz);
+    bool Log_Write_ISBD(uint16_t isb_seqno,
+                        uint16_t seqno,
+                        const int16_t x[32],
+                        const int16_t y[32],
+                        const int16_t z[32]);
     void Log_Write_Vibration(const AP_InertialSensor &ins);
     void Log_Write_RCIN(void);
     void Log_Write_RCOUT(void);
@@ -146,6 +160,7 @@ public:
     void Log_Write_AOA_SSA(AP_AHRS &ahrs);
     void Log_Write_Beacon(AP_Beacon &beacon);
     void Log_Write_Proximity(AP_Proximity &proximity);
+    void Log_Write_SRTL(bool active, uint16_t num_points, uint16_t max_points, uint8_t action, const Vector3f& point);
 
     void Log_Write(const char *name, const char *labels, const char *fmt, ...);
 
@@ -209,6 +224,9 @@ public:
     void handle_log_send(class GCS_MAVLINK &);
     bool in_log_download() const { return _in_log_download; }
 
+    float quiet_nanf() const { return nanf("0x4152"); } // "AR"
+    double quiet_nan() const { return nan("0x4152445550490a"); } // "ARDUPI"
+
 protected:
 
     const struct LogStructure *_structures;
@@ -221,6 +239,8 @@ protected:
                                bool is_critical);
 
 private:
+    DataFlash_Class(const char *firmware_string, const AP_Int32 &log_bitmask);
+
     #define DATAFLASH_MAX_BACKENDS 2
     uint8_t _next_backend;
     DataFlash_Backend *backends[DATAFLASH_MAX_BACKENDS];
@@ -269,6 +289,25 @@ private:
     void Log_Write_EKF2(AP_AHRS_NavEKF &ahrs);
     void Log_Write_EKF3(AP_AHRS_NavEKF &ahrs);
 #endif
+
+    void Log_Write_Baro_instance(AP_Baro &baro, uint64_t time_us, uint8_t baro_instance, enum LogMessages type);
+    void Log_Write_IMU_instance(const AP_InertialSensor &ins,
+                                uint64_t time_us,
+                                uint8_t imu_instance,
+                                enum LogMessages type);
+    void Log_Write_Compass_instance(const Compass &compass,
+                                    uint64_t time_us,
+                                    uint8_t mag_instance,
+                                    enum LogMessages type);
+    void Log_Write_Current_instance(const AP_BattMonitor &battery,
+                                    uint64_t time_us,
+                                    uint8_t battery_instance,
+                                    enum LogMessages type,
+                                    enum LogMessages celltype);
+    void Log_Write_IMUDT_instance(const AP_InertialSensor &ins,
+                                  uint64_t time_us,
+                                  uint8_t imu_instance,
+                                  enum LogMessages type);
 
     void backend_starting_new_log(const DataFlash_Backend *backend);
 

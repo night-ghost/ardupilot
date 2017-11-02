@@ -6,6 +6,11 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <time.h>
+#include <cinttypes>
+
+#ifndef PRIu64
+#define PRIu64 "llu"
+#endif
 
 // flogged from AP_Hal_Linux/system.cpp; we don't want to use stopped clock here
 uint64_t now() {
@@ -22,8 +27,8 @@ DataFlashFileReader::~DataFlashFileReader()
 {
     const uint64_t micros = now();
     const uint64_t delta = micros - start_micros;
-    ::printf("Replay counts: %ld bytes  %u entries\n", bytes_read, message_count);
-    ::printf("Replay rates: %ld bytes/second  %ld messages/second\n", bytes_read*1000000/delta, message_count*1000000/delta);
+    ::printf("Replay counts: %" PRIu64 " bytes  %u entries\n", bytes_read, message_count);
+    ::printf("Replay rates: %" PRIu64 " bytes/second  %" PRIu64 " messages/second\n", bytes_read*1000000/delta, message_count*1000000/delta);
 }
 
 bool DataFlashFileReader::open_log(const char *logfile)
@@ -42,6 +47,20 @@ ssize_t DataFlashFileReader::read_input(void *buffer, const size_t count)
     return ret;
 }
 
+void DataFlashFileReader::format_type(uint16_t type, char dest[5])
+{
+    const struct log_Format &f = formats[type];
+    memset(dest,0,5);
+    if (f.length == 0) {
+        return;
+    }
+    strncpy(dest, f.name, 4);
+}
+void DataFlashFileReader::get_packet_counts(uint64_t dest[])
+{
+    memcpy(dest, packet_counts, sizeof(packet_counts));
+}
+
 bool DataFlashFileReader::update(char type[5])
 {
     uint8_t hdr[3];
@@ -52,6 +71,8 @@ bool DataFlashFileReader::update(char type[5])
         printf("bad log header\n");
         return false;
     }
+
+    packet_counts[hdr[2]]++;
 
     if (hdr[2] == LOG_FORMAT_MSG) {
         struct log_Format f;
