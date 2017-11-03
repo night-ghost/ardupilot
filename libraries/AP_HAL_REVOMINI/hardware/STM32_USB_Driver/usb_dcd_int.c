@@ -211,8 +211,7 @@ uint32_t USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
   USB_OTG_GINTSTS_TypeDef  gintr_status;
   uint32_t retval = 0;
   
-  if (USB_OTG_IsDeviceMode(pdev)) /* ensure that we are in device mode */
-  {
+  if (USB_OTG_IsDeviceMode(pdev)) { /* ensure that we are in device mode */
     gintr_status.d32 = USB_OTG_ReadCoreItr(pdev);
     if (!gintr_status.d32) /* avoid spurious interrupt */
     {
@@ -248,6 +247,7 @@ uint32_t USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
     {
       retval |= DCD_HandleUSBSuspend_ISR(pdev);
     }
+
     if (gintr_status.b.sofintr)
     {
       retval |= DCD_HandleSof_ISR(pdev);

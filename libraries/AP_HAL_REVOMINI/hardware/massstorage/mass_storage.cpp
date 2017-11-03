@@ -15,6 +15,7 @@ uint32_t MAL_massBlockSize[STORAGE_LUN_NBR];
 
 extern USB_OTG_CORE_HANDLE           USB_OTG_dev;
 
+
 void MassStorage::setup() const {
     usb_attr_t usb_attr;
     
@@ -51,21 +52,21 @@ uint16_t usb_mass_mal_get_status(uint8_t lun){
 }
 
 
-int8_t usb_mass_mal_write_memory(uint8_t lun, uint32_t lba, uint8_t *writebuff, uint16_t transferLength) {  
+int8_t usb_mass_mal_write_memory(uint8_t lun,uint8_t *writebuff,  uint32_t lba, uint16_t transferLength) {  
   if (lun != 0) {
     return USB_MASS_MAL_FAIL;
   }
-  if (Sd2Card::writeBlock(lba, writebuff, transferLength)) {
+  if (Sd2Card::writeBlock(writebuff, lba, transferLength)) {
     return USB_MASS_MAL_SUCCESS;
   }
   return USB_MASS_MAL_FAIL;
 }
 
-int8_t usb_mass_mal_read_memory(uint8_t lun, uint32_t lba, uint8_t *readbuff, uint16_t transferLength) {
+int8_t usb_mass_mal_read_memory(uint8_t lun, uint8_t *readbuff, uint32_t lba, uint16_t transferLength) {
   if (lun != 0) {
     return USB_MASS_MAL_FAIL;
   }
-  if (Sd2Card::readBlock(lba, readbuff, transferLength)) {
+  if (Sd2Card::readBlock(readbuff, lba, transferLength)) {
     return USB_MASS_MAL_SUCCESS;
   }
   return USB_MASS_MAL_FAIL;

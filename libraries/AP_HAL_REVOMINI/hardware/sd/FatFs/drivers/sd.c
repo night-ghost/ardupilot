@@ -44,6 +44,10 @@
 #define CMD58	(58)		/* READ_OCR */
 
 
+static inline  uint32_t micros() {  return timer_get_count32(TIMER5); }
+
+static inline  uint32_t millis() {  return systick_uptime(); }
+
 // utility function 
 extern uint8_t spi_spiSend(uint8_t b);
 extern uint8_t spi_spiRec(void);
@@ -505,8 +509,9 @@ DRESULT sd_read (
 		        got++;
 		        buff += 512;
 		    } while (--count);
-		    send_cmd(CMD12, 0);				/* STOP_TRANSMISSION */
-		    if(got && count) {     // readed only 1 block
+		    if(got) send_cmd(CMD12, 0);				/* STOP_TRANSMISSION */
+		    
+		    if(count) {     // readed only 1 block or none
 		        sector+=got*sectorInc;
 		        single_sector_card=true;
 		        return sd_read(buff, sector/sectorInc, count); // read remaining in single sector mode
@@ -563,13 +568,19 @@ DRESULT sd_write (
 	    } else {
 				/* Multiple sector write */
 		if (CardType & CT_SDC) send_cmd(ACMD23, count);	/* Predefine number of sectors */
-
+                uint32_t sent=0;
 		if (send_cmd(CMD25, sector) == 0) {	/* WRITE_MULTIPLE_BLOCK */
 		    do {
 			if (!xmit_datablock(buff, 0xFC)) break;
 			buff += 512;
+			sent++;
 		    } while (--count);
 		    if (!xmit_datablock(0, 0xFD)) count = 1;	/* STOP_TRAN token */
+		}
+		if(count) {
+		    single_sector_card=true;
+	            sector+=sent*sectorInc;
+		    return sd_write(buff, sector/sectorInc, count); // write remaining in single sector mode
 		}
 	    }
 	}

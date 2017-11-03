@@ -46,11 +46,13 @@
 /** @defgroup USBD_CORE_Exported_Defines
   * @{
   */ 
-#define BOT_IDLE                      0       /* Idle state */
-#define BOT_DATA_OUT                  1       /* Data Out state */
-#define BOT_DATA_IN                   2       /* Data In state */
-#define BOT_LAST_DATA_IN              3       /* Last Data In Last */
-#define BOT_SEND_DATA                 4       /* Send Immediate data */
+ enum BOT_STATE {
+    BOT_IDLE           =           0,       /* Idle state */
+    BOT_DATA_OUT       =           1,       /* Data Out state */
+    BOT_DATA_IN        =           2,       /* Data In state */
+    BOT_LAST_DATA_IN   =           3,       /* Last Data In Last */
+    BOT_SEND_DATA      =           4,       /* Send Immediate data */
+};
 
 #define BOT_CBW_SIGNATURE             0x43425355
 #define BOT_CSW_SIGNATURE             0x53425355
@@ -137,6 +139,7 @@ void MSC_BOT_SendCSW (USB_OTG_CORE_HANDLE  *pdev,
 
 void  MSC_BOT_CplClrFeature (USB_OTG_CORE_HANDLE  *pdev, 
                              uint8_t epnum);
+void  MSC_BOT_CBW_finish (USB_OTG_CORE_HANDLE  *pdev);
 /**
   * @}
   */ 

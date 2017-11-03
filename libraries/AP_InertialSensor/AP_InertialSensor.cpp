@@ -1172,7 +1172,8 @@ AP_InertialSensor::_init_gyro()
 
     // we've kept the user waiting long enough - use the best pair we
     // found so far
-    hal.console->printf("\n");
+    hal.console->printf(" done!\n");
+    
     for (uint8_t k=0; k<num_gyros; k++) {
         if (!converged[k]) {
             hal.console->printf("gyro[%u] did not converge: diff=%f dps (expected < %f)\n",

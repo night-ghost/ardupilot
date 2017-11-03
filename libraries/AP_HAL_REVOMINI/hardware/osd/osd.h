@@ -17,8 +17,8 @@ extern const AP_HAL::HAL& hal;
 #include "osd_core/Defs.h"
 
 
-#define OSD_LOW_PRIORITY 120 // 20 less than main task so runs only in delay() time
-#define OSD_HIGH_PRIORITY 99
+#define OSD_LOW_PRIORITY 115 // 15 less than main task so runs almost only in delay() time
+#define OSD_HIGH_PRIORITY 99 // 1 more than main so uses 2/3 of CPU
 
 namespace OSDns {// OSD interface emulates UART
 

@@ -50,7 +50,7 @@ int8_t STORAGE_Read(
 	uint32_t blk_addr,  // address of 1st block to be read
 	uint16_t blk_len)   // nmber of blocks to be read
 {
-        return usb_mass_mal_read_memory(lun, blk_addr, buf, blk_len);
+        return usb_mass_mal_read_memory(lun, buf, blk_addr, blk_len);
 }
 
 int8_t STORAGE_Write(uint8_t lun,
@@ -58,7 +58,7 @@ int8_t STORAGE_Write(uint8_t lun,
 	uint32_t blk_addr,
 	uint16_t blk_len)
 {
-	return usb_mass_mal_write_memory(lun, blk_addr, buf, blk_len);
+	return usb_mass_mal_write_memory(lun, buf, blk_addr, blk_len);
 }
 
 inline int8_t STORAGE_GetMaxLun(void)

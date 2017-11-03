@@ -23,7 +23,7 @@ void boardInit(void);
 
 #define BOARD_BUTTON_PIN     254
 
-#define BOARD_BUZZER_PIN        105 // PB15, PWM2 - used as PPM2
+#define BOARD_BUZZER_PIN        105 
 
 #define BOARD_NR_USARTS         5
 #define BOARD_USART1_TX_PIN     23 
@@ -74,8 +74,7 @@ void boardInit(void);
 
 
 # define BOARD_GPIO_A_LED_PIN        36  // BLUE
-# define BOARD_GPIO_B_LED_PIN        9      //  frequency select - resistor to VCC or ground
-# define BOARD_GPIO_C_LED_PIN        105 // RED
+# define BOARD_GPIO_B_LED_PIN        6   // NC - PC0 pin 8
 
 # define BOARD_LED_ON           LOW
 # define BOARD_LED_OFF          HIGH
@@ -149,9 +148,9 @@ void boardInit(void);
 #define SERVO_PIN_5 48 // PA1
 #define SERVO_PIN_6 22 // PA8
 
-#define HAL_CONSOLE USB_Driver // console on USB
-#define HAL_CONSOLE_PORT 0
-//#define HAL_CONSOLE uart1Driver // console on radio
+//#define HAL_CONSOLE USB_Driver // console on USB
+#define HAL_CONSOLE_PORT 1
+#define HAL_CONSOLE uart1Driver // console on radio
 
 /*
      DMA modes:

@@ -84,7 +84,6 @@ struct task_t {
 extern "C" {
     extern unsigned _estack; // defined by link script
     extern uint32_t us_ticks;
-    extern void *__brkval;
     extern void *_sdata;
     extern void *_sccm;  // start of CCM
     extern void *_eccm;  // end of CCM vars
@@ -111,6 +110,12 @@ extern "C" {
     void hal_delay_us_ny(uint16_t t);
     uint32_t hal_micros();
     void hal_isr_time(uint32_t t);
+    
+    // task management for USB
+    void hal_set_task_active(void * handle); 
+    void hal_context_switch_isr();
+    void * hal_register_task(voidFuncPtr task, uint32_t stack);
+    void hal_set_task_priority(void * handle, uint8_t prio);
 }
 
 
@@ -198,7 +203,7 @@ public:
     static void _reboot(bool hold_in_bootloader);
     void     reboot(bool hold_in_bootloader);
 
-//    bool in_main_thread() const override { return _in_main_thread(); }
+    bool in_main_thread() const override { return _in_main_thread(); }
 
 // drivers are not the best place for its own sheduler so let do it here
     static AP_HAL::Device::PeriodicHandle register_timer_task(uint32_t period_us, AP_HAL::Device::PeriodicCb proc, REVOMINI::Semaphore *sem) {

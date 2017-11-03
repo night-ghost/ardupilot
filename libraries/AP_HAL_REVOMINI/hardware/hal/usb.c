@@ -148,6 +148,14 @@ const __ALIGN_BEGIN U8 USBD_DeviceQualifierDesc[USB_LEN_DEV_QUALIFIER_DESC] __AL
   0x00,
 };
 
+
+// handler for hardware ISR
+void OTG_FS_IRQHandler(void)
+{
+  USBD_OTG_ISR_Handler(&USB_OTG_dev);
+}
+
+
 /* USB Standard Device Descriptor */
 const __ALIGN_BEGIN U8 USBD_LangIDDesc[USB_SIZ_STRING_LANGID] __ALIGN_END =
 {
@@ -180,10 +188,7 @@ U8 * USBD_USR_LangIDStrDescriptor(U8 speed, U16 *length)
 /* return the product string descriptor */
 U8 * USBD_USR_ProductStrDescriptor(U8 speed, U16 *length)
 {
-//    if (usb_attr && usb_attr->description)
-//	USBD_GetString ((U8 *)usb_attr->description, USBD_StrDesc, length);
-//    else
-	USBD_GetString ((U8 *)USBD_PRODUCT_FS_STRING, USBD_StrDesc, length);
+    USBD_GetString ((U8 *)USBD_PRODUCT_FS_STRING, USBD_StrDesc, length);
 
     return USBD_StrDesc;
 }
@@ -191,30 +196,21 @@ U8 * USBD_USR_ProductStrDescriptor(U8 speed, U16 *length)
 /* return the manufacturer string descriptor */
 U8 * USBD_USR_ManufacturerStrDescriptor(U8 speed, U16 *length)
 {
-//    if (usb_attr && usb_attr->manufacturer)
-//	USBD_GetString ((U8 *)usb_attr->manufacturer, USBD_StrDesc, length);
-//    else
-	USBD_GetString ((U8 *)USBD_MANUFACTURER_STRING, USBD_StrDesc, length);
+    USBD_GetString ((U8 *)USBD_MANUFACTURER_STRING, USBD_StrDesc, length);
     return USBD_StrDesc;
 }
 
 /* return the serial number string descriptor */
 U8 *  USBD_USR_SerialStrDescriptor(U8 speed, U16 *length)
 {
-//    if (usb_attr && usb_attr->serial_number)
-//	USBD_GetString ((U8 *)usb_attr->serial_number, USBD_StrDesc, length);
-//    else
-	USBD_GetString ((U8 *)USBD_SERIALNUMBER_FS_STRING, USBD_StrDesc, length);
+    USBD_GetString ((U8 *)USBD_SERIALNUMBER_FS_STRING, USBD_StrDesc, length);
     return USBD_StrDesc;
 }
 
 /* return the configuration string descriptor */
 U8 * USBD_USR_ConfigStrDescriptor(U8 speed , U16 *length)
 {
-//    if (usb_attr && usb_attr->configuration)
-//	USBD_GetString ((U8 *)usb_attr->configuration, USBD_StrDesc, length);
-//    else	
-	USBD_GetString ((U8 *)USBD_CONFIGURATION_FS_STRING, USBD_StrDesc, length); 
+    USBD_GetString ((U8 *)USBD_CONFIGURATION_FS_STRING, USBD_StrDesc, length); 
     return USBD_StrDesc;
 }
 
@@ -222,10 +218,7 @@ U8 * USBD_USR_ConfigStrDescriptor(U8 speed , U16 *length)
 /* return the interface string descriptor */
 U8 * USBD_USR_InterfaceStrDescriptor( U8 speed , U16 *length)
 {
-//    if (usb_attr && usb_attr->interface)
-//	USBD_GetString ((U8 *)usb_attr->interface, USBD_StrDesc, length);
-//    else	
-	USBD_GetString ((U8 *)USBD_INTERFACE_FS_STRING, USBD_StrDesc, length);
+    USBD_GetString ((U8 *)USBD_INTERFACE_FS_STRING, USBD_StrDesc, length);
     return USBD_StrDesc;
 }
 
@@ -237,15 +230,14 @@ void USBD_USR_Init(void)
 
 void USBD_USR_DeviceReset(uint8_t speed )
 {
-	 switch (speed)
-	 {
-		 case USB_OTG_SPEED_HIGH: 
-			 break;
-		 case USB_OTG_SPEED_FULL: 
-			 break;
-		 default:
-			 break;
-	 }
+     switch (speed) {
+     case USB_OTG_SPEED_HIGH: 
+	 break;
+     case USB_OTG_SPEED_FULL: 
+	 break;
+     default:
+	 break;
+     }
 }
 
 void USBD_USR_DeviceConfigured (void)
@@ -346,18 +338,7 @@ int usb_configure(usb_attr_t * attr)
     if (attr == NULL)
 	return 0;
 
-
     usb_setParams(attr);
-/*
-    if (attr->use_present_pin) {
-		if (!IS_GPIO_ALL_PERIPH(attr->present_port->GPIOx) || !IS_GPIO_PIN_SOURCE(attr->present_pin))
-			return 0;
-		gpio_set_mode(attr->present_port, attr->present_pin, GPIO_INPUT_FLOATING);
-    }
-
-    preempt_prio = attr->preempt_prio;
-    sub_prio = attr->sub_prio;
-*/
 
     // USB Device Initialize
     USBD_Init(&USB_OTG_dev, USB_OTG_FS_CORE_ID, &USR_desc, &USBD_CDC_cb, &USR_cb);
@@ -384,28 +365,15 @@ void usb_setParams(usb_attr_t * attr)
 
 
 
-void USB_OTG_BSP_mDelay (const uint32_t msec)
-{
-    uint32_t start = systick_micros(), ms = msec;
-
-    while (ms > 0) {
-        while ((systick_micros() - start) >= 1000) {
-            ms--;
-            if (ms == 0) break;
-            start += 1000;
-        }
-    }
- }
 
 void USB_OTG_BSP_EnableInterrupt(USB_OTG_CORE_HANDLE *pdev)
 {
-	NVIC_InitTypeDef NVIC_InitStructure;
-	NVIC_InitStructure.NVIC_IRQChannel = OTG_FS_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = preempt_prio;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = sub_prio;
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&NVIC_InitStructure);
-
+    NVIC_InitTypeDef NVIC_InitStructure;
+    NVIC_InitStructure.NVIC_IRQChannel = OTG_FS_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = preempt_prio;
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = sub_prio;
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStructure);
 }
 
 void USB_OTG_BSP_DisableInterrupt()
@@ -418,6 +386,27 @@ void USB_OTG_BSP_DisableInterrupt()
 	NVIC_Init(&NVIC_InitStructure);
 
 }
+
+void USB_OTG_BSP_mDelay (const uint32_t msec)
+{
+    uint32_t start = systick_micros(), ms = msec;
+
+    while (ms > 0) {
+        while ((systick_micros() - start) >= 1000) {
+            ms--;
+            if (ms == 0) break;
+            start += 1000;
+        }
+    }
+}
+
+
+
+
+
+
+
+
 
 /* VCP_Init
  * Initializes the Media on the STM32
@@ -673,13 +662,7 @@ static U16 VCP_DataRx(U8 *buffer, U32 nbytes)
     return sz;
 }
 
-void OTG_FS_IRQHandler(void)
-{
-    uint32_t t=hal_micros();
-    USBD_OTG_ISR_Handler(&USB_OTG_dev);
-    
-    hal_isr_time(hal_micros() - t);
-}
+
 
 
 

@@ -250,7 +250,7 @@ void AP_BoardLED2::update(void)
             uint16_t sats = AP_Notify::flags.gps_num_sats;
     
             if(_sat_cnt<16) { // pause between pulses
-                hal.gpio->write(HAL_GPIO_C_LED_PIN, HAL_GPIO_LED_OFF);
+                hal.gpio->write(HAL_GPIO_B_LED_PIN, HAL_GPIO_LED_OFF);
             } else if(_sat_cnt< (16 + (sats-6)*2) ) {
                 hal.gpio->toggle(HAL_GPIO_B_LED_PIN); // 2Hz
             } else {

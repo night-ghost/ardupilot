@@ -151,7 +151,7 @@ void spi_chipSelectHigh(void) {
 
 bool spi_chipSelectLow(bool take_sem) {
     if(take_sem){
-        if(!_spi_sem->take(100)) return false;
+        if(!_spi_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) return false;
 
         _spi->set_speed(AP_HAL::Device::SPEED_HIGH);
 
@@ -184,7 +184,7 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
 
     _spi_sem = _spi->get_semaphore();
 
-    if(!_spi_sem->take(10)) return false;
+    if(!_spi_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) return false;
 
     //_spi->register_periodic_callback(1000, FUNCTOR_BIND_MEMBER(&Sd2Card::_timer, void));
     Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&Sd2Card::_timer, void) };
@@ -212,7 +212,7 @@ void spi_chipSelectHigh(void) {
 
 bool spi_chipSelectLow(bool take_sem) {
     if(take_sem){
-        if(!_spi_sem->take(100)) return false;
+        if(!_spi_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) return false;
 
         _spi->set_speed(AP_HAL::Device::SPEED_HIGH);
 
@@ -243,7 +243,7 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
         return false;
     }
 
-    if(!_spi_sem->take(10)) return false; // just for check
+    if(!_spi_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) return false; // just for check
 
     _spi_sem->give();
 

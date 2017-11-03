@@ -107,7 +107,7 @@ static INLINE void setupCCM(){
         *dest++ = 0;
     }
 
-#if 1
+#if 0
     uint32_t sp;
     
     // Get stack pointer

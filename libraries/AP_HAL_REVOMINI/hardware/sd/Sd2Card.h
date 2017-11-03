@@ -72,11 +72,11 @@ public:
     static uint8_t type(void) { return sd_get_type(); }
 
     static uint16_t errorCode() { return sd_status(); }
-    static uint8_t writeBlock(uint32_t block, uint8_t *buff) { return sd_write(buff, block, 1)==RES_OK; }
-    static uint8_t readBlock(uint32_t block, uint8_t *buff){   return sd_read( buff, block, 1)==RES_OK; }
+    static uint8_t writeBlock(uint8_t *buff, uint32_t block) {               return sd_write(buff, block, 1)==RES_OK; }
+    static uint8_t readBlock(uint8_t *buff, uint32_t block){                 return sd_read( buff, block, 1)==RES_OK; }
 
-    static uint8_t writeBlock(uint32_t block, uint8_t *buff, uint16_t len) { return sd_write(buff, block, len)==RES_OK; }
-    static uint8_t readBlock(uint32_t block, uint8_t *buff, uint16_t len){   return sd_read( buff, block, len)==RES_OK; }
+    static uint8_t writeBlock(uint8_t *buff, uint32_t block, uint16_t len) { return sd_write(buff, block, len)==RES_OK; }
+    static uint8_t readBlock(uint8_t *buff, uint32_t block, uint16_t len){   return sd_read( buff, block, len)==RES_OK; }
     
     static uint8_t ioctl(uint32_t cmd, uint32_t *buff){   return sd_ioctl(cmd, buff) == RES_OK; }
 

@@ -207,11 +207,10 @@ void AP_Notify::add_backends(void)
 
 
 #elif CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
-
-    _devices[0] = new AP_BoardLED2();
-    _devices[1] = new ToshibaLED_I2C();
-    _devices[2] = new Buzzer();
-    _devices[3] = new Display();
+    ADD_BACKEND(new AP_BoardLED2());
+    ADD_BACKEND(new ToshibaLED_I2C(TOSHIBA_LED_I2C_BUS_EXTERNAL));
+    ADD_BACKEND(new Buzzer());
+    ADD_BACKEND(new Display());
 
 #else
     ADD_BACKEND(new AP_BoardLED());

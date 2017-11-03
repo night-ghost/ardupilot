@@ -197,6 +197,8 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
             usb_init(); // moved from boards.cpp
 
             uartA->begin(115200); // uartA is the USB serial port used for the console, so lets make sure it is initialized at boot 
+
+
         }
     }
     
@@ -210,20 +212,21 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
     storage->init(); // Uses EEPROM.*, flash_stm* reworked
     analogin->init();
 
-#if defined(BOARD_SDCARD_NAME) && defined(BOARD_SDCARD_CS_PIN)
     if(!state.sd_busy) {
-        SD.begin(REVOMINI::SPIDeviceManager::_get_device(BOARD_SDCARD_NAME));
-    }
-#elif defined(BOARD_DATAFLASH_FATFS)
-    if(!state.sd_busy) {
-        SD.begin(REVOMINI::SPIDeviceManager::_get_device(HAL_DATAFLASH_NAME));
-    }
-#endif
 
+#if defined(BOARD_SDCARD_NAME) && defined(BOARD_SDCARD_CS_PIN)
+        SD.begin(REVOMINI::SPIDeviceManager::_get_device(BOARD_SDCARD_NAME));
+#elif defined(BOARD_DATAFLASH_FATFS)
+        SD.begin(REVOMINI::SPIDeviceManager::_get_device(HAL_DATAFLASH_NAME));
+#endif
 
 #if defined(BOARD_OSD_NAME)
-    uartF->begin(57600); // init OSD before call to lateInit()
+        uartF->begin(57600); // init OSD after SD but before call to lateInit(), but only if not in USB_STORAGE
 #endif
+
+    }
+
+
 
     callbacks->setup();
 

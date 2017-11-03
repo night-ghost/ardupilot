@@ -11,10 +11,6 @@
 #include <timer.h>
 #include <string.h>
 
-static inline  uint32_t micros() {  return timer_get_count32(TIMER5); }
-
-static inline  uint32_t millis() {  return systick_uptime(); }
-
 #define FAT_SECTOR_SIZE 512
 
 

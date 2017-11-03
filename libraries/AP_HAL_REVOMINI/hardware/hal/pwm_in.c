@@ -38,13 +38,6 @@ also see https://github.com/mahowik/MahoRotorF4-Discovery/blob/master/src/drv/dr
 #include <boards.h>
 #include "ring_buffer_pulse.h"
 
-#define MINONWIDTH 920 * 2
-#define MAXONWIDTH 2120 * 2
-// PATCH FOR FAILSAFE AND FRSKY
-#define MINOFFWIDTH 1000 * 2
-#define MAXOFFWIDTH 22000 * 2
-
-
 #define PPM_CHANNELS 2 // independent input pins
 
 
@@ -136,7 +129,6 @@ static inline void pwmInitializeInput(uint8_t ppmsum){
             const struct TIM_Channel *channel = &PWM_Channels[i];
 
             const stm32_pin_info *p     = &PIN_MAP[channel->pin];
-
             const gpio_dev       *dev   = p->gpio_device;
             uint8_t               bit   = p->gpio_bit;
             const timer_dev      *timer = p->timer_device;

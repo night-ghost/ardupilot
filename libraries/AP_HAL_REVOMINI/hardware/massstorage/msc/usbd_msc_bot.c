@@ -138,6 +138,8 @@ void MSC_BOT_Init (USB_OTG_CORE_HANDLE  *pdev)
                     MSC_OUT_EP,
                     (uint8_t *)&MSC_BOT_cbw,
                     BOT_CBW_LENGTH);    
+
+    SCSI_Init();
 }
 
 /**
@@ -239,6 +241,8 @@ void MSC_BOT_DataOut (USB_OTG_CORE_HANDLE  *pdev,
 * @param  pdev: device instance
 * @retval None
 */
+
+
 static void  MSC_BOT_CBW_Decode (USB_OTG_CORE_HANDLE  *pdev)
 {
 
@@ -256,36 +260,40 @@ static void  MSC_BOT_CBW_Decode (USB_OTG_CORE_HANDLE  *pdev)
                    ILLEGAL_REQUEST, 
                    INVALID_CDB);
      MSC_BOT_Status = BOT_STATE_ERROR;   
-    MSC_BOT_Abort(pdev);
- 
+     MSC_BOT_Abort(pdev);
+     return;
   }
-  else
-  {
-    if(SCSI_ProcessCmd(pdev,
-                              MSC_BOT_cbw.bLUN,
-                              &MSC_BOT_cbw.CB[0]) < 0)
-    {
-      MSC_BOT_Abort(pdev);
+
+    if(SCSI_ProcessCmd(pdev,  MSC_BOT_cbw.bLUN,
+                              &MSC_BOT_cbw.CB[0]) < 0){
+          MSC_BOT_Abort(pdev);
+      
+          return;
     }
-    /*Burst xfer handled internally*/
-    else if ((MSC_BOT_State != BOT_DATA_IN) && 
-             (MSC_BOT_State != BOT_DATA_OUT) &&
-             (MSC_BOT_State != BOT_LAST_DATA_IN)) 
+
+    // MSC_BOT_CBW_finish(); moved out to SCSI task
+
+}
+
+
+void  MSC_BOT_CBW_finish (USB_OTG_CORE_HANDLE  *pdev){
+    /*Burst xfer handled internally*/    
+    if ((MSC_BOT_State != BOT_DATA_IN) && 
+             (MSC_BOT_State != BOT_DATA_OUT) && 
+             (MSC_BOT_State != BOT_LAST_DATA_IN))  // idle or BOT_SEND_DATA
     {
-      if (MSC_BOT_DataLen > 0)
-      {
+      if (MSC_BOT_DataLen > 0)  {
         MSC_BOT_SendData(pdev,
                          MSC_BOT_Data, 
                          MSC_BOT_DataLen);
-      }
-      else if (MSC_BOT_DataLen == 0) 
-      {
+        MSC_BOT_DataLen=0;
+      } else if (MSC_BOT_DataLen == 0) {
         MSC_BOT_SendCSW (pdev,
                          CSW_CMD_PASSED);
       }
     }
-  }
 }
+
 
 /**
 * @brief  MSC_BOT_SendData

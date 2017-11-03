@@ -9,6 +9,8 @@
 
 using namespace REVOMINI;
 
+#include <AP_Common/AP_Common.h>
+#include <stdio.h>
 
 #include <hal.h>
 #include "ring_buffer.h"
@@ -25,6 +27,7 @@ using namespace REVOMINI;
 #include "osd_eeprom.h"
 #include "osd_core/eeprom.h"
 #include "osd_core/version.h"
+#include <sd/SD.h>
 
 
 namespace OSDns {
@@ -41,7 +44,6 @@ OSD osd; //OSD object
 #include "osd_core/misc.h"
 #include "osd_core/Panels.h"
 
-#include <sd/SD.h>
 
 // TODO: чтение конфига и еепром с карты памяти, чтобы закинуть .mcm и .osd и все       
 static const char * const words[] = {
@@ -165,37 +167,39 @@ typedef struct OSD_PAN {
     uint8_t pan_n;
 } OSD_pan;
 
+#define m1 ((uint8_t)-1)
+
 static OSD_pan pan_tbl[]={
     { 0, 0, 0, 0, },
-    { 0, 0,  0, ID_of(airSpeed), },     //    "Air Speed",        // 1
+    { 0, 0, 0, ID_of(airSpeed), },     //    "Air Speed",        // 1
     { 0, 0, 0, ID_of(alt), },          //    "Altitude",         // 2
-    { 9,    -1, 0, 0, },               //        "Auto Mode",        // 3 - bit in flags
-    { 7,    -1, 0, 0, },               //        "Auto Screen Switch", // 4 
-    { offsetof(Settings,evBattA_koef),    sizeof(Settings.evBattA_koef),   'f', 0, }, //        "batt_a_k",         
-    { offsetof(Settings,battBv),          sizeof(Settings.battBv),         'b', 0, },  //        "BattB",            
-    { offsetof(Settings,evBattB_koef),    sizeof(Settings.evBattB_koef),   'f', 0, }, //        "batt_b_k",         
-    { offsetof(Settings,battv),           sizeof(Settings.battv),          'b', 0, },  //        "Battery",          
+    { 9,    m1, 0, 0, },               //        "Auto Mode",        // 3 - bit in flags
+    { 7,    m1, 0, 0, },               //        "Auto Screen Switch", // 4 
+    { offsetof(Settings,evBattA_koef),    sizeof(sets.evBattA_koef),   'f', 0, }, //        "batt_a_k",         
+    { offsetof(Settings,battBv),          sizeof(sets.battBv),         'b', 0, },  //        "BattB",            
+    { offsetof(Settings,evBattB_koef),    sizeof(sets.evBattB_koef),   'f', 0, }, //        "batt_b_k",         
+    { offsetof(Settings,battv),           sizeof(sets.battv),          'b', 0, },  //        "Battery",          
     { 0, 0, 0, ID_of(batt_A), },       //        "Battery A",        // 9
     { 0, 0, 0, ID_of(batt_B), },       //        "Battery B",        // 10
     { 0, 0, 0, ID_of(batteryPercent), },//       "Battery Percent",  // 11
-    { offsetof(Settings,batt_warn_level), sizeof(Settings.batt_warn_level),'b', 0, },  //        "Battery Warning Level", // 12
-    { offsetof(Settings,OSD_CALL_SIGN),   sizeof(Settings,OSD_CALL_SIGN),  'c', 0, },  //        "Call Sign",        // 13
-    { offsetof(Settings,switch_mode),     sizeof(Settings.switch_mode),    'b', 0, },  //        "Chanel Rotation Switching", // 14
+    { offsetof(Settings,batt_warn_level), sizeof(sets.batt_warn_level),'b', 0, },  //        "Battery Warning Level", // 12
+    { offsetof(Settings,OSD_CALL_SIGN),   sizeof(sets.OSD_CALL_SIGN),  'c', 0, },  //        "Call Sign",        // 13
+    { offsetof(Settings,switch_mode),     sizeof(sets.switch_mode),    'b', 0, },  //        "Chanel Rotation Switching", // 14
     { 0, 0, 0, ID_of(ch), },          //        "Channel Raw",      // 15
-    { 0, 0, 0, ID_of(Scal(), },       //        "Channel Scale",    // 16
+    { 0, 0, 0, ID_of(Scale), },       //        "Channel Scale",    // 16
     { 0, 0, 0, ID_of(State), },       //        "Channel state",    // 17
     { 0, 0, 0, ID_of(CValue), },      //        "Channel Value",    // 18
 
     { 0, 0, 0, 0, },                  //         "Configuration",    // 19
     { 0, 0, 0, ID_of(curr_A), },      //        "Current",          // 20
-    { offsetof(Settings,eCurrent_koef),   sizeof(Settings.eCurrent_koef),  'f', 0, },      //        "curr_k",           // 21
-    { 0, 0, 0, 0, ID_of(eff), },      //        "Efficiency",       // 22
-    { 4, -1,   0, 0, },               //        "fBattA",           // 23
-    { 5, -1,   0, 0, },               //        "fBattB",           // 24      
-    { 6, -1,   0, 0, },               //        "fCurr",            // 25
+    { offsetof(Settings,eCurrent_koef),   sizeof(sets.eCurrent_koef),  'f', 0, },      //        "curr_k",           // 21
+    { 0, 0, 0, ID_of(eff), },         //        "Efficiency",       // 22
+    { 4, m1,   0, 0, },               //        "fBattA",           // 23
+    { 5, m1,   0, 0, },               //        "fBattB",           // 24      
+    { 6, m1,   0, 0, },               //        "fCurr",            // 25
     { 0, 0,    0, 0, },               // 26
     { 0, 0,    0, 0, },               // 27
-    { 0, -1,   0, 0, },               //        "flgOnce",          // 28
+    { 0, m1,   0, 0, },               //        "flgOnce",          // 28
     { 0, 0,    0, 0, },         //29
     { 0, 0, 0, ID_of(Fdata), },       //        "Flight Data",      // 30
     { 0, 0, 0, ID_of(FMod), },        //        "Flight Mode",      // 31
@@ -208,30 +212,30 @@ static OSD_pan pan_tbl[]={
     { 0, 0, 0, ID_of(homeDir), },     //        "Home Direction",   // 38
     { 0, 0, 0, ID_of(homeDist), },    //        "Home Distance",    // 39
     { 0, 0, 0, ID_of(horizon), },     //        "Horizon",          // 40
-    { offsetof(Settings,horiz_offs),      sizeof(Settings.horiz_offs),    'b', 0, },  //        "HOS",              // 41
+    { offsetof(Settings,horiz_offs),      sizeof(sets.horiz_offs),    'b', 0, },  //        "HOS",              // 41
     { 0, 0, 0, ID_of(message), },         //        "Message",          // 42
-    { offsetof(Settings,model_type),      sizeof(Settings.model_type),    'b', 0, },  //        "Model Type",       // 43
-    { offsetof(Settings,n_screens),       sizeof(Settings.n_screens),     'b', 0, },  //        "NSCREENS",         // 44
-    { offsetof(Settings,OSD_BRIGHTNESS),  sizeof(Settings.OSD_BRIGHTNESS),'b', 0, },  //        "OSD Brightness",   // 45
-    { offsetof(Settings,overspeed),       sizeof(Settings,overspeed),     'b', 0, },  //        "Overspeed",        // 46
+    { offsetof(Settings,model_type),      sizeof(sets.model_type),    'b', 0, },  //        "Model Type",       // 43
+    { offsetof(Settings,n_screens),       sizeof(sets.n_screens),     'b', 0, },  //        "NSCREENS",         // 44
+    { offsetof(Settings,OSD_BRIGHTNESS),  sizeof(sets.OSD_BRIGHTNESS),'b', 0, },  //        "OSD Brightness",   // 45
+    { offsetof(Settings,overspeed),       sizeof(sets.overspeed),     'b', 0, },  //        "Overspeed",        // 46
 
     { 0, 0, 0, 0, },                      //       "Panel",             // 47
     { 0, 0, 0, ID_of(pitch), },           //        "Pitch",            // 48
-    { offsetof(Settings,horiz_kPitch),    sizeof(Settings.horiz_kPitch),  'f', 0, }, //        "pitch_k",          // 49
-    { offsetof(Settings,horiz_kPitch_a),  sizeof(Settings.horiz_kPitch_a),'f', 0, }, //        "pitch_kn",         // 50
-    { offsetof(Settings,pwm_dst),         sizeof(Settings.pwm_dst),       'b', 0, }, //        "PWMDST",           // 51
-    { offsetof(Settings,pwm_src),         sizeof(Settings.pwm_src),       'b', 0, }, //        "PWMSRC",           // 52
+    { offsetof(Settings,horiz_kPitch),    sizeof(sets.horiz_kPitch),  'f', 0, }, //        "pitch_k",          // 49
+    { offsetof(Settings,horiz_kPitch_a),  sizeof(sets.horiz_kPitch_a),'f', 0, }, //        "pitch_kn",         // 50
+    { offsetof(Settings,pwm_dst),         sizeof(sets.pwm_dst),       'b', 0, }, //        "PWMDST",           // 51
+    { offsetof(Settings,pwm_src),         sizeof(sets.pwm_src),       'b', 0, }, //        "PWMSRC",           // 52
     { 0, 0, ID_of(RadarScale), },         //        "Radar Scale",      // 53
     { 0, 0, ID_of(COG), },                //        "Real heading",     // 54
     { 0, 0, ID_of(roll), },               //        "Roll",             // 55
-    { offsetof(Settings,horiz_kRoll),    sizeof(Settings.horiz_kRoll),    'f', 0, }, //        "roll_k",           // 56
-    { offsetof(Settings,horiz_kRoll_a),  sizeof(Settings.horiz_kRoll_a),  'f', 0, }, //        "roll_kn",          // 57
+    { offsetof(Settings,horiz_kRoll),    sizeof(sets.horiz_kRoll),    'f', 0, }, //        "roll_k",           // 56
+    { offsetof(Settings,horiz_kRoll_a),  sizeof(sets.horiz_kRoll_a),  'f', 0, }, //        "roll_kn",          // 57
     { 0, 0, ID_of(RSSI), },               //        "RSSI",             // 58
-    { offsetof(Settings,RSSI_raw),       sizeof(Settings.RSSI_raw),       'b', 0, }, //        "RSSI Enable Raw",  // 59
-    { offsetof(Settings,RSSI_16_high),   sizeof(Settings.RSSI_16_high),   'w', 0, }, //        "RSSI High",        // 60
-    { offsetof(Settings,eRSSI_koef),     sizeof(Settings.eRSSI_koef),     'f', 0, }, //        "rssi_k",           // 61
-    { offsetof(Settings,RSSI_16_low),    sizeof(Settings.RSSI_16_low),    'w', 0, }, //        "RSSI Low",         // 62
-    { offsetof(Settings,rssi_warn_level),sizeof(Settings.rssi_warn_level),'b', 0, }, //        "RSSI Warning Level", // 63
+    { offsetof(Settings,RSSI_raw),       sizeof(sets.RSSI_raw),       'b', 0, }, //        "RSSI Enable Raw",  // 59
+    { offsetof(Settings,RSSI_16_high),   sizeof(sets.RSSI_16_high),   'w', 0, }, //        "RSSI High",        // 60
+    { offsetof(Settings,eRSSI_koef),     sizeof(sets.eRSSI_koef),     'f', 0, }, //        "rssi_k",           // 61
+    { offsetof(Settings,RSSI_16_low),    sizeof(sets.RSSI_16_low),    'w', 0, }, //        "RSSI Low",         // 62
+    { offsetof(Settings,rssi_warn_level),sizeof(sets.rssi_warn_level),'b', 0, }, //        "RSSI Warning Level", // 63
     { 0, 0, 0, 0, },         //        "SAdd1",            // 64     // sensors not supported
     { 0, 0, 0, 0, },         //        "SAdd2",            // 65
     { 0, 0, 0, 0, },         //        "SAdd3",            // 66
@@ -248,28 +252,28 @@ static OSD_pan pan_tbl[]={
     { 0, 0, 0, 0, },         //        "SFormat2",         // 77
     { 0, 0, 0, 0, },         //        "SFormat3",         // 78
     { 0, 0, 0, 0, },         //        "SFormat4",         // 79
-    { offsetof(Settings,stall),         sizeof(Settings.stall),           'b', 0, },         //        "Stall",            // 80
+    { offsetof(Settings,stall),         sizeof(sets.stall),           'b', 0, },         //        "Stall",            // 80
     { 0, 0, 0, ID_of(temp), },         //        "Temperature",      // 81
     { 0, 0, 0, ID_of(throttle), },     //        "Throttle",         // 82
     { 0, 0, 0, ID_of(time), },         //        "Time",             // 83
-    { offsetof(Settings,ch_toggle),     sizeof(Settings.ch_toggle),       'b', 0, },         //        "Toggle Channel",   // 84
+    { offsetof(Settings,ch_toggle),     sizeof(sets.ch_toggle),       'b', 0, },         //        "Toggle Channel",   // 84
     { 0, 0, 0, ID_of(distance), },     //        "Trip Distance",    // 85
     { 0, 0, 0, ID_of(tune), },         //        "Tune",             // 86
     { 0, 0, 0, 0, },         //        "txtTime0",         // 87
     { 0, 0, 0, 0, },         //        "txtTime1",         // 88
     { 0, 0, 0, 0, },                        //        "txtTime2",         // 89
     { 0, 0, 0, 0, },                        //        "txtTime3",         // 90
-    { 1, -1, 0, 0, },                       //        "Units",            // 91
+    { 1, m1, 0, 0, },                       //        "Units",            // 91
     { 0, 0, 0, ID_of(vel), },               //        "Velocity",         // 92
     { 0, 0, 0, ID_of(climb), },             //        "Vertical Speed",   // 93
-    { 3, -1, 0, 0, },                       //        "Video Mode",       // 94
+    { 3, m1, 0, 0, },                       //        "Video Mode",       // 94
     { 0, 0, 0, ID_of(GPS_sats), },          //        "Visible Sats",     // 95
-    { offsetof(Settings,vert_offs),     sizeof(Settings.vert_offs),       'b', 0, },         //        "VOS",              // 96
+    { offsetof(Settings,vert_offs),     sizeof(sets.vert_offs),       'b', 0, },         //        "VOS",              // 96
     { 0, 0, 0, ID_of(warn), },              //        "Warnings",         // 97
     { 0, 0, 0, ID_of(windSpeed), },         //        "Wind Speed",       // 98
     { 0, 0, 0, ID_of(WP_dir), },            //        "WP Direction",     // 99
     { 0, 0, 0, ID_of(WP_dist), },           //        "WP Distance",      // 100
-    { 0, 0, 0, ID_of(), },                  // #
+    { 0, 0, 0, 0, },                        // #
     { 0, 0, 0, ID_of(Power), },             //        "Power",            // 102
     { 0, 0, 0, ID_of(fDate), },             //        "Date",             // 103
     { 0, 0, 0, ID_of(dayTime), },           //        "Time of day",      // 104
@@ -280,8 +284,6 @@ static OSD_pan pan_tbl[]={
     { 0, 0, 0, ID_of(coordLon), },          //        "GPS Coord Lon",    // 109
 
 };
-
-static 
 
 static ring_buffer osd_rxrb IN_CCM;
 static uint8_t osd_rx_buf[OSD_RX_BUF_SIZE] IN_CCM;
@@ -309,7 +311,7 @@ void max_do_transfer(const char *buffer, uint16_t len);
 
 uint32_t get_word(char *buf, char * &ptr){
     for(uint32_t i=0; i<ARRAY_SIZE(words); i++){
-        uint32_t=strlen(words[i]);
+        uint32_t len=strlen(words[i]);
         if(strncmp(buf, words[i],len)==0){
             ptr=buf+len;
             return i+1;
@@ -336,16 +338,16 @@ char * get_lex(char *buf, char * &ptro){
 static bool get_flag(char *p) {
     if(!p) return false;
     
-    if(*p=='T' || *p=='t' || *p='1') return true;
+    if(*p=='T' || *p=='t' || *p=='1') return true;
     return false;
 }
 
-//                          x, y,   vis,  sign,    Altf,  Alt2,  Alt3,  Alt4, strings
-//                         30   15  False   0       1       1     1      1    A||||
-static point create_point(px,   py, pVis,  pSign, pAlt,  pAlt2, pAlt3, pAlt4,  ps ){
+//                          x,         y,           vis,          sign,    Altf,        Alt2,        Alt3,          Alt4,     strings
+//                         30         15          False            0       1            1             1              1          A||||
+static point create_point(char *px,   char *py, char *pVis,  char *pSign, char *pAlt,  char *pAlt2, char *pAlt3, char *pAlt4,  char *ps ){
     point p;
-    p.x = strtoul(px);
-    p.y = strtoul(px);
+    p.x = strtoul(px, nullptr, 10);
+    p.y = strtoul(px, nullptr, 10);
     p = do_on(p,   get_flag(pVis));
     p = do_sign(p, get_flag(pSign));
     if(get_flag(pAlt))  p=do_alt(p);
@@ -384,13 +386,23 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 
     OSD_EEPROM::init();
 
+
+
 /*
     lets try to load settings from SD card
 */
     readSettings();
+
+    OSD::update();// clear memory
+
+        
+    doScreenSwitch(); // set vars for startup screen
+
+
     
     File fd = SD.open("eeprom.osd", FILE_READ);
     if (fd) {
+        printf("\nLoading OSD config\n");
         char buf[80];
 //        memset(buf, 0, sizeof(buf));
         uint32_t panel_num=-1;
@@ -399,7 +411,7 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
         while(fd.gets(buf, sizeof(buf)-1) > 0) {
             // we readed one line
             char *ptr;
-            char *p[10]
+            char *p[10];
 
             uint8_t word=get_word(buf,ptr);
             switch(word) {
@@ -408,9 +420,9 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
                 continue;
                 
             case 47: { // panel
-                    p2=get_lex(ptr)
-                    panel_num=strtoul(p2);
-                    uint16_t flags=strtoul(ptr);
+                    char *p2 = get_lex(buf, ptr);
+                    panel_num=strtoul(p2, nullptr, 10);
+                    uint16_t flags=strtoul(ptr, nullptr, 10);
                     write_point(0,flags);
                 }break;
                 
@@ -428,9 +440,10 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
                                 
                 if(is_config){
                     if(pan_tbl[word].size == (uint8_t)-1){ // bit flags
-                        uint32_t flags = Sets.flags;
-                        if(get_flag(p[0]) flags |=  (1<<pan_tbl[word].dst);
-                        else              flags &= ~(1<<pan_tbl[word].dst);
+                        uint32_t flags = sets.flags.dw;
+                        if(get_flag(p[0])) flags |=  (1<<pan_tbl[word].dst);
+                        else               flags &= ~(1<<pan_tbl[word].dst);
+                        sets.flags.dw=flags;
                     } else {
                         union {
                             float f;
@@ -444,25 +457,25 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
                             val.f = atof(p[0]);
                             break;
                         case 'b': // byte
-                            val.b=(uint8_t)strtoul(p[0]);
+                            val.b=(uint8_t)strtoul(p[0], nullptr, 10);
                             break;
                         case 'c': // char
                             strncpy(val.buf, p[0], 8);
                             break;
                         case 'w':
-                            val.w==(uint16_t)strtoul(p[0]);
+                            val.w=(uint16_t)strtoul(p[0], nullptr, 10);
                             break;                    
                         }                    
-                        memmove((&sets) + dst, &val, pan_tbl[word].size);
-                        eeprom_write_len( (&sets) + dst,  EEPROM_offs(sets) + dst,  pan_tbl[word].size);
+                        memmove(         ((uint8_t*)(&sets)) + pan_tbl[word].dst, &val, pan_tbl[word].size);
+                        eeprom_write_len(((uint8_t*)(&sets)) + pan_tbl[word].dst, EEPROM_offs(sets) + pan_tbl[word].dst,  pan_tbl[word].size);
                     }
                 }else{ // panel
                     uint8_t id = pan_tbl[word].pan_n;
                     if(id) {
                 //                           30    15    False   0     1     1     1     1   A||||
-                        point p=create_point(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8] );
+                        point po=create_point(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8] );
                     
-                        write_point(id, p); // save to eeprom
+                        write_point(id, po); // save to eeprom
                     }
                 }
                 
@@ -471,10 +484,97 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
             
         }
         fd.close();
+
         readSettings();
+        
+        sets.CHK1_VERSION = VER;        // set version - EEPROM OK
+        sets.CHK2_VERSION = (VER ^ 0x55);
+        eeprom_write_len( &sets.CHK1_VERSION,  EEPROM_offs(sets) + ((byte *)&sets.CHK1_VERSION - (byte *)&sets),  2 );
+
+        osd.init();    // re-Start display
 
     }
 
+
+    const char font[]="font.mcm";
+    fd = SD.open(font, FILE_READ);
+    if (fd) {
+        char buf[80];
+        
+        if(fd.gets(buf, sizeof(buf)-1)){
+            printf("\nLoading OSD font\n");
+
+            OSD::setPanel(5, 5);
+            osd_print_S(PSTR("font uploading "));
+            OSD::update();// Show it
+            
+            char patt[]="MAX7456";
+            
+            if(strncmp(buf,patt,strlen(patt))==0){
+                uint8_t character_bitmap[0x40];
+                
+                uint16_t font_count = 0;
+                byte byte_count = 0;
+                byte bit_count=0;
+
+                uint8_t chk=0;
+                uint8_t got_any_data=0;
+                uint8_t c=0;
+                uint8_t last_c;
+
+                uint8_t b=0;
+
+                uint8_t cnt=0;
+                while(font_count < 256) {
+                    last_c = c;
+                    if(fd.read(&c,1)<=0) break; // get a char
+                                            
+                    switch(c){ // parse and decode mcm file
+                    case 0x0A: // line feed - skip
+                        if(last_c == 0x0d) continue;
+                        // lf without cr cause line end
+
+                    case 0x0d: // carridge return, end of line
+                        if (bit_count == 8)  {
+                            chk ^= b;
+                            character_bitmap[byte_count] = b;
+                            b = 0;
+                            byte_count++;
+                        }
+                        bit_count = 0;
+                        break;
+
+                    case 0x30: // ascii '0'
+                    case 0x31: // ascii '1' 
+                        b <<= 1;
+                        if(c == 0x31)
+                            b += 1;
+                        bit_count++;
+
+                        got_any_data=1;
+                        break;
+
+                    default:
+                        break;
+                    }
+            
+                    // we have one completed character
+                    // write the character to NVM 
+                    if(byte_count == 64) {
+                        osd.write_NVM(font_count, character_bitmap);
+                        byte_count = 0;
+                        font_count++;
+                        printf(".");
+                        chk=0;
+                    }                    
+                }
+                printf("done\n");
+            }                    
+        }
+
+        fd.close();
+        SD.remove(font); // once!
+    }
 
 
     if( sets.CHK1_VERSION != VER || sets.CHK2_VERSION != (VER ^ 0x55)) { // wrong version
@@ -490,18 +590,12 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
         sets.FW_VERSION[1]=REL_2 + '0';
         sets.FW_VERSION[2]=REL_3 + '0';
 
-        eeprom_write_len( sets.FW_VERSION,  EEPROM_offs(sets) + ((byte *)sets.FW_VERSION - (byte *)&sets),  sizeof(sets.FW_VERSION) );
+        eeprom_write_len( sets.FW_VERSION,  EEPROM_offs(sets) + ((uint8_t *)sets.FW_VERSION - (uint8_t *)&sets),  sizeof(sets.FW_VERSION) );
     }
 
         
-    OSD::update();// clear memory
-
-    osd.init();    // Start display
-        
     logo();
-    
-    doScreenSwitch(); // set vars for startup screen
-    
+
 #ifdef BOARD_OSD_VSYNC_PIN
     Revo_hal_handler h = { .vp = vsync_ISR };
     
@@ -537,7 +631,7 @@ void osd_loop() {
 
 #if defined(MAV_REQUEST) && (defined(USE_MAVLINK) || defined(USE_MAVLINKPX4))
     if(apm_mav_system && !lflags.mav_request_done){ // we got HEARTBEAT packet and still don't send requests
-        for(byte n = 3; n >0; n--){
+        for(uint8_t n = 3; n >0; n--){
             request_mavlink_rates();//Three times to certify it will be readed
             delay_150();
         }

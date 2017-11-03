@@ -169,17 +169,17 @@ task 7 (0x0000000080ADE5D) time:    0.01% mean     84.5uS max   107uS full    70
 
 Timer usage:
 
-1
+1 
 2 RC-Output
 3 RC-Output
-4 soft_i2c0
+4 soft_i2c0, PPM_IN on AirbotV2
 5 micros()
 6 event generation for WFE
 7 scheduler
 8 PPM_IN
 9 soft_i2c1
 10 soft_i2c2 or PPM_IN on AirbotV2
-11 PPM_IN on AirbotV2
+11 
 12 PPM_IN
 13 driver's io_completion
 14 schedule tail timer

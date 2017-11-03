@@ -41,7 +41,6 @@ ToshibaLED_I2C::ToshibaLED_I2C(uint8_t bus)
 
 bool ToshibaLED_I2C::hw_init(void)
 {
-#ifdef TOSHIBA_LED_I2C_BUS_EXTERNAL
     // first look for led on external bus
     _dev = std::move(hal.i2c_mgr->get_device(_bus, TOSHIBA_LED_I2C_ADDR));
     if (!_dev || !_dev->get_semaphore()->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
@@ -54,22 +53,9 @@ bool ToshibaLED_I2C::hw_init(void)
     bool ret = _dev->write_register(TOSHIBA_LED_ENABLE, 0x03);
     if (!ret) {
         _dev->get_semaphore()->give();
-#else
-    bool ret=false;
-    {
-#endif
-
-#ifdef TOSHIBA_LED_I2C_BUS_INTERNAL
-        // get internal I2C bus driver
-        _dev = std::move(hal.i2c_mgr->get_device(TOSHIBA_LED_I2C_BUS_INTERNAL, TOSHIBA_LED_I2C_ADDR));
-        if (!_dev || !_dev->get_semaphore()->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
-            return false;
-        }
-        ret = _dev->write_register(TOSHIBA_LED_ENABLE, 0x03);
-#endif
+        return false;
     }
 
-    if(ret) {
     // update the red, green and blue values to zero
     uint8_t val[4] = { TOSHIBA_LED_PWM0, _led_off, _led_off, _led_off };
     ret = _dev->transfer(val, sizeof(val), nullptr, 0);
@@ -79,13 +65,10 @@ bool ToshibaLED_I2C::hw_init(void)
     // give back i2c semaphore
     _dev->get_semaphore()->give();
 
-    _dev->register_periodic_callback(20000, FUNCTOR_BIND_MEMBER(&ToshibaLED_I2C::_timer, void));
-    } else {         // give back external bus semaphore
-        if(_dev) _dev->get_semaphore()->give();
-
-        _dev = NULL; // no needs for driver
+    if (ret) {
+        _dev->register_periodic_callback(20000, FUNCTOR_BIND_MEMBER(&ToshibaLED_I2C::_timer, void));
     }
-    
+
     return ret;
 }
 

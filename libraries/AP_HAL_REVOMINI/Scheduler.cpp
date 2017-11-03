@@ -575,9 +575,14 @@ void REVOMINIScheduler::stats_proc(void){
 }
 
 #ifdef DEBUG_BUILD
+
+extern "C" {
+    extern  void *__brkval;
+}
+
+
 void REVOMINIScheduler::_print_stats(){
     static int cnt=0;
-    
 
     if(flag_10s) {
         flag_10s=false;
@@ -954,7 +959,6 @@ static uint16_t next_log_ptr(uint16_t sched_log_ptr){
 task_t *REVOMINIScheduler::get_next_task(){
     task_t *me = s_running; // current task
     task_t *task=_idle_task; // task to switch to, idle_task by default
-    task_t *prev_task = _idle_task;
 
     uint32_t timeFromLast=0;
     uint32_t remains = 0;
@@ -1413,3 +1417,13 @@ void hal_delay_us_ny(uint16_t t){ REVOMINIScheduler::_delay_us_ny(t);}
 
 uint32_t hal_micros() { return REVOMINIScheduler::_micros(); }
 void hal_isr_time(uint32_t t) { s_running->in_isr += t; }
+
+
+// task management for USB
+void hal_set_task_active(void * h) { REVOMINIScheduler::set_task_active(h); } 
+void hal_context_switch_isr() { REVOMINIScheduler::context_switch_isr(); }
+void hal_set_task_priority(void * h, uint8_t prio) {REVOMINIScheduler::set_task_priority(h, prio); }
+void * hal_register_task(voidFuncPtr task, uint32_t stack) {
+    Revo_handler r = { .vp=task };
+    return REVOMINIScheduler::_start_task(r.h, stack);
+}

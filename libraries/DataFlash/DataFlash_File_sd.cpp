@@ -21,7 +21,6 @@
 #include <assert.h>
 #include <AP_Math/AP_Math.h>
 #include <time.h>
-#include <time.h>
 #include <stdio.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_Param_Helper/AP_Param_Helper.h>
