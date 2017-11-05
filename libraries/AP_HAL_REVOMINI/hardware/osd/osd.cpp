@@ -17,8 +17,11 @@ using namespace REVOMINI;
 
 #include <inttypes.h>
 #include <AP_HAL/AP_HAL.h>
+#include <AP_HAL/utility/print_vprintf.h>
 #include <AP_HAL_REVOMINI/AP_HAL_REVOMINI.h>
 #include <AP_HAL_REVOMINI/SPIDevice.h>
+
+#define SLAVE_BUILD
 
 #include "osd_core/Defs.h"
 
@@ -36,9 +39,9 @@ namespace OSDns {
 OSD osd; //OSD object
 
 #include "osd_core/prototypes.h"
+#include "osd_core/Vars.h"
 #include "osd_core/Config_Func.h"
 #include "osd_core/Config.h"
-#include "osd_core/Vars.h"
 #include "osd_core/Func.h"
 #include "osd_core/protocols.h"
 #include "osd_core/misc.h"
@@ -320,8 +323,9 @@ uint32_t get_word(char *buf, char * &ptr){
     return 0;  // not found
 }
 
-char * get_lex(char *buf, char * &ptro){
+char * get_lex(char * &ptro){
     char *ptr;
+    char *buf = ptro;
     while(*buf && (*buf=='\t' || *buf == ' ')) buf++;
     ptr=buf;
     while(*ptr && *ptr!='\t') ptr++;
@@ -420,7 +424,7 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
                 continue;
                 
             case 47: { // panel
-                    char *p2 = get_lex(buf, ptr);
+                    char *p2 = get_lex(ptr);
                     panel_num=strtoul(p2, nullptr, 10);
                     uint16_t flags=strtoul(ptr, nullptr, 10);
                     write_point(0,flags);
@@ -434,7 +438,7 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
                 char **pp = p;
                 memset(p,0,sizeof(p));
                 do {
-                    *pp++ = get_lex(buf, ptr);
+                    *pp++ = get_lex(ptr);
                 }while(ptr);
                 
                                 
@@ -491,10 +495,10 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
         sets.CHK2_VERSION = (VER ^ 0x55);
         eeprom_write_len( &sets.CHK1_VERSION,  EEPROM_offs(sets) + ((byte *)&sets.CHK1_VERSION - (byte *)&sets),  2 );
 
-        osd.init();    // re-Start display
 
     }
 
+    osd.init();    // Start display
 
     const char font[]="font.mcm";
     fd = SD.open(font, FILE_READ);
@@ -573,7 +577,9 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
         }
 
         fd.close();
+//* not in debug mode
         SD.remove(font); // once!
+//*/
     }
 
 
@@ -664,21 +670,22 @@ void osd_loop() {
     }
 
     if(pt > timer_20ms){
-        long_plus(&timer_20ms, 20);
+        timer_20ms+=20;
         On20ms();
         
-        if(update_screen && vsync_wait && time_since((uint32_t *)&vsync_time)>50){ // прерывания остановились - с последнего прошло более 50мс
+        if(update_screen && vsync_wait && (millis() - vsync_time)>50){ // прерывания остановились - с последнего прошло более 50мс
             vsync_wait=0; // хватит ждать
-
+            REVOMINIScheduler::set_task_priority(task_handle, OSD_HIGH_PRIORITY); // equal to main 
             OSD::update(); // обновим принудительно (и далее будем обновлять каждые 20мс)
             update_screen = 0;
+            REVOMINIScheduler::set_task_priority(task_handle, OSD_LOW_PRIORITY);
         }
     
 
     }
 
     if(pt > timer_100ms){
-        long_plus(&timer_100ms, 100);
+        timer_100ms+= 100;
         On100ms(); 
 
         lflags.flag_01s = !lflags.flag_01s;
@@ -700,8 +707,9 @@ void osd_loop() {
     }
 
     if(pt > timer_500ms){
-        long_plus(&timer_500ms, 500);
+        timer_500ms+= 500;
         lflags.got_data=1; // каждые полсекунды принудительно
+        update_screen = 1; 
 
         lflags.flag_05s = 1;
 
@@ -791,30 +799,36 @@ void osd_dequeue() {
 
 }
 
-
-void max7456_off(){
+void max7456_cs_off(){
     const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
     gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);
-    
+}
+
+void max7456_cs_on(){
+    const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
+    gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
+}
+
+void max7456_off(){
+    max7456_cs_off();
     osd_spi_sem->give();
 }
 
 void max7456_on(){
     if(osd_spi_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
-        const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
-        gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
+        max7456_cs_on();
 
         osd_spi->set_speed(AP_HAL::Device::SPEED_HIGH);
     }
 }
 
 void MAX_write(byte addr, byte data){
-    osd_spi->transfer(addr);
+    osd_spi->transfer(addr); // this transfer don't controls CS
     osd_spi->transfer(data);
 }
 
 byte MAX_read(byte addr){
-  osd_spi->transfer(addr);
+  osd_spi->transfer(addr);      // this transfer don't controls CS
   return osd_spi->transfer(0xff);
 }
 
@@ -825,13 +839,26 @@ byte MAX_rw(byte b){
 void update_max_buffer(const uint8_t *buffer, uint16_t len){
     max7456_on();
 
+    uint16_t cnt=0;
     MAX_write(MAX7456_DMAH_reg, 0);
     MAX_write(MAX7456_DMAL_reg, 0);
-    MAX_write(MAX7456_DMM_reg, 1); // автоинкремент адреса
+//    MAX_write(MAX7456_DMM_reg, 1); // автоинкремент адреса
+
+//    max7456_cs_off();
     
     // DMA
-    osd_spi->transfer(buffer, len, NULL, 0);
+//    osd_spi->transfer(buffer, len, NULL, 0);
+    while(len--){
+//        max7456_cs_on();
+//        osd_spi->transfer(*buffer++);
+//        max7456_cs_off();
 
+        MAX_write(MAX7456_DMAH_reg, cnt>>8);
+        MAX_write(MAX7456_DMAL_reg, cnt&0xFF);
+        MAX_write(MAX7456_DMDI_reg, *buffer++);
+        cnt++;
+    }
+    
     max7456_off();
 }
 

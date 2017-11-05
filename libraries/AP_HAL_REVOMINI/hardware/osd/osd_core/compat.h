@@ -63,6 +63,7 @@ static inline uint32_t pgm_read_word(const void * v){
 #include <AP_HAL_REVOMINI/AP_HAL_REVOMINI.h>
 #include <AP_HAL_REVOMINI/GPIO.h>
 #include <AP_HAL_REVOMINI/Scheduler.h>
+#include <AP_HAL/utility/print_vprintf.h>
 
 #ifndef NOINLINE
 #define NOINLINE __attribute__ ((noinline))

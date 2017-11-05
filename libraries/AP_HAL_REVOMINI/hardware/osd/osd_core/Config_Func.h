@@ -170,3 +170,48 @@ void serial_hex_dump(byte *p, uint16_t len) {}
 #endif
 
 
+
+void NOINLINE millis_plus(uint32_t *dst, uint16_t inc) {
+    *dst = millis() + inc;
+}
+
+
+void inline long_plus(uint32_t *dst, uint16_t inc) {
+    *dst +=  inc;
+}
+
+int inline long_diff(uint32_t *l1, uint32_t *l2) {
+    return (int)(l1-l2);
+}
+
+extern const struct Measure *measure;
+
+float inline get_converth(){
+    return pgm_read_float(&measure->converth);
+}
+
+float inline get_converts(){
+    return pgm_read_float(&measure->converts);
+}
+
+float inline f_div1000(float f){
+    return f/1000;
+}
+
+uint16_t inline time_since(uint32_t *t){
+    return (uint16_t)(millis() - *t); // loop time no more 1000 ms
+
+}
+void inline float_add(float &dst, float val){
+    dst+=val;
+}
+void inline calc_max(float &dst, float src){
+    if (dst < src) dst = src;
+
+}
+void inline gps_norm(float &dst, long f){
+    dst = f / GPS_MUL;
+}
+bool inline timeToScreen(){ // we should renew screen 
+    return lflags.need_redraw && !vsync_wait;
+}

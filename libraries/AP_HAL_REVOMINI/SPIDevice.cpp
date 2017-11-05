@@ -156,7 +156,6 @@ uint8_t SPIDevice::_transfer(uint8_t data) {
 }
 
 
-
 bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, uint32_t recv_len){
     
     uint8_t ret=1;
@@ -233,9 +232,14 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
 
         _cs_assert();
 
-        if(_desc.dma){
+        switch(_desc.mode){
+        case 3: // interrupts
+            break;
+            
+        case 1: // DMA
+        case 2: // only DMA
             if(send_len){
-                if((send_len >= MIN_DMA_BYTES || _desc.dma>1)){ // long enough 
+                if((send_len >= MIN_DMA_BYTES || _desc.mode==2)){ // long enough 
                     _desc.dev->state->len=0;
 
                     if(ADDRESS_IN_RAM(send)){   // not in CCM
@@ -256,7 +260,7 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
                 }
             }
             if(recv_len) {
-                if((recv_len>=MIN_DMA_BYTES || _desc.dma>1) ) { // long enough 
+                if((recv_len>=MIN_DMA_BYTES || _desc.mode==2) ) { // long enough or always DMA
                     if(ADDRESS_IN_RAM(recv)){   //not in CCM
                         _desc.dev->state->len=0;
                         ret=dma_transfer(NULL, recv, recv_len);
@@ -277,8 +281,10 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
                     ret=spimaster_transfer(_desc.dev, NULL, 0, recv, recv_len);
                 }
             }
-        } else {
+            break;
+        case 0: // polling
             ret = spimaster_transfer(_desc.dev, send, send_len, recv, recv_len);
+            break;
         }
     }
 
@@ -347,7 +353,7 @@ bool SPIDevice::transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t
     {
         spi_set_speed(_desc.dev, determine_baud_rate(_speed)); //- on cs_assert()
         
-        if(_desc.dma && (send==NULL || ADDRESS_IN_RAM(send)) && (recv==NULL || ADDRESS_IN_RAM(recv)) ) {
+        if(_desc.mode && (send==NULL || ADDRESS_IN_RAM(send)) && (recv==NULL || ADDRESS_IN_RAM(recv)) ) {
             dma_transfer(send, recv, len);
         } else {
             if (send != NULL && recv !=NULL && len) {
@@ -670,8 +676,7 @@ void SPIDevice::init(){
                         miso.gpio_bit,    PIN_MAP[pins->mosi].gpio_bit);
 
 
-
-        spi_master_enable(_desc.dev, determine_baud_rate(_desc.lowspeed), _desc.mode, MSBFIRST);          
+        spi_master_enable(_desc.dev, determine_baud_rate(_desc.lowspeed), _desc.sm, MSBFIRST);          
     }
     _initialized=true;
 

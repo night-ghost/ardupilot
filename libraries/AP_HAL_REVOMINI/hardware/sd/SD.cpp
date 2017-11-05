@@ -472,7 +472,7 @@ UINT File::gets(char* buf, size_t len)
         *buf++=c;
         bytesread++;
     }        
-        
+    if(len) *buf++=0; // close string
     return bytesread;
 
 }

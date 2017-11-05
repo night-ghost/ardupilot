@@ -51,11 +51,11 @@ struct SPIDesc {
     const char * const name;
     const spi_dev * const dev;
     uint8_t bus;
-    spi_mode mode;
+    spi_mode sm;
     uint16_t cs_pin;
     SPIFrequency lowspeed;
     SPIFrequency highspeed;
-    uint8_t dma;
+    uint8_t mode;  // mode of operations: 0 - polling, 1&2 DMA
 };
 
 //#define  DEBUG_SPI    
