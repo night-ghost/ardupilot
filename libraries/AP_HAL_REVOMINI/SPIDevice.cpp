@@ -143,6 +143,11 @@ uint8_t SPIDevice::transfer(uint8_t out){
 uint8_t SPIDevice::_transfer(uint8_t data) {
     uint8_t buf[1];
 
+    //wait for TXE before send
+    while (!spi_is_tx_empty(_desc.dev)) {    // надо дожидаться окончания передачи.
+        if(!spi_is_busy(_desc.dev) ) break;
+    }
+
     //write 1byte
     spi_tx_reg(_desc.dev, data); //    _desc.dev->SPIx->DR = data;
 
@@ -155,8 +160,17 @@ uint8_t SPIDevice::_transfer(uint8_t data) {
     return buf[0];
 }
 
+void SPIDevice::send(uint8_t out) {
+    //wait for TXE before send
+    while (!spi_is_tx_empty(_desc.dev)) {    // надо дожидаться окончания передачи.
+        if(!spi_is_busy(_desc.dev) ) break;
+    }
+    //write 1byte
+    spi_tx_reg(_desc.dev, out); //    _desc.dev->SPIx->DR = data;
+}
 
-bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, uint32_t recv_len){
+
+bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, uint32_t recv_len){
     
     uint8_t ret=1;
     bool was_dma=false;
@@ -204,9 +218,9 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
 
         dly_time = rate; 
 
-        if (send != NULL && send_len) {
+        if (out != NULL && send_len) {
             for (uint16_t i = 0; i < send_len; i++) {
-                _transfer_s(send[i]);
+                _transfer_s(out[i]);
             }    
         } 
     
@@ -242,13 +256,13 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
                 if((send_len >= MIN_DMA_BYTES || _desc.mode==2)){ // long enough 
                     _desc.dev->state->len=0;
 
-                    if(ADDRESS_IN_RAM(send)){   // not in CCM
-                        ret=dma_transfer(send, NULL, send_len);
+                    if(ADDRESS_IN_RAM(out)){   // not in CCM
+                        ret=dma_transfer(out, NULL, send_len);
                         was_dma=true;
                     } else {
                         if(send_len<=SPI_BUFFER_SIZE){
                             uint8_t *buf = &buffer[_desc.bus-1][0];
-                            memmove(buf,send,send_len);
+                            memmove(buf,out,send_len);
                             ret=dma_transfer(buf, NULL, send_len);
                             was_dma=true;
                         }
@@ -256,7 +270,7 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
                 } 
                 
                 if(!was_dma) {
-                    ret=spimaster_transfer(_desc.dev, send, send_len, NULL, 0);
+                    ret=spimaster_transfer(_desc.dev, out, send_len, NULL, 0);
                 }
             }
             if(recv_len) {
@@ -283,7 +297,7 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
             }
             break;
         case 0: // polling
-            ret = spimaster_transfer(_desc.dev, send, send_len, recv, recv_len);
+            ret = spimaster_transfer(_desc.dev, out, send_len, recv, recv_len);
             break;
         }
     }
@@ -294,10 +308,10 @@ bool SPIDevice::transfer(const uint8_t *send, uint32_t send_len, uint8_t *recv, 
     p.dev      = _desc.dev;
     p.send_len = send_len;
     if(send_len)
-      p.sent = send[0];
+      p.sent = out[0];
     else p.sent = 0;
     if(send_len>1)
-      p.sent1 = send[1];
+      p.sent1 = out[1];
     else p.sent1 = 0;
     p.recv_len = recv_len;
     if(recv_len)
@@ -330,7 +344,7 @@ done:
 
 
 
-bool SPIDevice::transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t len) {
+bool SPIDevice::transfer_fullduplex(const uint8_t *out, uint8_t *recv, uint32_t len) {
 
     if(owner[_desc.bus-1] != this) { // bus was in use by another driver so need reinit
         _initialized=false;
@@ -343,9 +357,9 @@ bool SPIDevice::transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t
 
 #ifdef BOARD_SOFTWARE_SPI
     if(_desc.soft) {
-        if (send != NULL && recv !=NULL && len) {
+        if (out != NULL && recv !=NULL && len) {
             for (uint16_t i = 0; i < len; i++) {
-                recv[i] = _transfer_s(send[i]);
+                recv[i] = _transfer_s(out[i]);
             }    
         } 
     } else 
@@ -353,12 +367,12 @@ bool SPIDevice::transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t
     {
         spi_set_speed(_desc.dev, determine_baud_rate(_speed)); //- on cs_assert()
         
-        if(_desc.mode && (send==NULL || ADDRESS_IN_RAM(send)) && (recv==NULL || ADDRESS_IN_RAM(recv)) ) {
-            dma_transfer(send, recv, len);
+        if(_desc.mode && (out==NULL || ADDRESS_IN_RAM(out)) && (recv==NULL || ADDRESS_IN_RAM(recv)) ) {
+            dma_transfer(out, recv, len);
         } else {
-            if (send != NULL && recv !=NULL && len) {
+            if (out != NULL && recv !=NULL && len) {
                 for (uint16_t i = 0; i < len; i++) {
-                    recv[i] = _transfer(send[i]);
+                    recv[i] = _transfer(out[i]);
                 }    
             }
         } 
@@ -475,7 +489,7 @@ spi_baud_rate SPIDevice::determine_baud_rate(SPIFrequency freq)
 static uint32_t rw_workbyte[] = { 0xffff }; // not in stack!
 
 
-uint8_t  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t btr)
+uint8_t  SPIDevice::dma_transfer(const uint8_t *out, const uint8_t *recv, uint32_t btr)
 {
     DMA_InitTypeDef DMA_InitStructure;
     DMA_StructInit(&DMA_InitStructure);
@@ -523,8 +537,8 @@ uint8_t  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint3
 
   // transmit stream
     DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
-    if(send) {
-      DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)send;
+    if(out) {
+      DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)out;
       DMA_InitStructure.DMA_MemoryInc       = DMA_MemoryInc_Enable;
     } else {
       DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)rw_workbyte;
@@ -535,7 +549,7 @@ uint8_t  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint3
     dma_enable(dp.stream_rx); dma_enable(dp.stream_tx);
 
     // we should call it after completion via interrupt
-    dma_attach_interrupt(dp.stream_rx, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SPIDevice::isr, void)), DMA_CR_TCIE);
+    dma_attach_interrupt(dp.stream_rx, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SPIDevice::dma_isr, void)), DMA_CR_TCIE);
 
     /* Enable SPI TX/RX request */
     SPI_I2S_DMACmd(_desc.dev->SPIx, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, ENABLE);
@@ -572,11 +586,11 @@ uint8_t  SPIDevice::dma_transfer(const uint8_t *send, const uint8_t *recv, uint3
     }
 #endif
 
-    isr();  //  disable DMA 
+    dma_isr();  //  disable DMA 
     return ret; // OK
 }
 
-void SPIDevice::isr(){
+void SPIDevice::dma_isr(){
     const Spi_DMA &dp = _desc.dev->dma;
 
     dma_disable(dp.stream_rx); dma_disable(dp.stream_tx);
@@ -587,24 +601,28 @@ void SPIDevice::isr(){
 
     dma_clear_isr_bits(dp.stream_rx); dma_clear_isr_bits(dp.stream_tx);
 
-    _cs_release(); // free bus
-    _desc.dev->state->busy=false; // reset 
-
     if(_desc.dev->state->len) {
         memmove(_desc.dev->state->dst, &buffer[_desc.bus-1][0], _desc.dev->state->len);
     }
 
-    Handler h;
-    if((h=_completion_cb)) {
-        _completion_cb=0; // only once and BEFORE call itself because IOC can do new transfer
-
-        revo_call_handler(h, (uint32_t)&_desc);
-    }
-
-    if(_task){ // resume paused task
+    if(_task){ // resume paused task after return from interrupt
         REVOMINIScheduler::task_resume(_task);
         _task=NULL;
     }
+
+/* Datasheet:
+
+During discontinuous communications, there is a 2 APB clock period delay between the
+write operation to SPI_DR and the BSY bit setting. As a consequence, it is mandatory to
+wait first until TXE=1 and then until BSY=0 after writing the last data.
+
+See Figure 259
+
+*/// so enable interrupt by TXE to not wait in ISR
+
+    _send_len = 0;  // will release bus
+    spi_attach_interrupt(_desc.dev, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SPIDevice::spi_isr, void)) );    
+    spi_irq_enable(_desc.dev, SPI_I2S_IT_TXE); 
 }
 
 
@@ -706,3 +724,68 @@ bool SPIDevice::set_speed(AP_HAL::Device::Speed speed)
     return true;
 }
 
+
+void SPIDevice::send_strobe(const uint8_t *buffer, uint16_t len){ // send in ISR and strobe each byte by CS
+    _send_address = buffer;
+    _send_len = len;
+
+    spi_attach_interrupt(_desc.dev, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SPIDevice::spi_isr, void)) );    
+
+    uint32_t timeout = len * 2; // time to transfer all data - 2Us per byte
+
+    noInterrupts();
+    spi_irq_enable(_desc.dev, SPI_I2S_IT_TXE); // enable - will be interrupt on next line
+
+    // need to wait until  transfer complete 
+    uint32_t t = hal_micros();
+    if(!REVOMINIScheduler::in_interrupt()) { // if function called from task - store it and pause
+        _task = REVOMINIScheduler::get_current_task();
+        REVOMINIScheduler::task_pause(timeout);
+    } else {
+        _task=0;
+    }
+    interrupts();
+
+    while (hal_micros() - t < timeout) {
+        hal_yield(0);
+        if(_send_len == 0) break;
+    }
+
+}
+
+// releases SPI bus after last TXE is set
+void SPIDevice::spi_isr(){
+    if(spi_is_tx_empty(_desc.dev)) {
+    
+        if(_send_len) {    
+            spi_wait_busy(_desc.dev); // SPI is double-buffered so we should wait to not spoil sent byte
+            _cs->write(1);
+            _send_len--;
+            _cs->write(0);
+            _desc.dev->SPIx->DR = *_send_address++;
+        } else { // all sent
+            spi_irq_disable(_desc.dev, SPI_I2S_IT_TXE);
+            spi_detach_interrupt(_desc.dev);
+
+            _desc.dev->state->busy=false; // reset 
+
+            if(_task){ // resume paused task
+                REVOMINIScheduler::task_resume(_task);
+                _task=NULL;
+            }
+    
+            spi_wait_busy(_desc.dev); // SPI is double-buffered so we should wait to not spoil sent byte, but there no way to do it in interrupt
+            _cs_release(); // free bus
+
+            Handler h;
+            if((h=_completion_cb)) {
+                _completion_cb=0; // only once and BEFORE call itself because IOC can do new transfer
+
+                revo_call_handler(h, (uint32_t)&_desc);
+            }
+
+        }
+    }
+}
+
+    

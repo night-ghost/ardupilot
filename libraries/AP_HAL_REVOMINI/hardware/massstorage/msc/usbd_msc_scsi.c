@@ -103,7 +103,7 @@ typedef struct USB_REC {
 
 // this is not true queue because there is only one request at a time, but this allows to exclude disabling of interrupts
 #define USB_QUEUE_SIZE 4
-static USB_rec usb_queue[USB_QUEUE_SIZE];
+static USB_rec usb_queue[USB_QUEUE_SIZE+1];
 static uint8_t usb_read_ptr, usb_write_ptr;
 
 // HAL task management for USB
@@ -125,6 +125,7 @@ void SCSI_Init() {
 //]
 
 #define SCSI_DEBUG
+
 //[ debug
 #ifdef SCSI_DEBUG
 #define SCSI_LOG_LEN 500
@@ -142,7 +143,7 @@ static uint16_t scsi_log_ptr=0;
 
 static SCSI_log *curr_log;
 
-static SCSI_log scsi_log[SCSI_LOG_LEN];
+static SCSI_log scsi_log[SCSI_LOG_LEN+1];
 #endif
 //]
 
@@ -195,6 +196,7 @@ int8_t SCSI_ProcessCmd(USB_OTG_CORE_HANDLE  *pdev,
 
     int8_t ret=-1;
     
+//    if(!task_handle) SCSI_Init(); can't be registered from ISR!
 
 #ifdef SCSI_DEBUG
   printf("\nSCSI cmd=%d ", params[0]);
@@ -420,8 +422,8 @@ static int8_t SCSI_ReadFormatCapacity(uint8_t lun, uint8_t *params)
     MSC_BOT_Data[6] = (uint8_t)((blk_nbr - 1) >>  8);
     MSC_BOT_Data[7] = (uint8_t)((blk_nbr - 1));
     
-    MSC_BOT_Data[8] = 0x02;
-    MSC_BOT_Data[9] = (uint8_t)(blk_size >>  16);
+    MSC_BOT_Data[8]  = 0x02;
+    MSC_BOT_Data[9]  = (uint8_t)(blk_size >>  16);
     MSC_BOT_Data[10] = (uint8_t)(blk_size >>  8);
     MSC_BOT_Data[11] = (uint8_t)(blk_size);
     
@@ -614,6 +616,9 @@ static int8_t SCSI_Read10(uint8_t lun , uint8_t *params)
         p->is_write = false;
     }
 
+    uint32_t fifoemptymsk = 0x1 << (MSC_IN_EP & 0x7F);
+    USB_OTG_MODIFY_REG32(&cdev->regs.DREGS->DIEPEMPMSK, fifoemptymsk, 0); // clear FIFO Empty mask until real data write
+
     hal_set_task_active(task_handle); // resume task 
     hal_context_switch_isr();         // and reschedule tasks after interrupt
     return 0;
@@ -734,7 +739,6 @@ static void usb_task(){
             usb_read_ptr=0;                   // ring
         }
 
-
 #ifdef SCSI_DEBUG
   SCSI_log *l = &scsi_log[scsi_log_ptr++];
   if(scsi_log_ptr>=SCSI_LOG_LEN) scsi_log_ptr=0;
@@ -755,11 +759,15 @@ static void usb_task(){
             ret = SCSI_ProcessRead(p->lun);            
         }   
         if(ret<0) {
+#ifdef SCSI_DEBUG            
             l->ret = ret;
+#endif
             MSC_BOT_SendCSW (p->pdev, CSW_CMD_FAILED);
         } else {
             MSC_BOT_CBW_finish(p->pdev);
+#ifdef SCSI_DEBUG            
             l->ret = 1;
+#endif
         }
     }
 }

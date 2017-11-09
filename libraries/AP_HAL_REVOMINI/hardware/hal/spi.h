@@ -21,6 +21,7 @@ typedef struct SPI_state {
     uint8_t *dst;
     uint16_t len;
     bool     busy;
+    Handler  handler;
 } spi_state;
 
 /** SPI device type */
@@ -249,6 +250,27 @@ static inline uint8_t spi_is_busy(const spi_dev *dev) {
 	return (dev->SPIx->SR & SPI_I2S_FLAG_BSY);
 }
 
+static inline void spi_wait_busy(const spi_dev *dev) {
+// Wait until the transfer is complete - to not disable CS too early 
+    uint32_t dly=3000;
+    while (dev->SPIx->SR & SPI_I2S_FLAG_BSY){ // but datasheet prohibits this usage
+        dly--;
+        if(dly==0) break;
+    }
+}
+
+
+static inline void spi_attach_interrupt(const spi_dev *dev, Handler handler){
+    dev->state->handler = handler;
+    
+    IRQn_Type irq=dev->irq;
+    NVIC_EnableIRQ(irq);
+    NVIC_SetPriority(irq, SPI_INT_PRIORITY); 
+}
+
+static inline void spi_detach_interrupt(const spi_dev *dev){
+    dev->state->handler = 0;
+}
                                        
 #ifdef __cplusplus
   }

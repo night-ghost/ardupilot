@@ -38,8 +38,6 @@ void UART_OSD::begin(uint32_t baud) {
 }
 
 
-/* REVOMINI implementations of Stream virtual methods */
-
 uint32_t UART_OSD::available() {
     return OSDns::osd_available(); 
 }
@@ -51,7 +49,7 @@ int16_t UART_OSD::read() {
 
 size_t UART_OSD::write(uint8_t c) {
 
-    if (REVOMINIScheduler::_in_timerprocess() || !_initialized) {      // not allowed from timers
+    if (!_initialized) { 
         return 0;
     }
 

@@ -9,9 +9,7 @@
 #include "EEPROM.h"
 #include <hal.h>
 
-extern const AP_HAL::HAL& hal;
-
-
+#include <GCS_MAVLink/GCS.h>
 
 /*
     address not uses 2 high bits so we will use them as flags of right written slot - if address has high bit then it written wrong
@@ -161,6 +159,7 @@ FLASH_Status EEPROMClass::_ErasePage(uint32_t pageBase)
 #ifdef DEBUG_BUILD
         printf("\nEEprom erase page %d\n ", (uint16_t)((pageBase & 0x00ffffff) / 0x4000) ); // clear high byte of address and count 16K blocks
 #endif
+        gcs().send_text(MAV_SEVERITY_INFO, "EEprom erase page %d", (uint16_t)((pageBase & 0x00ffffff) / 0x4000) );
 
 	status = _ErasePageByAddress(pageBase);
 	
@@ -431,7 +430,7 @@ uint16_t EEPROMClass::_init(void) //
 	if (erased0 == 0xffff) erased0 = 0;
 	// Print number of EEprom write cycles - but  it cleared each reflash
 #ifdef DEBUG_BUILD
-	hal.console->printf("\nEEprom write cycles %d\n ", erased0);
+	printf("\nEEprom write cycles %d\n ", erased0);
 #endif
 
 	status0 = read_16(PageBase0);

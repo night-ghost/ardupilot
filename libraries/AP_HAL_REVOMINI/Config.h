@@ -21,7 +21,7 @@
 //#define SEM_PROF - now semaphores are part of scheduler
 #define SHED_PROF 
 #define MTASK_PROF
-//#define SHED_DEBUG
+#define SHED_DEBUG
 //#define SEM_DEBUG
 //#define MPU_DEBUG
 
@@ -47,3 +47,6 @@ interrupts priorities:
 //                            13
 #define SVC_INT_PRIORITY      14 // scheduler - Timer7, tail timer, svc
 #define PENDSV_INT_PRIORITY   15 // Pend_Sw
+
+
+#define SPI_INT_PRIORITY MPU_INT_PRIORITY

@@ -68,7 +68,7 @@ Copter::Copter(void)
     auto_trim_counter(0),
     in_mavlink_delay(false),
     param_helper(false),
-#if USE_WAYBACK == ENABLED
+#if USE_WAYBACK == ENABLED && 0
     way_back(ahrs),
 #endif
     param_loader(var_info)

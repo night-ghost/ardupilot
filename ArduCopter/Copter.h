@@ -129,7 +129,7 @@
 
 #include <AP_Param_Helper/AP_Param_Helper.h>
 
-#if USE_WAYBACK == ENABLED
+#if USE_WAYBACK == ENABLED && 0
 #include <AP_WayBack/AP_WayBack.h>
 #endif
 
@@ -630,7 +630,7 @@ private:
 
     AP_Param_Helper param_helper;
 
-#if USE_WAYBACK == ENABLED
+#if USE_WAYBACK == ENABLED && 0
     AP_WayBack way_back;
 #endif
 

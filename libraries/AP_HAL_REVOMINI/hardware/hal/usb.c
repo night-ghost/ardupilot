@@ -76,6 +76,7 @@ static U16 VCP_Ctrl     (uint32_t Cmd, uint8_t* Buf, uint32_t Len);
 static U16 VCP_DataTx   (const uint8_t* Buf, uint32_t Len);
 static U16 VCP_DataRx   (uint8_t* Buf, uint32_t Len);
 
+// direct usage from usbd_cdc_core.c
 const CDC_IF_Prop_TypeDef VCP_fops = 
 {
   VCP_Init,
@@ -98,7 +99,7 @@ const USBD_Usr_cb_TypeDef USR_cb =
 
 
 
-const USBD_DEVICE USR_desc =
+static const USBD_DEVICE USR_CDC_desc =
 {
   USBD_USR_DeviceDescriptor,
   USBD_USR_LangIDStrDescriptor, 
@@ -226,6 +227,8 @@ void USBD_USR_Init(void)
 {  
     usb_connected = 0;
     usb_opened = 0;
+    
+    SCSI_Init(); // start USB IO task
 }
 
 void USBD_USR_DeviceReset(uint8_t speed )
@@ -294,7 +297,7 @@ void usb_default_attr(usb_attr_t *attr)
 
 /*--------------------------- usb_periphcfg -------------------------------*/
 
-void USB_OTG_BSP_Init(USB_OTG_CORE_HANDLE *pdev){
+void USB_OTG_BSP_Init(USB_OTG_CORE_HANDLE *pdev){ // callback for hardware init
     return;
 }
 
@@ -341,7 +344,7 @@ int usb_configure(usb_attr_t * attr)
     usb_setParams(attr);
 
     // USB Device Initialize
-    USBD_Init(&USB_OTG_dev, USB_OTG_FS_CORE_ID, &USR_desc, &USBD_CDC_cb, &USR_cb);
+    USBD_Init(&USB_OTG_dev, USB_OTG_FS_CORE_ID, &USR_CDC_desc, &USBD_CDC_cb, &USR_cb);
 
     usb_ready = 1;
 	
@@ -693,9 +696,9 @@ int usb_close(void)
 		usb_ready = 0;
 	}
 	
-	if (usb_attr->use_present_pin)
+	if (usb_attr->use_present_pin){
 		gpio_set_mode(usb_attr->present_port, usb_attr->present_pin, GPIO_INPUT_FLOATING);
-	
+	}
 	return 1;
 }
 

@@ -46,13 +46,17 @@ AP_HAL::Semaphore                *_spi_sem;
 
 
 /** Send a byte to the card */
-uint8_t spi_spiSend(uint8_t b) {
-  return _spi->transfer(b);
+void  spi_spiSend(uint8_t b) {
+  return _spi->send(b);
 }
 
 /** Receive a byte from the card */
-uint8_t spi_spiRec(void) {
+uint8_t spi_spiRecv(void) {
   return _spi->transfer(0xFF);
+}
+
+uint8_t spi_spiXchg(uint8_t b) {
+  return _spi->transfer(b);
 }
 
 
@@ -145,6 +149,7 @@ uint32_t get_fattime()
 
 void spi_chipSelectHigh(void) {
     const stm32_pin_info &pp = PIN_MAP[BOARD_SDCARD_CS_PIN];
+    _spi->wait_busy();
     gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);
     _spi_sem->give();
 }

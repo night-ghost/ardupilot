@@ -138,8 +138,6 @@ void MSC_BOT_Init (USB_OTG_CORE_HANDLE  *pdev)
                     MSC_OUT_EP,
                     (uint8_t *)&MSC_BOT_cbw,
                     BOT_CBW_LENGTH);    
-
-    SCSI_Init();
 }
 
 /**

@@ -116,6 +116,7 @@ extern "C" {
     void hal_context_switch_isr();
     void * hal_register_task(voidFuncPtr task, uint32_t stack);
     void hal_set_task_priority(void * handle, uint8_t prio);
+//    void hal_panic(const char *errormsg, ...);
 }
 
 
@@ -275,7 +276,11 @@ public:
 
 // this functions are atomic so don't need to disable interrupts
   static inline void *get_current_task() { return s_running; }
-  static void inline set_task_active(void *h) {   task_t * task = (task_t*)h; task->active=true; } // tasks are created in stopped state
+  static inline void set_task_active(void *h) {   // tasks are created in stopped state
+    task_t * task = (task_t*)h; 
+    task->curr_prio = 70;  //   will get 1st quant 100%
+    task->active=true; 
+}
 
 #if defined(MTASK_PROF)
   static void inline task_pause(uint16_t t) {   // called from task when it starts DMA transfer
@@ -290,8 +295,8 @@ public:
       task->t_paused += dt;
   } 
 #else
-  static void inline task_pause(uint16_t t) {   s_running->ttw=t;  }                      // called from task when it starts DMA transfer
-  static void inline task_resume(void *h) {   task_t * task = (task_t*)h; task->ttw=0;  } // called from IO_Complete ISR to resume task
+  static void inline task_pause(uint16_t t) {   s_running->ttw=t;  }                      // called from task when it starts IO transfer
+  static void inline task_resume(void *h)   {   task_t * task = (task_t*)h; task->ttw=0; task->curr_prio = 70;  } // called from IO_Complete ISR to resume task, and   will get 1st quant 100%
 #endif
   static void inline NAKED set_task_ioc(bool v) { asm volatile("svc 4"); }  // task waits for IO_Complete so don't release semaphore when taskLoop finished
 //]  

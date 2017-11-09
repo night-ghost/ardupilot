@@ -29,6 +29,8 @@ also see https://github.com/mahowik/MahoRotorF4-Discovery/blob/master/src/drv/dr
  
  */
 
+#pragma GCC optimize ("O2")
+
 #include "pwm_in.h"
 #include <stdbool.h>
 #include "hal_types.h"

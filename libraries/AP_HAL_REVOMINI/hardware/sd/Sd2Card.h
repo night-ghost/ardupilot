@@ -53,8 +53,9 @@ using namespace REVOMINI;
 
 
 
-extern "C" uint8_t spi_spiSend(uint8_t b);
-extern "C" uint8_t spi_spiRec(void);
+extern "C" void    spi_spiSend(uint8_t b);
+extern "C" uint8_t spi_spiRecv(void);
+extern "C" uint8_t spi_spiXchg(uint8_t b);
 extern "C" void spi_spiTransfer(const uint8_t *send, uint32_t send_len,  uint8_t *recv, uint32_t recv_len);
 extern "C" void spi_chipSelectHigh(void);
 extern "C" bool spi_chipSelectLow(bool take_sem);

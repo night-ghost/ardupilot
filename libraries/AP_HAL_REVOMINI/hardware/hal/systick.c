@@ -1,3 +1,5 @@
+#pragma GCC optimize ("O2")
+
 #include <systick.h>
 #include <hal.h>
 #include <timer.h>

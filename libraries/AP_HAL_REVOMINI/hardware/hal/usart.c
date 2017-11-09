@@ -1,3 +1,5 @@
+#pragma GCC optimize ("O2")
+
 #include <usart.h>
 #include <hal.h>
 #include <systick.h>

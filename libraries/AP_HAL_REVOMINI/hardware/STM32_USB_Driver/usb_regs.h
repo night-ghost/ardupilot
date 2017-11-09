@@ -472,45 +472,45 @@ typedef union _USB_OTG_GINTSTS_TypeDef
   uint32_t d32;
   struct
   {
-uint32_t curmode :
+uint32_t curmode :      //1
     1;
-uint32_t modemismatch :
+uint32_t modemismatch : //2
     1;
-uint32_t otgintr :
+uint32_t otgintr :      //4
     1;
-uint32_t sofintr :
+uint32_t sofintr :      //8
     1;
-uint32_t rxstsqlvl :
+uint32_t rxstsqlvl :    //10
     1;
-uint32_t nptxfempty :
+uint32_t nptxfempty :   //20   
     1;
-uint32_t ginnakeff :
+uint32_t ginnakeff :    //40
     1;
-uint32_t goutnakeff :
+uint32_t goutnakeff :   //80
     1;
-uint32_t Reserved8_9 :
+uint32_t Reserved8_9 :  //100
     2;
-uint32_t erlysuspend :
+uint32_t erlysuspend :  //200
     1;
-uint32_t usbsuspend :
+uint32_t usbsuspend :   //400
     1;
-uint32_t usbreset :
+uint32_t usbreset :     //800
     1;
-uint32_t enumdone :
+uint32_t enumdone :     //1000
     1;
-uint32_t isooutdrop :
+uint32_t isooutdrop :   //2000
     1;
-uint32_t eopframe :
+uint32_t eopframe :     //4000
     1;
-uint32_t Reserved16_17 :
+uint32_t Reserved16_17 ://8000
     2;
-uint32_t inepint:
+uint32_t inepint:       //10000
     1;
-uint32_t outepintr :
+uint32_t outepintr :    //20000
     1;
-uint32_t incomplisoin :
+uint32_t incomplisoin : //40000
     1;
-uint32_t incomplisoout :
+uint32_t incomplisoout ://80000
     1;
 uint32_t Reserved22_23 :
     2;

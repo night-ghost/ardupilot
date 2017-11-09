@@ -1,3 +1,5 @@
+#pragma GCC optimize ("O2")
+
 #include <gpio_hal.h>
 
 

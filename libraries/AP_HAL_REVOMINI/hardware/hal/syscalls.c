@@ -24,6 +24,8 @@
  * SOFTWARE.
  *****************************************************************************/
 
+#pragma GCC optimize ("O2")
+
 /**
  * @file syscalls.c
  * @brief Low level system routines used by Newlib for basic I/O and

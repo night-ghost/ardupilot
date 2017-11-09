@@ -1,3 +1,5 @@
+#pragma GCC optimize ("O2")
+
 #include <hal.h>
 #include "adc.h"
 //#include "gpiopins.h"

@@ -29,6 +29,7 @@
  * @file dmaF2.c
  * @brief Direct Memory Access peripheral support
  */
+#pragma GCC optimize ("O2")
 
 #include "dma.h"
 #include "bitband.h"

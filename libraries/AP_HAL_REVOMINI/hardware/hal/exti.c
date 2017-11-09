@@ -1,3 +1,5 @@
+#pragma GCC optimize ("O2")
+
 #include "exti.h"
 #include "hal.h"
 #include "util.h"

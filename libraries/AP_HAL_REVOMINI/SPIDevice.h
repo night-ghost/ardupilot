@@ -90,9 +90,14 @@ public:
 
     // one byte
     uint8_t transfer(uint8_t out);
+    void send(uint8_t out); // without wait for answer
 
     /* See AP_HAL::SPIDevice::transfer_fullduplex() */
     bool transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t len) override;
+
+
+    void send_strobe(const uint8_t *buffer, uint16_t len); // send in ISR and strobe each byte by CS
+    void wait_busy() { spi_wait_busy(_desc.dev);  }
 
     /* See AP_HAL::Device::get_semaphore() */
     inline REVOMINI::Semaphore *get_semaphore() { uint8_t n = _desc.bus - 1; if(n<MAX_BUS_NUM) { return &_semaphores[n];} else return NULL; } // numbers from 1
@@ -122,7 +127,8 @@ public:
         register_completion_callback(r.h);
     }
 
-    void  isr();
+    void  dma_isr();
+    void  spi_isr();
     
 protected:
     const SPIDesc &_desc;
@@ -139,7 +145,7 @@ protected:
     void init(void);
 
     inline void _cs_assert(){                   if(_cs){_cs->write(0); delay_ns100(1);} } // Select device and wait a little
-    inline void _cs_release(){ if(_cs){ delay_ns100(5); _cs->write(1); } } // Deselect device, time from http://datasheetspdf.com/mobile/735133/MPU-6000.html page 19
+    inline void _cs_release(){ if(_cs){spi_wait_busy(_desc.dev);       delay_ns100(5); _cs->write(1); } } // Deselect device, time from http://datasheetspdf.com/mobile/735133/MPU-6000.html page 19
 
     const spi_pins* dev_to_spi_pins(const spi_dev *dev);
 
@@ -155,7 +161,12 @@ protected:
     static uint8_t spi_trans_ptr;
 #endif
     Handler _completion_cb;
-    void *_task;
+    void   *_task;
+    
+    // vars for send_strobe()
+    const uint8_t *_send_address;
+    uint16_t _send_len;
+    
 };
 
 class SPIDeviceManager : public AP_HAL::SPIDeviceManager {

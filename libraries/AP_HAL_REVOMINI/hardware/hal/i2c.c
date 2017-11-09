@@ -1,3 +1,5 @@
+#pragma GCC optimize ("O2")
+
 #include "i2c.h"
 //#include "dma.h"
 #include "systick.h"

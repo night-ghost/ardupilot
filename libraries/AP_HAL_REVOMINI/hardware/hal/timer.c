@@ -27,6 +27,8 @@
  * SOFTWARE.
  *****************************************************************************/
 
+#pragma GCC optimize ("O2")
+
 /**
  * @file   timer.c
  * @author Marti Bolivar <mbolivar@leaflabs.com>

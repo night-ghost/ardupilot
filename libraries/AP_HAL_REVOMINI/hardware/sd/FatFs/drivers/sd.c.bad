@@ -49,9 +49,9 @@ static inline  uint32_t micros() {  return timer_get_count32(TIMER5); }
 static inline  uint32_t millis() {  return systick_uptime(); }
 
 // utility function 
-extern uint8_t spi_spiSend(uint8_t b);
-extern uint8_t spi_spiRecv(void);
+extern void    spi_spiSend(uint8_t b);
 extern uint8_t spi_spiXchg(uint8_t b);
+extern uint8_t spi_spiRecv(void);
 extern void spi_spiTransfer(const uint8_t *send, uint32_t send_len,  uint8_t *recv, uint32_t recv_len);
 extern void spi_chipSelectHigh(void);
 extern bool spi_chipSelectLow(bool take_sem);
@@ -100,8 +100,14 @@ BYTE xchg_spi (
 
 static inline 
 BYTE rcvr_spi(){
-    return xchg_spi(0xFF);
+    return spi_spiRecv();
 }
+
+static inline 
+void send_spi(BYTE dat){
+    spi_spiSend(dat);
+}
+
 
 /* Receive multiple byte */
 static inline
@@ -174,7 +180,7 @@ static
 void deselect (void)
 {
 	CS_HIGH();		/* Set CS# high */
-	xchg_spi(0xFF);	/* Dummy clock (force DO hi-z for multiple slave SPI) */
+	send_spi(0xFF);	/* Dummy clock (force DO hi-z for multiple slave SPI) */
 
 }
 
@@ -190,7 +196,7 @@ int select (void)	/* 1:OK, 0:Timeout */
 	if(!CS_LOW()) { /* take semaphore and Set CS# low */
 	    return 0;		
 	}
-	xchg_spi(0xFF);	/* Dummy clock (force DO enabled) */
+	send_spi(0xFF);	/* Dummy clock (force DO enabled) */
 	if (wait_ready(500)) return 1;	/* Wait for card ready */
 
 	deselect();
@@ -255,10 +261,10 @@ static int8_t xmit_datablock (	/* 1:OK, 0:Failed */
 
 	if (!wait_ready(500)) return 0;		/* Wait for card ready */
 
-	xchg_spi(token);				/* Send token */
+	send_spi(token);				/* Send token */
 	if (token != 0xFD) {				/* Send data if token is other than StopTran */
 		xmit_spi_multi(buff, 512);		/* Data */
-		xchg_spi(0xFF); xchg_spi(0xFF);	/* Dummy CRC */
+		send_spi(0xFF); send_spi(0xFF);	/* Dummy CRC */
 
 		resp = xchg_spi(0xFF);			/* Receive data resp */
 		if ((resp & 0x1F) != 0x05) {
@@ -322,8 +328,8 @@ BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
         xmit_spi_multi(buf, 6);	// entire command in one packet
 
 	/* Receive command resp */
-	if (cmd == CMD12) xchg_spi(0xFF);	/* Diacard following one byte when CMD12 */
-	uint8_t n = 255;		        /* Wait for response (10 bytes max) */
+	if (cmd == CMD12) send_spi(0xFF);	/* Diacard following one byte when CMD12 */
+	uint8_t n = 32;				/* Wait for response (10 bytes max) */
 	do {
 	    res = xchg_spi(0xFF);
 	    spi_yield();	                /* This loop will take a time. Insert rot_rdq() here for multitask environment. */
@@ -345,7 +351,7 @@ BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 /* Initialize disk drive                                                 */
 /*-----------------------------------------------------------------------*/
 
-DSTATUS sd_initialize() {
+DSTATUS sd_initialize () {
 	BYTE n, cmd, ty, ocr[4] ;
 	
 	if (Stat & STA_NODISK) return Stat;	/* Is card existing in the soket? */
@@ -394,15 +400,6 @@ DSTATUS sd_initialize() {
 
 
 	return Stat;
-}
-
-static BYTE restart_card(){
-    Stat = STA_NOINIT;
-    
-    sd_initialize();
-    
-    if(!(Stat & STA_NOINIT) )  return true; // OK
-    return false;
 }
 
 BYTE sd_getSectorCount(DWORD *ptr){
@@ -510,9 +507,9 @@ DRESULT sd_read (
 
 	    } else {
 //	        send_cmd(CMD23, count);
+    	        uint16_t got=0;
 		if (CardType & CT_SDC) send_cmd(ACMD23, count);	/* Predefine number of sectors */
 
-    	        uint16_t got=0;
             	if ((ret=send_cmd(CMD18, sector)) == 0) {	/* READ_MULTIPLE_BLOCK */
     		    do {
 		        if (!rcvr_datablock(buff, 512)) {
@@ -524,12 +521,12 @@ DRESULT sd_read (
 		    if(got) send_cmd(CMD12, 0);				/* STOP_TRANSMISSION */
 		    
 		}
-	        if(count) {     // readed only 1 block or none
-		    single_sector_card=true;
+		if(count) {     // readed only 1 block or none
 		    sector+=got*sectorInc;
-		    restart_card();
+		    single_sector_card=true;
 		    return sd_read(buff, sector/sectorInc, count); // read remaining in single sector mode
 		}
+
 	    }
 	}
 	deselect();
@@ -593,7 +590,6 @@ DRESULT sd_write (
 		if(count) {
 		    single_sector_card=true;
 	            sector+=sent*sectorInc;
-		    restart_card();
 		    return sd_write(buff, sector/sectorInc, count); // write remaining in single sector mode
 		}
 	    }
@@ -841,11 +837,11 @@ static inline uint8_t spi_write(
 	BYTE dat	/* Data to send */
 )
 {
-    return spi_spiXchg(dat);
+    return spi_spiSend(dat);
 }
 
 static inline uint8_t spi_read(){
-    return spi_spiXchg(0xFF);
+    return spi_spiSend(0xFF);
 }
 
 /* Receive multiple byte */

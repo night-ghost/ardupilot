@@ -351,7 +351,7 @@ static bool get_flag(char *p) {
 static point create_point(char *px,   char *py, char *pVis,  char *pSign, char *pAlt,  char *pAlt2, char *pAlt3, char *pAlt4,  char *ps ){
     point p;
     p.x = strtoul(px, nullptr, 10);
-    p.y = strtoul(px, nullptr, 10);
+    p.y = strtoul(py, nullptr, 10);
     p = do_on(p,   get_flag(pVis));
     p = do_sign(p, get_flag(pSign));
     if(get_flag(pAlt))  p=do_alt(p);
@@ -368,6 +368,8 @@ static point create_point(char *px,   char *py, char *pVis,  char *pSign, char *
 
 static bool osd_need_redraw = false;
 static void * task_handle;
+
+static uint8_t shadowbuf[sizeof(OSD::osdbuf)];
 
 void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 
@@ -397,7 +399,10 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 */
     readSettings();
 
-    OSD::update();// clear memory
+//    OSD::update();// clear memory
+    memset(OSD::osdbuf,0x20, sizeof(OSD::osdbuf));
+    memset(shadowbuf,  0x20, sizeof(OSD::osdbuf));
+    
 
         
     doScreenSwitch(); // set vars for startup screen
@@ -727,7 +732,7 @@ void osd_loop() {
                 max7456_err_count++;
                 if(max7456_err_count>3) { // 3 seconds bad sync
 #ifdef DEBUG   
-                    Serial.printf_P(PSTR("restart MAX! vsync_count=%d\n"),vsync_count);
+                    printf(PSTR("restart MAX! vsync_count=%d\n"),vsync_count);
 #endif
                     osd.reset();    // restart MAX7456
                 }
@@ -754,7 +759,7 @@ void vsync_ISR(){
         osd_need_redraw=true;
         REVOMINIScheduler::set_task_priority(task_handle, OSD_HIGH_PRIORITY); // higher than all drivers so it will be scheduled just after semaphore release
         REVOMINIScheduler::set_task_active(task_handle); // task should be finished at this time so resume it
-        REVOMINIScheduler::context_switch_isr();   // switch context after interrupt
+        REVOMINIScheduler::context_switch_isr();         // switch context after interrupt
         update_screen = 0;
     }
 }
@@ -799,12 +804,14 @@ void osd_dequeue() {
 
 }
 
-void max7456_cs_off(){
+static void max7456_cs_off(){
+    osd_spi->wait_busy(); // wait for transfer complete
+    
     const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
     gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);
 }
 
-void max7456_cs_on(){
+static void max7456_cs_on(){
     const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
     gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
 }
@@ -842,23 +849,67 @@ void update_max_buffer(const uint8_t *buffer, uint16_t len){
     uint16_t cnt=0;
     MAX_write(MAX7456_DMAH_reg, 0);
     MAX_write(MAX7456_DMAL_reg, 0);
-//    MAX_write(MAX7456_DMM_reg, 1); // автоинкремент адреса
+#if 0
+    MAX_write(MAX7456_DMM_reg, 1); // автоинкремент адреса
 
-//    max7456_cs_off();
+    max7456_cs_off();
     
-    // DMA
-//    osd_spi->transfer(buffer, len, NULL, 0);
-    while(len--){
-//        max7456_cs_on();
-//        osd_spi->transfer(*buffer++);
-//        max7456_cs_off();
+    osd_spi->send_strobe(buffer, len);
+#elif 0
+    MAX_write(MAX7456_DMM_reg, 0); 
 
-        MAX_write(MAX7456_DMAH_reg, cnt>>8);
-        MAX_write(MAX7456_DMAL_reg, cnt&0xFF);
-        MAX_write(MAX7456_DMDI_reg, *buffer++);
+// try to send just diffenence - don't clears last chars
+    uint8_t last_h=0;
+    while(len--){
+        if(*buffer != shadowbuf[cnt]){
+            uint8_t h = cnt>>8 ;
+            if(last_h != h){
+                MAX_write(MAX7456_DMAH_reg, h);
+                last_h = h;
+            }
+            MAX_write(MAX7456_DMAL_reg, cnt&0xFF);
+            MAX_write(MAX7456_DMDI_reg, *buffer);
+            shadowbuf[cnt] = *buffer;
+        }
+        buffer++;
         cnt++;
     }
-    
+
+#elif 0
+
+// a try to do writes in sottware strobe mode
+    MAX_write(MAX7456_DMM_reg, 1); // автоинкремент адреса
+    max7456_cs_off();
+    while(len--){
+        max7456_cs_on();
+        // osd_spi->transfer(*buffer++); MAX7456
+        MAX_write(MAX7456_DMDI_reg, *buffer++); // AT7456
+        buffer++;
+        cnt++;
+        osd_spi->wait_busy();
+        max7456_cs_off();
+    }
+    max7456_cs_on();
+    MAX_write(MAX7456_DMM_reg, 0); // автоинкремент адреса
+#else
+// just write all to MAX
+    MAX_write(MAX7456_DMM_reg, 0); 
+
+    uint8_t last_h=0;
+    while(len--){
+        uint8_t h = cnt>>8 ;
+        if(last_h != h){
+            MAX_write(MAX7456_DMAH_reg, h);
+            last_h = h;
+        }
+        
+        MAX_write(MAX7456_DMAL_reg, cnt&0xFF);
+        MAX_write(MAX7456_DMDI_reg, *buffer);
+        buffer++;
+        cnt++;
+    }
+
+#endif    
     max7456_off();
 }
 

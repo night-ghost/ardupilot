@@ -1,5 +1,4 @@
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
+#pragma GCC optimize ("O2")
 
 #include <spi.h>
 #include <hal.h>
@@ -218,11 +217,10 @@ int spimaster_transfer(const spi_dev *dev,
 	// Transfer command data out
 
 	while (txcount--){
-	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_TXE)); // just for case
-
-	    uint8_t bt=*txbuf++;
-	    
-	    dev->SPIx->DR = bt;
+	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_TXE)){ // just for case
+                if(!spi_is_busy(dev) ) break;
+            }	    
+	    dev->SPIx->DR = *txbuf++;
 	    uint16_t dly=1000; // ~20uS so byte already transferred
 	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE)) {
 	        if(--dly==0) break;
@@ -255,11 +253,35 @@ int spimaster_transfer(const spi_dev *dev,
 }
 
 
-
+/*
 uint32_t spi_tx(const spi_dev *dev, const void *buf, uint16_t len) {
     uint16_t txed = 0;
     while ( (txed < len) && spi_is_tx_empty(dev) ) {
             dev->SPIx->DR = ((const uint8_t*)buf)[txed++];
     }
     return txed;
+}
+*/
+
+static void isr_handler(const spi_dev *dev){
+    if(dev->state->handler) revo_call_handler(dev->state->handler, dev->SPIx->SR);
+    else { // disable interrupts
+        spi_irq_disable(dev, SPI_INTERRUPTS_ALL);
+    }
+}
+
+void SPI1_IRQHandler();
+void SPI2_IRQHandler();
+void SPI3_IRQHandler();
+
+void SPI1_IRQHandler() {
+    isr_handler(&spi1);
+}
+
+void SPI2_IRQHandler() {
+    isr_handler(&spi2);
+}
+
+void SPI3_IRQHandler() {
+    isr_handler(&spi3);
 }

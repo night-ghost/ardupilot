@@ -33,35 +33,6 @@
 #endif
 
 
-/*
-    case OUTPUT:
-        outputMode = ;
-        break;
-    case OUTPUT_OPEN_DRAIN:
-        outputMode = ;
-        break;
-    case INPUT:
-    case INPUT_FLOATING:
-        outputMode = GPIO_INPUT_FLOATING;
-        break;
-    case INPUT_ANALOG:
-        outputMode = ;
-        break;
-    case INPUT_PULLUP:
-        outputMode = ;
-        break;
-    case INPUT_PULLDOWN:
-        outputMode = ;
-*/
-
-/*
-    we should define modes to be compatible with HAL_GPIO_ defines from HAL.h
-#define HAL_GPIO_INPUT  0
-#define HAL_GPIO_OUTPUT 1
-#define HAL_GPIO_ALT    2
-
-*/
-
 
 typedef enum HALPinMode {
     INPUT = GPIO_INPUT_FLOATING, /**< Basic digital input. The pin voltage is sampled; when

@@ -25,6 +25,8 @@
   ******************************************************************************
   */
 
+#pragma GCC optimize ("Og")
+
 /* Includes ------------------------------------------------------------------*/
 #include "usb_dcd_int.h"
 /** @addtogroup USB_OTG_DRIVER
@@ -212,7 +214,9 @@ uint32_t USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
   uint32_t retval = 0;
   
   if (USB_OTG_IsDeviceMode(pdev)) { /* ensure that we are in device mode */
-    gintr_status.d32 = USB_OTG_ReadCoreItr(pdev);
+    gintr_status.d32 = USB_OTG_ReadCoreItr(pdev); 
+    
+//40000
     if (!gintr_status.d32) /* avoid spurious interrupt */
     {
       return 0;
@@ -700,12 +704,11 @@ static uint32_t DCD_WriteEmptyTxFifo(USB_OTG_CORE_HANDLE *pdev, uint32_t epnum)
     ep->xfer_buff  += len;
     ep->xfer_count += len;
     
-    if( ep->xfer_count >= ep->xfer_len)
-	{
+    if( ep->xfer_count >= ep->xfer_len)	{
 	uint32_t fifoemptymsk = 1 << ep->num;
 	USB_OTG_MODIFY_REG32(&pdev->regs.DREGS->DIEPEMPMSK, fifoemptymsk, 0);
 	break;
-	}
+    }
 
     txstatus.d32 = USB_OTG_READ_REG32(&pdev->regs.INEP_REGS[epnum]->DTXFSTS);
   }

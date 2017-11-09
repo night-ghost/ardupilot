@@ -175,12 +175,12 @@ int8_t SCSI_ProcessCmd(USB_OTG_CORE_HANDLE  *pdev,
                            uint8_t lun, 
                            uint8_t *cmd);
 
-void SCSI_Init();
-
 void   SCSI_SenseCode(uint8_t lun, 
                     uint8_t sKey, 
                     uint8_t ASC);
 
+
+void SCSI_Init(); // needed to start usb IO process
 /**
   * @}
   */ 

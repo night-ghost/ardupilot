@@ -411,22 +411,24 @@ uint32_t REVOI2CDevice::i2c_write(uint8_t addr, const uint8_t *tx_buff, uint8_t 
     // Send START condition
     _dev->I2Cx->CR1 |= I2C_CR1_START;
 
+    noInterrupts();
     _dev->I2Cx->CR2 |= I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN;    // Enable interrupts
-
-
-    if(_completion_cb) return I2C_PENDING;
-        
-    uint32_t timeout = i2c_bit_time * 9 * (len+1) * 4 + 100; // time to transfer all data *4 plus 100uS
-
 
     // need to wait until  transfer complete 
     uint32_t t = hal_micros();
+    uint32_t timeout = i2c_bit_time * 9 * (len+1) * 4 + 100; // time to transfer all data *4 plus 100uS
     if(!REVOMINIScheduler::in_interrupt()) { // if function called from task - store it and pause
         _task = REVOMINIScheduler::get_current_task();
         REVOMINIScheduler::task_pause(timeout);
     } else {
         _task=0;
     }
+    interrupts();
+
+    if(_completion_cb) return I2C_PENDING;
+        
+
+
     while (hal_micros() - t < timeout) {
         if(_error!=I2C_ERR_TIMEOUT) break; // error changed
         
@@ -464,20 +466,25 @@ uint32_t REVOI2CDevice::i2c_read(uint8_t addr, const uint8_t *tx_buff, uint8_t t
     
     _dev->I2Cx->CR1 |= I2C_CR1_START;    // Send START condition
 
+
+    noInterrupts();
     _dev->I2Cx->CR2 |= I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN;    // Enable interrupts
 
-    if(_completion_cb) return I2C_PENDING;
-        
-    uint32_t timeout = i2c_bit_time * 9 * (txlen+rxlen) * 4 + 100; // time to transfer all data *4 plus 100uS
-        
+
     t = hal_micros();
-    // need to wait until DMA transfer complete */
+    uint32_t timeout = i2c_bit_time * 9 * (txlen+rxlen) * 4 + 100; // time to transfer all data *4 plus 100uS
+    // need to wait until DMA transfer complete  - before interrupt enable, so ISR shoul not be where _task still not set
     if(!REVOMINIScheduler::in_interrupt()) { // if function called from task - store it and pause
         _task = REVOMINIScheduler::get_current_task();
         REVOMINIScheduler::task_pause(timeout);
     } else {
         _task=0;
     }
+    interrupts();
+
+
+    if(_completion_cb) return I2C_PENDING;
+            
     while (hal_micros() - t < timeout) {
         if(_error!=I2C_ERR_TIMEOUT) break; // error occures
         

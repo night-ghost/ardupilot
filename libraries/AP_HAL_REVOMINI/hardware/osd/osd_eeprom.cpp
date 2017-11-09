@@ -75,7 +75,7 @@ void OSD_EEPROM::_write(uint16_t addr, uint8_t val){
     
     
 // 1st - erase page. power loss here cause data loss! In execution time CPU is frozen!
-    hal.console->printf("\nEEprom_OSD erase page %d\n ", (uint16_t)((EEPROM_PAGE & 0x00ffffff) / 0x4000) ); // clear high byte of address and count 16K blocks
+    printf("\nEEprom_OSD erase page %d\n ", (uint16_t)((EEPROM_PAGE & 0x00ffffff) / 0x4000) ); // clear high byte of address and count 16K blocks
     FLASH_Unlock_dis();
     erasePageByAddress(EEPROM_PAGE); 
 

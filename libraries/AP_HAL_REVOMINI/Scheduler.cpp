@@ -1,4 +1,4 @@
-#pragma GCC optimize ("Og")
+#pragma GCC optimize ("O2")
 
 
 #include "Scheduler.h"
@@ -900,6 +900,11 @@ void * NOINLINE REVOMINIScheduler::_start_task(Handler handle, size_t stackSize)
 {
     // Check called from main task
     if (!_in_main_thread() ) return NULL; 
+    
+    if(in_interrupt()) {
+        AP_HAL::panic("start_task called from ISR 0x%x", (uint8_t)(SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk));
+    }
+
 
     // Adjust stack size with size of task context
     stackSize += sizeof(task_t)+8; // for alignment
@@ -1427,3 +1432,5 @@ void * hal_register_task(voidFuncPtr task, uint32_t stack) {
     Revo_handler r = { .vp=task };
     return REVOMINIScheduler::_start_task(r.h, stack);
 }
+
+//void hal_panic(const char *errormsg, ...) { AP_HAL::pa}
