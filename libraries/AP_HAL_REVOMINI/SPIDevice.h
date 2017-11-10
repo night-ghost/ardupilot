@@ -40,6 +40,7 @@ typedef enum SPIFrequency {
     SPI_36MHZ       = 8, /**< 36 MHz */
 } SPIFrequency;
 
+typedef uint8_t (*spi_WaitFunc)(uint8_t b);
 
 struct spi_pins {
     uint8_t sck;
@@ -56,6 +57,12 @@ struct SPIDesc {
     SPIFrequency lowspeed;
     SPIFrequency highspeed;
     uint8_t mode;  // mode of operations: 0 - polling, 1&2 DMA
+};
+
+enum SPI_ISR_MODE {
+    SPI_ISR_NONE,
+    SPI_ISR_STROBE,
+    SPI_ISR_COMPARE,
 };
 
 //#define  DEBUG_SPI    
@@ -98,6 +105,7 @@ public:
 
     void send_strobe(const uint8_t *buffer, uint16_t len); // send in ISR and strobe each byte by CS
     void wait_busy() { spi_wait_busy(_desc.dev);  }
+    uint8_t wait_for(uint8_t out, spi_WaitFunc cb, uint16_t dly); // wait for needed byte in ISR
 
     /* See AP_HAL::Device::get_semaphore() */
     inline REVOMINI::Semaphore *get_semaphore() { uint8_t n = _desc.bus - 1; if(n<MAX_BUS_NUM) { return &_semaphores[n];} else return NULL; } // numbers from 1
@@ -163,10 +171,15 @@ protected:
     Handler _completion_cb;
     void   *_task;
     
-    // vars for send_strobe()
+    // vars for send_strobe() and wait_for()
     const uint8_t *_send_address;
-    uint16_t _send_len;
-    
+    uint16_t       _send_len;
+
+    SPI_ISR_MODE   _isr_mode;
+    spi_WaitFunc   _compare_cb;
+    uint8_t        _recv_data;
+
+    void isr_transfer_finish();
 };
 
 class SPIDeviceManager : public AP_HAL::SPIDeviceManager {

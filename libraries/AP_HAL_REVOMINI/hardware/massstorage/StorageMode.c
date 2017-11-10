@@ -1,5 +1,6 @@
 #include "StorageMode.h"
 
+
 // defines of disk status
 #include "../sd/FatFs/diskio.h"
 
@@ -66,19 +67,6 @@ inline int8_t STORAGE_GetMaxLun(void)
   return (STORAGE_LUN_NBR - 1);
 }
 
-const USBD_STORAGE_cb_TypeDef STORAGE_fops =
-{
-  STORAGE_Init,
-  STORAGE_GetCapacity,
-  STORAGE_IsReady,
-  STORAGE_IsWriteProtected,
-  STORAGE_Read,
-  STORAGE_Write,
-  STORAGE_GetMaxLun,
-  (int8_t *)STORAGE_Inquirydata,
-};
-
-const USBD_STORAGE_cb_TypeDef * const USBD_STORAGE_fops = &STORAGE_fops;
 
 #ifdef USE_USB_OTG_FS
 void OTG_FS_WKUP_IRQHandler(void)
@@ -92,3 +80,18 @@ void OTG_FS_WKUP_IRQHandler(void)
   EXTI_ClearITPendingBit(EXTI_Line18);
 }
 #endif
+
+
+const USBD_STORAGE_cb_TypeDef STORAGE_fops =
+{
+  STORAGE_Init,
+  STORAGE_GetCapacity,
+  STORAGE_IsReady,
+  STORAGE_IsWriteProtected,
+  STORAGE_Read,
+  STORAGE_Write,
+  STORAGE_GetMaxLun,
+  (int8_t *)STORAGE_Inquirydata,
+};
+
+const USBD_STORAGE_cb_TypeDef * const USBD_STORAGE_fops = &STORAGE_fops;

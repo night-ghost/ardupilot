@@ -227,8 +227,9 @@ void USBD_USR_Init(void)
 {  
     usb_connected = 0;
     usb_opened = 0;
-    
+#ifdef USB_MASSSTORAGE    
     SCSI_Init(); // start USB IO task
+#endif
 }
 
 void USBD_USR_DeviceReset(uint8_t speed )

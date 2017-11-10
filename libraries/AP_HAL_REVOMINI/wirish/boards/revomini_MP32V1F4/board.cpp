@@ -21,8 +21,8 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     {&gpiob,&timer12,NULL, 14, 1, ADCx}, /* D4/PB14  4 CH1_IN - PPMSUM */
     {&gpiob,&timer12,NULL, 15, 2, ADCx}, /* D5/PB15  5 CH2_IN - PPMSUM2 */
     {&gpioc,   NULL,&_adc1, 0, 0,   10}, /* D6/PC0   6 SBUS invertor output */
-    {&gpioc,   NULL,&_adc1, 1, 0,   11}, /* D7/PC1   7 VOLT */
-    {&gpioc,   NULL,&_adc1, 2, 0,   12}, /* D8/PC2   8 AMP/SONAR */
+    {&gpioc,   NULL,&_adc1, 1, 0,   11}, /* D7/PC1   7 AMP */
+    {&gpioc,   NULL,&_adc1, 2, 0,   12}, /* D8/PC2   8 Volt/SONAR (connected to 22) */
     {&gpioc,   NULL,&_adc1, 3, 0,   13}, /* D9/PC3   9 freq sense - resistor to VCC */
     {&gpioc,   NULL,&_adc1, 4, 0,   14}, /* D10/PC4  10 EXTI_MPU6000 */
     {&gpioc,   NULL,&_adc1, 5, 0,   15}, /* D11/PC5  1 USB_SENSE */
@@ -36,7 +36,7 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     {&gpioc,   NULL, NULL, 13, 0, ADCx}, /* D19/PC13 9  NOT CONNECTED */
     {&gpioc,   NULL, NULL, 14, 0, ADCx}, /* D20/PC14 20 NOT CONNECTED */
     {&gpioc,   NULL, NULL, 15, 0, ADCx}, /* D21/PC15 1  NOT CONNECTED */
-    {&gpioa, &timer1,NULL,  8, 1, ADCx}, /* D22/PA8  2 Volt/Sonar double */
+    {&gpioa, &timer1,NULL,  8, 1, ADCx}, /* D22/PA8  2 Volt/Sonar double (connected to 8) */
     {&gpioa, &timer1,NULL,  9, 2, ADCx}, /* D23/PA9  3 USART1_TX */
     {&gpioa, &timer1,NULL, 10, 3, ADCx}, /* D24/PA10 4 USART1_RX */
     {&gpiob,   NULL, NULL,  9, 4, ADCx}, /* D25/PB9  5 I2C1_SDA */
@@ -117,11 +117,11 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     {&gpiob,   NULL, NULL, 11, 0, ADCx}, /* D100/PB11 100 USART3_RX/I2C2-SDA */
     {&gpiob,   NULL, NULL,  8, 0, ADCx}, /* D101/PB8  I2C1_SCL  */
     {&gpioe,   NULL, NULL,  2, 0, ADCx}, /* D102/PE2 */
-    {&gpioa,   NULL, NULL, 15, 0, ADCx}, /* D103/PA15 CS_RFM22B */
+    {&gpioa,   NULL, NULL, 15, 0, ADCx}, /* D103/PA15 BOARD_SPEKTRUM_PWR_PIN */
     {&gpiob,   NULL, NULL,  3, 0, ADCx}, /* D104/PB3  CS_FLASH */
     {&gpiob,   NULL, NULL,  4, 0, ADCx}, /* D105/PB4  LED_RED */
-    {&gpioa,   NULL, NULL, 13, 0, ADCx}, /* D106/PA13 LED_MOTOR - SWDIO */
-    {&gpioa,   NULL, NULL, 14, 0, ADCx}, /* D107/PA14 */
+    {&gpioa,   NULL, NULL, 13, 0, ADCx}, /* D106/PA13 SWDIO */
+    {&gpioa,   NULL, NULL, 14, 0, ADCx}, /* D107/PA14 SWCLK */
     {&gpioa,   NULL, NULL, 11, 0, ADCx}, /* D108/PA11  - USB D- */
     
 };

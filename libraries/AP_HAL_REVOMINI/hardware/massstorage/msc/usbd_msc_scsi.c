@@ -137,6 +137,8 @@ typedef struct SCSI_LOG {
     uint32_t len;
     uint8_t params[8];
     int8_t ret;
+    uint8_t rdp;
+    uint8_t wrp;
 } SCSI_log;
 
 static uint16_t scsi_log_ptr=0;
@@ -251,18 +253,10 @@ int8_t SCSI_ProcessCmd(USB_OTG_CORE_HANDLE  *pdev,
     
   case SCSI_READ10:
     ret= SCSI_Read10(lun, params); 
-#ifdef SCSI_DEBUG
-    printf(" ret=%d\n", ret);
-    p->ret=ret;
-#endif
     return ret; // without MSC_BOT_CBW_finish(p->pdev);
     
   case SCSI_WRITE10:
     ret= SCSI_Write10(lun, params);
-#ifdef SCSI_DEBUG
-    printf(" ret=%d\n", ret);
-    p->ret=ret;
-#endif
     return ret; // without MSC_BOT_CBW_finish(p->pdev);
     
   case SCSI_VERIFY10:
@@ -276,10 +270,6 @@ int8_t SCSI_ProcessCmd(USB_OTG_CORE_HANDLE  *pdev,
     ret= -1;
     break;
   }
-#ifdef SCSI_DEBUG
-    printf(" ret=%d\n", ret);
-    p->ret=ret;
-#endif
 
     MSC_BOT_CBW_finish(pdev);
 
@@ -599,6 +589,8 @@ static int8_t SCSI_Read10(uint8_t lun , uint8_t *params)
 #ifdef SCSI_DEBUG
     curr_log->addr = SCSI_blk_addr;
     curr_log->len  = SCSI_blk_len;
+    curr_log->rdp = usb_read_ptr;
+    curr_log->wrp = usb_write_ptr;
 #endif
  
 #if 1
@@ -700,11 +692,24 @@ static int8_t SCSI_Write10 (uint8_t lun , uint8_t *params)
 #ifdef SCSI_DEBUG
     curr_log->addr = SCSI_blk_addr;
     curr_log->len  = SCSI_blk_len;
+    curr_log->rdp = usb_read_ptr;
+    curr_log->wrp = usb_write_ptr;
 #endif
 
         return 0;
     }
     /* Write Process ongoing */
+
+
+#ifdef SCSI_DEBUG
+    curr_log->addr = SCSI_blk_addr;
+    curr_log->len  = SCSI_blk_len;
+    curr_log->rdp = usb_read_ptr;
+    curr_log->wrp = usb_write_ptr;
+    curr_log->alt = true;
+
+#endif
+
   
 #if 1
     USB_rec *p = &usb_queue[usb_write_ptr];
@@ -748,6 +753,8 @@ static void usb_task(){
     l->alt = true;
     l->addr=SCSI_blk_addr;
     l->len=SCSI_blk_len;
+    l->rdp = usb_read_ptr;
+    l->wrp = usb_write_ptr;
   curr_log=l;
 #endif
 

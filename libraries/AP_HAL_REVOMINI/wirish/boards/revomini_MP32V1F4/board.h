@@ -64,14 +64,12 @@ void boardInit(void);
 
 #define BOARD_DATAFLASH_CS_PIN  104
 
-
 #define BOARD_MPU6000_CS_PIN	51
 #define BOARD_MPU6000_DRDY_PIN	10  // PC4
-//#define INVENSENSE_INTERRUPT_PIN	BOARD_MPU6000_DRDY_PIN	
 
 
 #define BOARD_SBUS_INVERTER     6
-#define BOARD_SBUS_UART 1 // can use some UART as hardware inverted input
+#define BOARD_SBUS_UART 1         // can use some UART as hardware inverted input
 
 
 #define BOARD_USB_SENSE 11      // PC5
@@ -87,9 +85,9 @@ void boardInit(void);
 
 
 # define BOARD_GPIO_A_LED_PIN   36  // BLUE
-//# define HAL_GPIO_B_LED_PIN   37  // PB6 YELLOW OPTIONAL (not included)
-# define BOARD_GPIO_B_LED_PIN   9      //  frequency select - resistor to VCC or ground
-# define BOARD_GPIO_C_LED_PIN   105 // RED
+# define BOARD_GPIO_B_LED_PIN   105 // GREEN 
+//# define BOARD_GPIO_C_LED_PIN   37  // PB6 YELLOW OPTIONAL (not included)
+//# define BOARD_GPIO_C_LED_PIN   9    //  frequency select - resistor to VCC or ground
 
 # define BOARD_LED_ON           LOW
 # define BOARD_LED_OFF          HIGH

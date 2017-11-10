@@ -170,6 +170,7 @@ public:
     static void           _pinMode(uint8_t pin, uint8_t output);
     static inline uint8_t _read(uint8_t pin) { const stm32_pin_info &pp = PIN_MAP[pin];   return gpio_read_bit( pp.gpio_device, pp.gpio_bit) ? HIGH : LOW; }
     static inline void    _write(uint8_t pin, uint8_t value) { const stm32_pin_info &pp = PIN_MAP[pin]; gpio_write_bit(pp.gpio_device, pp.gpio_bit, value); }
+    static inline void    _setSpeed(uint8_t pin, GPIOSpeed_TypeDef gpio_speed) { const stm32_pin_info &pp = PIN_MAP[pin]; gpio_set_speed(pp.gpio_device, pp.gpio_bit, gpio_speed);}
 
     static inline AP_HAL::DigitalSource* get_channel(uint16_t pin) { const stm32_pin_info &pp = PIN_MAP[pin]; return new REVOMINIDigitalSource(pp.gpio_device, pp.gpio_bit); }
 };

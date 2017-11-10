@@ -26,6 +26,8 @@ cSRCS_$(d) += $(MS)/msc/usbd_msc_bot.c
 cSRCS_$(d) += $(MS)/msc/usbd_msc_data.c
 cSRCS_$(d) += $(MS)/msc/usbd_msc_scsi.c
 
+sSRCS_$(d) :=
+
 cFILES_$(d)   := $(cSRCS_$(d):%=$(d)/%)
 cppFILES_$(d) := $(cppSRCS_$(d):%=$(d)/%)
 sFILES_$(d)   := $(sSRCS_$(d):%=$(d)/%)

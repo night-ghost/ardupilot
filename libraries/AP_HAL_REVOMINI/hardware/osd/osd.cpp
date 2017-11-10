@@ -379,6 +379,7 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 
     const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
     gpio_set_mode(pp.gpio_device, pp.gpio_bit, GPIO_OUTPUT_PP);
+    gpio_set_speed(pp.gpio_device, pp.gpio_bit, GPIO_Speed_100MHz); 
     gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);
 
 
@@ -494,7 +495,7 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
         }
         fd.close();
 
-        readSettings();
+        readSettings(); // re-read new values
         
         sets.CHK1_VERSION = VER;        // set version - EEPROM OK
         sets.CHK2_VERSION = (VER ^ 0x55);
@@ -877,7 +878,7 @@ void update_max_buffer(const uint8_t *buffer, uint16_t len){
 
 #elif 0
 
-// a try to do writes in sottware strobe mode
+// a try to do writes in software strobe mode
     MAX_write(MAX7456_DMM_reg, 1); // автоинкремент адреса
     max7456_cs_off();
     while(len--){

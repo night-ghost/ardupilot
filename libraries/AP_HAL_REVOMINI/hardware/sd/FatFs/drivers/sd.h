@@ -36,7 +36,6 @@ uint8_t sd_get_type();
 uint8_t sd_get_state();
 BYTE    sd_getSectorCount(DWORD *ptr);
 
-//extern xchg_spi(BYTE b);
 
 /* MMC card type flags (MMC_GET_TYPE) */
 #define CT_MMC          0x01            /* MMC ver 3 */

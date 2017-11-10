@@ -1,4 +1,5 @@
 #pragma GCC optimize ("O2")
+
 #include <AP_HAL/HAL.h>
 #include <AP_Param_Helper/AP_Param_Helper.h>
 

@@ -1,4 +1,3 @@
-# Try "make help" first
 
 #TOOLCHAIN = NATIVE
 TOOLCHAIN = ARM
@@ -210,7 +209,6 @@ include $(HARDWARE_PATH)/hal/rules.mk
 include $(HARDWARE_PATH)/4way/rules.mk
 #include $(HARDWARE_PATH)/osd/rules.mk - per board
 include $(HARDWARE_PATH)/sd/rules.mk
-include $(HARDWARE_PATH)/massstorage/rules.mk
 include $(HARDWARE_PATH)/STM32_USB_Driver/rules.mk
 include $(HARDWARE_PATH)/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/rules.mk
 
@@ -318,10 +316,11 @@ revomini-program:
 
 
 revomini-clean: clean
-	$(v) /bin/find $(REVO_PATH) -type f -name "*.d" -delete
-	$(v) /bin/find $(REVO_PATH) -type f -name "*.o" -delete
-	$(v) /bin/find $(REVO_PATH) -type f -name "*.i" -delete
+	$(v) /bin/find $(REVO_PATH) -type f -name "*.d"  -delete
+	$(v) /bin/find $(REVO_PATH) -type f -name "*.o"  -delete
+	$(v) /bin/find $(REVO_PATH) -type f -name "*.i"  -delete
 	$(v) /bin/find $(REVO_PATH) -type f -name "*.ii" -delete
+	$(v) /bin/find $(REVO_PATH) -type f -name "*.d"  -delete
 
 
 # Link the final object

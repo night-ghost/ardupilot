@@ -166,7 +166,6 @@ inline void dma_setup_transfer_mm(dma_stream    stream,
 
 
 // compatible way
-
 void dma_init_transfer(dma_stream stream, DMA_InitTypeDef *v){
     uint32_t tmpreg;
 

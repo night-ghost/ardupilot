@@ -1,8 +1,9 @@
+#pragma GCC optimize ("O2")
+
 #include <AP_HAL/AP_HAL.h>
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
 
-#pragma GCC optimize ("O2")
 
 #include <string.h>
 #include "stm32f4xx.h"

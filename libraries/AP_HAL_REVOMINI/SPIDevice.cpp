@@ -564,7 +564,6 @@ uint8_t  SPIDevice::dma_transfer(const uint8_t *out, const uint8_t *recv, uint32
 
     uint8_t ret=0;
 
-#if 1
     t=hal_micros();
     if(!REVOMINIScheduler::in_interrupt()) { // if function called from task - store it and pause
         _task = REVOMINIScheduler::get_current_task();
@@ -574,17 +573,6 @@ uint8_t  SPIDevice::dma_transfer(const uint8_t *out, const uint8_t *recv, uint32
         hal_yield(0); // пока ждем пусть другие работают. 
         if(hal_micros()-t > MAX_SPI_TIME) { ret=1; break; } // timeout
     }
-#else
-    /* Wait until Receive Complete */
-    t=hal_micros();
-    uint16_t n_bytes = btr;
-    while ( (dma_get_isr_bits(dp.stream_rx) & DMA_FLAG_TCIF) == 0) { 
-        if(hal_micros()-t > MAX_SPI_TIME) { ret=1; break; } // timeout
-        uint16_t dly = n_bytes * byte_time / 4; // time in 0.25uS
-        hal_yield(dly); // пока ждем пусть другие работают. 
-        n_bytes=0; // long delay only once
-    }
-#endif
 
     dma_isr();  //  disable DMA 
     return ret; // OK
@@ -620,6 +608,7 @@ See Figure 259
 
 */// so enable interrupt by TXE to not wait in ISR
 
+    _isr_mode = SPI_ISR_NONE; 
     _send_len = 0;  // will release bus
     spi_attach_interrupt(_desc.dev, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SPIDevice::spi_isr, void)) );    
     spi_irq_enable(_desc.dev, SPI_I2S_IT_TXE); 
@@ -728,16 +717,19 @@ bool SPIDevice::set_speed(AP_HAL::Device::Speed speed)
 void SPIDevice::send_strobe(const uint8_t *buffer, uint16_t len){ // send in ISR and strobe each byte by CS
     _send_address = buffer;
     _send_len = len;
+    _isr_mode = SPI_ISR_STROBE;
 
     spi_attach_interrupt(_desc.dev, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SPIDevice::spi_isr, void)) );    
 
-    uint32_t timeout = len * 2; // time to transfer all data - 2Us per byte
+    uint32_t timeout = len * 3; // time to transfer all data - 3uS per byte
+
+    uint32_t t = hal_micros();
+    _desc.dev->state->busy=true;
 
     noInterrupts();
     spi_irq_enable(_desc.dev, SPI_I2S_IT_TXE); // enable - will be interrupt on next line
 
     // need to wait until  transfer complete 
-    uint32_t t = hal_micros();
     if(!REVOMINIScheduler::in_interrupt()) { // if function called from task - store it and pause
         _task = REVOMINIScheduler::get_current_task();
         REVOMINIScheduler::task_pause(timeout);
@@ -753,39 +745,114 @@ void SPIDevice::send_strobe(const uint8_t *buffer, uint16_t len){ // send in ISR
 
 }
 
+uint8_t SPIDevice::wait_for(uint8_t out, spi_WaitFunc cb, uint16_t dly){ // wait for needed byte in ISR
+    _send_len = out;
+    _isr_mode = SPI_ISR_COMPARE;
+    _compare_cb = cb;    
+
+    spi_attach_interrupt(_desc.dev, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SPIDevice::spi_isr, void)) );    
+
+    uint32_t t = hal_micros();
+    _desc.dev->state->busy=true;
+
+    noInterrupts();
+    spi_irq_enable(_desc.dev, SPI_I2S_IT_TXE| SPI_I2S_IT_RXNE); // enable - will be interrupt on next line
+
+    // need to wait until transfer complete 
+    if(!REVOMINIScheduler::in_interrupt()) { // if function called from task - store it and pause
+        _task = REVOMINIScheduler::get_current_task();
+        REVOMINIScheduler::task_pause(dly);
+    } else {
+        _task=0;
+    }
+    interrupts();
+
+    while (hal_micros() - t < dly) {
+        hal_yield(0);
+        if(_send_len == 0) break;
+    }
+    if(_desc.dev->state->busy) isr_transfer_finish(); // timeout
+    return  _recv_data;
+}
+
 // releases SPI bus after last TXE is set
+void SPIDevice::isr_transfer_finish(){
+    spi_irq_disable(_desc.dev, SPI_I2S_IT_TXE|SPI_I2S_IT_RXNE);
+    spi_detach_interrupt(_desc.dev);
+
+    _desc.dev->state->busy=false; // reset 
+
+    if(_task){ // resume paused task
+        REVOMINIScheduler::task_resume(_task);
+        _task=NULL;
+    }
+
+    if(_isr_mode != SPI_ISR_COMPARE) {
+        spi_wait_busy(_desc.dev); // SPI is double-buffered so we should wait to not spoil sent byte, but there no way to do it in interrupt
+
+        _cs_release(); // free bus
+    }
+
+    Handler h;
+    if((h=_completion_cb)) {
+        _completion_cb=0; // only once and BEFORE call itself because IOC can do new transfer
+
+        revo_call_handler(h, (uint32_t)&_desc);
+    }
+}
+
 void SPIDevice::spi_isr(){
     if(spi_is_tx_empty(_desc.dev)) {
     
         if(_send_len) {    
-            spi_wait_busy(_desc.dev); // SPI is double-buffered so we should wait to not spoil sent byte
-            _cs->write(1);
-            _send_len--;
-            _cs->write(0);
-            _desc.dev->SPIx->DR = *_send_address++;
+            switch(_isr_mode) {
+            case SPI_ISR_STROBE:
+                spi_wait_busy(_desc.dev); // SPI is double-buffered so we should wait to not spoil sent byte
+                _cs->write(1);
+                _send_len--;
+                _cs->write(0);
+                _desc.dev->SPIx->DR = *_send_address++;
+                break;
+
+            case SPI_ISR_NONE:
+                _send_len--;
+                _desc.dev->SPIx->DR = *_send_address++;
+                break;
+            
+            case SPI_ISR_COMPARE:
+                _desc.dev->SPIx->DR = _send_len; // data to send in len
+                break;
+                
+            default:
+                break;
+            }
         } else { // all sent
-            spi_irq_disable(_desc.dev, SPI_I2S_IT_TXE);
-            spi_detach_interrupt(_desc.dev);
-
-            _desc.dev->state->busy=false; // reset 
-
-            if(_task){ // resume paused task
-                REVOMINIScheduler::task_resume(_task);
-                _task=NULL;
-            }
-    
-            spi_wait_busy(_desc.dev); // SPI is double-buffered so we should wait to not spoil sent byte, but there no way to do it in interrupt
-            _cs_release(); // free bus
-
-            Handler h;
-            if((h=_completion_cb)) {
-                _completion_cb=0; // only once and BEFORE call itself because IOC can do new transfer
-
-                revo_call_handler(h, (uint32_t)&_desc);
-            }
-
+            isr_transfer_finish();                // releases SPI bus after last TXE is set
         }
     }
+
+    if(spi_is_rx_nonempty(_desc.dev)) {
+        switch(_isr_mode) {
+/*
+        case SPI_ISR_NONE:
+            if(_recv_len){
+                _recv_len--;
+                *_recv_address++ = _desc.dev->SPIx->DR;
+            } else {
+                isr_transfer_finish();                // releases SPI bus after last TXE is set
+            }
+            break;
+*/
+        case SPI_ISR_COMPARE:
+            _recv_data = _desc.dev->SPIx->DR;
+            if(_compare_cb(_recv_data) ) { // ok
+                _send_len=0;
+                isr_transfer_finish();
+            }
+        default:
+            break;
+        }
+    }
+
 }
 
-    

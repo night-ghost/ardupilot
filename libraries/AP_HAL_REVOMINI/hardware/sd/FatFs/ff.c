@@ -1,4 +1,4 @@
-#pragma GCC optimize ("Og")
+#pragma GCC optimize ("O2")
 
 /*----------------------------------------------------------------------------/
 /  FatFs - FAT file system module  R0.11                 (C)ChaN, 2015
@@ -582,44 +582,18 @@ static void gen_numname (BYTE* dst, const BYTE* src, const WCHAR* lfn, UINT seq)
 static inline
 void mem_cpy (void* dst, const void* src, UINT cnt) {
     memcpy(dst,src,cnt);
-/*
-	BYTE *d = (BYTE*)dst;
-	const BYTE *s = (const BYTE*)src;
-
-#if _WORD_ACCESS == 1
-	while (cnt >= sizeof (int)) {
-		*(int*)d = *(int*)s;
-		d += sizeof (int); s += sizeof (int);
-		cnt -= sizeof (int);
-	}
-#endif
-	while (cnt--)
-		*d++ = *s++;
-*/
 }
 
 /* Fill memory */
 static inline
 void mem_set (void* dst, BYTE val, UINT cnt) {
     memset(dst,val,cnt);
-/*	BYTE *d = (BYTE*)dst;
-
-	while (cnt--)
-		*d++ = (BYTE)val;
-*/
 }
 
 /* Compare memory to memory */
 static
 int mem_cmp (const void* dst, const void* src, UINT cnt) {
     return memcmp(dst,src, cnt);
-/*
-	const BYTE *d = (const BYTE *)dst, *s = (const BYTE *)src;
-	int r = 0;
-
-	while (cnt-- && (r = *d++ - *s++) == 0) ;
-	return r;
-*/
 }
 
 /* Check if chr is contained in the string */

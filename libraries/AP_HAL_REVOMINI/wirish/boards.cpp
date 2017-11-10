@@ -31,6 +31,8 @@ based on:
  *
  */
 
+#pragma GCC optimize ("O2")
+
 #include "boards.h"
 #include <usb.h>
 

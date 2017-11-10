@@ -89,7 +89,6 @@ static inline void i2c_lowLevel_init(const i2c_dev *dev)  {
     memset(dev->state,0,sizeof(i2c_state));
 
     GPIO_InitTypeDef GPIO_InitStructure;
-//    NVIC_InitTypeDef NVIC_InitStructure;
 
     /* Enable the i2c */
     RCC_APB1PeriphClockCmd(dev->clk, ENABLE);
@@ -149,9 +148,6 @@ void i2c_init(const i2c_dev *dev, uint16_t address, uint32_t speed)
     I2C_Cmd(dev->I2Cx, ENABLE);
     /* Apply I2C configuration after enabling it */
     I2C_Init(dev->I2Cx, &I2C_InitStructure);
-
-//    dma_init(dev->dma.stream_rx);
-//    dma_disable(dev->dma.stream_rx);
 }
 
 /**
@@ -170,6 +166,11 @@ static void ev_handler(const i2c_dev *dev, bool err){
         dev->I2Cx->CR2 &= ~(I2C_CR2_ITBUFEN|I2C_CR2_ITEVTEN|I2C_CR2_ITERREN);    // Disable interrupts
     }
 }
+
+void I2C1_EV_IRQHandler(); // to avoid warnings
+void I2C1_ER_IRQHandler();
+void I2C2_EV_IRQHandler();
+void I2C2_ER_IRQHandler();
 
 void I2C1_EV_IRQHandler(){                // I2C1 Event                   
     ev_handler(_I2C1, false);
@@ -266,7 +267,7 @@ again:
 // datasheet: It indicates a communication in progress on the bus. This information is still updated when the interface is disabled (PE=0).
 
     dev->I2Cx->CR1 |= I2C_CR1_SWRST;           // set SoftReset for some time 
-    I2C_Yield(10);
+    I2C_Yield(0);
     dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_SWRST); // clear SoftReset flag 
     return true;
 }

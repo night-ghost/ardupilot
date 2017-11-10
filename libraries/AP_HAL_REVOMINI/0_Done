@@ -178,7 +178,7 @@ Timer usage:
 7 scheduler
 8 PPM_IN
 9 soft_i2c1
-10 soft_i2c2 or PPM_IN on AirbotV2
+10 soft_i2c2
 11 
 12 PPM_IN
 13 driver's io_completion

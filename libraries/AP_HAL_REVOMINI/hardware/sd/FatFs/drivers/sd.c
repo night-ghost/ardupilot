@@ -1,3 +1,5 @@
+#pragma GCC optimize ("O2")
+
 #include "sd.h"
 #include "../diskio.h"
 #include "../ff.h"
@@ -139,29 +141,36 @@ void power_off(void){
 /* Wait for card ready                                                   */
 /*-----------------------------------------------------------------------*/
 
+// TODO: remove all active waiting by transferring check to callback 
+
+static uint8_t wait_ff(uint8_t b){
+    return b==0xff;
+}
+
 static
 int wait_ready (	/* 1:Ready, 0:Timeout */
 	UINT wt			/* Timeout [ms] */
 )
 {
-	BYTE d;
+    BYTE d;
 
+/*
 
-	Timer2 = wt;
-	do {
-		d = xchg_spi(0xFF);		
-		spi_yield(); /* This loop takes a time. Insert rot_rdq() here for multitask envilonment. */
-	} while (d != 0xFF && Timer2);	/* Wait for card goes ready or timeout */
+    d=spi_waitFor(0xFF,wait_ff,wt);
 
-	if(d == 0xFF) {
-	    // endless recursion! sd_get_state(); // reset errors
-//	    if(was_write){ // no endless recursion because we reset flag first
-//	        was_write=0;
-//	        sd_get_state(); // reset errors
-//	    }
-	    return 1;
-	}
-	return 0;
+    return d == 0xFF;
+      
+*/
+    Timer2 = wt;
+    do {
+	d = xchg_spi(0xFF);		
+	spi_yield(); /* This loop takes a time. Insert rot_rdq() here for multitask envilonment. */
+    } while (d != 0xFF && Timer2);	/* Wait for card goes ready or timeout */
+
+    if(d == 0xFF) {
+        return 1;
+    }
+    return 0;
 }
 
 
@@ -173,9 +182,8 @@ int wait_ready (	/* 1:Ready, 0:Timeout */
 static
 void deselect (void)
 {
-	CS_HIGH();		/* Set CS# high */
-	xchg_spi(0xFF);	/* Dummy clock (force DO hi-z for multiple slave SPI) */
-
+    CS_HIGH();		/* Set CS# high */
+    xchg_spi(0xFF);	/* Dummy clock (force DO hi-z for multiple slave SPI) */
 }
 
 
@@ -187,14 +195,14 @@ void deselect (void)
 static
 int select (void)	/* 1:OK, 0:Timeout */
 {
-	if(!CS_LOW()) { /* take semaphore and Set CS# low */
-	    return 0;		
-	}
-	xchg_spi(0xFF);	/* Dummy clock (force DO enabled) */
-	if (wait_ready(500)) return 1;	/* Wait for card ready */
+    if(!CS_LOW()) { /* take semaphore and Set CS# low */
+        return 0;		
+    }
+    xchg_spi(0xFF);	/* Dummy clock (force DO enabled) */
+    if (wait_ready(500)) return 1;	/* Wait for card ready */
 
-	deselect();
-	return 0;	/* Timeout */
+    deselect();
+    return 0;	/* Timeout */
 }
 
 
@@ -202,6 +210,11 @@ int select (void)	/* 1:OK, 0:Timeout */
 /*-----------------------------------------------------------------------*/
 /* Receive a data packet from the MMC                                    */
 /*-----------------------------------------------------------------------*/
+
+static uint8_t wait_noFF(uint8_t b){
+    return b!=0xff;
+}
+
 
 static
 int8_t rcvr_datablock (	/* 1:OK, 0:Error */
@@ -212,22 +225,20 @@ int8_t rcvr_datablock (	/* 1:OK, 0:Error */
 	BYTE token;
         BYTE ret=0;
 
+/*
+        ret=spi_waitFor(0xff, wait_noFF, 200);
+
+        if(ret != 0xFF) goto done;		// Function fails if invalid DataStart token or timeout 
+
+*/
+
 	Timer1 = 200;
 	do {					/* Wait for DataStart token in timeout of 200ms */
     	    token = xchg_spi(0xFF);
 	    spi_yield();	/* This loop will take a time. Insert rot_rdq() here for multitask environment. */
 	} while ((token == 0xFF) && Timer1);
-//	} while ((token != 0xFE) && Timer1);
 
 	if(token != 0xFE) {
-
-/*            if(token == 0xC0 || token == 0x80) {
-                BYTE r = wait_ready(500);
-        	rcvr_spi_multi(buff, btr);		// read the rest
-                printf("rcvr_datablock failed token=%x ret=%d\n", token, r);
-                goto done;
-            }
-*/
 	    goto done;		/* Function fails if invalid DataStart token or timeout */
 	}
 
@@ -273,6 +284,11 @@ static int8_t xmit_datablock (	/* 1:OK, 0:Failed */
 /* Send a command packet to the MMC                                      */
 /*-----------------------------------------------------------------------*/
 static uint8_t buf[6]; // to use DMA
+
+static uint8_t wait_0x80(uint8_t b){
+    return (b & 0x80)==0;
+}
+
 
 static
 BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
@@ -323,6 +339,14 @@ BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 
 	/* Receive command resp */
 	if (cmd == CMD12) xchg_spi(0xFF);	/* Diacard following one byte when CMD12 */
+
+/*
+        res=spi_waitFor(0xff, wait_0x80, 20);
+
+        return res;
+
+*/
+
 	uint8_t n = 255;		        /* Wait for response (10 bytes max) */
 	do {
 	    res = xchg_spi(0xFF);

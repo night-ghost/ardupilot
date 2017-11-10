@@ -119,59 +119,59 @@ void gpio_set_mode(const gpio_dev* const dev, uint8_t pin, gpio_pin_mode mode)
     config.GPIO_Speed = GPIO_Speed_2MHz; // low noise by default
 	
     switch(mode) {
-	case GPIO_OUTPUT_PP:
-		config.GPIO_Mode = GPIO_Mode_OUT;
-		config.GPIO_PuPd = GPIO_PuPd_NOPULL;
-		config.GPIO_OType = GPIO_OType_PP;
-		break;
-	case GPIO_OUTPUT_OD:
-		config.GPIO_Mode = GPIO_Mode_OUT;
-		config.GPIO_PuPd = GPIO_PuPd_NOPULL;
-		config.GPIO_OType = GPIO_OType_OD;
-		break;
-	case GPIO_OUTPUT_OD_PU:
-		config.GPIO_Mode = GPIO_Mode_OUT;
-		config.GPIO_PuPd = GPIO_PuPd_UP;
-		config.GPIO_OType = GPIO_OType_OD;
-		break;
-	case GPIO_INPUT_FLOATING:
-		config.GPIO_Mode = GPIO_Mode_IN;
-		config.GPIO_PuPd = GPIO_PuPd_NOPULL;
-		config.GPIO_OType = GPIO_OType_PP;
-		break;
-	case GPIO_INPUT_ANALOG:
-		config.GPIO_Mode = GPIO_Mode_AN;
-		config.GPIO_PuPd = GPIO_PuPd_NOPULL;
-		config.GPIO_OType = GPIO_OType_PP;
-		break;
-	case GPIO_INPUT_PU:
-		config.GPIO_Mode = GPIO_Mode_IN;
-		config.GPIO_PuPd = GPIO_PuPd_UP;
-		config.GPIO_OType = GPIO_OType_PP;
-		break;
-	case GPIO_INPUT_PD:
-		config.GPIO_Mode = GPIO_Mode_IN;
-		config.GPIO_PuPd = GPIO_PuPd_DOWN;
-		config.GPIO_OType = GPIO_OType_PP;
-		break;
-	case GPIO_AF_OUTPUT_PP:
-		config.GPIO_Mode = GPIO_Mode_AF;
-		config.GPIO_PuPd = GPIO_PuPd_NOPULL;
-		config.GPIO_OType = GPIO_OType_PP;
-		break;
-	case GPIO_AF_OUTPUT_OD:
-		config.GPIO_Mode = GPIO_Mode_AF;
-		config.GPIO_PuPd = GPIO_PuPd_NOPULL;
-		config.GPIO_OType = GPIO_OType_OD;
-		break;
-	case GPIO_AF_OUTPUT_OD_PU:
-		config.GPIO_Mode = GPIO_Mode_AF;
-		config.GPIO_PuPd = GPIO_PuPd_UP;
-		config.GPIO_OType = GPIO_OType_OD;
-		break;
-	default:
-		//errno_r = EINVAL;
-		return;
+    case GPIO_OUTPUT_PP:
+	config.GPIO_Mode = GPIO_Mode_OUT;
+	config.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	config.GPIO_OType = GPIO_OType_PP;
+	break;
+    case GPIO_OUTPUT_OD:
+	config.GPIO_Mode = GPIO_Mode_OUT;
+	config.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	config.GPIO_OType = GPIO_OType_OD;
+	break;
+    case GPIO_OUTPUT_OD_PU:
+	config.GPIO_Mode = GPIO_Mode_OUT;
+	config.GPIO_PuPd = GPIO_PuPd_UP;
+	config.GPIO_OType = GPIO_OType_OD;
+	break;
+    case GPIO_INPUT_FLOATING:
+	config.GPIO_Mode = GPIO_Mode_IN;
+	config.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	config.GPIO_OType = GPIO_OType_PP;
+	break;
+    case GPIO_INPUT_ANALOG:
+	config.GPIO_Mode = GPIO_Mode_AN;
+	config.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	config.GPIO_OType = GPIO_OType_PP;
+	break;
+    case GPIO_INPUT_PU:
+	config.GPIO_Mode = GPIO_Mode_IN;
+	config.GPIO_PuPd = GPIO_PuPd_UP;
+	config.GPIO_OType = GPIO_OType_PP;
+	break;
+    case GPIO_INPUT_PD:
+	config.GPIO_Mode = GPIO_Mode_IN;
+	config.GPIO_PuPd = GPIO_PuPd_DOWN;
+	config.GPIO_OType = GPIO_OType_PP;
+	break;
+    case GPIO_AF_OUTPUT_PP:
+	config.GPIO_Mode = GPIO_Mode_AF;
+	config.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	config.GPIO_OType = GPIO_OType_PP;
+	break;
+    case GPIO_AF_OUTPUT_OD:
+	config.GPIO_Mode = GPIO_Mode_AF;
+	config.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	config.GPIO_OType = GPIO_OType_OD;
+	break;
+    case GPIO_AF_OUTPUT_OD_PU:
+	config.GPIO_Mode = GPIO_Mode_AF;
+	config.GPIO_PuPd = GPIO_PuPd_UP;
+	config.GPIO_OType = GPIO_OType_OD;
+	break;
+    default:
+	//errno_r = EINVAL;
+	return;
     }
 
     config.GPIO_Pin = BIT(pin);

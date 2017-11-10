@@ -17,11 +17,13 @@
   Copied from: Flymaple port by Mike McCauley
  */
 
-#if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
-
 #pragma GCC optimize ("O2")
 
+
+
 #include <AP_HAL/AP_HAL.h>
+
+#if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
 
 #include "AP_HAL_REVOMINI_Namespace.h"
 #include "AnalogIn.h"
@@ -46,8 +48,6 @@ REVOMINIAnalogIn::REVOMINIAnalogIn():
 
 
 void REVOMINIAnalogIn::init() {
-
-//    setupADC(); // init and enable all ADC - individually
 
     // Register _timer_event in the scheduler. 
     REVOMINIScheduler::_register_timer_process(FUNCTOR_BIND_MEMBER(&REVOMINIAnalogIn::_timer_event,void), 5000); // 200Hz is enough

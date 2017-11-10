@@ -367,6 +367,7 @@ void DataFlash_Revo::Init()
     erase_size = BOARD_DATAFLASH_ERASE_SIZE;
     
     REVOMINIGPIO::_pinMode(DF_RESET,OUTPUT);
+    REVOMINIGPIO::_setSpeed(DF_RESET, GPIO_Speed_100MHz);
     // Reset the chip
     REVOMINIGPIO::_write(DF_RESET,0);
     REVOMINIScheduler::_delay(1);
