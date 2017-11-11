@@ -109,10 +109,11 @@ size_t REVOMINIUARTDriver::write(uint8_t c) {
     }
 
     uint16_t n;
-    uint16_t tr=3; // 3 попытки
+    uint16_t tr=5; // попытки
     while(tr) {
         n = usart_putc(_usart_device, c);
         if(n==0) { // no place for character
+            hal_yield(0);
             if(!_blocking || REVOMINIScheduler::_in_timerprocess() ) tr--; // при неблокированном выводе уменьшим счетчик попыток
         } else break; // успешно отправили
     } 
@@ -121,13 +122,14 @@ size_t REVOMINIUARTDriver::write(uint8_t c) {
 
 size_t REVOMINIUARTDriver::write(const uint8_t *buffer, size_t size)
 {
-    uint16_t tr=3; // 3 попытки
+    uint16_t tr=5; // попыток
     uint16_t n;
     uint16_t sent=0;
     while(tr && size) {
 
         n = usart_tx(_usart_device, buffer, size);
         if(n<size) { // no place for character
+            hal_yield(0);
             if(!_blocking || REVOMINIScheduler::_in_timerprocess() ) tr--; // при неблокированном выводе уменьшим счетчик попыток
         } else break; // успешно отправили
         buffer+=n;

@@ -13,7 +13,7 @@
 #endif
 
 #ifndef USART_TX_BUF_SIZE
-#define USART_TX_BUF_SIZE               256
+#define USART_TX_BUF_SIZE               512
 #endif
 
 typedef void (* usart_cb)();
@@ -162,7 +162,9 @@ static inline uint32_t usart_txfifo_nbytes(const usart_dev *dev) {
 	return rb_full_count(dev->txrb);
 }
 static inline uint32_t usart_txfifo_freebytes(const usart_dev *dev) {
-	return (USART_TX_BUF_SIZE-rb_full_count(dev->txrb));
+        uint32_t used = rb_full_count(dev->txrb);
+        if(used >= USART_TX_BUF_SIZE/2) return 0; // leave half for dirty writes without check - thanks s_s
+	return (USART_TX_BUF_SIZE/2-used);
 }
 /**
  * @brief Disable all serial ports.
