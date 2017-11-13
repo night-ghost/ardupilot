@@ -7,6 +7,8 @@
 #include "osd_core/compat.h"
 
 
+#define OSD_DMA_TRANSFER
+
 using namespace REVOMINI;
 
 #include <AP_Common/AP_Common.h>
@@ -302,6 +304,15 @@ static volatile byte vas_vsync=false;
 mavlink_system_t mavlink_system = {12,1};  // sysid, compid
 
 
+#ifdef OSD_DMA_TRANSFER
+ #define DMA_BUFFER_SIZE 512
+    static uint8_t  dma_buffer[DMA_BUFFER_SIZE]; // in RAM
+    static uint16_t dma_transfer_length IN_CCM;
+#endif
+
+static uint8_t shadowbuf[sizeof(OSD::osdbuf)] IN_CCM;
+
+
 extern void heartBeat();
 extern void writePanels(unsigned long pt);
 
@@ -310,6 +321,33 @@ void On20ms() {}
 void osd_loop();
 void vsync_ISR();
 void max_do_transfer(const char *buffer, uint16_t len);
+
+#ifdef OSD_DMA_TRANSFER
+static void prepare_dma_buffer(){
+    uint16_t rp;
+    uint16_t wp=0;
+
+    uint8_t last_h=0;
+    
+    for(rp=0,  wp=0; rp<sizeof(OSD::osdbuf) ; rp++){
+        uint8_t c = OSD::osdbuf[rp];
+        if(c != shadowbuf[rp] ){
+            if(wp>=DMA_BUFFER_SIZE-4) break;
+            uint8_t h = rp>>8;
+            if(last_h != h){                
+                last_h = h;
+                dma_buffer[wp++] = MAX7456_DMAH_reg;  dma_buffer[wp++] = h; 
+                if(wp>=DMA_BUFFER_SIZE-4) break;
+            }
+        
+            dma_buffer[wp++] = MAX7456_DMAL_reg;  dma_buffer[wp++] = rp&0xFF; 
+            dma_buffer[wp++] = MAX7456_DMDI_reg;  dma_buffer[wp++] = c; 
+            shadowbuf[rp] = c;
+        }
+    }
+    dma_transfer_length = wp;
+}
+#endif
 
 
 uint32_t get_word(char *buf, char * &ptr){
@@ -369,7 +407,6 @@ static point create_point(char *px,   char *py, char *pVis,  char *pSign, char *
 static bool osd_need_redraw = false;
 static void * task_handle;
 
-static uint8_t shadowbuf[sizeof(OSD::osdbuf)];
 
 void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 
@@ -407,7 +444,6 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 
         
     doScreenSwitch(); // set vars for startup screen
-
 
     
     File fd = SD.open("eeprom.osd", FILE_READ);
@@ -528,7 +564,6 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
                 byte bit_count=0;
 
                 uint8_t chk=0;
-                uint8_t got_any_data=0;
                 uint8_t c=0;
                 uint8_t last_c;
 
@@ -561,7 +596,6 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
                             b += 1;
                         bit_count++;
 
-                        got_any_data=1;
                         break;
 
                     default:
@@ -663,7 +697,7 @@ void osd_loop() {
         lflags.got_data=0; // данные обработаны
     }
     
-    if( lflags.need_redraw &&  !vsync_wait) { // сразу после прерывания дабы успеть закончить расчет к следующему
+    if( lflags.need_redraw) {                 
         lflags.need_redraw=0; // экран перерисован
 
         setHomeVars();   // calculate and set Distance from home and Direction to home
@@ -671,6 +705,10 @@ void osd_loop() {
         setFdataVars();  // накопление статистики и рекордов
 
         writePanels(pt);   // writing enabled panels (check OSD_Panels Tab)
+
+#ifdef OSD_DMA_TRANSFER
+        prepare_dma_buffer(); // prepare diff with addresses
+#endif
 
         update_screen = 1; // пришли данные, надо перерисовать экран
     }
@@ -686,8 +724,6 @@ void osd_loop() {
             update_screen = 0;
             REVOMINIScheduler::set_task_priority(task_handle, OSD_LOW_PRIORITY);
         }
-    
-
     }
 
     if(pt > timer_100ms){
@@ -772,7 +808,7 @@ int16_t osd_available(){
     return rb_full_count(&osd_rxrb);
 }
 
-void osd_queue(uint8_t c) {    // push bytes around in the ring buffer
+void osd_queue(uint8_t c) {    // push bytes from OSD to FC around in the ring buffer
     while(rb_is_full(&osd_rxrb)) hal_yield(100);
     rb_push_insert(&osd_rxrb, c);
 }
@@ -785,7 +821,7 @@ int16_t osd_getc(){ // get char from ring buffer
 
 void osd_putc(uint8_t c){ 
     while(rb_is_full(&osd_txrb)) {
-        REVOMINIScheduler::set_task_priority(task_handle, 100); // equal to main to run in time of yield()
+        REVOMINIScheduler::set_task_priority(task_handle, OSD_HIGH_PRIORITY); // to run in time of yield()
         hal_yield(100);
     }
     rb_push_insert(&osd_txrb, c);
@@ -848,15 +884,20 @@ void update_max_buffer(const uint8_t *buffer, uint16_t len){
     max7456_on();
 
     uint16_t cnt=0;
+    
+#ifdef OSD_DMA_TRANSFER
+    osd_spi->transfer(dma_buffer, dma_transfer_length, NULL, 0);    // diff already prepared
+#elif 0
     MAX_write(MAX7456_DMAH_reg, 0);
     MAX_write(MAX7456_DMAL_reg, 0);
-#if 0
     MAX_write(MAX7456_DMM_reg, 1); // автоинкремент адреса
 
     max7456_cs_off();
     
     osd_spi->send_strobe(buffer, len);
 #elif 0
+    MAX_write(MAX7456_DMAH_reg, 0);
+    MAX_write(MAX7456_DMAL_reg, 0);
     MAX_write(MAX7456_DMM_reg, 0); 
 
 // try to send just diffenence - don't clears last chars
@@ -876,9 +917,11 @@ void update_max_buffer(const uint8_t *buffer, uint16_t len){
         cnt++;
     }
 
-#elif 0
+#elif 1
 
 // a try to do writes in software strobe mode
+    MAX_write(MAX7456_DMAH_reg, 0);
+    MAX_write(MAX7456_DMAL_reg, 0);
     MAX_write(MAX7456_DMM_reg, 1); // автоинкремент адреса
     max7456_cs_off();
     while(len--){
@@ -894,6 +937,8 @@ void update_max_buffer(const uint8_t *buffer, uint16_t len){
     MAX_write(MAX7456_DMM_reg, 0); // автоинкремент адреса
 #else
 // just write all to MAX
+    MAX_write(MAX7456_DMAH_reg, 0);
+    MAX_write(MAX7456_DMAL_reg, 0);
     MAX_write(MAX7456_DMM_reg, 0); 
 
     uint8_t last_h=0;

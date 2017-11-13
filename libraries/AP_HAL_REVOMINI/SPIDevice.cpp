@@ -606,7 +606,7 @@ wait first until TXE=1 and then until BSY=0 after writing the last data.
 
 See Figure 259
 
-*/// so enable interrupt by TXE to not wait in ISR
+*/// now 2 bytes still should be sent so enable interrupt by TXE to not wait in ISR
 
     _isr_mode = SPI_ISR_NONE; 
     _send_len = 0;  // will release bus

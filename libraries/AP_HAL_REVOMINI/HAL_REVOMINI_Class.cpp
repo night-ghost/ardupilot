@@ -111,7 +111,7 @@ HAL_REVOMINI::HAL_REVOMINI() :
         &uart6Driver,  /* uartB - pin 7&8(REVO)/5&6(RevoMini) of input port - for GPS */
         &uart1Driver,  /* uartC - main port  - for telemetry */
 #ifdef BOARD_HAS_UART3
-        &uart3Driver,  /* uartD - flexi port - for OSD */
+        &uart3Driver,  /* uartD - flexi port */
 #else
         NULL,          /* no uartD */
 #endif
