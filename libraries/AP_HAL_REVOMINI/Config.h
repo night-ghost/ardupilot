@@ -21,7 +21,7 @@
 //#define SEM_PROF - now semaphores are part of scheduler
 #define SHED_PROF 
 #define MTASK_PROF
-#define SHED_DEBUG
+//#define SHED_DEBUG
 //#define SEM_DEBUG
 //#define MPU_DEBUG
 
