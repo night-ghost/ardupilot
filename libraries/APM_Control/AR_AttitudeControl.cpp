@@ -117,7 +117,7 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("_STOP_SPEED", 5, AR_AttitudeControl, _stop_speed, AR_ATTCONTROL_STOP_SPEED_DEFAULT),
 
-	AP_GROUPEND
+    AP_GROUPEND
 };
 
 AR_AttitudeControl::AR_AttitudeControl(AP_AHRS &ahrs) :
@@ -131,7 +131,7 @@ AR_AttitudeControl::AR_AttitudeControl(AP_AHRS &ahrs) :
 
 // return a steering servo output from -1.0 to +1.0 given a desired lateral acceleration rate in m/s/s.
 // positive lateral acceleration is to the right.
-float AR_AttitudeControl::get_steering_out_lat_accel(float desired_accel, bool skid_steering, bool motor_limit_left, bool motor_limit_right)
+float AR_AttitudeControl::get_steering_out_lat_accel(float desired_accel, bool skid_steering, bool motor_limit_left, bool motor_limit_right, bool reversed)
 {
     // get speed forward
     float speed;
@@ -141,37 +141,42 @@ float AR_AttitudeControl::get_steering_out_lat_accel(float desired_accel, bool s
         return 0.0f;
     }
 
+    // only use positive speed. Use reverse flag instead of negative speeds.
+    speed = fabsf(speed);
+
     // enforce minimum speed to stop oscillations when first starting to move
-    if (fabsf(speed) < AR_ATTCONTROL_STEER_SPEED_MIN) {
-        if (is_negative(speed)) {
-            speed = -AR_ATTCONTROL_STEER_SPEED_MIN;
-        } else {
-            speed = AR_ATTCONTROL_STEER_SPEED_MIN;
-        }
+    if (speed < AR_ATTCONTROL_STEER_SPEED_MIN) {
+        speed = AR_ATTCONTROL_STEER_SPEED_MIN;
     }
 
     // Calculate the desired steering rate given desired_accel and speed
     float desired_rate = desired_accel / speed;
-    return get_steering_out_rate(desired_rate, skid_steering, motor_limit_left, motor_limit_right);
+
+    // invert rate if we are going backwards
+    if (reversed) {
+        desired_rate *= -1.0f;
+    }
+
+    return get_steering_out_rate(desired_rate, skid_steering, motor_limit_left, motor_limit_right, reversed);
 }
 
 // return a steering servo output from -1 to +1 given a yaw error in radians
-float AR_AttitudeControl::get_steering_out_angle_error(float angle_err, bool skid_steering, bool motor_limit_left, bool motor_limit_right)
+float AR_AttitudeControl::get_steering_out_angle_error(float angle_err, bool skid_steering, bool motor_limit_left, bool motor_limit_right, bool reversed)
 {
     // Calculate the desired turn rate (in radians) from the angle error (also in radians)
-    float desired_rate = _steer_angle_p.get_p(angle_err);
+    const float desired_rate = _steer_angle_p.get_p(angle_err);
 
-    return get_steering_out_rate(desired_rate, skid_steering, motor_limit_left, motor_limit_right);
+    return get_steering_out_rate(desired_rate, skid_steering, motor_limit_left, motor_limit_right, reversed);
 }
 
 // return a steering servo output from -1 to +1 given a
 // desired yaw rate in radians/sec. Positive yaw is to the right.
-float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool skid_steering, bool motor_limit_left, bool motor_limit_right)
+float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool skid_steering, bool motor_limit_left, bool motor_limit_right, bool reversed)
 {
     // calculate dt
-    uint32_t now = AP_HAL::millis();
+    const uint32_t now = AP_HAL::millis();
     float dt = (now - _steer_turn_last_ms) / 1000.0f;
-    if (_steer_turn_last_ms == 0 || dt > 0.1) {
+    if (_steer_turn_last_ms == 0 || dt > 0.1f) {
         dt = 0.0f;
         _steer_rate_pid.reset_filter();
     } else {
@@ -187,15 +192,14 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool skid_st
         return 0.0f;
     }
 
+    // only use positive speed. Use reverse flag instead of negative speeds.
+    speed = fabsf(speed);
+
     // enforce minimum speed to stop oscillations when first starting to move
     bool low_speed = false;
-    if (fabsf(speed) < AR_ATTCONTROL_STEER_SPEED_MIN) {
+    if (speed < AR_ATTCONTROL_STEER_SPEED_MIN) {
         low_speed = true;
-        if (is_negative(speed)) {
-            speed = -AR_ATTCONTROL_STEER_SPEED_MIN;
-        } else {
-            speed = AR_ATTCONTROL_STEER_SPEED_MIN;
-        }
+        speed = AR_ATTCONTROL_STEER_SPEED_MIN;
     }
 
     // scaler to linearize output because turn rate increases as vehicle speed increases on non-skid steering vehicles
@@ -208,10 +212,10 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool skid_st
     // We do this in earth frame to allow for rover leaning over in hard corners
     float yaw_rate_earth = _ahrs.get_yaw_rate_earth();
     // check if reversing
-    if (is_negative(speed)) {
+    if (reversed) {
         yaw_rate_earth *= -1.0f;
     }
-    float rate_error = (desired_rate - yaw_rate_earth) * scaler;
+    const float rate_error = (desired_rate - yaw_rate_earth) * scaler;
 
     // record desired rate for logging purposes only
     _steer_rate_pid.set_desired_rate(desired_rate);
@@ -220,7 +224,7 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool skid_st
     _steer_rate_pid.set_input_filter_all(rate_error);
 
     // get p
-    float p = _steer_rate_pid.get_p();
+    const float p = _steer_rate_pid.get_p();
 
     // get i unless non-skid-steering rover at low speed or steering output has hit a limit
     float i = _steer_rate_pid.get_integrator();
@@ -229,17 +233,16 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool skid_st
     }
 
     // get d
-    float d = _steer_rate_pid.get_d();
+    const float d = _steer_rate_pid.get_d();
 
     // constrain and return final output
     return constrain_float(p + i + d, -1.0f, 1.0f);
 }
 
 // return a throttle output from -1 to +1 given a desired speed in m/s (use negative speeds to travel backwards)
-//   skid_steering should be true for skid-steer vehicles
 //   motor_limit should be true if motors have hit their upper or lower limits
 //   cruise speed should be in m/s, cruise throttle should be a number from -1 to +1
-float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool skid_steering, bool motor_limit_low, bool motor_limit_high, float cruise_speed, float cruise_throttle)
+float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor_limit_low, bool motor_limit_high, float cruise_speed, float cruise_throttle)
 {
     // get speed forward
     float speed;
@@ -250,9 +253,9 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool skid_
     }
 
     // calculate dt
-    uint32_t now = AP_HAL::millis();
+    const uint32_t now = AP_HAL::millis();
     float dt = (now - _speed_last_ms) / 1000.0f;
-    if (_speed_last_ms == 0 || dt > 0.1) {
+    if (_speed_last_ms == 0 || dt > 0.1f) {
         dt = 0.0f;
         _throttle_speed_pid.reset_filter();
     }
@@ -264,7 +267,7 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool skid_
         if (!is_positive(dt)) {
             desired_speed = speed;
         } else {
-            float speed_change_max = _throttle_accel_max * dt;
+            const float speed_change_max = _throttle_accel_max * dt;
             desired_speed = constrain_float(desired_speed, _desired_speed - speed_change_max, _desired_speed + speed_change_max);
         }
     }
@@ -272,14 +275,14 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool skid_
     _desired_speed = desired_speed;
 
     // calculate speed error and pass to PID controller
-    float speed_error = desired_speed - speed;
+    const float speed_error = desired_speed - speed;
     _throttle_speed_pid.set_input_filter_all(speed_error);
 
     // record desired speed for logging purposes only
     _throttle_speed_pid.set_desired_rate(desired_speed);
 
     // get p
-    float p = _throttle_speed_pid.get_p();
+    const float p = _throttle_speed_pid.get_p();
 
     // get i unless moving at low speed or motors have hit a limit
     float i = _throttle_speed_pid.get_integrator();
@@ -288,7 +291,7 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool skid_
     }
 
     // get d
-    float d = _throttle_speed_pid.get_d();
+    const float d = _throttle_speed_pid.get_d();
 
     // calculate base throttle (protect against divide by zero)
     float throttle_base = 0.0f;
@@ -321,10 +324,10 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool skid_
 }
 
 // return a throttle output from -1 to +1 to perform a controlled stop.  returns true once the vehicle has stopped
-float AR_AttitudeControl::get_throttle_out_stop(bool skid_steering, bool motor_limit_low, bool motor_limit_high, float cruise_speed, float cruise_throttle, bool &stopped)
+float AR_AttitudeControl::get_throttle_out_stop(bool motor_limit_low, bool motor_limit_high, float cruise_speed, float cruise_throttle, bool &stopped)
 {
     // get current system time
-    uint32_t now = AP_HAL::millis();
+    const uint32_t now = AP_HAL::millis();
 
     // if we were stopped in the last 300ms, assume we are still stopped
     bool _stopped = (_stop_last_ms != 0) && (now - _stop_last_ms) < 300;
@@ -353,7 +356,7 @@ float AR_AttitudeControl::get_throttle_out_stop(bool skid_steering, bool motor_l
         // clear stopped system time
         _stop_last_ms = 0;
         // run speed controller to bring vehicle to stop
-        return get_throttle_out_speed(0.0f, skid_steering, motor_limit_low, motor_limit_high, cruise_speed, cruise_throttle);
+        return get_throttle_out_speed(0.0f, motor_limit_low, motor_limit_high, cruise_speed, cruise_throttle);
     }
 }
 

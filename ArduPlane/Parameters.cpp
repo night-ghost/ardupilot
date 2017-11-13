@@ -436,7 +436,7 @@ const AP_Param::Info Plane::var_info[] = {
 
     // @Param: THR_SLEWRATE
     // @DisplayName: Throttle slew rate
-    // @Description: maximum percentage change in throttle per second. A setting of 10 means to not change the throttle by more than 10% of the full throttle range in one second.
+    // @Description: maximum percentage change in throttle per second. A setting of 10 means to not change the throttle by more than 10% of the full throttle range in one second. Note that the minimum throttle change is 1 microsecond per loop, which provides a lower limit on the throttle slew rate, especially for quadplanes that run at 300 loops per second by default.
     // @Units: %/s
     // @Range: 0 127
     // @Increment: 1
@@ -710,8 +710,8 @@ const AP_Param::Info Plane::var_info[] = {
     // @Param: DSPOILR_RUD_RATE
     // @DisplayName: Differential spoilers rudder rate
     // @Description: Sets the amount of deflection that the rudder output will apply to the differential spoilers, as a percentage. The default value of 100 results in full rudder applying full deflection. A value of 0 will result in the differential spoilers exactly following the elevons (no rudder effect).
-    // @Units: d%
-    // @Range: -1000 1000
+    // @Units: %
+    // @Range: -100 100
     // @User: User
     GSCALAR(dspoiler_rud_rate,      "DSPOILR_RUD_RATE",  DSPOILR_RUD_RATE_DEFAULT),
 

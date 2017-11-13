@@ -72,7 +72,7 @@ void Mode::calc_throttle(float target_speed, bool nudge_allowed)
     }
 
     // call throttle controller and convert output to -100 to +100 range
-    float throttle_out = 100.0f * attitude_control.get_throttle_out_speed(target_speed, g2.motors.have_skid_steering(), g2.motors.limit.throttle_lower, g2.motors.limit.throttle_upper, g.speed_cruise, g.throttle_cruise * 0.01f);
+    float throttle_out = 100.0f * attitude_control.get_throttle_out_speed(target_speed, g2.motors.limit.throttle_lower, g2.motors.limit.throttle_upper, g.speed_cruise, g.throttle_cruise * 0.01f);
 
     // send to motor
     g2.motors.set_throttle(throttle_out);
@@ -83,7 +83,7 @@ bool Mode::stop_vehicle()
 {
     // call throttle controller and convert output to -100 to +100 range
     bool stopped = false;
-    float throttle_out = 100.0f * attitude_control.get_throttle_out_stop(g2.motors.have_skid_steering(), g2.motors.limit.throttle_lower, g2.motors.limit.throttle_upper, g.speed_cruise, g.throttle_cruise * 0.01f, stopped);
+    float throttle_out = 100.0f * attitude_control.get_throttle_out_stop(g2.motors.limit.throttle_lower, g2.motors.limit.throttle_upper, g.speed_cruise, g.throttle_cruise * 0.01f, stopped);
 
     // send to motor
     g2.motors.set_throttle(throttle_out);
@@ -205,10 +205,9 @@ void Mode::calc_lateral_acceleration(const struct Location &origin, const struct
         _yaw_error_cd = wrap_180_cd(rover.nav_controller->target_bearing_cd() - ahrs.yaw_sensor);
     }
     if (rover.use_pivot_steering(_yaw_error_cd)) {
-        if (is_positive(_yaw_error_cd)) {
+        if (_yaw_error_cd >= 0.0f) {
             lateral_acceleration = g.turn_max_g * GRAVITY_MSS;
-        }
-        if (is_negative(_yaw_error_cd)) {
+        } else {
             lateral_acceleration = -g.turn_max_g * GRAVITY_MSS;
         }
     }
@@ -228,6 +227,6 @@ void Mode::calc_nav_steer(bool reversed)
     lateral_acceleration = constrain_float(lateral_acceleration, -g.turn_max_g * GRAVITY_MSS, g.turn_max_g * GRAVITY_MSS);
 
     // send final steering command to motor library
-    float steering_out = attitude_control.get_steering_out_lat_accel(lateral_acceleration, g2.motors.have_skid_steering(), g2.motors.limit.steer_left, g2.motors.limit.steer_right);
+    float steering_out = attitude_control.get_steering_out_lat_accel(lateral_acceleration, g2.motors.have_skid_steering(), g2.motors.limit.steer_left, g2.motors.limit.steer_right, reversed);
     g2.motors.set_steering(steering_out * 4500.0f);
 }

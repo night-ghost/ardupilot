@@ -450,6 +450,11 @@ bool AP_Arming::hardware_safety_check(bool report)
     return true;
 }
 
+bool AP_Arming::rc_calibration_checks(bool report)
+{
+    return true;
+}
+
 bool AP_Arming::manual_transmitter_checks(bool report)
 {
     if ((checks_to_perform & ARMING_CHECK_ALL) ||
@@ -462,9 +467,9 @@ bool AP_Arming::manual_transmitter_checks(bool report)
             return false;
         }
 
-        //TODO verify radio calibration
-        //Requires access to Parameters ... which are implemented a little
-        //differently for Rover, Plane, and Copter.
+        if (!rc_calibration_checks(report)) {
+            return false;
+        }
     }
 
     return true;
@@ -509,6 +514,14 @@ bool AP_Arming::pre_arm_checks(bool report)
 
 bool AP_Arming::arm_checks(uint8_t method)
 {
+    // ensure the GPS drivers are ready on any final changes
+    if ((checks_to_perform & ARMING_CHECK_ALL) ||
+        (checks_to_perform & ARMING_CHECK_GPS_CONFIG)) {
+        if (!AP_GPS::gps().prepare_for_arming()) {
+            return false;
+        }
+    }
+
     // note that this will prepare DataFlash to start logging
     // so should be the last check to be done before arming
     if ((checks_to_perform & ARMING_CHECK_ALL) ||

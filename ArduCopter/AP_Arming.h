@@ -20,7 +20,7 @@ public:
     void update(void);
     bool all_checks_passing(bool arming_from_gcs);
 
-    bool rc_calibration_checks(bool display_failure);
+    bool rc_calibration_checks(bool display_failure) override;
 
 protected:
 
@@ -34,14 +34,14 @@ protected:
     bool ins_checks(bool display_failure) override;
     bool compass_checks(bool display_failure) override;
     bool gps_checks(bool display_failure) override;
+    bool barometer_checks(bool display_failure) override;
+    bool board_voltage_checks(bool display_failure) override;
 
     // NOTE! the following check functions *DO NOT* call into AP_Arming!
     bool fence_checks(bool display_failure);
-    bool board_voltage_checks(bool display_failure);
     bool parameter_checks(bool display_failure);
     bool motor_checks(bool display_failure);
     bool pilot_throttle_checks(bool display_failure);
-    bool barometer_checks(bool display_failure);
 
     void set_pre_arm_check(bool b);
 
