@@ -1,3 +1,5 @@
+#pragma GCC optimize ("O2")
+
 #include <stm32f4xx.h>
 #include <hal.h>
 /* 
@@ -31,14 +33,9 @@ void stopwatch_delay_us(uint32_t us){
     uint32_t ts = stopwatch_getticks(); // start time in ticks
     uint32_t dly = us * us_ticks;       // delay in ticks
     while(1) {
-        uint32_t dt;
         uint32_t now = stopwatch_getticks(); // current time in ticks
+        uint32_t dt = now - ts;
 
-//        if (now > ts) {
-            dt = now - ts;
-//        }else { // overflow
-//            dt = now + (0xffffffffU - ts) + 1;
-//        }
 	if (dt >= dly)
 		break;
     }

@@ -1101,7 +1101,7 @@ void TIM_ITConfig(TIM_TypeDef* TIMx, uint16_t TIM_IT, FunctionalState NewState);
 void TIM_GenerateEvent(TIM_TypeDef* TIMx, uint16_t TIM_EventSource);
 FlagStatus TIM_GetFlagStatus(TIM_TypeDef* TIMx, uint16_t TIM_FLAG);
 void TIM_ClearFlag(TIM_TypeDef* TIMx, uint16_t TIM_FLAG);
-ITStatus TIM_GetITStatus(TIM_TypeDef* TIMx, uint16_t TIM_IT);
+
 void TIM_ClearITPendingBit(TIM_TypeDef* TIMx, uint16_t TIM_IT);
 void TIM_DMAConfig(TIM_TypeDef* TIMx, uint16_t TIM_DMABase, uint16_t TIM_DMABurstLength);
 void TIM_DMACmd(TIM_TypeDef* TIMx, uint16_t TIM_DMASource, FunctionalState NewState);
@@ -1132,6 +1132,48 @@ void TIM_SelectHallSensor(TIM_TypeDef* TIMx, FunctionalState NewState);
 
 /* Specific remapping management **********************************************/
 void TIM_RemapConfig(TIM_TypeDef* TIMx, uint16_t TIM_Remap);
+
+
+
+/**
+  * @brief  Checks whether the TIM interrupt has occurred or not.
+  * @param  TIMx: where x can be 1 to 14 to select the TIM peripheral.
+  * @param  TIM_IT: specifies the TIM interrupt source to check.
+  *          This parameter can be one of the following values:
+  *            @arg TIM_IT_Update: TIM update Interrupt source
+  *            @arg TIM_IT_CC1: TIM Capture Compare 1 Interrupt source
+  *            @arg TIM_IT_CC2: TIM Capture Compare 2 Interrupt source
+  *            @arg TIM_IT_CC3: TIM Capture Compare 3 Interrupt source
+  *            @arg TIM_IT_CC4: TIM Capture Compare 4 Interrupt source
+  *            @arg TIM_IT_COM: TIM Commutation Interrupt source
+  *            @arg TIM_IT_Trigger: TIM Trigger Interrupt source
+  *            @arg TIM_IT_Break: TIM Break Interrupt source
+  *
+  * @note   TIM6 and TIM7 can generate only an update interrupt.
+  * @note   TIM_IT_COM and TIM_IT_Break are used only with TIM1 and TIM8.
+  *     
+  * @retval The new state of the TIM_IT(SET or RESET).
+  */
+static inline ITStatus TIM_GetITStatus(TIM_TypeDef* TIMx, uint16_t TIM_IT)
+{   
+  ITStatus bitstatus;
+  /* Check the parameters */
+  assert_param(IS_TIM_ALL_PERIPH(TIMx));
+  assert_param(IS_TIM_GET_IT(TIM_IT));
+
+  uint16_t  itstatus = TIMx->SR & TIM_IT;
+
+  uint16_t itenable = TIMx->DIER & TIM_IT;
+  if ((itstatus != (uint16_t)RESET) && (itenable != (uint16_t)RESET))
+  { 
+    bitstatus = SET;
+  }
+  else
+  {
+    bitstatus = RESET;
+  }
+  return bitstatus;
+}
 
 #ifdef __cplusplus
 }

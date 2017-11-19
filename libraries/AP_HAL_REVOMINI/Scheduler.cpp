@@ -45,6 +45,8 @@ bool REVOMINIScheduler::_initialized IN_CCM=false;
 Handler REVOMINIScheduler::on_disarm_handler IN_CCM;
 task_t * REVOMINIScheduler::_idle_task IN_CCM;
 
+volatile Handler REVOMINIScheduler::_delay_timer_proc IN_CCM=0;
+
 
 static void loc_ret(){}
 
@@ -222,6 +224,16 @@ void REVOMINIScheduler::init()
         timer_attach_interrupt(TIMER13, TIMER_UPDATE_INTERRUPT, h.h , IOC_INT_PRIORITY); // priority 12
         TIMER13->regs->CR1 &= ~(TIMER_CR1_ARPE | TIMER_CR1_URS); // not buffered preload, interrupt by overflow or by UG set
     }
+
+    { // timer to execute function after some delay
+                // dev    period   freq, kHz
+        configTimeBase(TIMER11, 0, 1000);      //1MHz 1us ticks
+        Revo_handler h = { .isr = _delay_timer_event };
+        timer_attach_interrupt(TIMER11, TIMER_UPDATE_INTERRUPT, h.h , IOC_INT_PRIORITY); // priority as IO_Complete
+        TIMER13->regs->CR1 &= ~(TIMER_CR1_ARPE ); // not buffered preload
+        TIMER13->regs->CR1 |= TIMER_CR1_URS;      // interrupt only by overflows
+    }
+
 
     void *task = _start_task((uint32_t)idle_task, 256); // only for one context
     set_task_priority(task, 255); // lowest possible, to fill delay()
@@ -801,7 +813,7 @@ void REVOMINIScheduler::do_task(task_t *task) {
                     continue;
                 }
             }
-            revo_call_handler(task->handle, task->id); 
+            revo_call_handler(task->handle, task->id);  // calls user's function
             if(task->sem){
                 if(!task->in_ioc){
                     task->sem->give(); // give semaphore when task finished
@@ -1133,7 +1145,7 @@ skip_task:
     if(want_tail) { // we have a task that want to be started next in the middle of tick
         if(partial_quant < TIMER_PERIOD-10) { // if time less than tick
             timer_set_count(TIMER14, 0);
-            timer_set_reload(TIMER14, partial_quant+2); // +2 to garantee
+            timer_set_reload(TIMER14, partial_quant+2); // +2 to guarantee
             timer_resume(TIMER14);
         }
     }
@@ -1391,6 +1403,17 @@ void REVOMINIScheduler::_switch_task(){
     }
 #endif
 }
+
+
+void REVOMINIScheduler::_delay_timer_event(uint32_t v /*TIM_TypeDef *tim */){
+    timer_pause(TIMER11);
+    timer_set_count(TIMER11, 0);
+
+    Handler h = _delay_timer_proc;
+    _delay_timer_proc=0;
+    revo_call_handler(h,0);
+}
+
 
 ////////////////////////////////////
 /*

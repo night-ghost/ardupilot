@@ -199,6 +199,7 @@ public:
     */
     virtual void register_completion_callback(AP_HAL::MemberProc proc) {}
     virtual void register_completion_callback(AP_HAL::Proc proc) {}
+    virtual void clear_completion_callback_isr() {}
     
     /*
      * support for direct control of SPI chip select. Needed for

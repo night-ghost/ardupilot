@@ -160,17 +160,8 @@ void EXTI_Init(EXTI_InitTypeDef* EXTI_InitStruct);
 void EXTI_StructInit(EXTI_InitTypeDef* EXTI_InitStruct);
 void EXTI_GenerateSWInterrupt(uint32_t EXTI_Line);
 
-/* Interrupts and flags management functions **********************************/
-FlagStatus EXTI_GetFlagStatus(uint32_t EXTI_Line);
-void EXTI_ClearFlag(uint32_t EXTI_Line);
-ITStatus EXTI_GetITStatus(uint32_t EXTI_Line);
-void EXTI_ClearITPendingBit(uint32_t EXTI_Line);
 
-#ifdef __cplusplus
-}
-#endif
 
-#endif /* __STM32F4xx_EXTI_H */
 
 /**
   * @}
@@ -181,3 +172,91 @@ void EXTI_ClearITPendingBit(uint32_t EXTI_Line);
   */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+
+/************** from .c  *************/
+
+
+/**
+  * @brief  Checks whether the specified EXTI line flag is set or not.
+  * @param  EXTI_Line: specifies the EXTI line flag to check.
+  *          This parameter can be EXTI_Linex where x can be(0..22)
+  * @retval The new state of EXTI_Line (SET or RESET).
+  */
+static inline FlagStatus EXTI_GetFlagStatus(uint32_t EXTI_Line)
+{
+  FlagStatus bitstatus = RESET;
+  /* Check the parameters */
+  assert_param(IS_GET_EXTI_LINE(EXTI_Line));
+  
+  if ((EXTI->PR & EXTI_Line) != (uint32_t)RESET)
+  {
+    bitstatus = SET;
+  }
+  else
+  {
+    bitstatus = RESET;
+  }
+  return bitstatus;
+}
+
+/**
+  * @brief  Clears the EXTI's line pending flags.
+  * @param  EXTI_Line: specifies the EXTI lines flags to clear.
+  *          This parameter can be any combination of EXTI_Linex where x can be (0..22)
+  * @retval None
+  */
+static inline void EXTI_ClearFlag(uint32_t EXTI_Line)
+{
+  /* Check the parameters */
+  assert_param(IS_EXTI_LINE(EXTI_Line));
+  
+  EXTI->PR = EXTI_Line;
+}
+
+/**
+  * @brief  Checks whether the specified EXTI line is asserted or not.
+  * @param  EXTI_Line: specifies the EXTI line to check.
+  *          This parameter can be EXTI_Linex where x can be(0..22)
+  * @retval The new state of EXTI_Line (SET or RESET).
+  */
+static inline ITStatus EXTI_GetITStatus(uint32_t EXTI_Line)
+{
+  ITStatus bitstatus = RESET;
+  uint32_t enablestatus = 0;
+  /* Check the parameters */
+  assert_param(IS_GET_EXTI_LINE(EXTI_Line));
+  
+  enablestatus =  EXTI->IMR & EXTI_Line;
+  if (((EXTI->PR & EXTI_Line) != (uint32_t)RESET) && (enablestatus != (uint32_t)RESET))
+  {
+    bitstatus = SET;
+  }
+  else
+  {
+    bitstatus = RESET;
+  }
+  return bitstatus;
+}
+
+/**
+  * @brief  Clears the EXTI's line pending bits.
+  * @param  EXTI_Line: specifies the EXTI lines to clear.
+  *          This parameter can be any combination of EXTI_Linex where x can be (0..22)
+  * @retval None
+  */
+static inline void EXTI_ClearITPendingBit(uint32_t EXTI_Line)
+{
+  /* Check the parameters */
+  assert_param(IS_EXTI_LINE(EXTI_Line));
+  
+  EXTI->PR = EXTI_Line;
+}
+
+
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __STM32F4xx_EXTI_H */

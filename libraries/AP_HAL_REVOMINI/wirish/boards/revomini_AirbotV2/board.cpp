@@ -41,7 +41,7 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     {&gpioa, &timer1,NULL,  8, 1, ADCx}, /* D22/PA8  2 SERVO6 */
     {&gpioa, &timer1,NULL,  9, 2, ADCx}, /* D23/PA9  3 USART1_TX */
     {&gpioa, &timer1,NULL, 10, 3, ADCx}, /* D24/PA10 4 USART1_RX */
-    {&gpiob, &timer4,NULL,  9, 4, ADCx}, /* D25/PB9  5 I2C1_SDA */
+    {&gpiob, &timer4,NULL,  9, 4, ADCx}, /* D25/PB9  5 PPM_in2 */
     {&gpiod,   NULL, NULL,  2, 0, ADCx}, /* D26/PD2  6 EXTI_RFM22B / UART5_RX */
     {&gpiod,   NULL, NULL,  3, 0, ADCx}, /* D27/PD3  7*/
     {&gpiod,   NULL, NULL,  6, 0, ADCx}, /* D28/PD6  8*/
@@ -157,10 +157,11 @@ extern const struct TIM_Channel PWM_Channels[] __FLASH__ =   {
 
 void boardInit(void) {
 
+#ifdef DEBUG_BUILD
     /* Configure PA.13 (JTMS/SWDIO), PA.14 (JTCK/SWCLK) as output push-pull */
 //    afio_cfg_debug_ports(AFIO_DEBUG_SW_ONLY); // there is error in this function so instead of disabling only JTAG pins it disables SWD pins
     afio_cfg_debug_ports(AFIO_DEBUG_FULL_SWJ);  // so let's it be fill debug 
-
+#endif
 
 /* we don't use RFM22! this pins are used for other needs so will be initialized in respective places
 

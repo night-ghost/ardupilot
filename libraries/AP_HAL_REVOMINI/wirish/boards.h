@@ -162,11 +162,12 @@ static inline bool is_bare_metal() {
 
 void NMI_Handler();
 void emerg_delay(uint32_t n);
-extern void SetSysClock(void);
+extern void SetSysClock(uint8_t oc);
 
 extern voidFuncPtr boardEmergencyHandler;
 
 extern void clock_gettime(uint32_t mode, void *ptr);
+extern void systemInit(uint8_t oc);
 
 #ifdef __cplusplus
  }
@@ -188,21 +189,28 @@ extern void clock_gettime(uint32_t mode, void *ptr);
 #define BOOT_RTC_SIGNATURE      0xb007b007
 #define DFU_RTC_SIGNATURE       0xDEADBEEF
 
-#define DSM_BIND_SIGNATURE      0xD82B14D0 // last nibble for DSM code
+#define DSM_BIND_SIGNATURE      0xD82B14D0 // "DSMBIND" last nibble for DSM code
 #define DSM_BIND_SIGN_MASK      0xF // mask for last nibble - DSM code
 
 #define CONSOLE_PORT_SIGNATURE  0xC07501e0 // last nibble for port number
 #define CONSOLE_PORT_MASK       0xF // mask for last nibble - port number
 
 
-#define MASS_STORAGE_SIGNATURE  0x5106a8ed
+#define MASS_STORAGE_SIGNATURE  0x5106a8ed // "storaged"
 
+
+#define OVERCLOCK_SIGNATURE     0xFACED1A0 // "FaceDia" last nibble for mode
+#define OVERCLOCK_SIG_MASK      0xF        // mode mask
+#define OV_GUARD_SIGNATURE      0xBABEFACE
+#define OV_GUARD_FAIL_SIGNATURE 0xBABEFA17 
 
 // Backup SRAM registers usage
 #define RTC_SIGNATURE_REG       0 
 #define RTC_DSM_BIND_REG        1   
 #define RTC_MASS_STORAGE_REG    2
 #define RTC_CONSOLE_REG         3
+#define RTC_OVERCLOCK_REG       4
+#define RTC_OV_GUARD_REG        5
 
 
 

@@ -11,55 +11,60 @@ static ring_buffer usart1_txrb IN_CCM;
 static ring_buffer usart1_rxrb IN_CCM;
 static usart_state u1state IN_CCM;
 
-static const usart_dev usart1 =   {
-	    .USARTx = USART1,
-	    .clk = RCC_APB2Periph_USART1,
-	    .txrb = &usart1_txrb,
-	    .rxrb = &usart1_rxrb,
-	    .state = &u1state,
-	    .max_baud = 4500000UL,
-	    .irq = USART1_IRQn,
-	    .rx_pin = BOARD_USART1_RX_PIN,
-	    .tx_pin = BOARD_USART1_TX_PIN,
-	    .gpio_af = GPIO_AF_USART1
+static const usart_dev usart1 = {
+    .USARTx = USART1,
+    .clk = RCC_APB2Periph_USART1,
+    .txrb = &usart1_txrb,
+    .rxrb = &usart1_rxrb,
+    .state = &u1state,
+//    .max_baud = 4500000UL,
+    .irq = USART1_IRQn,
+    .rx_pin = BOARD_USART1_RX_PIN,
+    .tx_pin = BOARD_USART1_TX_PIN,
+    .gpio_af = GPIO_AF_USART1
 };
 /** USART1 device */
 const usart_dev * const _USART1 = &usart1;
+
+#if defined(USART2_USED)  /// can't be used
 
 static ring_buffer usart2_txrb IN_CCM;
 static ring_buffer usart2_rxrb IN_CCM;
 static usart_state u2state IN_CCM;
 
-static const usart_dev usart2 =  {
-	    .USARTx = USART2,
-	    .clk = RCC_APB1Periph_USART2,
-	    .txrb = &usart2_txrb,
-	    .rxrb = &usart2_rxrb,
-	    .state = &u2state,
-	    .max_baud = 2250000UL,
-	    .irq = USART2_IRQn,
-	    .rx_pin = 255,
-	    .tx_pin = 255,
-	    .gpio_af = GPIO_AF_USART2
+static const usart_dev usart2 = {
+    .USARTx = USART2,
+    .clk = RCC_APB1Periph_USART2,
+    .txrb = &usart2_txrb,
+    .rxrb = &usart2_rxrb,
+    .state = &u2state,
+//    .max_baud = 2250000UL,
+    .irq = USART2_IRQn,
+    .rx_pin = 255,
+    .tx_pin = 255,
+    .gpio_af = GPIO_AF_USART2
 };
 /** USART2 device */
 const usart_dev * const _USART2 = &usart2;
+#else 
+#define _USART2 NULL
+#endif
 
 static ring_buffer usart3_txrb IN_CCM;
 static ring_buffer usart3_rxrb IN_CCM;
 static usart_state u3state IN_CCM;
 
-static const usart_dev usart3 =    {
-	    .USARTx = USART3,
-	    .clk = RCC_APB1Periph_USART3,
-	    .txrb = &usart3_txrb,
-	    .rxrb = &usart3_rxrb,
-	    .state = &u3state,
-	    .max_baud = 2250000UL,
-	    .irq = USART3_IRQn,
-	    .rx_pin = BOARD_USART3_RX_PIN,
-	    .tx_pin = BOARD_USART3_TX_PIN,
-	    .gpio_af = GPIO_AF_USART3
+static const usart_dev usart3 = {
+    .USARTx = USART3,
+    .clk = RCC_APB1Periph_USART3,
+    .txrb = &usart3_txrb,
+    .rxrb = &usart3_rxrb,
+    .state = &u3state,
+//    .max_baud = 2250000UL,
+    .irq = USART3_IRQn,
+    .rx_pin = BOARD_USART3_RX_PIN,
+    .tx_pin = BOARD_USART3_TX_PIN,
+    .gpio_af = GPIO_AF_USART3
 };
 /** USART3 device */
 const usart_dev * const _USART3 = &usart3;
@@ -75,7 +80,7 @@ static const usart_dev uart4 = {
     .txrb = &uart4_txrb,
     .rxrb = &uart4_rxrb,
     .state = &u4state,
-    .max_baud = 2250000UL,
+    //.max_baud = 2250000UL,
     .irq = UART4_IRQn,
     .rx_pin = BOARD_USART4_RX_PIN,
     .tx_pin = BOARD_USART4_TX_PIN,
@@ -96,7 +101,7 @@ static const usart_dev uart5 = {
     .txrb = NULL,              // RX-only
     .rxrb = &uart5_rxrb,
     .state = &u5state,
-    .max_baud = 2250000UL,
+    //.max_baud = 2250000UL,
     .irq = UART5_IRQn,
     .rx_pin = BOARD_USART5_RX_PIN,
     .tx_pin = 255,              // RX-only
@@ -110,26 +115,29 @@ static ring_buffer usart6_txrb IN_CCM;
 static ring_buffer usart6_rxrb IN_CCM;
 static usart_state u6state IN_CCM;
 
-static const usart_dev usart6 =
-    {
-	    .USARTx = USART6,
-	    .clk = RCC_APB2Periph_USART6,
-	    .txrb = &usart6_txrb,
-	    .rxrb = &usart6_rxrb,
-	    .state = &u6state,
-	    .max_baud = 2250000UL,
-	    .irq = USART6_IRQn,
-	    .rx_pin = BOARD_USART6_RX_PIN,
-	    .tx_pin = BOARD_USART6_TX_PIN,
-	    .gpio_af = GPIO_AF_USART6
-    };
+static const usart_dev usart6 =  {
+    .USARTx = USART6,
+    .clk = RCC_APB2Periph_USART6,
+    .txrb = &usart6_txrb,
+    .rxrb = &usart6_rxrb,
+    .state = &u6state,
+    //.max_baud = 2250000UL,
+    .irq = USART6_IRQn,
+    .rx_pin = BOARD_USART6_RX_PIN,
+    .tx_pin = BOARD_USART6_TX_PIN,
+    .gpio_af = GPIO_AF_USART6
+};
 /** UART6 device */
 const usart_dev * const _USART6 = &usart6;
 
-const usart_dev * const UARTS[]={
+const usart_dev * const UARTS[] = {
     NULL,
     &usart1,
+#if defined(USART2_USED)
     &usart2,
+#else
+    NULL, 
+#endif
     &usart3,
 #if defined(BOARD_USART4_RX_PIN) && defined(BOARD_USART4_TX_PIN)
     &uart4,
@@ -147,7 +155,9 @@ const usart_dev * const UARTS[]={
 void usart_foreach(void (*fn)(const usart_dev*))
 {
     fn(_USART1);
-    //fn(_USART2);
+#if defined(USART2_USED)
+    fn(_USART2);
+#endif
     fn(_USART3);
 #if defined( BOARD_USART4_RX_PIN) && defined( BOARD_USART4_TX_PIN)
     fn(_UART4);
@@ -217,34 +227,44 @@ void usart_setup(const usart_dev *dev, uint32_t baudRate, uint16_t wordLength,
 
     USART_Init(dev->USARTx, &USART_config);
 
+#if 0
     USART_ITConfig(dev->USARTx, USART_IT_PE, DISABLE);
     USART_ITConfig(dev->USARTx, USART_IT_IDLE, DISABLE);
     USART_ITConfig(dev->USARTx, USART_IT_LBD, DISABLE);
+
     if (IS_USART_1236_PERIPH(dev->USARTx))
 	USART_ITConfig(dev->USARTx, USART_IT_CTS, DISABLE);
+
     USART_ITConfig(dev->USARTx, USART_IT_ERR, DISABLE);
+    USART_ITConfig(dev->USARTx, USART_IT_TC, DISABLE);
 
     if(mode & USART_Mode_Rx) { /* Enable Rx request */
-        USART_ITConfig(dev->USARTx, USART_IT_RXNE, ENABLE);
         USART_ClearFlag(dev->USARTx, USART_FLAG_RXNE);
+        USART_ITConfig(dev->USARTx, USART_IT_RXNE, ENABLE);
     } else {
         USART_ITConfig(dev->USARTx, USART_IT_RXNE, DISABLE);
     }
 
-    USART_ITConfig(dev->USARTx, USART_IT_TC, DISABLE);
+    USART_ITConfig(dev->USARTx, USART_IT_TXE, DISABLE);
     if(mode & USART_Mode_Tx) {
-        USART_ITConfig(dev->USARTx, USART_IT_TXE, ENABLE);
         USART_ClearFlag(dev->USARTx, USART_FLAG_TC);
-    } else {
-        USART_ITConfig(dev->USARTx, USART_IT_TXE, DISABLE);
+//        USART_ITConfig(dev->USARTx, USART_IT_TXE, ENABLE); will enable after first write()
+    }
+#else
+    dev->USARTx->CR1 &= ~(USART_MASK_IDLEIE | USART_MASK_RXNEIE | USART_MASK_TCEIE | USART_MASK_TXEIE | USART_MASK_PEIE);
+    dev->USARTx->CR2 &= ~(USART_MASK2_LBDIE);
+    dev->USARTx->CR3 &= ~(USART_MASK3_CTSIE | USART_MASK3_EIE);
+    
+    if(mode & USART_Mode_Rx) { /* Enable Rx request */
+        USART_ClearFlag(dev->USARTx, USART_FLAG_RXNE);
+        dev->USARTx->CR1 |= USART_MASK_RXNEIE;
     }
 
+    if(mode & USART_Mode_Tx) {
+        USART_ClearFlag(dev->USARTx, USART_FLAG_TC);
+    }    
+#endif
 
-    /* do not enable interrupt at init!
-     USART_ITConfig(dev->USARTx, USART_IT_RXNE,  ENABLE);
-     USART_ITConfig(dev->USARTx, USART_IT_PE,    ENABLE);
-     USART_ITConfig(dev->USARTx, USART_IT_ERR,   ENABLE);
-     */
 
     NVIC_InitTypeDef NVIC_InitStructure;
     /* Enable the USART Interrupt */
@@ -268,7 +288,6 @@ void usart_disable(const usart_dev *dev)
     usart_reset_rx(dev);
     usart_reset_tx(dev);
     dev->state->is_used=false;
-
 }
 
 
@@ -292,7 +311,8 @@ uint32_t usart_tx(const usart_dev *dev, const uint8_t *buf, uint32_t len)
     }
     if (dev->state->txbusy == 0 && sent > 0)	    {
 	dev->state->txbusy = 1;
-	USART_ITConfig(dev->USARTx, USART_IT_TXE, ENABLE);
+//	USART_ITConfig(dev->USARTx, USART_IT_TXE, ENABLE);
+        dev->USARTx->CR1 |= USART_MASK_TXEIE;
     }
 
     return sent;
@@ -319,11 +339,13 @@ void usart_putudec(const usart_dev *dev, uint32_t val) {
 
 static inline void usart_rx_irq(const usart_dev *dev)    {
 #ifdef ISR_PERF
-    uint32_t t=stopwatch_getticks();
+        uint32_t t=stopwatch_getticks();
 #endif
 
 	/* Check on Receive Data register Not Empty interrupt */
-	if( USART_GetITStatus(dev->USARTx, USART_IT_RXNE) != RESET ){
+//	if( USART_GetITStatus(dev->USARTx, USART_IT_RXNE) != RESET ){
+        uint16_t sr = dev->USARTx->SR;
+	if( (sr & USART_F_RXNE) && (dev->USARTx->CR1 & USART_MASK_RXNEIE) ){
 #ifdef USART_SAFE_INSERT
 	    /* If the buffer is full and the user defines USART_SAFE_INSERT, ignore new bytes. */
 	    rb_safe_insert(dev->rxrb, (uint8_t) dev->USARTx->DR);
@@ -331,16 +353,17 @@ static inline void usart_rx_irq(const usart_dev *dev)    {
 	    /* By default, push bytes around in the ring buffer. */
 	    rb_push_insert(dev->rxrb, (uint8_t)dev->USARTx->DR);
 #endif
-            USART_ClearFlag(dev->USARTx, USART_FLAG_RXNE);
+
+//            USART_ClearFlag(dev->USARTx, USART_FLAG_RXNE); datasheet: It is cleared by a read to the USART_DR register
 
             if(dev->state->callback) {
                 revo_call_handler(dev->state->callback, (uint32_t)dev); 
             }
-
 	}
 
-	if( USART_GetFlagStatus(dev->USARTx, USART_FLAG_ORE) != RESET ){
-	    (void)dev->USARTx->DR;
+//	if( USART_GetFlagStatus(dev->USARTx, USART_FLAG_ORE) != RESET ){
+        if( sr & USART_F_ORE ){
+	    (void)dev->USARTx->DR; // cleared after reading sr, dr
 	}
 
 #ifdef ISR_PERF
@@ -356,13 +379,17 @@ static inline void usart_tx_irq(const usart_dev *dev) {
     uint32_t t=stopwatch_getticks();
 #endif
     /* Check USART Transmit Data Register Empty Interrupt */
-    if (USART_GetITStatus(dev->USARTx, USART_IT_TXE) != RESET) {
+//    if (USART_GetITStatus(dev->USARTx, USART_IT_TXE) != RESET) {
+    uint16_t sr = dev->USARTx->SR;
+    if( (sr & USART_F_TXE) && (dev->USARTx->CR1 & USART_MASK_TXEIE) ){
+
 	if (dev->txrb && !rb_is_empty(dev->txrb))  {
 	    dev->USARTx->DR = rb_remove(dev->txrb);
 	    dev->state->txbusy = 1;
 	} else   {
 	    /* Disable the USART Transmit Data Register Empty Interrupt */
-	    USART_ITConfig(dev->USARTx, USART_IT_TXE, DISABLE);
+	    //USART_ITConfig(dev->USARTx, USART_IT_TXE, DISABLE);
+	    dev->USARTx->CR1 &= ~USART_MASK_TXEIE;
 	    dev->state->txbusy = 0;
 	    // nops needed to deactivate the irq before irq handler is left
             asm volatile("nop");
@@ -383,11 +410,13 @@ void USART1_IRQHandler(void)
     usart_tx_irq(_USART1);
 }
 
+#if defined(USART2_USED)
 void USART2_IRQHandler(void)
 {
     usart_rx_irq(_USART2);
     usart_tx_irq(_USART2);
 }
+#endif
 
 void USART3_IRQHandler(void)
 {

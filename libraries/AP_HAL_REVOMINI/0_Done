@@ -124,6 +124,7 @@
 * PWM_IN is rewritten to use HAL drivers, as result its size decreased four times (!)
 * working PPM on AirbotV2/V3
 * added ability to connect buzzer to arbitrary pin (parameter BUZZ_PIN)
+* added priority to SPI transfers
 * ...
 * a lot of minor enhancements
 

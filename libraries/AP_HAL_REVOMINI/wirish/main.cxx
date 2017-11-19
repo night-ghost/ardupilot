@@ -24,8 +24,6 @@
  * SOFTWARE.
  *****************************************************************************/
 
-extern void init();
-
 
 
 // Force init to be called *first*, i.e. before static object allocation.
@@ -33,6 +31,4 @@ extern void init();
  __attribute__(( constructor )) void premain() ;
 
 
- __attribute__(( constructor )) void premain(){
-//    init(); - even earlier
-}
+ __attribute__(( constructor )) void premain(){}

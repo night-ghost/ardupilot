@@ -12,7 +12,7 @@
 #define I2C_400KHz_SPEED                        400000
 
 // missed definition in .h
-#define FLAG_MASK         ((uint32_t)0x00FFFFFF)  /*<! I2C FLAG mask */
+#define I2C_FLAG_MASK         ((uint32_t)0x00FFFFFF)  /*<! I2C FLAG mask */
 
 /* Maximum Timeout values for events waiting loops */
    
@@ -95,10 +95,12 @@ static inline void i2c_set_isr_handler(const i2c_dev *dev, Handler h){
     dev->state->handler = h;
 
     irq=dev->er_nvic_line;
+    NVIC_ClearPendingIRQ(irq);
     NVIC_EnableIRQ(irq);
     NVIC_SetPriority(irq, I2C_INT_PRIORITY); // 8 bits * 4uS = 32uS max reaction time
 
     irq=dev->ev_nvic_line;
+    NVIC_ClearPendingIRQ(irq);
     NVIC_EnableIRQ(irq);
     NVIC_SetPriority(irq, I2C_INT_PRIORITY);
 }

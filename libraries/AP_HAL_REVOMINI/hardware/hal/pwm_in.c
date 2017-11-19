@@ -109,10 +109,10 @@ struct PPM_State  {
 
                 if (input->state == 0) { // rising edge
 	            input->state = 1;
-	            timer_cc_set_pol(timer, p->timer_channel, 1);
+	            timer_cc_set_pol(timer, p->timer_channel, TIMER_POLARITY_RISING);
 	        } else  {               // falling edge
 	            input->state = 0;
-	            timer_cc_set_pol(timer, p->timer_channel, 0);
+	            timer_cc_set_pol(timer, p->timer_channel, TIMER_POLARITY_FALLING);
 	        }
                 
                 if(input->handler) revo_call_handler(input->handler, i); // call callback on each edge, SBUS decoding requires only  1.4% of CPU (2.5 for full io_completion)
@@ -151,12 +151,18 @@ static inline void pwmInitializeInput(uint8_t ppmsum){
             }
             
 	    // PWM input capture ************************************************************
+#if 1
 	    TIM_ICInitStructure.TIM_Channel = (p->timer_channel-1)*4;
 	    TIM_ICInitStructure.TIM_ICPolarity  = TIM_ICPolarity_Falling;
 	    TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
 	    TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
 	    TIM_ICInitStructure.TIM_ICFilter = 0x0;
 	    TIM_ICInit(timer->regs, &TIM_ICInitStructure);
+
+#else
+            timer_ic_set_mode(timer, p->timer_channel, TIM_ICSelection_DirectTI | TIM_ICPSC_DIV1, 0);
+            timer_cc_set_pol(timer,  p->timer_channel, TIMER_POLARITY_FALLING);
+#endif
 
 	    timer_cc_enable( timer, p->timer_channel); // enable capture
 

@@ -275,7 +275,10 @@ public:
 //]
 
 // this functions are atomic so don't need to disable interrupts
-  static inline void *get_current_task() { return s_running; }
+  static inline void *get_current_task() { 
+    if(in_interrupt()) return NULL;
+    return s_running; 
+  }
   static inline void set_task_active(void *h) {   // tasks are created in stopped state
     task_t * task = (task_t*)h; 
     task->curr_prio = 70;  //   will get 1st quant 100%
@@ -392,6 +395,13 @@ public:
 
     static void start_stats_task(); // it interferes with CONNECT_COM and CONNECT_ESC so should be started last
     
+    static inline void do_delayed_proc(Handler h, uint16_t dly){  // call a handler after some time
+        while(_delay_timer_proc); // wait for prevoius task
+        _delay_timer_proc = h;
+        timer_set_reload(TIMER11, dly);
+        timer_resume(TIMER11);
+    };
+    
 protected:
 
 //{ multitask
@@ -445,6 +455,7 @@ private:
     static void _timer5_ovf(uint32_t v /*TIM_TypeDef *tim */ );
     static void _tail_timer_event(uint32_t v /*TIM_TypeDef *tim */);
     static void _ioc_timer_event(uint32_t v /*TIM_TypeDef *tim */);
+    static void _delay_timer_event(uint32_t v /*TIM_TypeDef *tim */);
     
     static void _run_timer_procs(bool called_from_isr);
 
@@ -463,7 +474,8 @@ private:
     static void _run_io(void);
 
     static void _print_stats();
-    void stats_proc(void);
+    static void stats_proc(void);
+    static volatile Handler _delay_timer_proc;
     
 #ifdef SHED_PROF
     static uint64_t shed_time;

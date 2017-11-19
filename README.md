@@ -1,40 +1,25 @@
 #ArduPilot Project port for Revolution/RevoMini boards#
 
-* near a half of code is fully rewritten
+* almost all code is fully rewritten
 * external I2C bus moved out from FlexiPort by Soft_I2C driver so we always has at least 3 UARTs
 * added 1 full-functional UART (only for quads) and 1 RX-only UART for DSM satellite receiver on OpLink connector
-* Unlike many other boards, fully implemented registerPeriodicCallback & Co calls
-* implemented register_io_process via simple cooperative multitasking
 * added buzzer support
 * stack now in CCM memory
-* PPM and PWM inputs works via Timer's driver handlers
-* added DSM and SBUS parsing on PPM input
-* high-frequency (8kHz) advanced scheduler, common for all needs, capable to use semaphores with (optional) performance statistics
+* PPM inputs can be used for SBUS, DSM and SUMD protocols
 * all hardware description tables are now 'const' and locates in flash
-* more reliable reset for I2C bus on hangups
-* all drivers support set_retries()
-* all delays - even microseconds - are very presize by using hardware clock counter (DWT_CYCCNT) in free-running mode
 * separated USB and UART drivers
 * new SoftwareSerial driver based on ST appnote
-* now it uses MPU6000 DRDY output
+* now it uses MPU6000 DRDY output for interrupts
 * removed all compiler's warnings
 * ported and slightly altered bootloader to support flashing and start firmware automatically at addresses 8010000 and 8020000
   (2 low 16k flash pages are used to emulate EEPROM)           
 * EEPROM emulation altered to ensure the reliability of data storage at power failures
 * optimized EEPROM usage by changing from 1-byte to 2-byte writes
-* all internal calls use static private methods                
-* removed unused files from "wirish" folder
-* added support for baro MS5611 on external I2C
-* micros() call uses 32-bit hardware timer instead of systick_micros()
+* added support for all known baros on external I2C
 * added translation layer between system PWM_MODES and board's PWM_MODES
-* added initial support for DMA
-* added support for all timers
 * supported reboot to DFU mode (via "reboot to PX4 bootloader" in MP)
 * after any Fault or Panic() automatically reboots to DFU mode
-* diversity on RC_Input
-* reverted idiotic mainline change in Periodic interface
-* all used drivers altered to use "reschedule me" HAL feature
-* added usage for Compass' DataReady pin
+* diversity on RC_Input - 2 PPM inputs
 * unified exception handling
 * added ability to bind Spectrum satellite without managed 3.3 DC-DC (requires short power off)
 * added support for Arduino32 reset sequence - negative DTR edge on 1200 baud or '1eaf' packet with high DTR
@@ -42,8 +27,8 @@
 * fixed USB characters loss *without* hangup if disconnected
 * added failsafe on receiver's hangup - if no one channel changes in 60 seconds
 * added HAL parameters support
-* changed to simplify support of slightly different boards - eg. AirbotF4
-* full support for AirbotF4 (separate binaries)
+* changed layout to simplify support of slightly different boards - eg. AirbotF4
+* full support for AirbotF4 and AurbotV2 (AKA Ombibus) as separate binaries
 * added support for servos on Input port unused pins
 * Added handling of FLASH_SR error bits, including automatic clearing of write protection 
 * added Arduino-like support of relay on arbitrary pin 
@@ -52,7 +37,7 @@
 * EEPROM error handling
 * fixed Ardupilot's stealing of Servos even they marked as "Unused"
 * added compilation date & time to log output
-* added SBUS input via USART1 as on Airbot boards
+* added SBUS input via any USART as it wired on Airbot boards
 * added per-board read_me.md files
 * fixed Dataflash logs bug from mainstream - now logs are persists between reboots!
 * DMA mode for lagre SPI transfers
@@ -60,11 +45,10 @@
 * any UART can be connected to ESC for 4-way interface
 * support for logs on SD card for AirbotV2 board
 * fixed 2nd Dataflash logs bug from mainstream - now logs are persists between reboots even on boards having chips with 64k sector
-* I2C wait time limited to 0.3s - no more forever hangs by external compass errors
+* I2C wait time limited to 3ms - no more forever hangs by external compass errors
 * FlexiPort can be switced between UART and I2C by parameters
 * The RCoutput module has been completely rewritten.
 * For the PWM outputs, the error in setting the timer frequency has been compensated.
-* Fixed bug with OneShot
 * added parameter to set PWM mode
 * added used memory reporting
 * added I2C error reporting
@@ -72,24 +56,19 @@
 * added HAL_RC_INPUT parameter to allow to force RC input module
 * added used stack reporting
 * added generation of .DFU file
-* time-consuming operations moved out from interrupt level to IO_Completion level with lowest possible priority
+* time-consuming operations moved out from interrupt level to IO_Completion level with low priority
 * added support for Clock Security System - if HSE fails in air system will use HSI instead
 * added boardEmergencyHandler which will be called on any Fault or Panic() before halt - eg. to release parachute
 * motor layout switched to per-board basis
 * console assignment switched to per-board basis
 * HAL switched to new DMA api with completion interrupts
-* AirbotV2 is fully supported with SD card and OSD (OSD not tested, just compiles)
+* AirbotV2 is fully supported with SD card and OSD
 * added support for reading from SD card via USB - HAL parameter allows to be USB MassStorege
-* fixed BUG in scheduler which periodically causes HardFault
 * added check for stack overflow for low priority tasks
 * all boards formats internal flash chip as FAT and allows access via USB
 * added spi flash autodetection
 * added support for TRIM command on FAT-formatted Dataflash
-* fixed bug in hardware I2C driver which spoils writes to I2C2
-* fixed bug in log write with different meanings of flags in FatFs and Posix
 * rewritten SD library to support 'errno' and early distinguish between file and dir
-* compass processing (4027uS) and baro processing(1271uS)  moved out from interrupt level to low-priority io level, because its
- execution time spoils loop time (500Hz = 2000uS for all)
 * added reformatting of DataFlash in case of hard filesystem errors, which fixes FatFs bug when there is no free space
  after file overflows and then deleted
 * added autodetect for all known types of baro on external I2C bus
@@ -97,10 +76,6 @@
 * added check to I2C_Mgr for same device on same bus - to prevent autodetection like MS5611 (already initialized) as BMP_085
 * added time offset HAL parameter
 * added time syncronization between board's time and GPS time - so logs now will show real local date&time
-* i2c driver is fully rewritten, added parsing of bus error flags - ARLO & BERR
-* errors at STOP don't cause data loss or time errors - bus reset scheduled as once io_task
-* ALL I2C reads does via DMA!
-* added parsing of TIMEOUT bus flag
 * added asyncronous bus reset in case when loockup occures after STOP generation
 * full BusReset changed to SoftReset on 1st try
 * new SoftI2C driver uses timer and works in interrupts
@@ -108,9 +83,23 @@
 * added support for SUMD via UARTs
 * MPU not uses FIFO - data readed out via interrupts
 * added parameter allowing to defer EEPROM save up to disarm
-* optimized multitask to not switch context if next task is the same as current. Real context switch occures in ~4% of calls to task scheduler
+* optimized preemptive multitask to not switch context if next task is the same as current. Real context switch occures in ~4% of calls to task scheduler
 * all work with task list moved out to ISR level so there is no race condition anymore
 * all work with semaphores moved out to the same ISR level so serialized by hardware and don't requires disabling interrupts
+* added parameter RC_FS to enable all RC failsafe
+* added disabling of data cache on flash write, just for case (upstream has this update too)
+* added a way to schedule context switch from ISR, eg. at data receive or IO_Complete
+* added timeout to SPI flags waiting
+* now task having started any IO (DMA or interrupts) goes to pause and resumes in IO_Completion ISR, not eating CPU time in wait loop
+* greatly reduced time of reformatting of DataFlash to FAT
+* I2C driver fully rewritten again to work via interrupts - no DMA, no polling, and excellent work on noisy lines
+* compass and baro gives bus semaphore ASAP to allow bus operations when calculations does
+* buzzer support
+* full status on only 2 leds - GPS sats count, failsafe, compass calibration, autotune etc
+* support for SBUS on any UART
+* PWM_IN is rewritten to use HAL drivers, as result its size decreased four times (!)
+* working PPM on AirbotV2/V3
+* added ability to connect buzzer to arbitrary pin (parameter BUZZ_PIN)
 * ...
 * a lot of minor enhancements
 
@@ -125,7 +114,7 @@ Since this controller is intended primarily for very small aircraft, the followi
 
 If some of this is needed it can be enabled later
 
-Also, this HAL now is not compatible with LibMapple/ArduinoSTM32 ("wirish" folder) - all imported files are altered.
+Also, this HAL now is not compatible with LibMapple/ArduinoSTM32 ("wirish" folder) - all imported files are highly altered.
 
 Warning!!!
 EEPROM emulation in Flash cause periodic program hunging on time of sector erase! So to allow auto-save parameters 

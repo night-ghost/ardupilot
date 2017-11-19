@@ -64,3 +64,10 @@ Green led: GPS state
 Dark: no fix
 Blinking: number of blinks shows number of sats minus 6, so if there is 10 sats LED will blink in 4 pulses
 
+
+
+this project got donations from:
+* Andrea Belloni
+* Sebastian Thoem
+* Alexander Malishev
+

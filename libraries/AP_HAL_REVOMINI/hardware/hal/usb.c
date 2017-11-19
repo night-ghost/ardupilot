@@ -228,6 +228,7 @@ void USBD_USR_Init(void)
     usb_connected = 0;
     usb_opened = 0;
 #ifdef USB_MASSSTORAGE    
+    extern void SCSI_Init();
     SCSI_Init(); // start USB IO task
 #endif
 }

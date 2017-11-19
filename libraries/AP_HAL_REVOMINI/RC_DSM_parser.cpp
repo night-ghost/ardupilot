@@ -184,7 +184,7 @@ bool DSM_parser::bind(int dsmMode) const {
     uartSDriver.begin(115200);                                  	/*Restore USART RX pin to RS232 receive mode*/
 
 #else
-    // store request to bing in BACKUP RAM
+    // store request to bing in BACKUP Registers
     board_set_rtc_register(DSM_BIND_SIGNATURE | ( dsmMode & DSM_BIND_SIGN_MASK), RTC_DSM_BIND_REG);
      
 #endif

@@ -105,8 +105,9 @@ void dma_attach_interrupt(dma_stream stream, Handler handler, uint8_t flag) {
 
     dev->handlers[stream] = handler;
     IRQn_Type irq = dev->irq_lines[stream];
-    NVIC_EnableIRQ(irq);
-    NVIC_SetPriority(irq, DMA_IOC_INT_PRIORITY);
+    NVIC_ClearPendingIRQ(irq);
+    NVIC_EnableIRQ(irq);                // inline
+    NVIC_SetPriority(irq, DMA_IOC_INT_PRIORITY); // inline
 
     dev->regs->STREAM[stream].CR |= flag;
 

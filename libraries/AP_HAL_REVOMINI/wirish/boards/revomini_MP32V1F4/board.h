@@ -187,9 +187,9 @@ void boardInit(void);
 
 */    
 
-   //                                    name            device   bus  mode         cs_pin                       speed_low       speed_high dma
-#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  1 }, \
-                             { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* caller controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, 2 },
+   //                                    name            device   bus  mode         cs_pin                       speed_low       speed_high dma priority
+#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  1, DMA_Priority_VeryHigh }, \
+                             { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* caller controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, 2, DMA_Priority_Medium },
 
 //#define HAL_CONSOLE USB_Driver // console on USB
 //#define HAL_CONSOLE_PORT 0 // USB
@@ -287,6 +287,13 @@ void boardInit(void);
     // @Values: 0: not translate, 1:translate
     // @User: Advanced
     AP_GROUPINFO("AIBAO_FS",     7, AP_Param_Helper, _aibao_fs, 0)
+    
+    // @Param: OVERCLOCK
+    // @DisplayName: Set CPU frequency
+    // @Description: Allows to set overclocking frequency for CPU. If anything went wrong then normal freq will be restored after reboot
+    // @Values: 0: standard 168MHz, 1:180MHz, 2:192MHz, 3:216MHz, 4:240MHz(*), 5:264MHz
+    // @User: Advanced
+    AP_GROUPINFO("OVERCLOCK",     7, AP_Param_Helper, _overclock, 0),
 */
 #define BOARD_HAL_VARINFO \
     AP_GROUPINFO("MOTOR_LAYOUT", 1, AP_Param_Helper, _motor_layout, 0), \
@@ -304,7 +311,8 @@ void boardInit(void);
     AP_GROUPINFO("EE_DEFERRED",  13, AP_Param_Helper, _eeprom_deferred, 0), \
     AP_GROUPINFO("RC_INPUT",     14, AP_Param_Helper, _rc_input, 0), \
     AP_GROUPINFO("AIBAO_FS",     15, AP_Param_Helper, _aibao_fs, 0), \
-    AP_GROUPINFO("RC_FS",        16, AP_Param_Helper, _rc_fs, 0)
+    AP_GROUPINFO("OVERCLOCK",    16, AP_Param_Helper, _overclock, 0), \
+    AP_GROUPINFO("RC_FS",        17, AP_Param_Helper, _rc_fs, 0)
     
 
 // parameters
@@ -324,6 +332,7 @@ void boardInit(void);
     AP_Int8 _eeprom_deferred; \
     AP_Int8 _rc_input; \
     AP_Int8 _aibao_fs; \
+    AP_Int8 _overclock; \
     AP_Int8 _rc_fs; 
     
 #define ERROR_USART _USART1 // main port - telemetry, all panic messages goes there

@@ -124,7 +124,7 @@ void SCSI_Init() {
 }
 //]
 
-//#define SCSI_DEBUG
+#define SCSI_DEBUG
 
 //[ debug
 #ifdef SCSI_DEBUG

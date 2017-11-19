@@ -495,6 +495,31 @@ typedef enum timer_oc_mode {
 } timer_oc_mode;
 
 
+
+
+
+/*
+01: CC1 channel is configured as input, IC1 is mapped on TI1.
+10: CC1 channel is configured as input, IC1 is mapped on TI2.
+11: CC1 channel is configured as input, IC1 is mapped on TRC. This mode is working only if
+an internal trigger input is selected through TS bit (TIMx_SMCR register)
+
+*/
+
+typedef enum timer_ic_mode {
+    TIMER_IC_MODE_TI1 = 1,//TIM_ICSelection_DirectTI
+    TIMER_IC_MODE_TI2 = 2,//TIM_ICSelection_IndirectTI
+    TIMER_IC_MODE_TRC = 3,
+} timer_ic_mode;
+
+
+typedef enum Timer_cc_Polarity {
+    TIMER_POLARITY_FALLING=0,
+    TIMER_POLARITY_RISING =1,
+    //TIMER_POLARITY_BOTH =2, not supported
+} timer_cc_polarity;
+
+
 /**
  * Timer output compare mode flags.
  * @see timer_oc_set_mode()
@@ -526,17 +551,10 @@ struct Timer_dev {
     Tim_dma ch_dma[4];
     uint16_t af;                // GPIO AF number
     //
-#if 0
-    timer_type         type:3;         // < Timer's type 
-    unsigned int n_handlers:5;         // number of handlers
-    unsigned int        bus:1;         // APB1 or APB2
-    unsigned int         id:5;         // timer's number
-#else
     timer_type         type;         // < Timer's type 
     uint8_t      n_handlers;         // number of handlers
     uint8_t             bus;         // APB1 or APB2
     uint8_t              id;         // timer's number
-#endif
     //
 };
 
@@ -544,23 +562,6 @@ struct Timer_dev {
 typedef struct Timer_dev timer_dev;
 
 extern const timer_dev timers[];
-
-/*
-extern const timer_dev timer1;
-extern const timer_dev timer2;
-extern const timer_dev timer3;
-extern const timer_dev timer4;
-extern const timer_dev timer5;
-extern const timer_dev timer6;
-extern const timer_dev timer7;
-extern const timer_dev timer8;
-extern const timer_dev timer9;
-extern const timer_dev timer10;
-extern const timer_dev timer11;
-extern const timer_dev timer12;
-extern const timer_dev timer13;
-extern const timer_dev timer14;
-*/
 
 #define timer1 (timers[0])
 #define timer2 (timers[1])
@@ -592,20 +593,6 @@ extern const timer_dev timer14;
 #define TIMER13 (&timer13)
 #define TIMER14 (&timer14)
 
-/*
-extern  const timer_dev * const TIMER1;
-extern  const timer_dev * const TIMER2;
-extern  const timer_dev * const TIMER3;
-extern  const timer_dev * const TIMER4;
-extern  const timer_dev * const TIMER5;
-extern  const timer_dev * const TIMER6;
-extern  const timer_dev * const TIMER7;
-extern  const timer_dev * const TIMER8;
-extern  const timer_dev * const TIMER9;
-extern  const timer_dev * const TIMER10;
-extern  const timer_dev * const TIMER11;
-extern  const timer_dev * const TIMER12;
-*/
 
 /*
  * Note: Don't require timer_channel arguments! We want to be able to say
@@ -901,8 +888,8 @@ static inline void timer_cc_disable(const timer_dev *dev, uint8_t channel) {
  * @return Polarity, either 0 or 1.
  * @see timer_cc_set_polarity()
  */
-static inline uint8_t timer_cc_get_pol(const timer_dev *dev, uint8_t channel) {
-    return *bb_perip(&(dev->regs->CCER), 4 * (channel-1) + 1);
+static inline timer_cc_polarity timer_cc_get_pol(const timer_dev *dev, uint8_t channel) {
+    return (timer_cc_polarity)(*bb_perip(&(dev->regs->CCER), 4 * (channel-1) + 1));
 }
 
 /**
@@ -922,7 +909,7 @@ static inline uint8_t timer_cc_get_pol(const timer_dev *dev, uint8_t channel) {
  * @param channel Channel whose capture/compare output polarity to set.
  * @param pol New polarity, 0 or 1.
  */
-static inline void timer_cc_set_pol(const timer_dev *dev, uint8_t channel, uint8_t pol) {
+static inline void timer_cc_set_pol(const timer_dev *dev, uint8_t channel, timer_cc_polarity pol) {
     *bb_perip(&(dev->regs->CCER), 4 * (channel - 1) + 1) = pol;
 }
 
@@ -995,8 +982,6 @@ typedef enum timer_dma_base_addr {
 /**
  * @brief Get the timer's DMA base address.
  *
- * Some restrictions apply; see ST RM0008. (http://www.st.com/content/ccc/resource/technical/document/reference_manual/59/b9/ba/7f/11/af/43/d5/CD00171190.pdf/files/CD00171190.pdf/jcr:content/translations/en.CD00171190.pdf)
- *
  * @param dev Timer device, must have type TIMER_ADVANCED or TIMER_GENERAL.
  * @return DMA base address
  */
@@ -1007,8 +992,6 @@ static inline timer_dma_base_addr timer_dma_get_base_addr(const timer_dev *dev) 
 
 /**
  * @brief Set the timer's DMA base address.
- *
- * Some restrictions apply; see ST RM0008.
  *
  * @param dev Timer device, must have type TIMER_ADVANCED or TIMER_GENERAL.
  * @param dma_base DMA base address.
@@ -1052,6 +1035,73 @@ static inline void timer_oc_set_mode(const timer_dev *dev,
     tmp |= (mode | flags | TIMER_CCMR_CCS_OUTPUT) << shift;
     *ccmr = tmp;
 }
+
+
+
+/*
+    TI1_Config(TIMx, TIM_ICInitStruct->TIM_ICPolarity, TIM_ICInitStruct->TIM_ICSelection,   TIM_ICInitStruct->TIM_ICFilter);
+   
+    // Set the Input Capture Prescaler value 
+    TIM_SetIC1Prescaler(TIMx, TIM_ICInitStruct->TIM_ICPrescaler);
+
+static void TI1_Config(TIM_TypeDef* TIMx, uint16_t TIM_ICPolarity, uint16_t TIM_ICSelection, uint16_t TIM_ICFilter)
+{
+  
+  // Disable the Channel 1: Reset the CC1E Bit 
+  TIMx->CCER &= (uint16_t)~TIM_CCER_CC1E;
+  uint16_t tmpccmr1 = TIMx->CCMR1;
+  uint16_t tmpccer = TIMx->CCER;
+
+  // Select the Input and set the filter 
+  tmpccmr1 &= ((uint16_t)~TIM_CCMR1_CC1S) & ((uint16_t)~TIM_CCMR1_IC1F);
+  tmpccmr1 |= (uint16_t)(TIM_ICSelection | (uint16_t)(TIM_ICFilter << (uint16_t)4));
+
+  // Select the Polarity and set the CC1E Bit 
+  tmpccer &= (uint16_t)~(TIM_CCER_CC1P | TIM_CCER_CC1NP);  
+  tmpccer |= (uint16_t)(TIM_ICPolarity | (uint16_t)TIM_CCER_CC1E);
+
+  // Write to TIMx CCMR1 and CCER registers 
+  TIMx->CCMR1 = tmpccmr1;
+  TIMx->CCER = tmpccer;
+}
+
+void TIM_SetIC1Prescaler(TIM_TypeDef* TIMx, uint16_t TIM_ICPSC)
+{
+  // Reset the IC1PSC Bits 
+  TIMx->CCMR1 &= (uint16_t)~TIM_CCMR1_IC1PSC;
+
+  // Set the IC1PSC value 
+  TIMx->CCMR1 |= TIM_ICPSC;
+}
+*/
+
+/**
+ * @brief Configure a channel's input capture mode.
+ *
+ * @param dev Timer device, must have type TIMER_ADVANCED or TIMER_GENERAL.
+ * @param channel Channel to configure in input capture mode.
+ * @param mode Timer mode to set.
+ * @param flags OR of timer_ic_mode_flags.
+ * @see timer_ic_mode
+ * @see timer_ic_mode_flags
+ */
+static inline void timer_ic_set_mode(const timer_dev *dev,
+                                     uint8_t channel,
+                                     uint8_t mode,
+                                     uint16_t filter) {
+    uint8_t bit0 = channel & 1;
+    uint8_t bit1 = ((channel-1) >> 1) & 1;  // fixed
+    /* channel == 1,2 -> CCMR1; channel == 3,4 -> CCMR2 */
+    __IO uint16_t *ccmr = &(dev->regs->CCMR1) + bit1*2;
+    /* channel == 1,3 -> shift = 0, channel == 2,4 -> shift = 8 */
+    uint8_t shift = 8 * (1 - bit0);
+
+    uint16_t tmp = *ccmr;
+    tmp &= ~(0xFF << shift);
+    tmp |= (mode | (filter << 4) ) << shift;
+    *ccmr = tmp;
+}
+
 
 
 /**

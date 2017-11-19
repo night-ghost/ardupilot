@@ -305,10 +305,12 @@ mavlink_system_t mavlink_system = {12,1};  // sysid, compid
 
 
 #ifdef OSD_DMA_TRANSFER
- #define DMA_BUFFER_SIZE 512
-    static uint8_t  dma_buffer[DMA_BUFFER_SIZE]; // in RAM
+ #define DMA_BUFFER_SIZE 510
+    static uint8_t  dma_buffer[DMA_BUFFER_SIZE+1]; // in RAM for DMA
     static uint16_t dma_transfer_length IN_CCM;
 #endif
+
+static bool diff_done;
 
 static uint8_t shadowbuf[sizeof(OSD::osdbuf)] IN_CCM;
 
@@ -322,22 +324,83 @@ void osd_loop();
 void vsync_ISR();
 void max_do_transfer(const char *buffer, uint16_t len);
 
+static void max7456_cs_off(){
+    osd_spi->wait_busy(); // wait for transfer complete
+    
+    const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
+    gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);
+}
+
+static void max7456_cs_on(){
+    const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
+    gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
+}
+
+
+static uint32_t sem_count=0;
+
+void max7456_on(){
+    
+    if(sem_count++ > 0 || osd_spi_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) { // take sem only if 0
+        max7456_cs_on();
+
+        osd_spi->set_speed(AP_HAL::Device::SPEED_HIGH);
+    }
+}
+
+void max7456_off(){
+    max7456_cs_off();
+    if(--sem_count == 0 ) osd_spi_sem->give(); // give sem on last count
+}
+
+void MAX_write(byte addr, byte data){
+    max7456_cs_on();
+    osd_spi->transfer(addr); // this transfer don't controls CS
+    osd_spi->transfer(data);
+    max7456_cs_off();
+}
+
+byte MAX_read(byte addr){
+    max7456_cs_on();
+    osd_spi->transfer(addr);      // this transfer don't controls CS
+    uint8_t ret = osd_spi->transfer(0xff);
+    max7456_cs_off();
+    return ret;
+}
+
+byte MAX_rw(byte b){
+  return osd_spi->transfer(b);
+}
+
+static uint16_t rdb_ptr IN_CCM;
+
+
 #ifdef OSD_DMA_TRANSFER
 static void prepare_dma_buffer(){
     uint16_t rp;
     uint16_t wp=0;
 
-    uint8_t last_h=0;
+    uint8_t last_h=0xff;
+
+//    MAX_write(MAX7456_DMM_reg, 0); 
+//    MAX_write(MAX7456_VM1_reg, B01000111); 
+
+    memset(dma_buffer,0xff,sizeof(dma_buffer));
+
+    dma_buffer[wp++] = MAX7456_DMM_reg;  dma_buffer[wp++] = 0; 
+    dma_buffer[wp++] = MAX7456_VM1_reg;  dma_buffer[wp++] = B01000111; 
+
     
-    for(rp=0,  wp=0; rp<sizeof(OSD::osdbuf) ; rp++){
+    // сначала все изменения
+    for(rp=0; rp<MAX7456_screen_size ; rp++){
         uint8_t c = OSD::osdbuf[rp];
         if(c != shadowbuf[rp] ){
-            if(wp>=DMA_BUFFER_SIZE-4) break;
+            if(wp>=DMA_BUFFER_SIZE-6) break;
             uint8_t h = rp>>8;
             if(last_h != h){                
                 last_h = h;
                 dma_buffer[wp++] = MAX7456_DMAH_reg;  dma_buffer[wp++] = h; 
-                if(wp>=DMA_BUFFER_SIZE-4) break;
+                if(wp>=DMA_BUFFER_SIZE-6) break;
             }
         
             dma_buffer[wp++] = MAX7456_DMAL_reg;  dma_buffer[wp++] = rp&0xFF; 
@@ -345,7 +408,29 @@ static void prepare_dma_buffer(){
             shadowbuf[rp] = c;
         }
     }
+    
+    // а в оставшееся место все остальное по кольцу. таким образом пересылка у нас всегда 500 байт, и на частоте 4.5МГц занимает ~1ms. 
+    // длинные пересылки имеют низкий приоритет, и никому не мешают
+    while(wp<DMA_BUFFER_SIZE-6){
+            uint8_t c = OSD::osdbuf[rdb_ptr];
+            uint8_t h = rdb_ptr>>8;
+            if(last_h != h){                
+                last_h = h;
+                dma_buffer[wp++] = MAX7456_DMAH_reg;  dma_buffer[wp++] = h; 
+                if(wp>=DMA_BUFFER_SIZE-6) break;
+            }
+        
+            dma_buffer[wp++] = MAX7456_DMAL_reg;  dma_buffer[wp++] = rdb_ptr&0xFF; 
+            dma_buffer[wp++] = MAX7456_DMDI_reg;  dma_buffer[wp++] = c; 
+            shadowbuf[rdb_ptr] = c;
+            rdb_ptr++;
+            if(rdb_ptr >= MAX7456_screen_size) rdb_ptr=0; // loop
+    }
+    
+//    dma_buffer[wp++] = MAX7456_VM0_reg;  dma_buffer[wp++] = MAX7456_ENABLE_display | MAX7456_SYNC_autosync | OSD::video_mode; 
+        
     dma_transfer_length = wp;
+    diff_done = true;
 }
 #endif
 
@@ -403,49 +488,7 @@ static point create_point(char *px,   char *py, char *pVis,  char *pSign, char *
 
 #define write_point(n,p) eeprom_write_len((byte *)&p,  OffsetBITpanel * (int)panel_num + n * sizeof(Point),  sizeof(Point) );
 
-
-static bool osd_need_redraw = false;
-static void * task_handle;
-
-
-void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
-
-    osd_spi = std::move(spi);
-    
-    osd_spi_sem = osd_spi->get_semaphore(); // bus semaphore
-
-    const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
-    gpio_set_mode(pp.gpio_device, pp.gpio_bit, GPIO_OUTPUT_PP);
-    gpio_set_speed(pp.gpio_device, pp.gpio_bit, GPIO_Speed_100MHz); 
-    gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);
-
-
-    if(osd_spi_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER) ) {
-//        osd_spi->set_speed(AP_HAL::Device::SPEED_HIGH);
-        osd_spi_sem->give();
-    }
-
-    rb_init(&osd_rxrb, OSD_RX_BUF_SIZE, osd_rx_buf);
-    rb_init(&osd_txrb, OSD_TX_BUF_SIZE, osd_tx_buf);
-
-    OSD_EEPROM::init();
-
-
-
-/*
-    lets try to load settings from SD card
-*/
-    readSettings();
-
-//    OSD::update();// clear memory
-    memset(OSD::osdbuf,0x20, sizeof(OSD::osdbuf));
-    memset(shadowbuf,  0x20, sizeof(OSD::osdbuf));
-    
-
-        
-    doScreenSwitch(); // set vars for startup screen
-
-    
+static void load_config(){
     File fd = SD.open("eeprom.osd", FILE_READ);
     if (fd) {
         printf("\nLoading OSD config\n");
@@ -540,10 +583,11 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 
     }
 
-    osd.init();    // Start display
+}
 
+static void load_font(){
     const char font[]="font.mcm";
-    fd = SD.open(font, FILE_READ);
+    File fd = SD.open(font, FILE_READ);
     if (fd) {
         char buf[80];
         
@@ -622,10 +666,117 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 //*/
     }
 
+}
+
+static bool osd_need_redraw = false;
+static void * task_handle;
+
+// slowly write all buffer
+static void write_buff_to_MAX(bool all){
+
+    max7456_on();
+    MAX_write(MAX7456_DMM_reg, 0); 
+
+    // clear internal memory
+    uint8_t old_h=0xff;
+    for(uint16_t len = MAX7456_screen_size, cnt=0;len--; cnt++){
+        uint8_t c= OSD::osdbuf[cnt];
+        if(all || c!=0x20) {
+            max7456_cs_on();
+            uint8_t h = cnt>>8;
+            if(old_h!=h){
+                MAX_write(MAX7456_DMAH_reg, h);
+                old_h = h;
+            }
+            MAX_write(MAX7456_DMAL_reg, cnt&0xFF);
+            MAX_write(MAX7456_DMDI_reg, c);
+            max7456_cs_off();
+        }
+        shadowbuf[cnt] = c;
+    }
+    max7456_off();
+}
+
+
+
+void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
+
+    osd_spi = std::move(spi);
+    
+    osd_spi_sem = osd_spi->get_semaphore(); // bus semaphore
+    {
+        const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
+        gpio_set_mode(pp.gpio_device, pp.gpio_bit, GPIO_OUTPUT_PP);
+        gpio_set_speed(pp.gpio_device, pp.gpio_bit, GPIO_Speed_100MHz); 
+        gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);
+    }
+
+#ifdef BOARD_OSD_RESET_PIN
+    {
+        const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_RESET_PIN];
+        gpio_set_mode(pp.gpio_device, pp.gpio_bit, GPIO_OUTPUT_PP);
+        gpio_set_speed(pp.gpio_device, pp.gpio_bit, GPIO_Speed_25MHz); 
+        gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
+        delayMicroseconds(50);
+        gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);
+        delayMicroseconds(120);
+    }
+#endif
+
+
+    rb_init(&osd_rxrb, OSD_RX_BUF_SIZE, osd_rx_buf);
+    rb_init(&osd_txrb, OSD_TX_BUF_SIZE, osd_tx_buf);
+
+    OSD_EEPROM::init();
+
+    // clear memory
+    memset(OSD::osdbuf,0x20, sizeof(OSD::osdbuf));
+    memset(shadowbuf,  0x20, sizeof(shadowbuf));
+
+/*
+    lets try to load settings from SD card
+*/
+    load_config();
+
+    readSettings();
+
+    doScreenSwitch(); // set vars for startup screen
 
     if( sets.CHK1_VERSION != VER || sets.CHK2_VERSION != (VER ^ 0x55)) { // wrong version
         lflags.bad_config=1;
+        
+        // some useful defaults
+        sets.OSD_BRIGHTNESS = 2;
+        sets.horiz_offs = 0x20;
+        sets.vert_offs  = 0x10;
+        
     }
+
+    while(millis()<1000) { // delay initialization until video stabilizes
+        hal_yield(1000);
+    }
+
+    max7456_on();
+
+    write_buff_to_MAX(true);
+
+
+    for(uint8_t i=0; i<100; i++) {
+        osd.init();    // Start display
+        
+        max7456_on();
+        uint8_t vm0 = MAX_read(MAX7456_VM0_reg | MAX7456_reg_read); // check register
+        max7456_off();
+
+        uint8_t patt = MAX7456_ENABLE_display | MAX7456_SYNC_autosync | OSD::video_mode;
+
+        if(vm0==patt) break;
+    }
+
+    max7456_off();
+
+    load_font();
+
 
 #define REL_1 int(RELEASE_NUM/100)
 #define REL_2 int((RELEASE_NUM - REL_1*100 )/10) 
@@ -638,8 +789,7 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 
         eeprom_write_len( sets.FW_VERSION,  EEPROM_offs(sets) + ((uint8_t *)sets.FW_VERSION - (uint8_t *)&sets),  sizeof(sets.FW_VERSION) );
     }
-
-        
+    
     logo();
 
 #ifdef BOARD_OSD_VSYNC_PIN
@@ -841,53 +991,90 @@ void osd_dequeue() {
 
 }
 
-static void max7456_cs_off(){
-    osd_spi->wait_busy(); // wait for transfer complete
-    
-    const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
-    gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);
-}
 
-static void max7456_cs_on(){
-    const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
-    gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
-}
-
-void max7456_off(){
-    max7456_cs_off();
-    osd_spi_sem->give();
-}
-
-void max7456_on(){
-    if(osd_spi_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
-        max7456_cs_on();
-
-        osd_spi->set_speed(AP_HAL::Device::SPEED_HIGH);
-    }
-}
-
-void MAX_write(byte addr, byte data){
-    osd_spi->transfer(addr); // this transfer don't controls CS
-    osd_spi->transfer(data);
-}
-
-byte MAX_read(byte addr){
-  osd_spi->transfer(addr);      // this transfer don't controls CS
-  return osd_spi->transfer(0xff);
-}
-
-byte MAX_rw(byte b){
-  return osd_spi->transfer(b);
-}
+static uint8_t max_err_cnt=0;
 
 void update_max_buffer(const uint8_t *buffer, uint16_t len){
     max7456_on();
 
     uint16_t cnt=0;
     
-#ifdef OSD_DMA_TRANSFER
-    osd_spi->transfer(dma_buffer, dma_transfer_length, NULL, 0);    // diff already prepared
-#elif 0
+    
+#if defined(OSD_DMA_TRANSFER) && 0
+//    MAX_write(MAX7456_DMM_reg, 0); 
+//    MAX_write(MAX7456_VM1_reg, B01000111);  - in dma_buffer
+
+    if(!diff_done){
+        prepare_dma_buffer(); 
+    }
+
+    if(dma_transfer_length) {
+        osd_spi->transfer(dma_buffer, dma_transfer_length, NULL, 0);    // diff already prepared
+
+        dma_transfer_length = 0;
+    }
+    diff_done = false;
+
+
+    max7456_cs_off();
+    uint8_t patt = MAX7456_ENABLE_display | MAX7456_SYNC_autosync | OSD::video_mode;
+    max7456_cs_on();
+    uint8_t vm0 = MAX_read(MAX7456_VM0_reg | MAX7456_reg_read);
+    max7456_cs_off();
+        
+    if(vm0 != patt) {
+        max_err_cnt++;
+        if(max_err_cnt<3) {
+            OSD::hw_init(); // first try without reset
+        } else {
+                // 3 errors together - nothing helps :(
+#ifdef BOARD_OSD_RESET_PIN
+            {
+                const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_RESET_PIN];
+                gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
+                delayMicroseconds(50);
+                gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);
+                delayMicroseconds(120);
+            }
+#endif
+            OSD::init();
+            max_err_cnt=0; 
+            write_buff_to_MAX(false); // restore screen
+        }
+//            MAX_write(MAX7456_VM0_reg, patt);         
+    } else {
+        max_err_cnt=0;
+    }
+
+#elif 1
+    max7456_cs_off();
+    uint8_t patt = MAX7456_ENABLE_display | MAX7456_SYNC_autosync | OSD::video_mode;
+    max7456_cs_on();
+    uint8_t vm0 = MAX_read(MAX7456_VM0_reg | MAX7456_reg_read);
+    max7456_cs_off();
+        
+    if(vm0 != patt) {
+        max_err_cnt++;
+        if(max_err_cnt<3) {
+            OSD::hw_init(); // first try without reset
+        } else {
+                // 3 errors together - nothing helps :(
+#ifdef BOARD_OSD_RESET_PIN
+            {
+                const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_RESET_PIN];
+                gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
+                delayMicroseconds(50);
+                gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);
+                delayMicroseconds(120);
+            }
+#endif
+            OSD::init();
+            max_err_cnt=0; 
+        }
+    } else {
+        max_err_cnt=0;
+    }
+
     MAX_write(MAX7456_DMAH_reg, 0);
     MAX_write(MAX7456_DMAL_reg, 0);
     MAX_write(MAX7456_DMM_reg, 1); // автоинкремент адреса
@@ -917,7 +1104,7 @@ void update_max_buffer(const uint8_t *buffer, uint16_t len){
         cnt++;
     }
 
-#elif 1
+#elif 0
 
 // a try to do writes in software strobe mode
     MAX_write(MAX7456_DMAH_reg, 0);
@@ -927,7 +1114,7 @@ void update_max_buffer(const uint8_t *buffer, uint16_t len){
     while(len--){
         max7456_cs_on();
         // osd_spi->transfer(*buffer++); MAX7456
-        MAX_write(MAX7456_DMDI_reg, *buffer++); // AT7456
+        MAX_rw(*buffer++);
         buffer++;
         cnt++;
         osd_spi->wait_busy();
@@ -956,6 +1143,7 @@ void update_max_buffer(const uint8_t *buffer, uint16_t len){
     }
 
 #endif    
+
     max7456_off();
 }
 

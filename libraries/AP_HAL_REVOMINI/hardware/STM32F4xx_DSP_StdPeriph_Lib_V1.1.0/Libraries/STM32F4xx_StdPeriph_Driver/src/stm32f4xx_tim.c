@@ -1,3 +1,5 @@
+#pragma GCC optimize ("O2")
+
 /**
   ******************************************************************************
   * @file    stm32f4xx_tim.c
@@ -1325,13 +1327,12 @@ void TIM_OC3PreloadConfig(TIM_TypeDef* TIMx, uint16_t TIM_OCPreload)
   */
 void TIM_OC4PreloadConfig(TIM_TypeDef* TIMx, uint16_t TIM_OCPreload)
 {
-  uint16_t tmpccmr2 = 0;
 
   /* Check the parameters */
   assert_param(IS_TIM_LIST3_PERIPH(TIMx));
   assert_param(IS_TIM_OCPRELOAD_STATE(TIM_OCPreload));
 
-  tmpccmr2 = TIMx->CCMR2;
+  uint16_t tmpccmr2 = TIMx->CCMR2;
 
   /* Reset the OC4PE Bit */
   tmpccmr2 &= (uint16_t)(~TIM_CCMR2_OC4PE);
@@ -1906,44 +1907,39 @@ void TIM_ICInit(TIM_TypeDef* TIMx, TIM_ICInitTypeDef* TIM_ICInitStruct)
   assert_param(IS_TIM_IC_PRESCALER(TIM_ICInitStruct->TIM_ICPrescaler));
   assert_param(IS_TIM_IC_FILTER(TIM_ICInitStruct->TIM_ICFilter));
   
-  if (TIM_ICInitStruct->TIM_Channel == TIM_Channel_1)
-  {
-    /* TI1 Configuration */
+  switch(TIM_ICInitStruct->TIM_Channel) {
+  case TIM_Channel_1:    /* TI1 Configuration */
     TI1_Config(TIMx, TIM_ICInitStruct->TIM_ICPolarity,
                TIM_ICInitStruct->TIM_ICSelection,
                TIM_ICInitStruct->TIM_ICFilter);
     /* Set the Input Capture Prescaler value */
     TIM_SetIC1Prescaler(TIMx, TIM_ICInitStruct->TIM_ICPrescaler);
-  }
-  else if (TIM_ICInitStruct->TIM_Channel == TIM_Channel_2)
-  {
-    /* TI2 Configuration */
+    break;
+  case TIM_Channel_2:    /* TI2 Configuration */
     assert_param(IS_TIM_LIST2_PERIPH(TIMx));
     TI2_Config(TIMx, TIM_ICInitStruct->TIM_ICPolarity,
                TIM_ICInitStruct->TIM_ICSelection,
                TIM_ICInitStruct->TIM_ICFilter);
     /* Set the Input Capture Prescaler value */
     TIM_SetIC2Prescaler(TIMx, TIM_ICInitStruct->TIM_ICPrescaler);
-  }
-  else if (TIM_ICInitStruct->TIM_Channel == TIM_Channel_3)
-  {
-    /* TI3 Configuration */
+    break;
+  case TIM_Channel_3:    /* TI3 Configuration */
     assert_param(IS_TIM_LIST3_PERIPH(TIMx));
     TI3_Config(TIMx,  TIM_ICInitStruct->TIM_ICPolarity,
                TIM_ICInitStruct->TIM_ICSelection,
                TIM_ICInitStruct->TIM_ICFilter);
     /* Set the Input Capture Prescaler value */
     TIM_SetIC3Prescaler(TIMx, TIM_ICInitStruct->TIM_ICPrescaler);
-  }
-  else
-  {
-    /* TI4 Configuration */
+
+    break;
+  default:    /* TI4 Configuration */
     assert_param(IS_TIM_LIST3_PERIPH(TIMx));
     TI4_Config(TIMx, TIM_ICInitStruct->TIM_ICPolarity,
                TIM_ICInitStruct->TIM_ICSelection,
                TIM_ICInitStruct->TIM_ICFilter);
     /* Set the Input Capture Prescaler value */
     TIM_SetIC4Prescaler(TIMx, TIM_ICInitStruct->TIM_ICPrescaler);
+    break;
   }
 }
 
@@ -2491,46 +2487,7 @@ void TIM_ClearFlag(TIM_TypeDef* TIMx, uint16_t TIM_FLAG)
   TIMx->SR = (uint16_t)~TIM_FLAG;
 }
 
-/**
-  * @brief  Checks whether the TIM interrupt has occurred or not.
-  * @param  TIMx: where x can be 1 to 14 to select the TIM peripheral.
-  * @param  TIM_IT: specifies the TIM interrupt source to check.
-  *          This parameter can be one of the following values:
-  *            @arg TIM_IT_Update: TIM update Interrupt source
-  *            @arg TIM_IT_CC1: TIM Capture Compare 1 Interrupt source
-  *            @arg TIM_IT_CC2: TIM Capture Compare 2 Interrupt source
-  *            @arg TIM_IT_CC3: TIM Capture Compare 3 Interrupt source
-  *            @arg TIM_IT_CC4: TIM Capture Compare 4 Interrupt source
-  *            @arg TIM_IT_COM: TIM Commutation Interrupt source
-  *            @arg TIM_IT_Trigger: TIM Trigger Interrupt source
-  *            @arg TIM_IT_Break: TIM Break Interrupt source
-  *
-  * @note   TIM6 and TIM7 can generate only an update interrupt.
-  * @note   TIM_IT_COM and TIM_IT_Break are used only with TIM1 and TIM8.
-  *     
-  * @retval The new state of the TIM_IT(SET or RESET).
-  */
-ITStatus TIM_GetITStatus(TIM_TypeDef* TIMx, uint16_t TIM_IT)
-{
-  ITStatus bitstatus = RESET;  
-  uint16_t itstatus = 0x0, itenable = 0x0;
-  /* Check the parameters */
-  assert_param(IS_TIM_ALL_PERIPH(TIMx));
-  assert_param(IS_TIM_GET_IT(TIM_IT));
-   
-  itstatus = TIMx->SR & TIM_IT;
-  
-  itenable = TIMx->DIER & TIM_IT;
-  if ((itstatus != (uint16_t)RESET) && (itenable != (uint16_t)RESET))
-  {
-    bitstatus = SET;
-  }
-  else
-  {
-    bitstatus = RESET;
-  }
-  return bitstatus;
-}
+
 
 /**
   * @brief  Clears the TIMx's interrupt pending bits.

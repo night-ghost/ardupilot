@@ -1,3 +1,4 @@
+#pragma GCC optimize ("O2")
 
 #include <AP_HAL/AP_HAL.h>
 
@@ -290,28 +291,51 @@ void HAL_REVOMINI::lateInit() {
     
     lateInitDone=true;
 
+    {
+        uint32_t sig = board_get_rtc_register(RTC_CONSOLE_REG);
+        uint8_t port = hal_param_helper->_console_uart;
 
-    uint32_t sig = board_get_rtc_register(RTC_CONSOLE_REG);
-    uint8_t port = hal_param_helper->_console_uart;
+        if(port < sizeof(uarts)/sizeof(AP_HAL::UARTDriver**) ){
 
-    if(port < sizeof(uarts)/sizeof(AP_HAL::UARTDriver**) ){
-
-        if( (sig & ~CONSOLE_PORT_MASK) == CONSOLE_PORT_SIGNATURE) {
-            if(port != (sig & CONSOLE_PORT_MASK)) { // wrong console - reboot needed
+            if( (sig & ~CONSOLE_PORT_MASK) == CONSOLE_PORT_SIGNATURE) {
+                if(port != (sig & CONSOLE_PORT_MASK)) { // wrong console - reboot needed
+                    board_set_rtc_register(CONSOLE_PORT_SIGNATURE | (port & CONSOLE_PORT_MASK), RTC_CONSOLE_REG);
+                    REVOMINIScheduler::_reboot(false);
+                }
+            } else { // no signature - set and check console
                 board_set_rtc_register(CONSOLE_PORT_SIGNATURE | (port & CONSOLE_PORT_MASK), RTC_CONSOLE_REG);
-                REVOMINIScheduler::_reboot(false);
-            }
-        } else { // no signature - set and check console
-            board_set_rtc_register(CONSOLE_PORT_SIGNATURE | (port & CONSOLE_PORT_MASK), RTC_CONSOLE_REG);
 
-            AP_HAL::UARTDriver** up = uarts[port];
-            if(up && *up != console) {
-
-                REVOMINIScheduler::_reboot(false);
+                AP_HAL::UARTDriver** up = uarts[port];
+                if(up && *up != console) {
+    
+                    REVOMINIScheduler::_reboot(false);
+                }
             }
         }
     }
+    {
+        uint32_t g   = board_get_rtc_register(RTC_OV_GUARD_REG);
+        uint32_t sig = board_get_rtc_register(RTC_OVERCLOCK_REG);
+        uint8_t  oc  = hal_param_helper->_overclock;
+        
+        if(g==OV_GUARD_FAIL_SIGNATURE) {
+            if(oc==0) {
+                board_set_rtc_register(OVERCLOCK_SIGNATURE | oc, RTC_OVERCLOCK_REG); // set default clock
+                board_set_rtc_register(0, RTC_OV_GUARD_REG);                    // and reset failure
+            } else printf("\noverclocking failed!\n");            
+        } else {
 
+            if((sig & ~OVERCLOCK_SIG_MASK ) == OVERCLOCK_SIGNATURE ) { // if correct signature
+                board_set_rtc_register(OVERCLOCK_SIGNATURE | oc, RTC_OVERCLOCK_REG); // set required clock in any case
+                if((sig & OVERCLOCK_SIG_MASK) != oc) {                 // if wrong clock
+                    REVOMINIScheduler::_reboot(false);                 //  then reboot required
+                } 
+            } else { // no signature, write only if needed
+                if(oc) board_set_rtc_register(OVERCLOCK_SIGNATURE | oc, RTC_OVERCLOCK_REG); // set required clock
+            }
+        }
+    }
+    
     { // one-time connection to COM-port
         uint8_t conn = hal_param_helper->_connect_com;
         if(conn) {
@@ -509,8 +533,10 @@ void HAL_REVOMINI::connect_uart(AP_HAL::UARTDriver* uartL,AP_HAL::UARTDriver* ua
     }
 }
 
+static const HAL_REVOMINI hal_revo;
+
 const AP_HAL::HAL& AP_HAL::get_HAL() {
-    static const HAL_REVOMINI hal_revo;
+//    static const HAL_REVOMINI hal_revo;
     return hal_revo;
 }
 

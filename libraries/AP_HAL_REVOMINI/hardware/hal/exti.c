@@ -69,33 +69,17 @@ void exti_attach_interrupt(afio_exti_num num,
 	NVIC_InitTypeDef   NVIC_InitStructure;
   	
 	// Register the handler 
-	//exti_channels[num].handler = handler;
 	handlers[num] = handler;
 
 	// Enable SYSCFG clock 
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 
-/*  this is not a job of attachInterrupt
-	GPIO_InitTypeDef   GPIO_InitStructure;
-	gpio_dev *dev = gpio_get_gpio_dev(port);
-	
- 
-	// Enable GPIOx clock 	
-	RCC_AHB1PeriphClockCmd(dev->clk, ENABLE);
-  
-	// Configure pin as input floating 
-        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;  
-	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	GPIO_InitStructure.GPIO_Pin = BIT(num);
-	GPIO_Init(dev->GPIOx, &GPIO_InitStructure);
-*/
 	SYSCFG_EXTILineConfig(port, num);
 
         uint32_t line = exti_channels[num].irq_line;
 
         // clear active request
         EXTI_ClearITPendingBit(line);
-
 
 	/* Configure EXTI Line */
 	EXTI_InitStructure.EXTI_Line = line;
@@ -106,7 +90,7 @@ void exti_attach_interrupt(afio_exti_num num,
 
 	/* Enable and set EXTI Line Interrupt to the lowest priority */
 	NVIC_InitStructure.NVIC_IRQChannel = exti_channels[num].irq_type;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 5;  // we init NVIC for 4 bit preemption,  0 bit subpriority 
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = GPIO_INT_PRIORITY;  // we init NVIC for 4 bit preemption,  0 bit subpriority 
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);  	
@@ -175,6 +159,7 @@ void exti_detach_interrupt(afio_exti_num num)
 	/* Finally, unregister the user's handler */
 	handlers[num] = (Handler)0;	
 }
+
 
 void exti_enable_interrupt(afio_exti_num num, bool e){
     if(e){

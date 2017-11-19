@@ -143,7 +143,7 @@ GLOBAL_CFLAGS   += -include $(WIRISH_PATH)/boards/$(BOARD)/board.h
 # GLOBAL_CXXFLAGS ---------------------------------------------------------------------------------
 GLOBAL_CXXFLAGS := -fno-rtti       #Disable generation of information about every class with virtual functions for use by the C++ runtime type identification features
 GLOBAL_CXXFLAGS += -fno-exceptions -fno-threadsafe-statics # not true C++
-GLOBAL_CXXFLAGS += -fconserve-space -fno-enforce-eh-specs
+GLOBAL_CXXFLAGS += -fconserve-space -fno-enforce-eh-specs  -fno-use-cxa-atexit
 
 #GLOBAL_CXXFLAGS += -Wall  -std=gnu++0x
 GLOBAL_CXXFLAGS += -Wall  -std=gnu++11

@@ -1,3 +1,5 @@
+#pragma GCC optimize ("O2")
+
 /**
   ******************************************************************************
   * @file    stm32f4xx_usart.c
@@ -1274,87 +1276,6 @@ void USART_ITConfig(USART_TypeDef* USARTx, uint16_t USART_IT, FunctionalState Ne
   }
 }
 
-/**
-  * @brief  Checks whether the specified USART flag is set or not.
-  * @param  USARTx: where x can be 1, 2, 3, 4, 5, 6, 7 or 8 to select the USART or 
-  *         UART peripheral.
-  * @param  USART_FLAG: specifies the flag to check.
-  *          This parameter can be one of the following values:
-  *            @arg USART_FLAG_CTS:  CTS Change flag (not available for UART4 and UART5)
-  *            @arg USART_FLAG_LBD:  LIN Break detection flag
-  *            @arg USART_FLAG_TXE:  Transmit data register empty flag
-  *            @arg USART_FLAG_TC:   Transmission Complete flag
-  *            @arg USART_FLAG_RXNE: Receive data register not empty flag
-  *            @arg USART_FLAG_IDLE: Idle Line detection flag
-  *            @arg USART_FLAG_ORE:  OverRun Error flag
-  *            @arg USART_FLAG_NE:   Noise Error flag
-  *            @arg USART_FLAG_FE:   Framing Error flag
-  *            @arg USART_FLAG_PE:   Parity Error flag
-  * @retval The new state of USART_FLAG (SET or RESET).
-  */
-FlagStatus USART_GetFlagStatus(USART_TypeDef* USARTx, uint16_t USART_FLAG)
-{
-  FlagStatus bitstatus = RESET;
-  /* Check the parameters */
-  assert_param(IS_USART_ALL_PERIPH(USARTx));
-  assert_param(IS_USART_FLAG(USART_FLAG));
-
-  /* The CTS flag is not available for UART4 and UART5 */
-  if (USART_FLAG == USART_FLAG_CTS)
-  {
-    assert_param(IS_USART_1236_PERIPH(USARTx));
-  } 
-    
-  if ((USARTx->SR & USART_FLAG) != (uint16_t)RESET)
-  {
-    bitstatus = SET;
-  }
-  else
-  {
-    bitstatus = RESET;
-  }
-  return bitstatus;
-}
-
-/**
-  * @brief  Clears the USARTx's pending flags.
-  * @param  USARTx: where x can be 1, 2, 3, 4, 5, 6, 7 or 8 to select the USART or 
-  *         UART peripheral.
-  * @param  USART_FLAG: specifies the flag to clear.
-  *          This parameter can be any combination of the following values:
-  *            @arg USART_FLAG_CTS:  CTS Change flag (not available for UART4 and UART5).
-  *            @arg USART_FLAG_LBD:  LIN Break detection flag.
-  *            @arg USART_FLAG_TC:   Transmission Complete flag.
-  *            @arg USART_FLAG_RXNE: Receive data register not empty flag.
-  *   
-  * @note   PE (Parity error), FE (Framing error), NE (Noise error), ORE (OverRun 
-  *          error) and IDLE (Idle line detected) flags are cleared by software 
-  *          sequence: a read operation to USART_SR register (USART_GetFlagStatus()) 
-  *          followed by a read operation to USART_DR register (USART_ReceiveData()).
-  * @note   RXNE flag can be also cleared by a read to the USART_DR register 
-  *          (USART_ReceiveData()).
-  * @note   TC flag can be also cleared by software sequence: a read operation to 
-  *          USART_SR register (USART_GetFlagStatus()) followed by a write operation
-  *          to USART_DR register (USART_SendData()).
-  * @note   TXE flag is cleared only by a write to the USART_DR register 
-  *          (USART_SendData()).
-  *   
-  * @retval None
-  */
-void USART_ClearFlag(USART_TypeDef* USARTx, uint16_t USART_FLAG)
-{
-  /* Check the parameters */
-  assert_param(IS_USART_ALL_PERIPH(USARTx));
-  assert_param(IS_USART_CLEAR_FLAG(USART_FLAG));
-
-  /* The CTS flag is not available for UART4 and UART5 */
-  if ((USART_FLAG & USART_FLAG_CTS) == USART_FLAG_CTS)
-  {
-    assert_param(IS_USART_1236_PERIPH(USARTx));
-  } 
-       
-  USARTx->SR = (uint16_t)~USART_FLAG;
-}
 
 /**
   * @brief  Checks whether the specified USART interrupt has occurred or not.
@@ -1421,50 +1342,6 @@ ITStatus USART_GetITStatus(USART_TypeDef* USARTx, uint16_t USART_IT)
   }
   
   return bitstatus;  
-}
-
-/**
-  * @brief  Clears the USARTx's interrupt pending bits.
-  * @param  USARTx: where x can be 1, 2, 3, 4, 5, 6, 7 or 8 to select the USART or 
-  *         UART peripheral.
-  * @param  USART_IT: specifies the interrupt pending bit to clear.
-  *          This parameter can be one of the following values:
-  *            @arg USART_IT_CTS:  CTS change interrupt (not available for UART4 and UART5)
-  *            @arg USART_IT_LBD:  LIN Break detection interrupt
-  *            @arg USART_IT_TC:   Transmission complete interrupt. 
-  *            @arg USART_IT_RXNE: Receive Data register not empty interrupt.
-  *
-  * @note   PE (Parity error), FE (Framing error), NE (Noise error), ORE (OverRun 
-  *          error) and IDLE (Idle line detected) pending bits are cleared by 
-  *          software sequence: a read operation to USART_SR register 
-  *          (USART_GetITStatus()) followed by a read operation to USART_DR register 
-  *          (USART_ReceiveData()).
-  * @note   RXNE pending bit can be also cleared by a read to the USART_DR register 
-  *          (USART_ReceiveData()).
-  * @note   TC pending bit can be also cleared by software sequence: a read 
-  *          operation to USART_SR register (USART_GetITStatus()) followed by a write 
-  *          operation to USART_DR register (USART_SendData()).
-  * @note   TXE pending bit is cleared only by a write to the USART_DR register 
-  *          (USART_SendData()).
-  *  
-  * @retval None
-  */
-void USART_ClearITPendingBit(USART_TypeDef* USARTx, uint16_t USART_IT)
-{
-  uint16_t bitpos = 0x00, itmask = 0x00;
-  /* Check the parameters */
-  assert_param(IS_USART_ALL_PERIPH(USARTx));
-  assert_param(IS_USART_CLEAR_IT(USART_IT)); 
-
-  /* The CTS interrupt is not available for UART4 and UART5 */
-  if (USART_IT == USART_IT_CTS)
-  {
-    assert_param(IS_USART_1236_PERIPH(USARTx));
-  } 
-    
-  bitpos = USART_IT >> 0x08;
-  itmask = ((uint16_t)0x01 << (uint16_t)bitpos);
-  USARTx->SR = (uint16_t)~itmask;
 }
 
 /**

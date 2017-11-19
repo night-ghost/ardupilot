@@ -104,10 +104,10 @@ static inline void i2c_lowLevel_init(const i2c_dev *dev)  {
 
 // common configuration
     /* common GPIO configuration */
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+    GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_25MHz; // GPIO_Speed_50MHz;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
+    GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP;
 
     /* Configure SCL */
     GPIO_InitStructure.GPIO_Pin = BIT(dev->scl_pin);
@@ -117,7 +117,7 @@ static inline void i2c_lowLevel_init(const i2c_dev *dev)  {
     GPIO_InitStructure.GPIO_Pin = BIT(dev->sda_pin);
     GPIO_Init(dev->gpio_port->GPIOx, &GPIO_InitStructure);
 
-    /* Connect GPIO pins to peripheral */
+    /* Connect GPIO pins to peripheral, SCL must be first! */
     GPIO_PinAFConfig(dev->gpio_port->GPIOx, dev->scl_pin, dev->gpio_af);
     GPIO_PinAFConfig(dev->gpio_port->GPIOx, dev->sda_pin, dev->gpio_af);
 }

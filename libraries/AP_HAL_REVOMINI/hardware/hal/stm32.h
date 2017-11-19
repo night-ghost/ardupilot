@@ -99,7 +99,7 @@
     #define DELAY_US_MULT               STM32_DELAY_US_MULT
 
 #elif defined(MCU_STM32F406VG)
-    #define STM32_TICKS_PER_US          168
+    #define STM32_TICKS_PER_US          (SystemCoreClock / 1000000)
     #define STM32_NR_GPIO_PORTS          5
     #define STM32_DELAY_US_MULT         (STM32_TICKS_PER_US/3)
     #define STM32_SRAM_END              ((void*)0x20020000)
@@ -108,7 +108,7 @@
     #define DELAY_US_MULT               STM32_DELAY_US_MULT
 
 #elif defined(MCU_STM32F407VG) || defined(stm32f407vg) || defined(mcu_stm32f405rg) || defined(MCU_STM32F405RG)
-    #define STM32_TICKS_PER_US          168
+    #define STM32_TICKS_PER_US          (SystemCoreClock / 1000000)
     #define STM32_NR_GPIO_PORTS          5
     #define STM32_DELAY_US_MULT         (STM32_TICKS_PER_US/3)
     #define STM32_SRAM_END              ((void*)0x20020000)

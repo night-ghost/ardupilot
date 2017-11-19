@@ -17,7 +17,7 @@ void boardInit(void);
 #define __Vendor_SysTickConfig    0       /*!< Set to 1 if different SysTick Config is used  */
 #define __FPU_PRESENT             1       /*!< FPU present      */
 
-#define CYCLES_PER_MICROSECOND  168
+#define CYCLES_PER_MICROSECOND  (SystemCoreClock / 1000000)
 #define SYSTICK_RELOAD_VAL      (CYCLES_PER_MICROSECOND*1000-1)
 
 #undef  STM32_PCLK1
@@ -175,9 +175,9 @@ void boardInit(void);
 2 - enable alaways
 
 */
-   //                                    name            device   bus  mode         cs_pin                       speed_low       speed_high dma
-#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  1 }, \
-                             { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* device controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, 2 },
+   //                                    name            device   bus  mode         cs_pin                       speed_low       speed_high dma priority
+#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  1, DMA_Priority_VeryHigh }, \
+                             { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* device controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, 2, DMA_Priority_Medium },
 
 
 /*
@@ -270,7 +270,8 @@ void boardInit(void);
     AP_GROUPINFO("EE_DEFERRED",  12, AP_Param_Helper, _eeprom_deferred, 0), \
     AP_GROUPINFO("RC_INPUT",     13, AP_Param_Helper, _rc_input, 0), \
     AP_GROUPINFO("AIBAO_FS",     14, AP_Param_Helper, _aibao_fs, 0), \
-    AP_GROUPINFO("RC_FS",        15, AP_Param_Helper, _rc_fs, 0)
+    AP_GROUPINFO("OVERCLOCK",    15, AP_Param_Helper, _overclock, 0), \
+    AP_GROUPINFO("RC_FS",        16, AP_Param_Helper, _rc_fs, 0)
 
 #else
 
@@ -288,7 +289,8 @@ void boardInit(void);
     AP_GROUPINFO("EE_DEFERRED",  11, AP_Param_Helper, _eeprom_deferred, 0), \
     AP_GROUPINFO("RC_INPUT",     12, AP_Param_Helper, _rc_input, 0), \
     AP_GROUPINFO("AIBAO_FS",     13, AP_Param_Helper, _aibao_fs, 0), \
-    AP_GROUPINFO("RC_FS",        14, AP_Param_Helper, _rc_fs, 0)
+    AP_GROUPINFO("OVERCLOCK",    14, AP_Param_Helper, _overclock, 0), \
+    AP_GROUPINFO("RC_FS",        15, AP_Param_Helper, _rc_fs, 0)
 
 #endif
 
@@ -309,6 +311,7 @@ void boardInit(void);
     AP_Int8 _eeprom_deferred; \
     AP_Int8 _rc_input; \
     AP_Int8 _aibao_fs; \
+    AP_Int8 _overclock; \
     AP_Int8 _rc_fs;
 
 #define WAYBACK_DEBUG

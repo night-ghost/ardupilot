@@ -163,7 +163,7 @@ void spi_reconfigure(const spi_dev *dev, uint8_t ismaster, uint16_t baudPrescale
 
     SPI_Cmd(dev->SPIx, ENABLE);
         
-    uint32_t dly=1000;
+    uint32_t dly=1024;
     while (SPI_I2S_GetFlagStatus(dev->SPIx, SPI_I2S_FLAG_TXE) == RESET) {
         dly--;
         if(dly==0) break;
@@ -193,6 +193,7 @@ int spimaster_transfer(const spi_dev *dev,
                        uint8_t *rxbuf,
                        uint16_t rxcount)
 {
+#if 0
 	// Validate parameters
 	if ((txbuf == NULL) && (txcount != 0)){
 		return __LINE__ - 3;
@@ -209,6 +210,7 @@ int spimaster_transfer(const spi_dev *dev,
 	if ((rxcount == 0) && (rxbuf != NULL)){
 		return __LINE__ - 3;
 	}
+#endif
 
     uint16_t tmp;
 
@@ -221,20 +223,24 @@ int spimaster_transfer(const spi_dev *dev,
                 if(!spi_is_busy(dev) ) break;
             }	    
 	    dev->SPIx->DR = *txbuf++;
-	    uint16_t dly=1000; // ~20uS so byte already transferred
+	    uint16_t dly=1024; // ~20uS so byte already transferred
 	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE)) {
 	        if(--dly==0) break;
 	    }
 	    (void) dev->SPIx->DR;
 	}
 
-        if(txc_in && rxcount) delay_ns100(5);
+        if(txc_in && rxcount) delay_ns100(5); // small delay when changing mode
 
 	// Transfer response data in
 	while (rxcount--){
-	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_TXE));
+	    uint16_t dly=1024;
+	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_TXE)) {
+	        if(--dly==0) break;
+	    }
+
 	    dev->SPIx->DR = 0xFF;
-	    uint16_t dly=1000;
+	    dly=1024;
 	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE)) {
 	        if(--dly==0) break;
 	    }
@@ -242,7 +248,7 @@ int spimaster_transfer(const spi_dev *dev,
 	}
 
 	// Wait until the transfer is complete - to not disable CS too early 
-	uint32_t dly=3000;
+	uint32_t dly=1024 * 3;
 	while (dev->SPIx->SR & SPI_I2S_FLAG_BSY){ // but datasheet prohibits this usage
             dly--;
             if(dly==0) break;

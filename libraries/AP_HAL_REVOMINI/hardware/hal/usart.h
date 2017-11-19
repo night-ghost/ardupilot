@@ -9,11 +9,11 @@
  */
 
 #ifndef USART_RX_BUF_SIZE
-#define USART_RX_BUF_SIZE               256
+#define USART_RX_BUF_SIZE               512
 #endif
 
 #ifndef USART_TX_BUF_SIZE
-#define USART_TX_BUF_SIZE               512
+#define USART_TX_BUF_SIZE               1024
 #endif
 
 typedef void (* usart_cb)();
@@ -34,7 +34,6 @@ typedef struct usart_state {
 typedef struct usart_dev {
     USART_TypeDef* USARTx;             /**< Register map */
     uint32_t clk;
-    uint32_t max_baud;                 /**< Maximum baud */
     IRQn_Type irq;
     uint8_t rx_pin;
     uint8_t tx_pin;
@@ -52,11 +51,34 @@ extern const usart_dev * const UARTS[];
 #endif
 
 extern const usart_dev * const _USART1;
-extern const usart_dev * const _USART2;
+extern const usart_dev * const _USART2; 
 extern const usart_dev * const _USART3;
 extern const usart_dev * const _UART4;
 extern const usart_dev * const _UART5;
 extern const usart_dev * const _USART6;
+
+//#define USART2_USED
+
+
+
+
+#define USART_F_RXNE 0x20
+#define USART_F_TXE  0x80
+#define USART_F_ORE  0x8
+
+#define USART_MASK_IDLEIE 0x10
+#define USART_MASK_RXNEIE 0x20
+#define USART_MASK_TCEIE  0x40
+#define USART_MASK_TXEIE  0x80
+#define USART_MASK_PEIE   0x100
+
+#define USART_MASK2_LBDIE  0x40
+
+#define USART_MASK3_CTSIE  0x400
+#define USART_MASK3_EIE  0x1
+
+
+
 
 /**
  * @brief Initialize a serial port.

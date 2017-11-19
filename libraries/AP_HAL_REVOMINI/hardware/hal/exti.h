@@ -95,7 +95,7 @@ void exti_attach_interrupt_pri(afio_exti_num num,
 void exti_detach_interrupt(afio_exti_num num);
 
 
-void exti_enable_interrupt(afio_exti_num num, bool e);
+void exti_enable_interrupt(afio_exti_num num, bool e); // needed access to internal data
 
 /**
  * Re-enable interrupts.

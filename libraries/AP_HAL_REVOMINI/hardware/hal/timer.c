@@ -315,12 +315,18 @@ void timer_reset(const timer_dev *dev) {
     memset(dev->handlers, 0, dev->n_handlers * sizeof(Handler));
     dev->state->busy=false;
 
-    if(dev->bus)
+    if(dev->bus) {
     	RCC_APB2PeriphClockCmd(dev->clk, ENABLE);
-    else
+    	RCC_APB2PeriphResetCmd(dev->clk, ENABLE);
+        RCC_APB2PeriphResetCmd(dev->clk, DISABLE);
+    } else {
 	RCC_APB1PeriphClockCmd(dev->clk, ENABLE);
+    	RCC_APB1PeriphResetCmd(dev->clk, ENABLE);
+        RCC_APB1PeriphResetCmd(dev->clk, DISABLE);
+    }
 
-    TIM_DeInit(dev->regs);
+//    TIM_DeInit(dev->regs);
+    
 
 
 }
@@ -402,7 +408,8 @@ uint32_t configTimeBase(const timer_dev *dev, uint16_t period, uint16_t khz)
 }
 
 
-// for PWM on advanced timers
+#if 0 // for PWM on advanced timers
+
 void pwmOCConfig(const timer_dev *dev, uint8_t channel, uint8_t flags)
 {
     TIM_TypeDef *tim = dev->regs;
@@ -440,7 +447,11 @@ void pwmOCConfig(const timer_dev *dev, uint8_t channel, uint8_t flags)
         TIM_OC4PreloadConfig(tim, TIM_OCPreload_Enable);
         break;
     }
+    
+    timer_oc_set_preload(tim, channel, true);
+
 }
+#endif
 
 static void disable_channel(const timer_dev *dev, uint8_t channel) {
     timer_detach_interrupt(dev, channel);
@@ -450,6 +461,7 @@ static void disable_channel(const timer_dev *dev, uint8_t channel) {
 static void pwm_mode(const timer_dev *dev, uint8_t channel) {
     timer_disable_irq(dev, channel);
 
+#if 0 
     switch (channel){
     case TIMER_CH1:
         TIM_SelectOCxM(dev->regs, TIM_Channel_1, BOARD_PWM_MODE);
@@ -470,6 +482,9 @@ static void pwm_mode(const timer_dev *dev, uint8_t channel) {
         TIM_OC4PreloadConfig(dev->regs, TIM_OCPreload_Enable);
         break;
     }
+#else
+    timer_oc_set_mode(dev, channel, BOARD_PWM_MODE, TIMER_OC_PE);
+#endif
 
     timer_cc_enable(dev, channel);
 }
@@ -857,6 +872,7 @@ static inline void enable_irq(const timer_dev *dev, timer_interrupt_id iid, uint
     if(priority  & PRIO_DISABLE_FLAG){
         NVIC_DisableIRQ(irq);
     }else {
+        NVIC_ClearPendingIRQ(irq);
         NVIC_EnableIRQ(irq);
         NVIC_SetPriority(irq,priority);
     }

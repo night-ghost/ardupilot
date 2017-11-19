@@ -122,8 +122,7 @@ uint16_t temp_read(void)
                                
   /* initialize result */
   res = 0;
-  for(i=4; i>0; i--)
-  {
+  for(i=4; i>0; i--)  {
   /* start ADC convertion by software */
     ADC_SoftwareStartConv(ADC1);
 
@@ -146,6 +145,7 @@ uint16_t vref_read(void)
 
   adc_set_reg_seqlen(_ADC1, 1);
   ADC_TempSensorVrefintCmd(ENABLE);
+
   /* Wait until ADC + Temp sensor start */
   T_StartupTimeDelay = 1024;
   while (T_StartupTimeDelay--);

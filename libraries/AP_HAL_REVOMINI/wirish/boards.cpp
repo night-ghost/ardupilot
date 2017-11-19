@@ -36,11 +36,10 @@ based on:
 #include "boards.h"
 #include <usb.h>
 
-static void setupFlash(void);
-static void setupClocks(void);
 static void setupNVIC(void);
 static void enableFPU(void);
 static void setupCCM(void);
+
 
 void setupADC(void);
 void setupTimers(void);
@@ -77,17 +76,6 @@ FPU_FPCCR_LSPEN_Msk
 }
 
 
-inline static void setupFlash(void) { // all done in SetSysClock()
-}
-
-/*
- * Clock setup.  Note that some of this only takes effect if we're
- * running bare metal and the bootloader hasn't done it for us
- * already.
- *
- */
-inline static void setupClocks() {
-}
 
 
 static INLINE void setupCCM(){
@@ -204,11 +192,34 @@ void inline init(void) {
         }
     }
 
-    setupFlash();  // empty
-    setupClocks(); // empty
 
-    SystemInit();
-    SystemCoreClockUpdate();
+    bool overclock_failed = false;
+    uint8_t overclock=0;
+    
+    uint32_t g = board_get_rtc_register(RTC_OV_GUARD_REG);
+
+    if(g == OV_GUARD_FAIL_SIGNATURE) {
+        overclock_failed = true; // never reset it to 0 if failed once
+    } else if(g == OV_GUARD_SIGNATURE) {  // overclock fails
+        overclock_failed = true; // never reset it to 0 if failed once
+        board_set_rtc_register(OV_GUARD_FAIL_SIGNATURE, RTC_OVERCLOCK_REG); // 
+    } else {
+        uint32_t sig=board_get_rtc_register(RTC_OVERCLOCK_REG);
+        if((sig & ~OVERCLOCK_SIG_MASK ) == OVERCLOCK_SIGNATURE) {
+            board_set_rtc_register(0, RTC_OVERCLOCK_REG); // 
+            overclock = (uint8_t)sig & OVERCLOCK_SIG_MASK;
+            
+            if(overclock) {
+                board_set_rtc_register(OV_GUARD_SIGNATURE, RTC_OV_GUARD_REG); // set guard in case overclock fails
+            } else {
+                board_set_rtc_register(0, RTC_OV_GUARD_REG); // clear guard
+            }
+        }
+    }
+
+
+    systemInit(overclock);       //  calls SetSysClock
+    SystemCoreClockUpdate();     //  update SystemCoreClock variable to current frequency
 
     enableFPU();
 
@@ -230,6 +241,12 @@ void inline init(void) {
      only CPU init here, all another moved to modules .init() functions
 */
     interrupts();
+
+    if(!overclock_failed) {
+        // comes here - all ok, we can clear guard
+        board_set_rtc_register(0, RTC_OV_GUARD_REG); // 
+    }
+
 }
 
 // called with stack in MSP
@@ -268,7 +285,7 @@ void NMI_Handler() {
 
     if (RCC_WaitForHSEStartUp() == SUCCESS){
         //Если запустился - проводим установку заново
-        SetSysClock(); 
+        SetSysClock(0); // without overclocking 
 
     } else {
 
@@ -310,6 +327,8 @@ void NMI_Handler() {
         /* Select the main PLL as system clock source */
         RCC->CFGR &= (uint32_t)((uint32_t)~(RCC_CFGR_SW));
         RCC->CFGR |= RCC_CFGR_SW_PLL;    
+        
+        SystemCoreClock=168000000;
     }
 }
 

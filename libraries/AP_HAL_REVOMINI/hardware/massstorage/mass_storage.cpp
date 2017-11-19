@@ -9,6 +9,12 @@
 
 #ifdef USB_MASSSTORAGE
 
+/*
+    also see https://habrahabr.ru/post/335018/ and 
+
+*/
+
+
 uint32_t MAL_massBlockCount[STORAGE_LUN_NBR];
 uint32_t MAL_massBlockSize[STORAGE_LUN_NBR];
 

@@ -119,8 +119,12 @@ public:
     REVOMINIDigitalSource(const gpio_dev *device, uint8_t bit): _device(device), _bit(bit){ }
 
     void    mode(uint8_t output);
-    inline uint8_t read() {                 return gpio_read_bit(_device, _bit) ? HIGH : LOW; }
-    inline void    write(uint8_t value) {   gpio_write_bit(_device, _bit, value); }
+
+    uint8_t read() {                 return _read(); }
+    void    write(uint8_t value) {   _write(value); }
+
+    inline uint8_t _read() {                 return gpio_read_bit(_device, _bit) ? HIGH : LOW; }
+    inline void    _write(uint8_t value) {   gpio_write_bit(_device, _bit, value); }
 
     inline void    toggle() {               gpio_toggle_bit(_device, _bit); }
 
@@ -172,7 +176,7 @@ public:
     static inline void    _write(uint8_t pin, uint8_t value) { const stm32_pin_info &pp = PIN_MAP[pin]; gpio_write_bit(pp.gpio_device, pp.gpio_bit, value); }
     static inline void    _setSpeed(uint8_t pin, GPIOSpeed_TypeDef gpio_speed) { const stm32_pin_info &pp = PIN_MAP[pin]; gpio_set_speed(pp.gpio_device, pp.gpio_bit, gpio_speed);}
 
-    static inline AP_HAL::DigitalSource* get_channel(uint16_t pin) { const stm32_pin_info &pp = PIN_MAP[pin]; return new REVOMINIDigitalSource(pp.gpio_device, pp.gpio_bit); }
+    static inline REVOMINIDigitalSource* get_channel(uint16_t pin) { const stm32_pin_info &pp = PIN_MAP[pin]; return new REVOMINIDigitalSource(pp.gpio_device, pp.gpio_bit); }
 };
 
 
