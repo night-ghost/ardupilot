@@ -78,9 +78,9 @@ typedef enum spi_baud_rate {
 
 /** Available SPI interrupts */
 typedef enum spi_interrupt {
-    SPI_TXE_INTERRUPT  = 1<<(SPI_I2S_IT_TXE>>4),  /**< TX buffer empty interrupt */
-    SPI_RXNE_INTERRUPT = 1<<(SPI_I2S_IT_RXNE>>4), /**< RX buffer not empty interrupt */
-    SPI_ERR_INTERRUPT  = 1<<(SPI_I2S_IT_ERR>>4)   /**<
+    SPI_TXE_INTERRUPT  = SPI_I2S_IT_TXE,  /**< TX buffer empty interrupt */
+    SPI_RXNE_INTERRUPT = SPI_I2S_IT_RXNE, /**< RX buffer not empty interrupt */
+    SPI_ERR_INTERRUPT  = SPI_I2S_IT_ERR   /**<
                                           * Error interrupt (CRC, overrun,
                                           * and mode fault errors for SPI;
                                           * underrun, overrun errors for I2S)
@@ -219,19 +219,12 @@ static inline void spi_peripheral_disable_all(void) {
 }
 
 static inline void spi_irq_enable(const spi_dev *dev, uint32_t interrupt_flags) {
-//	SPI_I2S_ITConfig(dev->SPIx, interrupt_flags, ENABLE);
-    dev->SPIx->CR2 |= interrupt_flags;
+	SPI_I2S_ITConfig(dev->SPIx, interrupt_flags, ENABLE);
 }
 
 static inline void spi_irq_disable(const spi_dev *dev, uint32_t interrupt_flags) {
-//	SPI_I2S_ITConfig(dev->SPIx, interrupt_flags, DISABLE);
-    dev->SPIx->CR2 &= ~interrupt_flags;
+	SPI_I2S_ITConfig(dev->SPIx, interrupt_flags, DISABLE);
 }
-
-static inline bool spi_irq_enabled(const spi_dev *dev, uint32_t interrupt_flags) {
-    return dev->SPIx->CR2 & interrupt_flags;
-}
-
 
 static inline uint16_t spi_dff(const spi_dev *dev) {
     return ((dev->SPIx->CR1 & SPI_DataSize_16b) == SPI_DataSize_8b ? SPI_DataSize_8b : SPI_DataSize_16b);
@@ -271,7 +264,6 @@ static inline void spi_attach_interrupt(const spi_dev *dev, Handler handler){
     dev->state->handler = handler;
     
     IRQn_Type irq=dev->irq;
-    NVIC_ClearPendingIRQ(irq);
     NVIC_EnableIRQ(irq);
     NVIC_SetPriority(irq, SPI_INT_PRIORITY); 
 }

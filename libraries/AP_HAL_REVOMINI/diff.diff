@@ -1,0 +1,471 @@
+diff -BburpN --exclude '*.d' AP_HAL_REVOMINI/hardware/hal/spi.h AP_HAL_REVOMINI.bad/hardware/hal/spi.h
+--- AP_HAL_REVOMINI/hardware/hal/spi.h	2017-11-13 17:02:20.000000000 +0500
++++ AP_HAL_REVOMINI.bad/hardware/hal/spi.h	2017-11-20 13:04:19.529264075 +0500
+@@ -78,9 +78,9 @@ typedef enum spi_baud_rate {
+ 
+ /** Available SPI interrupts */
+ typedef enum spi_interrupt {
+-    SPI_TXE_INTERRUPT  = SPI_I2S_IT_TXE,  /**< TX buffer empty interrupt */
+-    SPI_RXNE_INTERRUPT = SPI_I2S_IT_RXNE, /**< RX buffer not empty interrupt */
+-    SPI_ERR_INTERRUPT  = SPI_I2S_IT_ERR   /**<
++    SPI_TXE_INTERRUPT  = 1<<(SPI_I2S_IT_TXE>>4),  /**< TX buffer empty interrupt */
++    SPI_RXNE_INTERRUPT = 1<<(SPI_I2S_IT_RXNE>>4), /**< RX buffer not empty interrupt */
++    SPI_ERR_INTERRUPT  = 1<<(SPI_I2S_IT_ERR>>4)   /**<
+                                           * Error interrupt (CRC, overrun,
+                                           * and mode fault errors for SPI;
+                                           * underrun, overrun errors for I2S)
+@@ -219,13 +219,20 @@ static inline void spi_peripheral_disabl
+ }
+ 
+ static inline void spi_irq_enable(const spi_dev *dev, uint32_t interrupt_flags) {
+-	SPI_I2S_ITConfig(dev->SPIx, interrupt_flags, ENABLE);
++//	SPI_I2S_ITConfig(dev->SPIx, interrupt_flags, ENABLE);
++    dev->SPIx->CR2 |= interrupt_flags;
+ }
+ 
+ static inline void spi_irq_disable(const spi_dev *dev, uint32_t interrupt_flags) {
+-	SPI_I2S_ITConfig(dev->SPIx, interrupt_flags, DISABLE);
++//	SPI_I2S_ITConfig(dev->SPIx, interrupt_flags, DISABLE);
++    dev->SPIx->CR2 &= ~interrupt_flags;
+ }
+ 
++static inline bool spi_irq_enabled(const spi_dev *dev, uint32_t interrupt_flags) {
++    return dev->SPIx->CR2 & interrupt_flags;
++}
++
++
+ static inline uint16_t spi_dff(const spi_dev *dev) {
+     return ((dev->SPIx->CR1 & SPI_DataSize_16b) == SPI_DataSize_8b ? SPI_DataSize_8b : SPI_DataSize_16b);
+ }
+@@ -264,6 +271,7 @@ static inline void spi_attach_interrupt(
+     dev->state->handler = handler;
+     
+     IRQn_Type irq=dev->irq;
++    NVIC_ClearPendingIRQ(irq);
+     NVIC_EnableIRQ(irq);
+     NVIC_SetPriority(irq, SPI_INT_PRIORITY); 
+ }
+Binary files AP_HAL_REVOMINI/hardware/hal/spi.o and AP_HAL_REVOMINI.bad/hardware/hal/spi.o differ
+diff -BburpN --exclude '*.d' AP_HAL_REVOMINI/hardware/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/rules.mk AP_HAL_REVOMINI.bad/hardware/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/rules.mk
+--- AP_HAL_REVOMINI/hardware/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/rules.mk	2017-11-13 17:02:20.000000000 +0500
++++ AP_HAL_REVOMINI.bad/hardware/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/rules.mk	2017-11-17 11:04:27.221927659 +0500
+@@ -19,34 +19,20 @@ cSRCS_$(d) :=
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/misc.c
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_adc.c
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_can.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_crc.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_cryp_aes.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_cryp_des.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_cryp_tdes.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_cryp.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_dac.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_dbgmcu.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_dcmi.c
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_dma.c
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_exti.c
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_flash.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_fsmc.c
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_gpio.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_hash_md5.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_hash_sha1.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_hash.c
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_i2c.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_iwdg.c
++#cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_iwdg.c
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_pwr.c
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_rcc.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_rng.c
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_rtc.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_sdio.c
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_spi.c
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_syscfg.c
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_tim.c
+ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_usart.c
+-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_wwdg.c
++#cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_wwdg.c
+ 
+ sSRCS_$(d) := 
+ 
+diff -BburpN --exclude '*.d' AP_HAL_REVOMINI/Scheduler.cpp AP_HAL_REVOMINI.bad/Scheduler.cpp
+--- AP_HAL_REVOMINI/Scheduler.cpp	2017-11-13 17:02:20.000000000 +0500
++++ AP_HAL_REVOMINI.bad/Scheduler.cpp	2017-11-20 12:55:41.810676411 +0500
+@@ -45,6 +45,8 @@ bool REVOMINIScheduler::_initialized IN_
+ Handler REVOMINIScheduler::on_disarm_handler IN_CCM;
+ task_t * REVOMINIScheduler::_idle_task IN_CCM;
+ 
++volatile Handler REVOMINIScheduler::_delay_timer_proc IN_CCM=0;
++
+ 
+ static void loc_ret(){}
+ 
+@@ -223,6 +225,16 @@ void REVOMINIScheduler::init()
+         TIMER13->regs->CR1 &= ~(TIMER_CR1_ARPE | TIMER_CR1_URS); // not buffered preload, interrupt by overflow or by UG set
+     }
+ 
++    { // timer to execute function after some delay
++                // dev    period   freq, kHz
++        configTimeBase(TIMER11, 0, 1000);      //1MHz 1us ticks
++        Revo_handler h = { .isr = _delay_timer_event };
++        timer_attach_interrupt(TIMER11, TIMER_UPDATE_INTERRUPT, h.h , IOC_INT_PRIORITY); // priority as IO_Complete
++        TIMER11->regs->CR1 &= ~(TIMER_CR1_ARPE ); // not buffered preload
++        TIMER11->regs->CR1 |= TIMER_CR1_URS;      // interrupt only by overflows
++    }
++
++
+     void *task = _start_task((uint32_t)idle_task, 256); // only for one context
+     set_task_priority(task, 255); // lowest possible, to fill delay()
+     _idle_task=(task_t *)task;
+@@ -795,21 +807,15 @@ void REVOMINIScheduler::do_task(task_t *
+         uint32_t t=0;
+         if(task->handle && task->active) { // Task Switch occures asyncronously so we should wait until task becomes active again
+             task->time_start=_micros();
+-            if(task->sem && !task->in_ioc) {// if task requires a semaphore - block on it
++            if(task->sem) {// if task requires a semaphore - block on it
+                 if(!task->sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+                     yield(0);   // can't be
+                     continue;
+                 }
+             }
+-            revo_call_handler(task->handle, task->id); 
++            revo_call_handler(task->handle, task->id);  // calls user's function
+             if(task->sem){
+-                if(!task->in_ioc){
+                     task->sem->give(); // give semaphore when task finished
+-#ifdef SEM_DEBUG
+-                } else {
+-                    printf("\nsemaphore not given because in IO_Complete!\n");
+-#endif
+-                }
+             }
+ #ifdef MTASK_PROF
+             t = _micros()-task->time_start; // execution time
+@@ -1133,7 +1139,7 @@ skip_task:
+     if(want_tail) { // we have a task that want to be started next in the middle of tick
+         if(partial_quant < TIMER_PERIOD-10) { // if time less than tick
+             timer_set_count(TIMER14, 0);
+-            timer_set_reload(TIMER14, partial_quant+2); // +2 to garantee
++            timer_set_reload(TIMER14, partial_quant+2); // +2 to guarantee
+             timer_resume(TIMER14);
+         }
+     }
+@@ -1350,12 +1356,8 @@ void REVOMINIScheduler::SVC_Handler(uint
+         }
+         break;
+     
+-    case 4: {          // set_task_ioc(bool v) - to not be called from ISR
+-            s_running->in_ioc=svc_args[0];
+-        }
+-        break;    
+     
+-    //case 5: // whats more we can do via SVC?
++    //case 4: // whats more we can do via SVC?
+ 
+     default:                // Unknown SVC - just ignore
+         break;    
+@@ -1392,6 +1394,17 @@ void REVOMINIScheduler::_switch_task(){
+ #endif
+ }
+ 
++
++void REVOMINIScheduler::_delay_timer_event(uint32_t v /*TIM_TypeDef *tim */){
++    timer_pause(TIMER11);
++    timer_set_count(TIMER11, 0);
++
++    Handler h = _delay_timer_proc;
++    _delay_timer_proc=0;
++    revo_call_handler(h,0);
++}
++
++
+ ////////////////////////////////////
+ /*
+ union Revo_handler { // кровь кишки ассемблер :) преобразование функторов в унифицированный вид для вызова из С
+diff -BburpN --exclude '*.d' AP_HAL_REVOMINI/Scheduler.h AP_HAL_REVOMINI.bad/Scheduler.h
+--- AP_HAL_REVOMINI/Scheduler.h	2017-11-13 17:02:20.000000000 +0500
++++ AP_HAL_REVOMINI.bad/Scheduler.h	2017-11-20 11:59:05.004199939 +0500
+@@ -52,7 +52,6 @@ struct task_t {
+         uint8_t curr_prio;      // current priority of task, usually higher than priority
+         bool active;            // task not ended
+ //        bool f_yield;           // task gives its quant
+-        bool in_ioc;            // task starts IO_Completion so don't release bus semaphore
+         uint32_t ttw;           // time to wait
+         uint32_t t_yield;       // time of yield
+         uint32_t period;        // if set then task starts on time basis only
+@@ -275,7 +274,10 @@ public:
+ //]
+ 
+ // this functions are atomic so don't need to disable interrupts
+-  static inline void *get_current_task() { return s_running; }
++  static inline void *get_current_task() { 
++    if(in_interrupt()) return NULL;
++    return s_running; 
++  }
+   static inline void set_task_active(void *h) {   // tasks are created in stopped state
+     task_t * task = (task_t*)h; 
+     task->curr_prio = 70;  //   will get 1st quant 100%
+@@ -298,7 +300,6 @@ public:
+   static void inline task_pause(uint16_t t) {   s_running->ttw=t;  }                      // called from task when it starts IO transfer
+   static void inline task_resume(void *h)   {   task_t * task = (task_t*)h; task->ttw=0; task->curr_prio = 70;  } // called from IO_Complete ISR to resume task, and   will get 1st quant 100%
+ #endif
+-  static void inline NAKED set_task_ioc(bool v) { asm volatile("svc 4"); }  // task waits for IO_Complete so don't release semaphore when taskLoop finished
+ //]  
+ 
+ /*
+@@ -392,6 +393,18 @@ public:
+ 
+     static void start_stats_task(); // it interferes with CONNECT_COM and CONNECT_ESC so should be started last
+     
++    static inline void do_delayed_proc(Handler h, uint16_t dly){  // call a handler after some time
++        while(_delay_timer_proc); // wait for prevoius task
++        _delay_timer_proc = h;
++        timer_set_reload(TIMER11, dly);
++        timer_resume(TIMER11);
++    }
++    static inline void cancel_delayed_proc() {
++        timer_pause(TIMER11);
++        _delay_timer_proc=0;
++    }
++
++    
+ protected:
+ 
+ //{ multitask
+@@ -445,6 +458,7 @@ private:
+     static void _timer5_ovf(uint32_t v /*TIM_TypeDef *tim */ );
+     static void _tail_timer_event(uint32_t v /*TIM_TypeDef *tim */);
+     static void _ioc_timer_event(uint32_t v /*TIM_TypeDef *tim */);
++    static void _delay_timer_event(uint32_t v /*TIM_TypeDef *tim */);
+     
+     static void _run_timer_procs(bool called_from_isr);
+ 
+@@ -463,7 +477,8 @@ private:
+     static void _run_io(void);
+ 
+     static void _print_stats();
+-    void stats_proc(void);
++    static void stats_proc(void);
++    static volatile Handler _delay_timer_proc;
+     
+ #ifdef SHED_PROF
+     static uint64_t shed_time;
+diff -BburpN --exclude '*.d' AP_HAL_REVOMINI/SPIDevice.cpp AP_HAL_REVOMINI.bad/SPIDevice.cpp
+--- AP_HAL_REVOMINI/SPIDevice.cpp	2017-11-13 17:02:20.000000000 +0500
++++ AP_HAL_REVOMINI.bad/SPIDevice.cpp	2017-11-20 13:33:25.096592973 +0500
+@@ -111,18 +111,11 @@ uint8_t SPIDevice::_transfer_s(uint8_t b
+ }
+ #endif
+ 
+-static uint8_t  byte_time;
+-
+ void SPIDevice::register_completion_callback(Handler h) { 
+     if(_completion_cb){ // IOC from last call still not called
+         // TODO: ???
+     }
+     _completion_cb = h; 
+-
+-
+-    if(!REVOMINIScheduler::in_interrupt()) { // drivers that calls register_completion_callback() from interrupt has exclusive bus
+-        REVOMINIScheduler::set_task_ioc(h!=0); // moreover interrupt can be in context of any task 
+-    }
+ }
+ 
+ 
+@@ -141,7 +134,6 @@ uint8_t SPIDevice::transfer(uint8_t out)
+ 
+ 
+ uint8_t SPIDevice::_transfer(uint8_t data) {
+-    uint8_t buf[1];
+ 
+     //wait for TXE before send
+     while (!spi_is_tx_empty(_desc.dev)) {    // надо дожидаться окончания передачи.
+@@ -156,8 +148,7 @@ uint8_t SPIDevice::_transfer(uint8_t dat
+         if(!spi_is_busy(_desc.dev) ) break;
+     }
+     
+-    buf[0] = (uint8_t)spi_rx_reg(_desc.dev);
+-    return buf[0];
++    return (uint8_t)spi_rx_reg(_desc.dev);
+ }
+ 
+ void SPIDevice::send(uint8_t out) {
+@@ -714,7 +705,7 @@ bool SPIDevice::set_speed(AP_HAL::Device
+ }
+ 
+ 
+-void SPIDevice::send_strobe(const uint8_t *buffer, uint16_t len){ // send in ISR and strobe each byte by CS
++uint16_t SPIDevice::send_strobe(const uint8_t *buffer, uint16_t len){ // send in ISR and strobe each byte by CS
+     _send_address = buffer;
+     _send_len = len;
+     _isr_mode = SPI_ISR_STROBE;
+@@ -743,6 +734,7 @@ void SPIDevice::send_strobe(const uint8_
+         if(_send_len == 0) break;
+     }
+ 
++    return _send_len;
+ }
+ 
+ uint8_t SPIDevice::wait_for(uint8_t out, spi_WaitFunc cb, uint16_t dly){ // wait for needed byte in ISR
+@@ -756,7 +748,8 @@ uint8_t SPIDevice::wait_for(uint8_t out,
+     _desc.dev->state->busy=true;
+ 
+     noInterrupts();
+-    spi_irq_enable(_desc.dev, SPI_I2S_IT_TXE| SPI_I2S_IT_RXNE); // enable - will be interrupt on next line
++    spi_irq_enable(_desc.dev, SPI_I2S_IT_TXE); // enable - will be interrupt on next line
++    spi_irq_enable(_desc.dev, SPI_I2S_IT_RXNE);
+ 
+     // need to wait until transfer complete 
+     if(!REVOMINIScheduler::in_interrupt()) { // if function called from task - store it and pause
+diff -BburpN --exclude '*.d' AP_HAL_REVOMINI/SPIDevice.h AP_HAL_REVOMINI.bad/SPIDevice.h
+--- AP_HAL_REVOMINI/SPIDevice.h	2017-11-13 17:02:20.000000000 +0500
++++ AP_HAL_REVOMINI.bad/SPIDevice.h	2017-11-20 12:42:23.350825722 +0500
+@@ -56,13 +56,15 @@ struct SPIDesc {
+     uint16_t cs_pin;
+     SPIFrequency lowspeed;
+     SPIFrequency highspeed;
+-    uint8_t mode;  // mode of operations: 0 - polling, 1&2 DMA
++    uint8_t mode;  // mode of operations: 0 - polling, 1&2 DMA, 3-interrupts
++    uint32_t prio; // DMA priority 
+ };
+ 
+ enum SPI_ISR_MODE {
+     SPI_ISR_NONE,
+     SPI_ISR_STROBE,
+     SPI_ISR_COMPARE,
++    SPI_ISR_FINISH,
+ };
+ 
+ //#define  DEBUG_SPI    
+@@ -103,7 +105,7 @@ public:
+     bool transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t len) override;
+ 
+ 
+-    void send_strobe(const uint8_t *buffer, uint16_t len); // send in ISR and strobe each byte by CS
++    uint16_t send_strobe(const uint8_t *buffer, uint16_t len); // send in ISR and strobe each byte by CS
+     void wait_busy() { spi_wait_busy(_desc.dev);  }
+     uint8_t wait_for(uint8_t out, spi_WaitFunc cb, uint16_t dly); // wait for needed byte in ISR
+ 
+@@ -141,7 +144,7 @@ public:
+ protected:
+     const SPIDesc &_desc;
+ 
+-    AP_HAL::DigitalSource *_cs;
++    REVOMINIDigitalSource *_cs;
+     SPIFrequency _speed;
+ 
+     static REVOMINI::Semaphore _semaphores[MAX_BUS_NUM]; // per bus 
+@@ -150,14 +153,15 @@ protected:
+     static uint8_t buffer[MAX_BUS_NUM][SPI_BUFFER_SIZE];
+ 
+     bool _initialized;
++    uint8_t  byte_time; // in 0.25uS
+     void init(void);
+ 
+-    inline void _cs_assert(){                   if(_cs){_cs->write(0); delay_ns100(1);} } // Select device and wait a little
++    inline void _cs_assert(){                   if(_cs){_cs->write(0);  delay_ns100(1); } } // Select device and wait a little
+     inline void _cs_release(){ if(_cs){spi_wait_busy(_desc.dev);       delay_ns100(5); _cs->write(1); } } // Deselect device, time from http://datasheetspdf.com/mobile/735133/MPU-6000.html page 19
+ 
+     const spi_pins* dev_to_spi_pins(const spi_dev *dev);
+ 
+-    static spi_baud_rate determine_baud_rate(SPIFrequency freq);
++    spi_baud_rate determine_baud_rate(SPIFrequency freq);
+ 
+     uint8_t _transfer_s(uint8_t bt);
+     uint8_t _transfer(uint8_t data);
+@@ -174,12 +178,29 @@ protected:
+     // vars for send_strobe() and wait_for()
+     const uint8_t *_send_address;
+     uint16_t       _send_len;
++    uint8_t       *_recv_address;
++    uint16_t       _recv_len;
+ 
+     SPI_ISR_MODE   _isr_mode;
+     spi_WaitFunc   _compare_cb;
+     uint8_t        _recv_data;
+ 
++    void disable_dma();
+     void isr_transfer_finish();
++    void release_bus();
++    
++#ifdef BOARD_SOFTWARE_SPI
++    volatile GPIO_TypeDef *sck_port;
++             uint16_t      sck_pin;
++
++    volatile GPIO_TypeDef *mosi_port;
++             uint16_t      mosi_pin;
++
++    volatile GPIO_TypeDef *miso_port;
++             uint16_t      miso_pin;
++
++    uint16_t dly_time;
++#endif
+ };
+ 
+diff -BburpN --exclude '*.d' AP_HAL_REVOMINI/USBDriver.cpp AP_HAL_REVOMINI.bad/USBDriver.cpp
+--- AP_HAL_REVOMINI/USBDriver.cpp	2017-11-13 17:02:20.000000000 +0500
++++ AP_HAL_REVOMINI.bad/USBDriver.cpp	2017-11-20 11:54:46.825934291 +0500
+@@ -45,7 +45,7 @@ uint32_t USBDriver::available() {
+ }
+ 
+ int16_t USBDriver::read() {
+-    if(_usb_present && is_usb_opened() ){
++    if(is_usb_opened() ){
+ 	if (available() == 0)
+ 	    return -1;
+ 	return usb_getc();
+@@ -63,7 +63,7 @@ size_t USBDriver::write(const uint8_t *b
+     size_t n = 0;
+     uint32_t t = REVOMINIScheduler::_millis();
+ 
+-    if(_usb_present && is_usb_opened()){
++    if(is_usb_opened()){
+         while (size) {
+             uint8_t k=usb_write((uint8_t *)buffer, size);
+             size-=k;
+diff -BburpN --exclude '*.d' AP_HAL_REVOMINI/wirish/exc.S AP_HAL_REVOMINI.bad/wirish/exc.S
+--- AP_HAL_REVOMINI/wirish/exc.S	2017-11-13 17:02:20.000000000 +0500
++++ AP_HAL_REVOMINI.bad/wirish/exc.S	2017-11-17 10:09:26.729936563 +0500
+@@ -20,8 +20,11 @@
+  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  * THE SOFTWARE.
+- * ****************************************************************************/
++
+ # modified by NG to give some useful info to __error handler
++# and added task switching code
++
++ * ****************************************************************************/
+ 
+ # On an exception, push a fake stack thread mode stack frame and redirect
+ # thread execution to a thread mode error handler
+diff -BburpN --exclude '*.d' AP_HAL_REVOMINI/wirish/main.cxx AP_HAL_REVOMINI.bad/wirish/main.cxx
+--- AP_HAL_REVOMINI/wirish/main.cxx	2017-11-13 17:02:20.000000000 +0500
++++ AP_HAL_REVOMINI.bad/wirish/main.cxx	2017-11-17 10:10:27.890033324 +0500
+@@ -24,8 +24,6 @@
+  * SOFTWARE.
+  *****************************************************************************/
+ 
+-extern void init();
+-
+ 
+ 
+ // Force init to be called *first*, i.e. before static object allocation.
+@@ -33,6 +31,4 @@ extern void init();
+  __attribute__(( constructor )) void premain() ;
+ 
+ 
+- __attribute__(( constructor )) void premain(){
+-//    init(); - even earlier
+-}
++ __attribute__(( constructor )) void premain(){}
+Binary files AP_HAL_REVOMINI/wirish/startup.o and AP_HAL_REVOMINI.bad/wirish/startup.o differ
+diff -BburpN --exclude '*.d' AP_HAL_REVOMINI/wirish/startup.S AP_HAL_REVOMINI.bad/wirish/startup.S
+--- AP_HAL_REVOMINI/wirish/startup.S	2017-11-13 17:02:20.000000000 +0500
++++ AP_HAL_REVOMINI.bad/wirish/startup.S	2017-11-14 13:11:50.911115511 +0500
+@@ -49,7 +49,6 @@ defined in linker script */
+ .word  _sbss
+ /* end address for the .bss section. defined in linker script */
+ .word  _ebss
+-/* stack used for SystemInit_ExtMemCtl; always internal RAM used */
+ 
+ /**
+  * @brief  This is the code that gets called when the processor first

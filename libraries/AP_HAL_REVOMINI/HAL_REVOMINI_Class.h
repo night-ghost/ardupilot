@@ -56,6 +56,7 @@ private:
 #if defined(USB_MASSSTORAGE)
     REVOMINI::MassStorage massstorage;
 #endif
+
 };
 
 

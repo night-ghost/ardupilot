@@ -56,8 +56,8 @@ struct SPIDesc {
     uint16_t cs_pin;
     SPIFrequency lowspeed;
     SPIFrequency highspeed;
-    uint8_t mode;  // mode of operations: 0 - polling, 1&2 DMA, 3-interrupts
-    uint32_t prio; // DMA priority 
+    uint8_t mode;  // mode of operations: 0 - polling, 1&2 DMA, 3 interrupts
+    uint32_t prio; // DMA priority
 };
 
 enum SPI_ISR_MODE {
@@ -136,7 +136,6 @@ public:
         Revo_handler r = { .hp=proc };
         register_completion_callback(r.h);
     }
-    
 
     void  dma_isr();
     void  spi_isr();
@@ -153,15 +152,14 @@ protected:
     static uint8_t buffer[MAX_BUS_NUM][SPI_BUFFER_SIZE];
 
     bool _initialized;
-    uint8_t  byte_time; // in 0.25uS
     void init(void);
 
-    inline void _cs_assert(){                   if(_cs){_cs->write(0); /* delay_ns100(1);*/ } } // Select device and wait a little
-    inline void _cs_release(){ if(_cs){spi_wait_busy(_desc.dev);    /* delay_ns100(5); */ _cs->write(1); } } // Deselect device, time from http://datasheetspdf.com/mobile/735133/MPU-6000.html page 19
+    inline void _cs_assert(){                   if(_cs){_cs->write(0); delay_ns100(1);} } // Select device and wait a little
+    inline void _cs_release(){ if(_cs){spi_wait_busy(_desc.dev);       delay_ns100(5); _cs->write(1); } } // Deselect device, time from http://datasheetspdf.com/mobile/735133/MPU-6000.html page 19
 
     const spi_pins* dev_to_spi_pins(const spi_dev *dev);
 
-    spi_baud_rate determine_baud_rate(SPIFrequency freq);
+    static spi_baud_rate determine_baud_rate(SPIFrequency freq);
 
     uint8_t _transfer_s(uint8_t bt);
     uint8_t _transfer(uint8_t data);
@@ -178,29 +176,14 @@ protected:
     // vars for send_strobe() and wait_for()
     const uint8_t *_send_address;
     uint16_t       _send_len;
-    uint8_t       *_recv_address;
+    uint8_t *_recv_address;
     uint16_t       _recv_len;
 
     SPI_ISR_MODE   _isr_mode;
     spi_WaitFunc   _compare_cb;
     uint8_t        _recv_data;
 
-    void disable_dma();
     void isr_transfer_finish();
-    void release_bus();
-    
-#ifdef BOARD_SOFTWARE_SPI
-    volatile GPIO_TypeDef *sck_port;
-             uint16_t      sck_pin;
-
-    volatile GPIO_TypeDef *mosi_port;
-             uint16_t      mosi_pin;
-
-    volatile GPIO_TypeDef *miso_port;
-             uint16_t      miso_pin;
-
-    uint16_t dly_time;
-#endif
 };
 
 class SPIDeviceManager : public AP_HAL::SPIDeviceManager {

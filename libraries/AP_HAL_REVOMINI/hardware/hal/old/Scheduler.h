@@ -335,6 +335,7 @@ public:
 
 
 // this functions are atomic so don't need to disable interrupts
+  static void inline set_task_ioc(bool v) {      s_running->in_ioc=v; }
   static void inline set_task_active(void *h) {   task_t * task = (task_t*)h; task->active=true; }
   static inline void * get_current_task() { return s_running; }
 //]  
