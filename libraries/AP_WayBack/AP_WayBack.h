@@ -25,10 +25,10 @@
 #include <AP_HAL/AP_HAL.h>
 #include <AP_AHRS/AP_AHRS.h>
 
-#define NUM_TRACK_POINTS    4000     // 4000 points by 8 bytes = 32K of RAM. Feel free to change size
-#define SIMPLIFY_MOVE_BACK     2  // move N points back
-#define MIN_SIMPLIFY_POINTS    8 // this number should be adjusted upto value which not cause processing time to exceed 1s at full load
-#define RAW_POINTS             3
+#define NUM_TRACK_POINTS_DEFAULT 4000  // 4000 points by 8 bytes = 32K of RAM. Feel free to change size via parmeter
+#define SIMPLIFY_MOVE_BACK          2  // move N points back
+#define MIN_SIMPLIFY_POINTS         8  // this number should be adjusted upto value which not cause processing time to exceed 1s at full load
+#define RAW_POINTS                  3
 
 #ifdef WAYBACK_DEBUG
   #define DBG_PRINTLN(x)     { hal.uartA->print("#"); hal.uartA->print(x); hal.uartA->println();  }
@@ -67,25 +67,15 @@ template<typename T> void zeroIt(T& value)
     memset(&value,0,sizeof(value));
 }
 
-/* _end is set in the linker command file */
-extern uint8_t * _end;
-
 
 class AP_WayBack
 {
 public:
 
-    enum POINT_STATUS {
-        POINT_EMPTY=0,
-        POINT_OK,
-        POINT_LOOP
-    };
-
 #pragma pack(push, 1)
     typedef struct POINT {
         float x;
         float y;
-//        enum POINT_STATUS status; // this field should be changed to NAN in X coord as boolean flag
     } Point;
 
     typedef struct SEGMENT {
@@ -94,32 +84,16 @@ public:
     } Segment;
 #pragma pack(pop)
 
-    AP_WayBack(AP_AHRS &ahrs) : _ahrs(ahrs){
-#ifndef I_KNOW_WHAT_I_DO 
-        if(inst_count) AP_HAL::panic("AP_Wayback instantiated more than once!");
-        inst_count++;
-#endif
-    }
+    AP_WayBack(){}
     
-#ifdef WAYBACK_DEBUG
-    AP_WayBack(): // without AHRS
-        _ahrs(_ahrs)
-    {
-        _params.blind_shortcut = 1;
-    }
-#endif
-
     ~AP_WayBack() {
         end();
-#ifndef I_KNOW_WHAT_I_DO 
-        inst_count--;
-#endif
     }
     
 //main API
-
     // init - perform required initialisation
     void init();
+    void init(float eps, uint16_t points, bool bs);
 
     // copter just armed so start to write track or RTH is turned off. If failed return false
     bool start(); 
@@ -130,12 +104,17 @@ public:
     // copter disarmed so free memory
     void end(){
         free(points);
-        points=nullptr;
+        points=NULL;
     }
+    
+    void push_point(Vector3f p);
 
+    static inline bool get_points_count()  { return points_count; }
+    static inline bool is_active() { return recording; }
 
 // get and remove the last point from track, false if none
-    bool get_point(float &x, float &y); 
+    bool get_point(float &x, float &y) ; 
+    bool get_point(float &x, float &y, float &z) ; 
 
     // tick - main call to get position from AHRS (called by scheduler at low priority) 
     // non-static to conrform ARDUPILOT API
@@ -156,8 +135,11 @@ public:
 
 
 private:
+    static void *_task; // handle of own task
 
-    AP_AHRS &_ahrs;
+    #define POINTS_QUEUE_LEN 8 
+    static Vector3f _queue[POINTS_QUEUE_LEN];
+    static uint16_t _read_ptr, _write_ptr;
 
     static uint16_t num_points; // index of last point in array
     static uint16_t points_count; // number of good points
@@ -181,7 +163,7 @@ private:
     
     static float _epsilon;
 
-    static void yield(); // give a tick to another tasks
+    static float max_alt; // maximal altitude during flight
 
 // calculations
     static        float dist( float p1X, float p1Y, float p2X, float p2Y);
@@ -248,19 +230,17 @@ private:
     static bool rdp_simplify( uint16_t start, uint16_t end);    
     static bool reumannWitkam_simplify(uint16_t key, uint16_t end);
 
-    static Point *points;  // the main track storage - huge size! so allocated only on start() when all another needs already satisfied
+    static Point *points;  // the main track storage - huge size! so allocated only on start()
     static uint16_t max_num_points;
 
-// parameter support
+//[ parameter support
     static const struct AP_Param::GroupInfo        var_info[];
     static struct Params {
-        AP_Int8 use;
         AP_Int8 eps; // in meters
         AP_Int8 blind_shortcut; // if 1 then non-intersecting legs with distance<EPS will be treated as intersecting
-        // also size of memory can be 
     } _params;
-    
+    AP_Int16 _points_max;
+//]    
     static bool initialized;
-    static uint16_t inst_count;
 };
 

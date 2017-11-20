@@ -1,1 +1,1 @@
-/mnt/disk_d/src/quad-copter/minimosd-extra/MinimOsd_Extra/misc.h
+../../../support/minimosd-extra/MinimOsd_Extra/misc.h

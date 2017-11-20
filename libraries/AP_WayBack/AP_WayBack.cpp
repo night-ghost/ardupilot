@@ -10,7 +10,10 @@ the shortest way to home via visited points.
    
 */
 
+#pragma GCC optimize ("O2")
+
 #include "AP_WayBack.h"
+#include <GCS_MAVLink/GCS.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -36,6 +39,19 @@ uint16_t          AP_WayBack::loop_leg_low=0; // lowest checked - we move back!
 uint16_t          AP_WayBack::loop_leg_high=0;// higest checked - will be next last_loop_check on finish
 uint16_t          AP_WayBack::loop_leg_ptr=0;//  current, goes to loop_leg_low
 
+#ifdef IN_CCM
+Vector3f AP_WayBack::_queue[POINTS_QUEUE_LEN] IN_CCM;
+#else
+Vector3f AP_WayBack::_queue[POINTS_QUEUE_LEN];
+#endif
+
+uint16_t AP_WayBack::_read_ptr = 0;
+uint16_t AP_WayBack::_write_ptr =0;
+
+void *AP_WayBack::_task; // handle of own task
+
+float AP_WayBack::max_alt = 0;
+
 #if defined(WAYBACK_DEBUG)
 bool              AP_WayBack::_debug_mode = false;
 #endif
@@ -43,13 +59,14 @@ bool              AP_WayBack::_debug_mode = false;
 bool              AP_WayBack::initialized=false;
 
 const AP_Param::GroupInfo AP_WayBack::var_info[] = {
-    // @Param: _USE
-    // @DisplayName: AP_Wayback use
-    // @Description: 0 to not use, !0 to use
-    // @Values: 0:not use, 1:use
-    // @User: Standard
-    AP_GROUPINFO("_USE",  0, AP_WayBack, _params.use,       0), 
-
+    // @Param: POINTS
+    // @DisplayName: SmartRTL maximum number of points on path
+    // @Description: SmartRTL maximum number of points on path. Set to 0 to disable Ap_WayBack.  100 points consumes about 800 bytes of memory.
+    // @Range: 0 500
+    // @User: Advanced
+    // @RebootRequired: True
+    AP_GROUPINFO("POINTS", 0, AP_WayBack, _points_max, NUM_TRACK_POINTS_DEFAULT),
+    
     // @Param: _EPS_DISTANCE
     // @DisplayName: Eps distance (in meters)
     // @Description: Minimal distance between points, in meters
@@ -72,29 +89,54 @@ struct AP_WayBack::Params AP_WayBack::_params;
  * init - perform required initialisation
  */
 void AP_WayBack::init()
-{    
-    if(initialized || !_params.use) return; // 2nd call not cause new io_process
+{
+    if(initialized) return;
     
     _epsilon = TRACK_EPS; // initial track error
+#if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
+    _task = REVOMINIScheduler::register_timer_task(100000, FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void), NULL); // 10Hz
+    REVOMINIScheduler::set_task_priority(_task, 116); // max speed 1/16 of main task
+#else
     hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void));
+#endif
+    initialized=true;
+}
+
+void AP_WayBack::init(float eps, uint16_t points, bool bs /*, AP_AHRS& ahrs*/ ) // mimics version
+{
+    if(initialized) return;
+    
+    _epsilon = eps;
+    _points_max = points;
+    _params.blind_shortcut=bs;
+//    _ahrs = ahrs;
+    
+#if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
+    _task = REVOMINIScheduler::register_timer_task(100000, FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void), NULL); // 10Hz
+    REVOMINIScheduler::set_task_priority(_task, 116); // max speed 1/16 of main task
+#else
+    hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void));
+    
+#endif
     initialized=true;
 }
 
 
-bool AP_WayBack::start()
-{
+bool AP_WayBack::start(){
     if(!initialized) init();
-    if(points==nullptr) {
-        if(_params.use) {
-            uint32_t sz = sizeof(Point) * NUM_TRACK_POINTS;
-            while(1){
-                points = (Point *)malloc(sz); // try to allocate buffer
-                if(points!=nullptr) {
-                    max_num_points = sz / sizeof(Point); // calculate size in points
-                    break;
-                }
-                sz /= 2; // no memory - try to reduce number of points
-                if(sz==0) return false; // no memory at all
+    if(points==NULL) {
+        max_num_points = _points_max;
+        while(1){
+            uint32_t sz = sizeof(Point) * max_num_points;
+            points = (Point *)malloc(sz); // try to allocate buffer
+            if(points!=NULL) {
+                gcs().send_text(MAV_SEVERITY_INFO, "AP_WayBack: allocated memory for %d points", max_num_points);
+                break;
+            }
+            max_num_points = (max_num_points*3) / 4; // no memory - try to reduce number of points
+            if(sz==0) {
+                gcs().send_text(MAV_SEVERITY_CRITICAL, "AP_WayBack: failed to allocated memory!");
+                return false; // no memory at all
             }
         }
         
@@ -106,6 +148,8 @@ bool AP_WayBack::start()
         last_point_time=0; // definitely less than current millis()
         last_big_reduce=0;
         last_raw_point=0;   
+        
+        max_alt=0;
     }
     
     
@@ -113,8 +157,7 @@ bool AP_WayBack::start()
     return true;
 }
 
-void AP_WayBack::stop()
-{
+void AP_WayBack::stop(){
     recording=false;
     
     if(num_points) num_points -= 1; // skip the last point - current coordinates
@@ -142,12 +185,37 @@ void AP_WayBack::stop()
         p1 = p0; // set left point as right    
     }
 
+    gcs().send_text(MAV_SEVERITY_INFO, "AP_WayBack: return path has %d points", points_count);
+
+}
+
+
+// add new point to track. Called from another thread so just put to queue
+void AP_WayBack::push_point(Vector3f p){
+    if(!recording) start();
+    
+    if(p.z > max_alt)  max_alt = p.z;
+    
+    _queue[_write_ptr]=p;
+    
+    uint16_t old_wp = _write_ptr++;
+    if(_write_ptr >= POINTS_QUEUE_LEN) { // move write pointer
+        _write_ptr=0;                         // ring
+    }
+    if(_write_ptr == _read_ptr) { // buffer overflow
+        _write_ptr=old_wp; // not overwrite, just skip last point
+    }
+            
+#if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
+    REVOMINIScheduler::set_task_active(_task); // resume task because there is new point
+#endif
+    
+
 }
 
 // get last point and remove it from track
-bool AP_WayBack::get_point(float &x, float &y) 
-{
-//    if(recording) stop(); Is we need it?
+bool AP_WayBack::get_point(float &x, float &y) {
+    if(recording) stop(); // stop write because RTL is started
     
     for(uint16_t i=num_points;i>0;i--){ 
         uint16_t idx = i-1;
@@ -159,23 +227,36 @@ bool AP_WayBack::get_point(float &x, float &y)
             return true;
         }
     }
-    return false; // no more points so go directly to HOME point
+    return false; // no more points so we at HOME point
+}
+
+bool AP_WayBack::get_point(float &x, float &y, float &z) {
+    if(recording) stop(); // stop write because RTL is started
+    
+    for(uint16_t i=num_points;i>0;i--){ 
+        uint16_t idx = i-1;
+        if(is_good(points[idx])){ // found a good point
+            num_points=idx; // remove last
+            
+            x=points[idx].x;
+            y=points[idx].y;
+            z=0;
+              // or
+//            z=max_alt;
+            return true;
+        }
+    }
+    return false; // no more points so we at HOME point
 }
 
 /*
- * tick - main call to get data from AHRS
+ * tick - main call to work with data, called from own thread
  */
 void AP_WayBack::tick(void)
 { 
 
     if(points==NULL) return;
 
-    uint32_t now = AP_HAL::millis();
-    uint32_t dt  = now - last_point_time;
-    if( dt < 1000) {    // 1 point per second
-        yield(); // don't disturbe for needed time
-        return; 
-    }
 
 #if defined(WAYBACK_DEBUG)
     if(_debug_mode) return; // work in soft emulation
@@ -183,29 +264,22 @@ void AP_WayBack::tick(void)
 
     if(recording){
 
-// here we should to get a current UAV location filtered with EKF to prevent recording of GPS glitches
-#if FRAME_CONFIG ==  MULTICOPTER_FRAME
-        Vector3f pos;
-        _ahrs.get_relative_position_NED_home(pos);
-        add_point(pos.x, pos.y);
-
-#else
-        Location loc;
-        if (!_ahrs.get_position(loc)) {
-            return;
-        }
-        add_point(loc.lat, loc.lng);
-#endif
+// here we should to get a point from queue
+        while(_read_ptr != _write_ptr) { // there are new points
+            Vector3f p = _queue[_read_ptr++];
+            if(_read_ptr >= POINTS_QUEUE_LEN) { 
+                _read_ptr=0;                       // ring
+            }
+            add_point(p.x, p.y);
+        }    
     }
-
 }
 
 
 
 #if defined(WAYBACK_DEBUG)
 // print out track points
-bool AP_WayBack::show_track(uint16_t &i, float &x, float &y ) 
-{
+bool AP_WayBack::show_track(uint16_t &i, float &x, float &y ) {
     while(i<num_points){ 
         if(is_good(points[i])){ // found a good point
             x=points[i].x;
@@ -224,8 +298,7 @@ bool AP_WayBack::show_track(uint16_t &i, float &x, float &y )
 // private 
 
 // move back on STEPS good points
-uint16_t AP_WayBack::move_back(uint16_t from, uint16_t steps)
-{
+uint16_t AP_WayBack::move_back(uint16_t from, uint16_t steps){
     if(from==0) return 0;
     for(uint16_t i=from-1;i>0;i--){ 
         if(is_good(points[i])){ // found a good point
@@ -238,8 +311,7 @@ uint16_t AP_WayBack::move_back(uint16_t from, uint16_t steps)
 
 
 // move forward on STEPS good points
-uint16_t AP_WayBack::move_forw(uint16_t from, uint16_t steps)
-{
+uint16_t AP_WayBack::move_forw(uint16_t from, uint16_t steps){
     if(from+1>=num_points)  return from;
     
     for(uint16_t i=from+1;i<num_points;i++){ 
@@ -252,11 +324,12 @@ uint16_t AP_WayBack::move_forw(uint16_t from, uint16_t steps)
     return from; //failed, return last good
 }
 
-void AP_WayBack::add_point(float x, float y)
-{
+void AP_WayBack::add_point(float x, float y){
     bool was_reduce=false;
     uint16_t p0;       // leg begin
     uint16_t p1;       // leg end
+
+//    uint16_t last_point = 0;
 
     if(dist(x,y,points[num_points-1]) > _epsilon) { // we can add a point
 
@@ -271,7 +344,7 @@ void AP_WayBack::add_point(float x, float y)
         new_points++;
     
          //don't mess to loops     we can simplify                                                                   or  we MUST simplify
-        if(!in_loop_reduce && (new_points > MIN_SIMPLIFY_POINTS && num_points > (MIN_SIMPLIFY_POINTS+RAW_POINTS)) || num_points>=max_num_points) { // simplify if we have enough points or have no room
+        if((!in_loop_reduce && (new_points > MIN_SIMPLIFY_POINTS && num_points > (MIN_SIMPLIFY_POINTS+RAW_POINTS))) || num_points>=max_num_points) { // simplify if we have enough points or have no room
 again:
             new_points=0;
         
@@ -326,9 +399,11 @@ again:
     }
     
     // if enabled or we should to clear room for new points: we check one leg per point so number of free points should be more than not checked legs
+    //                  process active    enabled                number of not checked legs          number of free points       corrected by one packet
     if(! was_reduce ) {
     
         // to exclude quadratic complexity we check intersection only one step in time
+
         if(in_loop_reduce){      //  уже обрабатываем или отстали на нужное количество точек 
 
             // check one leg from last_loop_check
@@ -352,6 +427,7 @@ again:
                 new_points +=  MIN_SIMPLIFY_POINTS; // force reduce on next point
             
                 if(p1<2) p1=2; // but not earlier than 2
+            
             
                 was_reduce = true; // points was removed
             } else {
@@ -448,6 +524,9 @@ uint8_t AP_WayBack::linesAreClose(const Point &p1, const Point &p2,
                                   Point *closest,
                                   uint16_t *np)
 {
+
+
+
     // check distance from both points of one segment to 2nd segment, and vice versa
     
     float d;
@@ -487,8 +566,7 @@ found:
     return seg;
 }
 
-uint16_t AP_WayBack::try_remove_loop(uint16_t sb, uint16_t se) // begin and end of checking segment
-{
+uint16_t AP_WayBack::try_remove_loop(uint16_t sb, uint16_t se) { // begin and end of checking segment
     if(!(se>sb) ) return 0;
     
     uint8_t  sect_count=0; // counts intersecions
@@ -511,7 +589,7 @@ uint16_t AP_WayBack::try_remove_loop(uint16_t sb, uint16_t se) // begin and end 
             points[i]=p;        // replace 2nd point of 1st segment by point of intersection        
             removePoints(i+1,se); // remove all points up to 2nd point of 2nd segment
 
-    DBG_PRINT("loop found at ");       DBG_PRINTVARLN(i);
+            DBG_PRINT("loop found at ");       DBG_PRINTVARLN(i);
             return i;  // point of intersection
         
         } else if(_params.blind_shortcut) { // try to treat close points as intersecting
@@ -538,7 +616,7 @@ uint16_t AP_WayBack::try_remove_loop(uint16_t sb, uint16_t se) // begin and end 
                     points[i]=p;
                     removePoints(i+1,ep); // remove all points up to 2nd point of 2nd segment
 
-            DBG_PRINT("close to 1seg at ");       DBG_PRINTVARLN(i);
+                    DBG_PRINT("close to 1seg at ");       DBG_PRINTVARLN(i);
                     return i;  // point of intersection
 
                 }else {  // point on 2nd segment
@@ -549,7 +627,7 @@ uint16_t AP_WayBack::try_remove_loop(uint16_t sb, uint16_t se) // begin and end 
                     points[sb]=p;       // replace 1st point of 2nd segment with intersection
                     removePoints(sp+1, sb); // remove all points up to 2nd point of 2nd segment
 
-            DBG_PRINT("close to 2seg at ");       DBG_PRINTVARLN(sp);
+                    DBG_PRINT("close to 2seg at ");       DBG_PRINTVARLN(sp);
                     return sp;  // point of intersection
                 }
             }
@@ -558,9 +636,7 @@ uint16_t AP_WayBack::try_remove_loop(uint16_t sb, uint16_t se) // begin and end 
 skip_it:
         // move to next segment
         s_last = s0; // предыдущий отрезок
-        s0 = i;
-    
-        yield(); // segment a time - give a chance to another tasks            
+        s0 = i;    
     }
     return sect_count;
 
@@ -628,8 +704,7 @@ bool lineLineIntersect(const Point &p1, const Point &p2, // 1st segment
 }
 #endif
 
-float AP_WayBack::dist( float p1X, float p1Y, float p2X, float p2Y)
-{
+float AP_WayBack::dist( float p1X, float p1Y, float p2X, float p2Y){
     p1X -= p2X;
     p1Y -= p2Y;
     return sqrt( p1X*p1X + p1Y*p1Y);
@@ -637,8 +712,7 @@ float AP_WayBack::dist( float p1X, float p1Y, float p2X, float p2Y)
 
 
 // distance from p to line [p1,p2]  without check for segment bounds
-float AP_WayBack::find_perpendicular_distance(const Point &p, const Point &p1, const Point &p2)
-{
+float AP_WayBack::find_perpendicular_distance(const Point &p, const Point &p1, const Point &p2){
 	float slope, intercept;
 
 	if (is_zero(p1.x - p2.x)) {
@@ -681,8 +755,7 @@ float dist_Point_to_Line(const Point &p, const Point &p1, const Point p2)
 
 // see http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.95.5882&rep=rep1&type=pdf
 
-bool AP_WayBack::simplify( uint16_t start, uint16_t end)
-{
+bool AP_WayBack::simplify( uint16_t start, uint16_t end){
     return rdp_simplify( start, end);
 //    return reumannWitkam_simplify( start, end);
 }
@@ -690,8 +763,7 @@ bool AP_WayBack::simplify( uint16_t start, uint16_t end)
 
 
 // Simplifies a 2D dimensional line according to the Ramer-Douglas-Peucker algorithm
-bool AP_WayBack::rdp_simplify( uint16_t start, uint16_t end)
-{
+bool AP_WayBack::rdp_simplify( uint16_t start, uint16_t end){
     if(start == end) return false;
         Point &startP = points[start];
         Point &endP   = points[end];
@@ -717,7 +789,6 @@ bool AP_WayBack::rdp_simplify( uint16_t start, uint16_t end)
 			index = i;
 		}
 	}
-        yield(); // we consume a lot of time so give a chance to another tasks
 
 	if (dist > _epsilon) {
 		ret = rdp_simplify(start, index);
@@ -731,11 +802,10 @@ bool AP_WayBack::rdp_simplify( uint16_t start, uint16_t end)
 }
 
 
-bool AP_WayBack::reumannWitkam_simplify(uint16_t key, uint16_t end)
-{
+bool AP_WayBack::reumannWitkam_simplify(uint16_t key, uint16_t end){
     bool ret=false;
   
-    while(key+3 < end){ 
+    while (key+3 < end){ 
 
         uint16_t test= key+2;
         while (test < end) {
@@ -754,8 +824,7 @@ bool AP_WayBack::reumannWitkam_simplify(uint16_t key, uint16_t end)
 }
 
 
-bool AP_WayBack::removePoints(uint16_t start, uint16_t end)
-{
+bool AP_WayBack::removePoints(uint16_t start, uint16_t end){
     bool ret=false;
 
     if(start>=end) return ret; // to remove empty messages
@@ -786,7 +855,7 @@ void AP_WayBack::squizze(){
                 gap_found=true;
             }
         } else { //search for good point    
-            if(is_good(points[i])){
+            if(is_good(points[i]) ){
                 rp=i;
                 break; // got both points
             }
@@ -795,7 +864,6 @@ void AP_WayBack::squizze(){
     
     if(!gap_found) return; // в массиве нет дыр
     
-    yield(); // give current tick to another tasks
 
 DBG_PRINT("squizze"); DBG_PRINTVAR(wp); DBG_PRINTVAR(rp); DBG_PRINTVARLN(num_points);
 
@@ -813,20 +881,4 @@ DBG_PRINT("new");  DBG_PRINTVARLN(num_points);
 
 }
 
-
-
-#if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
- // no threads but just cooperative multitask
-#include <AP_HAL_REVOMINI/AP_HAL_REVOMINI.h>
-#include <AP_HAL_REVOMINI/Scheduler.h>
-using namespace REVOMINI;
-void AP_WayBack::yield() 
-{
-    REVOMINIScheduler::yield(0); // give other tasks a chance do run
-}
-
-#else // we don't should do anything if HAL has a POSIX threads
-
-void AP_WayBack::yield(){}
-#endif
 
