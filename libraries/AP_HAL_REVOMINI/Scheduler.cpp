@@ -807,7 +807,7 @@ void REVOMINIScheduler::do_task(task_t *task) {
         uint32_t t=0;
         if(task->handle && task->active) { // Task Switch occures asyncronously so we should wait until task becomes active again
             task->time_start=_micros();
-            if(task->sem && !task->in_ioc) {// if task requires a semaphore - block on it
+            if(task->sem) {// if task requires a semaphore - block on it
                 if(!task->sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
                     yield(0);   // can't be
                     continue;
@@ -815,13 +815,7 @@ void REVOMINIScheduler::do_task(task_t *task) {
             }
             revo_call_handler(task->handle, task->id);  // calls user's function
             if(task->sem){
-                if(!task->in_ioc){
-                    task->sem->give(); // give semaphore when task finished
-#ifdef SEM_DEBUG
-                } else {
-                    printf("\nsemaphore not given because in IO_Complete!\n");
-#endif
-                }
+                task->sem->give(); // give semaphore when task finished
             }
 #ifdef MTASK_PROF
             t = _micros()-task->time_start; // execution time
@@ -1362,12 +1356,8 @@ void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
         }
         break;
     
-    case 4: {          // set_task_ioc(bool v) - to not be called from ISR
-            s_running->in_ioc=svc_args[0];
-        }
-        break;    
     
-    //case 5: // whats more we can do via SVC?
+    //case 4: // whats more we can do via SVC?
 
     default:                // Unknown SVC - just ignore
         break;    

@@ -52,7 +52,6 @@ struct task_t {
         uint8_t curr_prio;      // current priority of task, usually higher than priority
         bool active;            // task not ended
 //        bool f_yield;           // task gives its quant
-        bool in_ioc;            // task starts IO_Completion so don't release bus semaphore
         uint32_t ttw;           // time to wait
         uint32_t t_yield;       // time of yield
         uint32_t period;        // if set then task starts on time basis only
@@ -301,7 +300,6 @@ public:
   static void inline task_pause(uint16_t t) {   s_running->ttw=t;  }                      // called from task when it starts IO transfer
   static void inline task_resume(void *h)   {   task_t * task = (task_t*)h; task->ttw=0; task->curr_prio = 70;  } // called from IO_Complete ISR to resume task, and   will get 1st quant 100%
 #endif
-  static void inline NAKED set_task_ioc(bool v) { asm volatile("svc 4"); }  // task waits for IO_Complete so don't release semaphore when taskLoop finished
 //]  
 
 /*
@@ -400,7 +398,11 @@ public:
         _delay_timer_proc = h;
         timer_set_reload(TIMER11, dly);
         timer_resume(TIMER11);
-    };
+    }
+    static inline void cancel_delayed_proc() {
+        timer_pause(TIMER11);
+    }
+    
     
 protected:
 

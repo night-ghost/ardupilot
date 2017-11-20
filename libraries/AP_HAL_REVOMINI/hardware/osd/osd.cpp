@@ -329,11 +329,14 @@ static void max7456_cs_off(){
     
     const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
     gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);
+
+    delay_ns100(3);
 }
 
 static void max7456_cs_on(){
     const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
     gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
+    delay_ns100(1);
 }
 
 
@@ -369,7 +372,10 @@ byte MAX_read(byte addr){
 }
 
 byte MAX_rw(byte b){
-  return osd_spi->transfer(b);
+    max7456_cs_on();
+    uint8_t ret=osd_spi->transfer(b);
+    max7456_cs_off();
+    return ret;
 }
 
 static uint16_t rdb_ptr IN_CCM;
@@ -1047,11 +1053,9 @@ void update_max_buffer(const uint8_t *buffer, uint16_t len){
     }
 
 #elif 1
-    max7456_cs_off();
     uint8_t patt = MAX7456_ENABLE_display | MAX7456_SYNC_autosync | OSD::video_mode;
     max7456_cs_on();
     uint8_t vm0 = MAX_read(MAX7456_VM0_reg | MAX7456_reg_read);
-    max7456_cs_off();
         
     if(vm0 != patt) {
         max_err_cnt++;
@@ -1081,7 +1085,8 @@ void update_max_buffer(const uint8_t *buffer, uint16_t len){
 
     max7456_cs_off();
     
-    osd_spi->send_strobe(buffer, len);
+    if(osd_spi->send_strobe(buffer, len)!=len) MAX_rw(0xff); // finish transfer
+    
 #elif 0
     MAX_write(MAX7456_DMAH_reg, 0);
     MAX_write(MAX7456_DMAL_reg, 0);

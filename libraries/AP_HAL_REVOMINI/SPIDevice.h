@@ -105,7 +105,7 @@ public:
     bool transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t len) override;
 
 
-    void send_strobe(const uint8_t *buffer, uint16_t len); // send in ISR and strobe each byte by CS
+    uint16_t send_strobe(const uint8_t *buffer, uint16_t len); // send in ISR and strobe each byte by CS
     void wait_busy() { spi_wait_busy(_desc.dev);  }
     uint8_t wait_for(uint8_t out, spi_WaitFunc cb, uint16_t dly); // wait for needed byte in ISR
 
@@ -135,12 +135,6 @@ public:
     inline void register_completion_callback(AP_HAL::Proc proc){
         Revo_handler r = { .hp=proc };
         register_completion_callback(r.h);
-        if(!r.h) _cs_release(); // IO_complete handler finished
-    }
-    
-    inline void clear_completion_callback_isr(){
-        _completion_cb = 0;
-        _cs_release(); // IO_complete handler finished
     }
     
 

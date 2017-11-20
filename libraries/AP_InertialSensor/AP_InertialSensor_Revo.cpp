@@ -558,7 +558,6 @@ void AP_InertialSensor_Revo::_ioc(){ // io completion ISR, data already in its p
     }
 
     //_dev->register_completion_callback(NULL); 
-    _dev->clear_completion_callback_isr();  // inform that IOC finished
 // we should release the bus semaphore if we use them 
 //    _dev->get_semaphore()->give();            // release
 
