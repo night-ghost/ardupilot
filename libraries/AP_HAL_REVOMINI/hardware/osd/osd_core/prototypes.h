@@ -32,7 +32,6 @@ void filter( float &dst, float val);
 void setFdataVars();
 NOINLINE void logo();
 bool parse_osd_packet(byte *p);
-void NOINLINE millis_plus(uint32_t *dst, uint16_t inc);
 void request_mavlink_rates();
 void heartBeat();
 byte NOINLINE radar_char();

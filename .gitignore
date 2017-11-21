@@ -13,6 +13,7 @@ PACK.sh
 /Tools/autotest/jsbsim_fgout_0.xml
 /Tools/autotest/jsbsim_start_0.xml
 /tmp/*
+*.bad
 *.bin
 *.d
 *.dfu

@@ -125,6 +125,8 @@
 * working PPM on AirbotV2/V3
 * added ability to connect buzzer to arbitrary pin (parameter BUZZ_PIN)
 * added priority to SPI transfers
+* overclocking support
+* OSD is working
 * ...
 * a lot of minor enhancements
 
