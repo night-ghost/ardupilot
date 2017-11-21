@@ -183,16 +183,18 @@ LDFLAGS         += -Wl,--relax
 # -flto -fuse-linker-plugin
 
 
-
 TGT_BIN := 
 
 
 
-COREINCLUDES = -I$(HARDWARE_PATH) -I$(HAL_PATH) -I$(STM32_PATH) -I$(STM32_PATH)/Libraries/STM32F4xx_StdPeriph_Driver/inc \
- -I$(STM32_PATH)/Libraries/CMSIS/Include  -I$(STM32_PATH)/Libraries/CMSIS/Device/ST/STM32F4xx/Include  \
- -I$(STM32USB_PATH) -I$(WIRISH_PATH) -I$(WIRISH_PATH)/boards/$(BOARD) \
- -I$(STM32USB_PATH)/STM32_USB_Device_Library/Class/cdc/inc -I$(STM32USB_PATH)/STM32_USB_Device_Library/Core/inc \
- -I$(BUILDROOT)/libraries/GCS_MAVLink/ -I$(BUILDROOT)/libraries/GCS_MAVLink/include/mavlink/v2.0
+COREINCLUDES = -I$(HAL_PATH) -I$(STM32_PATH) -I$(WIRISH_PATH) -I$(WIRISH_PATH)/boards/$(BOARD) -I$(STM32USB_PATH) \
+ -I$(HARDWARE_PATH) \
+ -I$(HARDWARE_PATH)/osd/osd_core \
+ -I$(STM32_PATH)/Libraries/STM32F4xx_StdPeriph_Driver/inc \
+ -I$(STM32_PATH)/Libraries/CMSIS/Include \
+ -I$(STM32_PATH)/Libraries/CMSIS/Device/ST/STM32F4xx/Include \
+ -I$(BUILDROOT)/libraries/GCS_MAVLink/ \
+ -I$(BUILDROOT)/libraries/GCS_MAVLink/include/mavlink/v2.0
 
 
 TGT_ASFLAGS = $(COREINCLUDES)
