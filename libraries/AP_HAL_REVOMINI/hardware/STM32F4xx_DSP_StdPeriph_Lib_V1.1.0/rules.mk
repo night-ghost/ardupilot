@@ -16,7 +16,7 @@ CFLAGS_$(d) =
 
 # Local rules and targets
 cSRCS_$(d) := 
-cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/misc.c
+cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_nvic.c
 cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_adc.c
 cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_can.c
 cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_dma.c

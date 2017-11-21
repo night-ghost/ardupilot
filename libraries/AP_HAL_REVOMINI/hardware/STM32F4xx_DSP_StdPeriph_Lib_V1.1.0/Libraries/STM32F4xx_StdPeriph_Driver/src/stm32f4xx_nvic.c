@@ -73,7 +73,7 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
-#include "misc.h"
+#include "stm32f4xx_nvic.h"
 
 /** @addtogroup STM32F4xx_StdPeriph_Driver
   * @{
