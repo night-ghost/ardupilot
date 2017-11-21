@@ -48,22 +48,28 @@ static REVOMINI::I2CDeviceManager i2c_mgr_instance;
 // XXX make sure these are assigned correctly
 static USBDriver USB_Driver(1);                 // ACM
 static REVOMINIUARTDriver uart1Driver(_USART1); // main port
-static REVOMINIUARTDriver uart3Driver(_USART3); // flexi port
 static REVOMINIUARTDriver uart6Driver(_USART6); // pin 7&8(REVO)/5&6(RevoMini) of input port
+
+#ifdef BOARD_HAS_UART3
+ static REVOMINIUARTDriver uart3Driver(_USART3); // flexi port
+#elif defined(BOARD_SOFT_UART3)
+ static SerialDriver uart3Driver(false);              // soft UART on pins 7&8 of input port
+#elif defined(USE_SOFTSERIAL)
+ static SerialDriver softDriver(false);  // pin 7&8 of input port
+#endif
+
+
 #ifdef BOARD_OSD_CS_PIN
-static UART_OSD uartOSDdriver;
-#else
- #if FRAME_CONFIG == QUAD_FRAME && defined(BOARD_USART4_RX_PIN) && defined( BOARD_USART4_TX_PIN)
-  static REVOMINIUARTDriver uart4Driver(_UART4);  // pin 5&6 of servo port
- #endif
+ static UART_OSD uartOSDdriver;
+#endif
+
+#if FRAME_CONFIG == QUAD_FRAME && defined(BOARD_USART4_RX_PIN) && defined( BOARD_USART4_TX_PIN)
+ static REVOMINIUARTDriver uart4Driver(_UART4);  // pin 5&6 of servo port
 #endif
 
 
 
 
-#ifdef USE_SOFTSERIAL
-static SerialDriver softDriver(false);  // pin 7&8 of input port
-#endif
 
 // only for DSM satellite, served in rc_input
 //static REVOMINIUARTDriver uart5Driver(_UART5,0);  // D26/PD2  6 EXTI_RFM22B / UART5_RX  input-only UART for DSM satellite
@@ -108,38 +114,44 @@ HAL_state HAL_REVOMINI::state;
 */
 HAL_REVOMINI::HAL_REVOMINI() :
     AP_HAL::HAL(
-        &USB_Driver,   /* uartA - USB console */
-        &uart6Driver,  /* uartB - pin 7&8(REVO)/5&6(RevoMini) of input port - for GPS */
-        &uart1Driver,  /* uartC - main port  - for telemetry */
+        &USB_Driver,            /* uartA - USB console */
+        &uart6Driver,           /* uartB - pin 7&8(REVO)/5&6(RevoMini) of input port - for GPS */
+        &uart1Driver,           /* uartC - main port  - for telemetry */
 #ifdef BOARD_HAS_UART3
-        &uart3Driver,  /* uartD - flexi port */
+        &uart3Driver,           /* uartD - flexi port */
+#elif defined(BOARD_SOFT_UART3)
+        &uart3Driver,           /* uartD - sotf UART on pins 7&8 */
 #else
-        NULL,          /* no uartD */
+        NULL,                   /* no uartD */
 #endif
+
 #if FRAME_CONFIG == QUAD_FRAME && defined(BOARD_USART4_RX_PIN)
-        &uart4Driver,  /* uartE  - PWM pins 5&6 */
+        &uart4Driver,           /* uartE  - PWM pins 5&6 */
+#elif defined(BOARD_OSD_NAME) && defined(USE_SOFTSERIAL) && defined(BOARD_SOFTSERIAL_TX) && defined(BOARD_SOFTSERIAL_RX)
+        &softDriver,            /* uartE softSerial on boards with OSD*/
 #else
-        NULL,          /* no uartE */
+        NULL,                   /* no uartE */
 #endif
+
 #if defined(BOARD_OSD_NAME)
-        &uartOSDdriver, /* uartF  - OSD emulated UART */
+        &uartOSDdriver,         /* uartF  - OSD emulated UART */
 #elif defined(USE_SOFTSERIAL) && defined(BOARD_SOFTSERIAL_TX) && defined(BOARD_SOFTSERIAL_RX)
         &softDriver,   /* uartF softSerial */
 #else
-        NULL,          /* no uartF */
+        NULL,                   /* no uartF */
 #endif
         &i2c_mgr_instance,
-        &spiDeviceManager, /* spi */
-        &analogIn,        /* analogin */
-        &storageDriver,   /* storage */
-        &HAL_CONSOLE,     /* console via radio or USB on per-board basis */
-        &gpioDriver,      /* gpio */
-        &rcinDriver,      /* rcinput */
-        &rcoutDriver,     /* rcoutput */
+        &spiDeviceManager,  /* spi */
+        &analogIn,          /* analogin */
+        &storageDriver,     /* storage */
+        &HAL_CONSOLE,       /* console via radio or USB on per-board basis */
+        &gpioDriver,        /* gpio */
+        &rcinDriver,        /* rcinput */
+        &rcoutDriver,       /* rcoutput */
         &schedulerInstance, /* scheduler */
-        &utilInstance,	  /* util */
-        nullptr,          /* no optical flow */
-        nullptr           /* no CAN */
+        &utilInstance,	    /* util */
+        nullptr,            /* no optical flow */
+        nullptr             /* no CAN */
     )
     
            //  0     1       2       3        4       5
@@ -198,7 +210,6 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
             usb_init(); // moved from boards.cpp
 
             uartA->begin(115200); // uartA is the USB serial port used for the console, so lets make sure it is initialized at boot 
-
 
         }
     }

@@ -97,13 +97,14 @@ static INLINE void setupCCM(){
         *dest++ = 0;
     }
 
+// only for stack debugging
 #if 0
     uint32_t sp;
     
     // Get stack pointer
     asm volatile ("mov %0, sp\n\t"  : "=rm" (sp) );
 
- #if 0
+ #if 0 //  memset is much faster but uses too much stack for own needs
     memset((void *)dest,0x55, (sp-(uint32_t)dest) -128); 
  #else
     while ((uint32_t)dest < (sp-8)) {

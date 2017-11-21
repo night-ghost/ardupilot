@@ -49,6 +49,7 @@ BUILD_PATH       := $(BUILDROOT)
 LIBRARIES_PATH   := $(BLDROOT)/libraries
 REVO_PATH        := $(LIBRARIES_PATH)/AP_HAL_REVOMINI
 WIRISH_PATH      := $(REVO_PATH)/wirish
+BOARDS_PATH      := $(REVO_PATH)/boards
 HARDWARE_PATH    := $(REVO_PATH)/hardware
 HAL_PATH         := $(REVO_PATH)/hardware/hal
 STM32_PATH       := $(HARDWARE_PATH)/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0
@@ -64,11 +65,11 @@ LIBRARY_INCLUDES :=
 SUPPORT_PATH     := $(BLDROOT)/libraries/AP_HAL_REVOMINI/support
 TOOLS_PATH       := $(BLDROOT)/libraries/AP_HAL_REVOMINI/support/tools
 # Support files for linker
-LDDIR            := $(WIRISH_PATH)/boards/$(BOARD)/ld
+LDDIR            := $(BOARDS_PATH)/$(BOARD)/ld
 
 
 # $(BOARD)- and $(MEMORY_TARGET)-specific configuration
-include $(WIRISH_PATH)/boards/$(BOARD)/target-config.mk
+include $(BOARDS_PATH)/$(BOARD)/target-config.mk
 
 SIZE     := arm-none-eabi-size
 DISAS    := arm-none-eabi-objdump
@@ -137,7 +138,7 @@ GLOBAL_CFLAGS   := $(cpu_flags)
 #GLOBAL_CFLAGS   += -nostdlib           #Do not use the standard system startup files or libraries when linking
 GLOBAL_CFLAGS   += -Wall               #This enables all the warnings about constructions that some users consider questionable, and that are easy to avoid (or modify to prevent the warning), even in conjunction with macros
 GLOBAL_CFLAGS   += $(GLOBAL_FLAGS) $(OPTFLAGS)
-GLOBAL_CFLAGS   += -include $(WIRISH_PATH)/boards/$(BOARD)/board.h 
+GLOBAL_CFLAGS   += -include $(BOARDS_PATH)/$(BOARD)/board.h 
 
 
 # GLOBAL_CXXFLAGS ---------------------------------------------------------------------------------
@@ -187,14 +188,15 @@ TGT_BIN :=
 
 
 
-COREINCLUDES = -I$(HAL_PATH) -I$(STM32_PATH) -I$(WIRISH_PATH) -I$(WIRISH_PATH)/boards/$(BOARD) -I$(STM32USB_PATH) \
+COREINCLUDES = -I$(HAL_PATH) -I$(STM32_PATH) -I$(WIRISH_PATH) -I$(BOARDS_PATH)/$(BOARD) -I$(STM32USB_PATH) \
  -I$(HARDWARE_PATH) \
- -I$(HARDWARE_PATH)/osd/osd_core \
  -I$(STM32_PATH)/Libraries/STM32F4xx_StdPeriph_Driver/inc \
  -I$(STM32_PATH)/Libraries/CMSIS/Include \
  -I$(STM32_PATH)/Libraries/CMSIS/Device/ST/STM32F4xx/Include \
  -I$(BUILDROOT)/libraries/GCS_MAVLink/ \
  -I$(BUILDROOT)/libraries/GCS_MAVLink/include/mavlink/v2.0
+
+# -I$(HARDWARE_PATH)/osd/osd_core \
 
 
 TGT_ASFLAGS = $(COREINCLUDES)

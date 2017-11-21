@@ -196,6 +196,7 @@ int spimaster_transfer(const spi_dev *dev,
                        uint8_t *rxbuf,
                        uint16_t rxcount)
 {
+#if 0
 	// Validate parameters
 	if ((txbuf == NULL) && (txcount != 0)){
 		return __LINE__ - 3;
@@ -212,6 +213,7 @@ int spimaster_transfer(const spi_dev *dev,
 	if ((rxcount == 0) && (rxbuf != NULL)){
 		return __LINE__ - 3;
 	}
+#endif
 
     uint16_t tmp;
 
@@ -228,10 +230,10 @@ int spimaster_transfer(const spi_dev *dev,
 	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE)) {
 	        if(--dly==0) break;
 	    }
-	    (void) dev->SPIx->DR;
+	    (void) dev->SPIx->DR; // read out unneeded data
 	}
 
-        if(txc_in && rxcount) delay_ns100(5);
+        if(txc_in && rxcount) delay_ns100(5); // small delay between TX and RX, to give the chip time to think over domestic affairs
 
 	// Transfer response data in
 	while (rxcount--){
@@ -267,9 +269,10 @@ uint32_t spi_tx(const spi_dev *dev, const void *buf, uint16_t len) {
 */
 
 static void isr_handler(const spi_dev *dev){
+    NVIC_ClearPendingIRQ(dev->irq);
     if(dev->state->handler) revo_call_handler(dev->state->handler, dev->SPIx->SR);
     else { // disable interrupts
-        spi_irq_disable(dev, SPI_INTERRUPTS_ALL);
+        spi_disable_irq(dev, SPI_INTERRUPTS_ALL);
     }
 }
 

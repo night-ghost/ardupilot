@@ -1,5 +1,7 @@
-# rules are in per-board basis
-WIR    := AP_HAL_REVOMINI/wirish
 
-include $(LIBRARIES_PATH)/$(WIR)/boards/$(BOARD)/rules.mk
+# rules are in per-board basis
+
+WIR    := AP_HAL_REVOMINI/wirish
+BRD    := AP_HAL_REVOMINI/boards
+include $(LIBRARIES_PATH)/$(BRD)/$(BOARD)/rules.mk
 

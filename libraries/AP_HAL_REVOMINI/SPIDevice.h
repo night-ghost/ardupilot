@@ -139,6 +139,8 @@ public:
 
     void  dma_isr();
     void  spi_isr();
+
+#define SPI_BUFFER_SIZE 512
     
 protected:
     const SPIDesc &_desc;
@@ -148,30 +150,28 @@ protected:
 
     static REVOMINI::Semaphore _semaphores[MAX_BUS_NUM]; // per bus 
     static void * owner[MAX_BUS_NUM];
-#define SPI_BUFFER_SIZE 512
     static uint8_t buffer[MAX_BUS_NUM][SPI_BUFFER_SIZE];
 
     bool _initialized;
+    uint8_t  byte_time; // in 0.25uS
+
     void init(void);
 
     inline void _cs_assert(){                   if(_cs){_cs->write(0); delay_ns100(1);} } // Select device and wait a little
-    inline void _cs_release(){ if(_cs){spi_wait_busy(_desc.dev);       delay_ns100(5); _cs->write(1); } } // Deselect device, time from http://datasheetspdf.com/mobile/735133/MPU-6000.html page 19
+    inline void _cs_release(){ spi_wait_busy(_desc.dev); if(_cs){      delay_ns100(5); _cs->write(1); } } // Deselect device, time from http://datasheetspdf.com/mobile/735133/MPU-6000.html page 19
 
     const spi_pins* dev_to_spi_pins(const spi_dev *dev);
 
-    static spi_baud_rate determine_baud_rate(SPIFrequency freq);
+    spi_baud_rate determine_baud_rate(SPIFrequency freq);
 
     uint8_t _transfer_s(uint8_t bt);
     uint8_t _transfer(uint8_t data);
 
     uint8_t dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t btr );
     
-#ifdef DEBUG_SPI    
-    static struct spi_trans spi_trans_array[SPI_LOG_SIZE];
-    static uint8_t spi_trans_ptr;
-#endif
     Handler _completion_cb;
     void   *_task;
+
     
     // vars for send_strobe() and wait_for()
     const uint8_t *_send_address;
@@ -184,6 +184,26 @@ protected:
     uint8_t        _recv_data;
 
     void isr_transfer_finish();
+    void disable_dma();
+
+#ifdef BOARD_SOFTWARE_SPI
+    volatile GPIO_TypeDef *sck_port;
+             uint16_t      sck_pin;
+
+    volatile GPIO_TypeDef *mosi_port;
+             uint16_t      mosi_pin;
+
+    volatile GPIO_TypeDef *miso_port;
+             uint16_t      miso_pin;
+
+    uint16_t dly_time;
+#endif
+
+#ifdef DEBUG_SPI    
+    static struct spi_trans spi_trans_array[SPI_LOG_SIZE];
+    static uint8_t spi_trans_ptr;
+#endif
+
 };
 
 class SPIDeviceManager : public AP_HAL::SPIDeviceManager {

@@ -3,14 +3,12 @@ sp              := $(sp).x
 dirstack_$(sp)  := $(d)
 d               := $(dir)
 BUILDDIRS       += $(BUILD_PATH)/$(d)
-BUILDDIRS       += $(BUILD_PATH)/$(d)/comm
-BUILDDIRS       += $(BUILD_PATH)/$(d)/boards/$(BOARD)
 
 #LIBRARY_INCLUDES += 
 
 # Local flags
 # always include board #defines
-CFLAGS_$(d) := -Wall -Werror -include $(WIR)/boards/$(BOARD)/board.h -I$(HARDWARE_PATH)/sd  -I$(HARDWARE_PATH)/sd/FatFs
+CFLAGS_$(d) := -Wall -Werror -I$(HARDWARE_PATH)/sd  -I$(HARDWARE_PATH)/sd/FatFs
 
 DIR := AP_HAL_REVOMINI/hardware/sd
 

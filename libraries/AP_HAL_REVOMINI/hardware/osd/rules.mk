@@ -6,10 +6,11 @@ BUILDDIRS       += $(BUILD_PATH)/$(d)
 
 #LIBRARY_INCLUDES += 
 
+OSD := AP_HAL_REVOMINI/hardware/osd
+
 # Local flags
 CFLAGS_$(d) := -Wall -Werror -Wno-missing-declarations -Wno-shadow -Wunused-function -Wno-unused-variable -Wno-missing-declarations -I$(OSD)/osd_core
 
-OSD := AP_HAL_REVOMINI/hardware/osd
 
 cppSRCS_$(d) :=  
 cppSRCS_$(d) += $(OSD)/osd.cpp

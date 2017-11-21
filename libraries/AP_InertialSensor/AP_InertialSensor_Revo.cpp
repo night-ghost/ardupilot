@@ -606,20 +606,25 @@ bool AP_InertialSensor_Revo::_accumulate(uint8_t *samples, uint8_t n_samples)
         _rotate_and_correct_accel(_accel_instance, accel);
         _rotate_and_correct_gyro(_gyro_instance, gyro);
 
-#if 0
+#if 0 // filter out samples if vector length changed by 100%
+
+#define FILTER_KOEF 0.1
         float len = accel.length();
         if(is_zero(accel_len)) {
             accel_len=len;
         } else {
-    
-            if(abs(accel_len-len)/(accel_len+len)*100 > 25) { // difference more than 50% from mean value
+            float d = abs(accel_len-len)/(accel_len+len);
+            if(d*100 > 50) { // difference more than 100% from mean value
                 debug("accel len error: mean %f got %f", accel_len, len );
-//                ret= false; just report
+                ret= false; //just report
+                float k = FILTER_KOEF / (d*10); // 5 and more, so one bad sample never change mean more than 4%
+                accel_len = accel_len * (1-k) + len*k; // complimentary filter 1/k on bad samples
+            } else {
+                accel_len = accel_len * (1-FILTER_KOEF) + len*FILTER_KOEF; // complimentary filter 1/10 on good samples
             }
-#define FILTER_KOEF 0.1
-            accel_len = accel_len * (1-FILTER_KOEF) + len*FILTER_KOEF; // complimentary filter 1/10 on all samples
         }
 #endif
+
         if(ret) {
             _notify_new_accel_raw_sample(_accel_instance, accel, 0, fsync_set);
             _notify_new_gyro_raw_sample(_gyro_instance, gyro);

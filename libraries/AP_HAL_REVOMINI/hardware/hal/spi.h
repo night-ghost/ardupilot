@@ -76,15 +76,17 @@ typedef enum spi_baud_rate {
     SPI_BAUD_PCLK_DIV_256 = SPI_BaudRatePrescaler_256, /**< f_PCLK/256 */
 } spi_baud_rate;
 
-/** Available SPI interrupts */
+/** Available SPI interrupts  - see SPI_I2S_GetITStatus */
 typedef enum spi_interrupt {
-    SPI_TXE_INTERRUPT  = SPI_I2S_IT_TXE,  /**< TX buffer empty interrupt */
-    SPI_RXNE_INTERRUPT = SPI_I2S_IT_RXNE, /**< RX buffer not empty interrupt */
-    SPI_ERR_INTERRUPT  = SPI_I2S_IT_ERR   /**<
-                                          * Error interrupt (CRC, overrun,
-                                          * and mode fault errors for SPI;
-                                          * underrun, overrun errors for I2S)
-                                          */
+    SPI_TXE_INTERRUPT  = 1<<(SPI_I2S_IT_TXE>>4),  /**< TX buffer empty interrupt */
+    SPI_RXNE_INTERRUPT = 1<<(SPI_I2S_IT_RXNE>>4), /**< RX buffer not empty interrupt */
+    SPI_ERR_INTERRUPT  = 1<<(SPI_I2S_IT_ERR>>4),   /**<
+                                                  * Error interrupt (CRC, overrun,
+                                                  * and mode fault errors for SPI;
+                                                  * underrun, overrun errors for I2S)
+                                                  */
+    SPI_RXNE_TXE_INTERRUPTS = SPI_RXNE_INTERRUPT | SPI_TXE_INTERRUPT,
+    SPI_INTERRUPTS_ALL = SPI_TXE_INTERRUPT  | SPI_RXNE_INTERRUPT | SPI_ERR_INTERRUPT
 } spi_interrupt;
 
 /**
@@ -190,13 +192,6 @@ void spi_slave_enable(const spi_dev *dev,
 
 void spi_set_speed(const spi_dev *dev, uint16_t baudPrescaler);                   
 
-/*
-uint32_t spi_tx(spi_dev *dev, const void *buf, uint32_t len);
-void spi_tx_byte(spi_dev *dev, uint8_t data);
-uint8_t spi_rx_byte(spi_dev *dev);
-void spi_write(spi_dev *dev, uint8_t reg, uint8_t data);
-void spi_tx_buf(spi_dev *dev, uint8_t *txbuf, uint32_t txcount);
-*/
 
 void spi_foreach(void (*fn)(const spi_dev*));
 
@@ -218,13 +213,30 @@ static inline void spi_peripheral_disable_all(void) {
     spi_foreach(spi_peripheral_disable);
 }
 
-static inline void spi_irq_enable(const spi_dev *dev, uint32_t interrupt_flags) {
-	SPI_I2S_ITConfig(dev->SPIx, interrupt_flags, ENABLE);
+//  [ old ones - for flags like SPI_I2S_IT_TXE. This flags can't be combined!
+static inline void spi_irq_enable(const spi_dev *dev, uint32_t interrupt_flag) {
+	SPI_I2S_ITConfig(dev->SPIx, interrupt_flag, ENABLE);
 }
 
-static inline void spi_irq_disable(const spi_dev *dev, uint32_t interrupt_flags) {
-	SPI_I2S_ITConfig(dev->SPIx, interrupt_flags, DISABLE);
+static inline void spi_irq_disable(const spi_dev *dev, uint32_t interrupt_flag) {
+	SPI_I2S_ITConfig(dev->SPIx, interrupt_flag, DISABLE);
 }
+//]
+
+//[ new ones - for enum spi_interrupt
+static inline void spi_enable_irq(const spi_dev *dev, spi_interrupt interrupt_flags) {
+	dev->SPIx->CR2 |= interrupt_flags;
+}
+
+static inline void spi_disable_irq(const spi_dev *dev, spi_interrupt interrupt_flags) {
+	dev->SPIx->CR2 &= ~interrupt_flags;
+}
+
+
+static inline bool spi_is_irq_enabled(const spi_dev *dev, uint32_t interrupt_flags) {
+    return dev->SPIx->CR2 & interrupt_flags;
+}
+//]
 
 static inline uint16_t spi_dff(const spi_dev *dev) {
     return ((dev->SPIx->CR1 & SPI_DataSize_16b) == SPI_DataSize_8b ? SPI_DataSize_8b : SPI_DataSize_16b);
@@ -259,11 +271,22 @@ static inline void spi_wait_busy(const spi_dev *dev) {
     }
 }
 
+static inline void spi_enable_dma_req(const spi_dev *dev, uint16_t SPI_I2S_DMAReq) {
+    /* Enable the selected SPI DMA requests */
+    dev->SPIx->CR2 |= SPI_I2S_DMAReq;
+}
+
+static inline void spi_disable_dma_req(const spi_dev *dev, uint16_t SPI_I2S_DMAReq) {
+    /* Disable the selected SPI DMA requests */
+    dev->SPIx->CR2 &= (uint16_t)~SPI_I2S_DMAReq;
+}
+
 
 static inline void spi_attach_interrupt(const spi_dev *dev, Handler handler){
     dev->state->handler = handler;
     
     IRQn_Type irq=dev->irq;
+    NVIC_ClearPendingIRQ(irq);
     NVIC_EnableIRQ(irq);
     NVIC_SetPriority(irq, SPI_INT_PRIORITY); 
 }

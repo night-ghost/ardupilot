@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  * ****************************************************************************/
 # modified by NG to give some useful info to __error handler
+# and added task switching code
 
 # On an exception, push a fake stack thread mode stack frame and redirect
 # thread execution to a thread mode error handler
@@ -89,7 +90,7 @@ __default_exc:
     ldr r3, [r1, #24]           @ PC of exception - if access to wrong address
     ldr r1, [r1, #20]           @ LR of exception - if call to wrong address
 
-    ldr r2, BFAR                @ for debug
+    ldr r2, BFAR                @ for debug, to see what happens
     ldr r2, [r2]
     ldr r2, CFSR
     ldr r2, [r2]
@@ -126,10 +127,10 @@ __default_exc:
 
     tst     lr, #4
     ite eq
-    ldreq r1, EXC_RETURN          @ Return to thread mode with PSP
-    ldrne r1, EXC_RETURN          @ Return to thread mode with MSP
+    ldreq r1, EXC_RETURN        @ Return to thread mode with PSP
+    ldrne r1, EXC_RETURN        @ Return to thread mode with MSP
     mov lr, r1
-    bx lr                         @ Exception exit
+    bx lr                       @ Exception exit
 
 
 .thumb_func

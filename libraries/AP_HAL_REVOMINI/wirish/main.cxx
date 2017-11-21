@@ -33,6 +33,4 @@ extern void init();
  __attribute__(( constructor )) void premain() ;
 
 
- __attribute__(( constructor )) void premain(){
-//    init(); - even earlier
-}
+ __attribute__(( constructor )) void premain(){}

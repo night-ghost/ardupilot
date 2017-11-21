@@ -33,9 +33,13 @@ USBDriver::USBDriver(bool usb):
 
 void USBDriver::begin(uint32_t baud) {
 
-    _usb_present = gpio_read_bit(PIN_MAP[BOARD_USB_SENSE].gpio_device,PIN_MAP[BOARD_USB_SENSE].gpio_bit);
+/*    _usb_present = gpio_read_bit(PIN_MAP[BOARD_USB_SENSE].gpio_device,PIN_MAP[BOARD_USB_SENSE].gpio_bit); 
+   using of this bit prevents USB hotplug
 
-    _initialized = true;
+
+*/
+
+    _initialized = true; // real USB initialization was much earlier
 }
 
 
@@ -43,6 +47,9 @@ uint32_t USBDriver::available() {
     uint32_t v = usb_data_available();
     return v; 
 }
+
+
+// usb *can* be used  in air, eg. to connect companion computer
 
 int16_t USBDriver::read() {
     if(is_usb_opened() ){

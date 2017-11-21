@@ -8,7 +8,7 @@ LIBRARY_INCLUDES += -I$(d)/common -I$(d)/include
 WIR := AP_HAL_REVOMINI/wirish
 
 # Local flags
-CFLAGS_$(d) := -Wall -include $(WIR)/boards/$(BOARD)/board.h
+CFLAGS_$(d) := -Wall 
 # -Werror
 
 STM_DIR := AP_HAL_REVOMINI/hardware/hal

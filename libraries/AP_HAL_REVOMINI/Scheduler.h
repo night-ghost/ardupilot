@@ -291,7 +291,9 @@ public:
       s_running->count_paused++;
   }                    
   static void inline task_resume(void *h) {   // called from IO_Complete ISR to resume task
-      task_t * task = (task_t*)h; task->ttw=0;  
+      task_t * task = (task_t*)h; 
+      task->ttw=0;  
+      task->curr_prio = 70;
       
       uint32_t dt= _micros() - task->sem_start_wait;
       task->t_paused += dt;
