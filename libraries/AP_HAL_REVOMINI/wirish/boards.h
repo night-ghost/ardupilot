@@ -44,6 +44,7 @@
 #define _BOARDS_H_
 
 #include <hal.h>
+#include <stm32f4xx_conf.h>
 #include <hal_types.h>
 #include <exti.h>
 #include <gpio_hal.h>
