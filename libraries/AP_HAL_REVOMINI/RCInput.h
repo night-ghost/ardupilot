@@ -50,7 +50,7 @@ public:
     bool rc_bind(int dsmMode) override;
 
     static uint16_t max_num_pulses; // for statistics
-    
+        
 private:
     static _parser *parsers[];
     static uint8_t num_parsers;

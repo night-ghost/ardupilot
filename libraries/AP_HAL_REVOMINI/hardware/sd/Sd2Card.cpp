@@ -61,6 +61,9 @@ uint8_t spi_spiXchg(uint8_t b) {
   return _spi->transfer(b);
 }
 
+uint8_t spi_waitFor(uint8_t out, spi_WaitFunc cb, uint16_t dly) {
+    return _spi->wait_for(out, cb, dly);
+}
 
 void spi_spiTransfer(const uint8_t *send, uint32_t send_len,  uint8_t *recv, uint32_t recv_len) {
   _spi->transfer(send, send_len,  recv, recv_len);

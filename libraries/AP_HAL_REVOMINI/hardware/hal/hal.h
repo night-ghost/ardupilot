@@ -11,6 +11,7 @@
 #include "delay.h"
 #include "adc.h"
 #include "systick.h"
+#include "nvic.h"
 #include <boards.h>
 
 

@@ -2,7 +2,10 @@
 #define BOARD_STM32V1F4
 
 #include <boards.h>
+#include "../../SPIDevice.h"
+#include <AP_Common/AP_Common.h>
 
+using namespace REVOMINI;
 
 extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] = {
 /*
@@ -137,8 +140,22 @@ extern const struct TIM_Channel PWM_Channels[] =   {
 };
 
 
-//  SIZEOF(PIN_MAP) / SIZEOF(stm32_pin_info)
+/*
+     DMA modes:
+     
+0 - disable
+1 - enable on large transfers
+2 - enable alaways
 
+*/
+// different SPI tables per board subtype
+extern const SPIDesc spi_device_table[] = {    
+//              name            device   bus  mode         cs_pin                       speed_low       speed_high  dma                      priority
+     { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  SPI_TRANSFER_DMA,       DMA_Priority_VeryHigh }, 
+     { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* device controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, SPI_TRANSFER_FORCE_DMA, DMA_Priority_Medium },
+};
+
+extern const uint8_t REVOMINI_SPI_DEVICE_NUM_DEVICES = ARRAY_SIZE(spi_device_table);
 
 void boardInit(void) {
 

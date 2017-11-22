@@ -7,7 +7,7 @@
 #include "osd_core/compat.h"
 
 
-#define OSD_DMA_TRANSFER
+// #define OSD_DMA_TRANSFER
 
 using namespace REVOMINI;
 
@@ -807,7 +807,6 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
     task_handle = REVOMINIScheduler::start_task(OSDns::osd_loop, SMALL_TASK_STACK); // 
     REVOMINIScheduler::set_task_priority(task_handle, OSD_LOW_PRIORITY); // less than main task
     REVOMINIScheduler::set_task_period(task_handle, 10000);              // 100Hz 
-
 }
 
 // all task is in one thread so no sync required
@@ -834,7 +833,7 @@ void osd_loop() {
 #if defined(MAV_REQUEST) && (defined(USE_MAVLINK) || defined(USE_MAVLINKPX4))
     if(apm_mav_system && !lflags.mav_request_done){ // we got HEARTBEAT packet and still don't send requests
         for(uint8_t n = 3; n >0; n--){
-            request_mavlink_rates();//Three times to certify it will be readed
+            request_mavlink_rates();        //Three times to certify it will be readed
             delay_150();
         }
         lflags.mav_request_done=1;
@@ -951,8 +950,7 @@ void vsync_ISR(){
     if(update_screen) { // there is data for screen
         osd_need_redraw=true;
         REVOMINIScheduler::set_task_priority(task_handle, OSD_HIGH_PRIORITY); // higher than all drivers so it will be scheduled just after semaphore release
-        REVOMINIScheduler::set_task_active(task_handle); // task should be finished at this time so resume it
-        REVOMINIScheduler::context_switch_isr();         // switch context after interrupt
+        REVOMINIScheduler::task_resume(task_handle); // task should be finished at this time so resume it
         update_screen = 0;
     }
 }
@@ -1085,7 +1083,12 @@ void update_max_buffer(const uint8_t *buffer, uint16_t len){
 
     max7456_cs_off();
     
-    if(osd_spi->send_strobe(buffer, len)!=len) MAX_rw(0xff); // finish transfer
+    if(osd_spi->send_strobe(buffer, len)!=len) {
+    /*/// for debug - mark last written char
+        MAX_rw(0x86); // finish transfer
+    //*///
+        MAX_rw(0xff); // finish transfer
+    }
     
 #elif 0
     MAX_write(MAX7456_DMAH_reg, 0);

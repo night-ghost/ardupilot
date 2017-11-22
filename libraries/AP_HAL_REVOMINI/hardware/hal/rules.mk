@@ -28,6 +28,7 @@ cSRCS_$(d)   += $(STM_DIR)/stopwatch.c
 cSRCS_$(d)   += $(STM_DIR)/usb.c
 cSRCS_$(d)   += $(STM_DIR)/pwm_in.c
 cSRCS_$(d)   += $(STM_DIR)/dma.c
+cSRCS_$(d)   += $(STM_DIR)/nvic.c
 
 cppSRCS_$(d) := 
 

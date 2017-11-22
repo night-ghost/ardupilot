@@ -563,9 +563,11 @@ void AP_InertialSensor_Revo::_ioc(){ // io completion ISR, data already in its p
 
 
     if(REVOMINIScheduler::get_current_task() != (void *)task_handle) {
+/*
         REVOMINIScheduler::set_task_active(task_handle); // resume task instead of using period. 
-
         REVOMINIScheduler::context_switch_isr(); // and reschedule tasks after interrupt
+*/ 
+        REVOMINIScheduler::task_resume(task_handle); // resume task instead of using period. 
     }
 }
 

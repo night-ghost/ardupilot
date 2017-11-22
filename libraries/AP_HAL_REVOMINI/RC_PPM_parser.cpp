@@ -12,6 +12,8 @@
 
 #include "RC_PPM_parser.h"
 
+#include "UARTDriver.h"
+#include "UART_PPM.h"
 
 using namespace AP_HAL;
 using namespace REVOMINI;
@@ -58,13 +60,10 @@ void PPM_parser::parse_pulses(void){
 //]
 
     while( getPPM_Pulse(&p, _ch-1)){
-// addHist(p.length);
         rxIntRC(last_pulse.length, p.length, p.state);
         last_pulse = p;
     }
 }
-
-//#pragma GCC optimize ("Og")
 
 
 void PPM_parser::rxIntRC(uint16_t last_value, uint16_t value, bool state)
@@ -311,6 +310,10 @@ void PPM_parser::_process_dsm_pulse(uint16_t width_s0, uint16_t width_s1)
                         _last_signal = systick_uptime();
 //                        _rssi = rssi;
                     }
+                }
+                
+                if(_rc_mode == BOARD_RC_NONE) { // if protocol not decoded
+                    UART_PPM::putch(bt, _ch);    // push received bytes to memory queue to get via fake UARTs
                 }
             }
             if(_rc_mode != BOARD_RC_SUMD) { // try to decode buffer as DSM on full frame

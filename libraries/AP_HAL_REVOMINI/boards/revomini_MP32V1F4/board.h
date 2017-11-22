@@ -179,18 +179,6 @@ void boardInit(void);
 
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
-/*
-     DMA modes:
-     
-0 - disable
-1 - enable on large transfers
-2 - enable alaways
-
-*/    
-
-   //                                    name            device   bus  mode         cs_pin                       speed_low       speed_high dma priority
-#define BOARD_SPI_DEVICES    { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  1,  DMA_Priority_VeryHigh }, \
-                             { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 255 /* caller controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, 2,  DMA_Priority_Medium },
 
 //#define HAL_CONSOLE USB_Driver // console on USB
 //#define HAL_CONSOLE_PORT 0 // USB

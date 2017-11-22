@@ -42,4 +42,4 @@ private:
     bool _blocking;
 };
 
-#endif // __AP_HAL_EMPTY_UARTDRIVER_H__
+#endif 

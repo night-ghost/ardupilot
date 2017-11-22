@@ -124,10 +124,12 @@
 * PWM_IN is rewritten to use HAL drivers, as result its size decreased four times (!)
 * working PPM on AirbotV2/V3
 * added ability to connect buzzer to arbitrary pin (parameter BUZZ_PIN)
-* added priority to SPI transfers
+* added priority to SPI DMA transfers
 * overclocking support
 * OSD is working
 * 'boards' folder moved from 'wirish' to HAL directory, to help to find them
+* added translation of decoded serial data from PPMn input port to fake UARTs
+* reduced to ~1.5uS time from interrupt to resuming task that was waiting that interrupt
 * ...
 * a lot of minor enhancements
 

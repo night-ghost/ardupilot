@@ -95,14 +95,11 @@ static inline void i2c_set_isr_handler(const i2c_dev *dev, Handler h){
     dev->state->handler = h;
 
     irq=dev->er_nvic_line;
-    NVIC_ClearPendingIRQ(irq);
-    NVIC_EnableIRQ(irq);
-    NVIC_SetPriority(irq, I2C_INT_PRIORITY); // 8 bits * 4uS = 32uS max reaction time
+    enable_nvic_irq(irq, I2C_INT_PRIORITY); // 8 bits * 4uS = 32uS max reaction time
 
     irq=dev->ev_nvic_line;
-    NVIC_ClearPendingIRQ(irq);
-    NVIC_EnableIRQ(irq);
-    NVIC_SetPriority(irq, I2C_INT_PRIORITY);
+    
+    enable_nvic_irq(irq, I2C_INT_PRIORITY);
 }
 
 static inline void i2c_clear_isr_handler(const i2c_dev *dev){

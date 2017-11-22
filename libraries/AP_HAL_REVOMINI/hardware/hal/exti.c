@@ -131,12 +131,16 @@ void exti_attach_interrupt_pri(afio_exti_num num,
 	EXTI_Init(&EXTI_InitStructure);
 
 	/* Enable and set EXTI Line Interrupt to the given priority */
+/*
 	NVIC_InitTypeDef   NVIC_InitStructure;
 	NVIC_InitStructure.NVIC_IRQChannel = exti_channels[num].irq_type;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = priority;  // we init NVIC for 4 bit preemption,  0 bit subpriority 
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);  	
+*/
+        enable_nvic_irq(exti_channels[num].irq_type, priority);  // we init NVIC for 4 bit preemption,  0 bit subpriority 
+
 }
 
 
@@ -145,17 +149,25 @@ void exti_detach_interrupt(afio_exti_num num)
 	/* Check the parameters */
 	assert_param(IS_EXTI_PORT_SOURCE(num));
 	
+
 	EXTI_InitTypeDef   EXTI_InitStructure;  
 	EXTI_StructInit(&EXTI_InitStructure);
 	EXTI_InitStructure.EXTI_Line = exti_channels[num].irq_line;
-//	EXTI_InitStructure.EXTI_LineCmd = DISABLE;
+	EXTI_InitStructure.EXTI_LineCmd = DISABLE;
 	EXTI_Init(&EXTI_InitStructure);
 
+
+
+/*
 	NVIC_InitTypeDef   NVIC_InitStructure;
 	NVIC_InitStructure.NVIC_IRQChannel = exti_channels[num].irq_type;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = DISABLE;
 	NVIC_Init(&NVIC_InitStructure);
-  
+
+or
+        NVIC_DisableIRQ(exti_channels[num].irq_type);
+*/
+
 	/* Finally, unregister the user's handler */
 	handlers[num] = (Handler)0;	
 }

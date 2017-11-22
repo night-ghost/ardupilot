@@ -33,6 +33,7 @@ cppSRCS_$(d) += UARTDriver.cpp
 cppSRCS_$(d) += EEPROM.cpp
 cppSRCS_$(d) += UART_SoftDriver.cpp
 cppSRCS_$(d) += tim_i2c.cpp
+cppSRCS_$(d) += UART_PPM.cpp
 
 cFILES_$(d) := $(cSRCS_$(d):%=$(d)/%)
 cppFILES_$(d) := $(cppSRCS_$(d):%=$(d)/%)

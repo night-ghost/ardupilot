@@ -50,6 +50,8 @@ static inline  uint32_t micros() {  return timer_get_count32(TIMER5); }
 
 static inline  uint32_t millis() {  return systick_uptime(); }
 
+typedef uint8_t (*spi_WaitFunc)(uint8_t b);
+
 // utility function 
 extern uint8_t spi_spiSend(uint8_t b);
 extern uint8_t spi_spiRecv(void);
@@ -58,13 +60,14 @@ extern void spi_spiTransfer(const uint8_t *send, uint32_t send_len,  uint8_t *re
 extern void spi_chipSelectHigh(void);
 extern bool spi_chipSelectLow(bool take_sem);
 extern void spi_yield();
+extern uint8_t spi_waitFor(uint8_t out,spi_WaitFunc cb, uint16_t dly);
 extern uint8_t spi_detect();
 extern uint32_t get_fattime ();
 
 
 static volatile DSTATUS Stat = STA_NOINIT;	/* Physical drive status */
 
-static volatile UINT Timer1, Timer2;	/* 1kHz decrement timer stopped at zero (disk_timerproc()) */
+static volatile UINT Timer1, Timer2;	        /* 1kHz decrement timer stopped at zero (disk_timerproc()) */
 static DWORD sd_max_sectors=0;
 
 
@@ -72,6 +75,8 @@ static DWORD sd_max_sectors=0;
 extern int printf(const char *msg, ...);
 
 #if defined(BOARD_SDCARD_CS_PIN)
+
+#define WAIT_IN_ISR
 
 static BYTE CardType;			/* Card type flags */
 static BYTE was_write=0;
@@ -111,7 +116,6 @@ void rcvr_spi_multi (
 	BYTE *buff,		/* Pointer to data buffer */
 	UINT btr		/* Number of bytes to receive (even number) */
 ){
-
     spi_spiTransfer(NULL,0, buff, btr);
 }
 
@@ -120,11 +124,10 @@ void rcvr_spi_multi (
 static inline
 void xmit_spi_multi (
 	const BYTE *buff,	/* Pointer to the data */
-	UINT btx			/* Number of bytes to send (even number) */
+	UINT btx		/* Number of bytes to send (even number) */
 )
 {
-
-    spi_spiTransfer(buff, btx,NULL, 0);
+    spi_spiTransfer(buff, btx, NULL, 0);
 }
 
 /*
@@ -149,18 +152,18 @@ static uint8_t wait_ff(uint8_t b){
 
 static
 int wait_ready (	/* 1:Ready, 0:Timeout */
-	UINT wt			/* Timeout [ms] */
+	UINT wt		/* Timeout [ms] */
 )
 {
     BYTE d;
 
-/*
 
+#if defined(WAIT_IN_ISR)
     d=spi_waitFor(0xFF,wait_ff,wt);
 
     return d == 0xFF;
-      
-*/
+#else
+
     Timer2 = wt;
     do {
 	d = xchg_spi(0xFF);		
@@ -171,6 +174,7 @@ int wait_ready (	/* 1:Ready, 0:Timeout */
         return 1;
     }
     return 0;
+#endif
 }
 
 
@@ -218,19 +222,18 @@ static uint8_t wait_noFF(uint8_t b){
 
 static
 int8_t rcvr_datablock (	/* 1:OK, 0:Error */
-	BYTE *buff,			/* Data buffer */
-	UINT btr			/* Data block length (byte) */
+	BYTE *buff,	/* Data buffer */
+	UINT btr	/* Data block length (byte) */
 )
 {
-	BYTE token;
         BYTE ret=0;
 
-/*
+#if defined(WAIT_IN_ISR)
         ret=spi_waitFor(0xff, wait_noFF, 200);
 
-        if(ret != 0xFF) goto done;		// Function fails if invalid DataStart token or timeout 
-
-*/
+        if(ret != 0xFE) goto done;		// Function fails if invalid DataStart token or timeout 
+#else
+	BYTE token;
 
 	Timer1 = 200;
 	do {					/* Wait for DataStart token in timeout of 200ms */
@@ -241,7 +244,7 @@ int8_t rcvr_datablock (	/* 1:OK, 0:Error */
 	if(token != 0xFE) {
 	    goto done;		/* Function fails if invalid DataStart token or timeout */
 	}
-
+#endif
 	rcvr_spi_multi(buff, btr);		/* Store trailing data to the buffer */
 	xchg_spi(0xFF); xchg_spi(0xFF);		/* Discard CRC */
 
@@ -335,17 +338,17 @@ BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 	buf[4] = (BYTE)arg;			/* Argument[7..0] */
         buf[5] = crc;                           /* CRC + Stop */
 
-        xmit_spi_multi(buf, 6);	// entire command in one packet
+        xmit_spi_multi(buf, 6);	        // entire command in one packet
 
 	/* Receive command resp */
-	if (cmd == CMD12) xchg_spi(0xFF);	/* Diacard following one byte when CMD12 */
+	if (cmd == CMD12) xchg_spi(0xFF);	/* Discard following one byte when CMD12 */
 
-/*
+#if defined(WAIT_IN_ISR)
         res=spi_waitFor(0xff, wait_0x80, 20);
 
         return res;
 
-*/
+#else
 
 	uint8_t n = 255;		        /* Wait for response (10 bytes max) */
 	do {
@@ -354,6 +357,7 @@ BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 	} while ((res & 0x80) && --n);
 
 	return res;				/* Return received response */
+#endif
 }
 
 
@@ -694,11 +698,11 @@ DRESULT sd_ioctl (
 				res = RES_OK;
 			}
 		    }
-		} else {					/* SDC ver 1.XX or MMC */
+		} else {				/* SDC ver 1.XX or MMC */
 		    if ((send_cmd(CMD9, 0) == 0) && rcvr_datablock(csd, 16)) {	/* Read CSD */
 			if (CardType & CT_SD1) {	/* SDC ver 1.XX */
 				*(DWORD*)buff = (((csd[10] & 63) << 1) + ((WORD)(csd[11] & 128) >> 7) + 1) << ((csd[13] >> 6) - 1);
-			} else {					/* MMC */
+			} else {			/* MMC */
 				*(DWORD*)buff = ((WORD)((csd[10] & 124) >> 2) + 1) * (((csd[11] & 3) << 3) + ((csd[11] & 224) >> 5) + 1);
 			}
 			res = RES_OK;

@@ -18,3 +18,4 @@ also supported connection to built-in OSD with CT from my MinimOSD (https://gith
 * set HAL_CONNECT_COM parameter to 5, then reboot / power cycle
 * USB will be connected to OSD after reboot, supported load/store/fonts in MAVLink mode
 
+OSD will work better when VSYNC out from MAX connected to PC3 (R8 to Vcc) 

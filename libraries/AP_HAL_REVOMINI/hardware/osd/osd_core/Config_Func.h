@@ -17,7 +17,6 @@ NOINLINE void eeprom_write_len(byte *p, uint16_t e, uint16_t l){
         b = *p++;
         OSD_EEPROM::write(e, b);
     }
-
 }
 
 
@@ -212,6 +211,7 @@ void inline calc_max(float &dst, float src){
 void inline gps_norm(float &dst, long f){
     dst = f / GPS_MUL;
 }
+
 bool inline timeToScreen(){ // we should renew screen 
     return lflags.need_redraw && !vsync_wait;
 }

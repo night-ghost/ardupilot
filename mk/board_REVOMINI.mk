@@ -270,6 +270,8 @@ ALLDEPS			=	$(ALLOBJS:%.o=%.d)
 
 CAT := cat
 
+FIND := /usr/bin/find
+
 ################################################################################
 # Targets
 #
@@ -320,11 +322,11 @@ revomini-program:
 
 
 revomini-clean: clean
-	$(v) /bin/find $(REVO_PATH) -type f -name "*.d"  -delete
-	$(v) /bin/find $(REVO_PATH) -type f -name "*.o"  -delete
-	$(v) /bin/find $(REVO_PATH) -type f -name "*.i"  -delete
-	$(v) /bin/find $(REVO_PATH) -type f -name "*.ii" -delete
-	$(v) /bin/find $(REVO_PATH) -type f -name "*.d"  -delete
+	$(v) $(FIND) $(REVO_PATH) -type f -name "*.d"  -delete
+	$(v) $(FIND) $(REVO_PATH) -type f -name "*.o"  -delete
+	$(v) $(FIND) $(REVO_PATH) -type f -name "*.i"  -delete
+	$(v) $(FIND) $(REVO_PATH) -type f -name "*.ii" -delete
+	$(v) $(FIND) $(REVO_PATH) -type f -name "*.d"  -delete
 
 
 # Link the final object

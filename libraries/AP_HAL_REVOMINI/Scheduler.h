@@ -280,7 +280,7 @@ public:
   }
   static inline void set_task_active(void *h) {   // tasks are created in stopped state
     task_t * task = (task_t*)h; 
-    task->curr_prio = 70;  //   will get 1st quant 100%
+//    task->curr_prio = 70;  //   will get 1st quant 100%
     task->active=true; 
 }
 
@@ -293,14 +293,34 @@ public:
   static void inline task_resume(void *h) {   // called from IO_Complete ISR to resume task
       task_t * task = (task_t*)h; 
       task->ttw=0;  
+      task->active=true;
+#if 0
       task->curr_prio = 70;
-      
+      context_switch_isr();
+#else
+//      next_task = task;  - damages all statistics
+//      plan_context_switch();
+        _forced_task = task; // force it
+        context_switch_isr();
+#endif 
       uint32_t dt= _micros() - task->sem_start_wait;
       task->t_paused += dt;
   } 
 #else
   static void inline task_pause(uint16_t t) {   s_running->ttw=t;  }                      // called from task when it starts IO transfer
-  static void inline task_resume(void *h)   {   task_t * task = (task_t*)h; task->ttw=0; task->curr_prio = 70;  } // called from IO_Complete ISR to resume task, and   will get 1st quant 100%
+  static void inline task_resume(void *h)   {   
+      task_t * task = (task_t*)h; 
+#if 0
+      task->curr_prio = 70;
+      context_switch_isr();
+#else
+//      next_task = task; // force it
+//      plan_context_switch();
+        _forced_task = task; // force it
+        context_switch_isr();
+#endif 
+
+  } // called from IO_Complete ISR to resume task, and   will get 1st quant 100%
 #endif
 //]  
 
@@ -440,6 +460,7 @@ protected:
     static void check_stack(uint32_t sp);
     static task_t *_idle_task; // remember TCB of idle task
  
+    static task_t *_forced_task;
 #define await(cond) while(!(cond)) yield()
   
 //} end of multitask

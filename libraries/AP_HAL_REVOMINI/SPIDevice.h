@@ -48,7 +48,15 @@ struct spi_pins {
     uint8_t mosi;
 };
 
-struct SPIDesc {
+typedef enum SPI_TRANSFER_MODE {
+    SPI_TRANSFER_POLL=0,
+    SPI_TRANSFER_DMA,
+    SPI_TRANSFER_FORCE_DMA,
+    SPI_TRANSFER_INTR,
+    SPI_TRANSFER_SOFT,
+} SPI_transferMode;
+
+typedef struct SPIDESC {
     const char * const name;
     const spi_dev * const dev;
     uint8_t bus;
@@ -56,9 +64,9 @@ struct SPIDesc {
     uint16_t cs_pin;
     SPIFrequency lowspeed;
     SPIFrequency highspeed;
-    uint8_t mode;  // mode of operations: 0 - polling, 1&2 DMA, 3 interrupts
+    SPI_transferMode mode;  // mode of operations: 0 - polling, 1&2 DMA, 3 interrupts, 4 software
     uint32_t prio; // DMA priority
-};
+} SPIDesc;
 
 enum SPI_ISR_MODE {
     SPI_ISR_NONE,
@@ -104,6 +112,10 @@ public:
     /* See AP_HAL::SPIDevice::transfer_fullduplex() */
     bool transfer_fullduplex(const uint8_t *send, uint8_t *recv, uint32_t len) override;
 
+    /* single-byte transfers don't do it */
+    inline void apply_speed() {
+        spi_set_speed(_desc.dev, determine_baud_rate(_speed));
+    }
 
     uint16_t send_strobe(const uint8_t *buffer, uint16_t len); // send in ISR and strobe each byte by CS
     void wait_busy() { spi_wait_busy(_desc.dev);  }
@@ -197,6 +209,7 @@ protected:
              uint16_t      miso_pin;
 
     uint16_t dly_time;
+    void spi_soft_set_speed();
 #endif
 
 #ifdef DEBUG_SPI    
@@ -219,4 +232,4 @@ protected:
 
 };
 
-}
+} // namespace

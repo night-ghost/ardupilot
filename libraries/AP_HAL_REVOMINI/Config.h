@@ -44,7 +44,7 @@ interrupts priorities:
 //                            10
 #define USB_INT_PRIORITY      11 // usb
 #define IOC_INT_PRIORITY      12 // driver's io_completion
-//                            13
+#define MASSSTORAGE_PRIORITY  13 // USB in mass-storage mode
 #define SVC_INT_PRIORITY      14 // scheduler - Timer7, tail timer, svc
 #define PENDSV_INT_PRIORITY   15 // Pend_Sw
 

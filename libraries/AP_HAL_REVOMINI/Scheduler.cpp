@@ -112,6 +112,8 @@ uint32_t REVOMINIScheduler::MPU_count IN_CCM;
 uint32_t REVOMINIScheduler::MPU_Time IN_CCM;
 #endif
 volatile bool REVOMINIScheduler::need_switch_task IN_CCM;
+task_t *REVOMINIScheduler::_forced_task IN_CCM;
+
 
 REVOMINIScheduler::REVOMINIScheduler()
 {
@@ -132,6 +134,7 @@ REVOMINIScheduler::REVOMINIScheduler()
     s_main.handle = h.h;        // to not 0
     s_main.guard = STACK_GUARD; // to check corruption of TCB by stack overflow
 
+    _forced_task = NULL;
 }
 
 
@@ -1000,98 +1003,104 @@ task_t *REVOMINIScheduler::get_next_task(){
 #endif
     }
 
-    task_t *ptr = me; // starting from current task
+    if(_forced_task) {
+        task = _forced_task;
+        _forced_task = NULL;
+    } else {
 
-    while(true) { // lets try to find task to switch to
-        ptr = ptr->next; // Next task in run queue will continue
+        task_t *ptr = me; // starting from current task
+
+        while(true) { // lets try to find task to switch to
+            ptr = ptr->next; // Next task in run queue will continue
 
 #if 0
-        if(!(ADDRESS_IN_RAM(ptr) || ADDRESS_IN_CCM(ptr)) ){
-            AP_HAL::panic("PANIC: s_rinning spoiled in process %d\n", me->id);
-        }
+            if(!(ADDRESS_IN_RAM(ptr) || ADDRESS_IN_CCM(ptr)) ){
+                AP_HAL::panic("PANIC: s_rinning spoiled in process %d\n", me->id);
+            }
 #endif
             
-        if(!ptr->handle) goto skip_task; // skip finished tasks
+            if(!ptr->handle) goto skip_task; // skip finished tasks
         
-//        if(ptr->f_yield) {
-//            ptr->f_yield=false; // only once
-//            goto skip_task;     // this allows to execute low-priority tasks 
-//        }
+//              if(ptr->f_yield) {
+//                    ptr->f_yield=false; // only once
+//                  goto skip_task;     // this allows to execute low-priority tasks 
+//                }
         
-        if(ptr->sem_wait) { // task want a semaphore
-            if(ptr->sem_wait->is_taken()) { // task blocked on semaphore
-                task_t *own =(task_t *)ptr->sem_wait->get_owner();
-                if(own != ptr) { // owner is another task?
-                    uint32_t dt = now - ptr->sem_start_wait;   // time since start waiting
-                    if(ptr->sem_time == HAL_SEMAPHORE_BLOCK_FOREVER || dt < ptr->sem_time) {
-                        if(ptr->curr_prio>1) ptr->curr_prio--;      // increase priority as task waiting for a semaphore
-                        if(own->curr_prio > ptr->curr_prio) {
-                            own->curr_prio=ptr->curr_prio;
+            if(ptr->sem_wait) { // task want a semaphore
+                if(ptr->sem_wait->is_taken()) { // task blocked on semaphore
+                    task_t *own =(task_t *)ptr->sem_wait->get_owner();
+                    if(own != ptr) { // owner is another task?
+                        uint32_t dt = now - ptr->sem_start_wait;   // time since start waiting
+                        if(ptr->sem_time == HAL_SEMAPHORE_BLOCK_FOREVER || dt < ptr->sem_time) {
+                            if(ptr->curr_prio>1) ptr->curr_prio--;      // increase priority as task waiting for a semaphore
+                            if(own->curr_prio > ptr->curr_prio) {
+                                own->curr_prio=ptr->curr_prio;
+                            }
+                            goto skip_task; 
                         }
-                        goto skip_task; 
-                    }
-                }
-            } 
-            ptr->sem_wait=NULL; // clear semaphore after release
+                    }       
+                } 
+                ptr->sem_wait=NULL; // clear semaphore after release
 #ifdef MTASK_PROF
-            uint32_t st=now-ptr->sem_start_wait;
-            if(st>ptr->sem_max_wait) ptr->sem_max_wait=st; // time of semaphore waiting
+                uint32_t st=now-ptr->sem_start_wait;
+                if(st>ptr->sem_max_wait) ptr->sem_max_wait=st; // time of semaphore waiting
 #endif            
-        }
+            }
             
         
-        if(!ptr->active){ // non-active, is it periodic?
-            if(ptr->period){ 
-                if(_timer_suspended) goto skip_task; //       timed tasks can't be started
+            if(!ptr->active){ // non-active, is it periodic?
+                if(ptr->period){ 
+                    if(_timer_suspended) goto skip_task; //       timed tasks can't be started
                 
-                timeFromLast = now - ptr->time_start; // time from last run
-                if( timeFromLast < ptr->period) {     //   is less than task's period?
-                    remains = ptr->period - timeFromLast;
-                    if(remains>10) {
-                        if(remains<partial_quant) {
-                            partial_quant=remains; // minimal time remains to next task
-                            want_tail = ptr;
-                        }
-                        goto skip_task; 
-                    }// else execute task slightly before
+                    timeFromLast = now - ptr->time_start; // time from last run
+                    if( timeFromLast < ptr->period) {     //   is less than task's period?
+                        remains = ptr->period - timeFromLast;
+                        if(remains>10) {
+                            if(remains<partial_quant) {
+                                partial_quant=remains; // minimal time remains to next task
+                                want_tail = ptr;
+                            }
+                            goto skip_task; 
+                        }// else execute task slightly before
+                    }
+                } else { // non-active non-periodic tasks with manual activation
+                    goto skip_task; // should be skipped
                 }
-            } else { // non-active non-periodic tasks with manual activation
-                goto skip_task; // should be skipped
+                ptr->active=true; // selected task to run, even if it lose quant by priority
+
+            } else { // обычный тайм слайс
+
+                if(ptr->ttw){// task wants to wait 
+                    timeFromLast = now - ptr->t_yield;     // time since that moment
+                    if(timeFromLast < ptr->ttw){           // still less than ttw ?
+                        remains = ptr->ttw - timeFromLast; // remaining time to wait
+                        if(remains>4) { // context switch time
+                            if(remains<partial_quant) {
+                                partial_quant=remains;
+                                want_tail = ptr;
+                            }
+                            goto skip_task; 
+                        }// else execute task slightly before
+                    }
+                } 
             }
-            ptr->active=true; // selected task to run, even if it lose quant by priority
 
-        } else { // обычный тайм слайс
-
-            if(ptr->ttw){// task wants to wait 
-                timeFromLast = now - ptr->t_yield;     // time since that moment
-                if(timeFromLast < ptr->ttw){           // still less than ttw ?
-                    remains = ptr->ttw - timeFromLast; // remaining time to wait
-                    if(remains>4) { // context switch time
-                        if(remains<partial_quant) {
-                            partial_quant=remains;
-                            want_tail = ptr;
-                        }
-                        goto skip_task; 
-                    }// else execute task slightly before
-                }
-            } 
-        }
-
-        if(ptr->curr_prio <= task->curr_prio){ // select the most priority task, round-robin for equal priorities
-            // task loose tick
-            if(task->priority != 255) { // not for idle task
-                if(task->curr_prio>1)  task->curr_prio--;      // increase priority if task loose tick
+            if(ptr->curr_prio <= task->curr_prio){ // select the most priority task, round-robin for equal priorities
+                // task loose tick
+                if(task->priority != 255) { // not for idle task
+                    if(task->curr_prio>1)  task->curr_prio--;      // increase priority if task loose tick
 // в результате роста приоритета ожидающей задачи мы не останавливаем низкоприоритетные задачи полностью, а лишь замедляем их
 // выполнение, заставляя пропустить число тиков, равное разности приоритетов. В результате низкоприоритетная задача выполняется на меньшей скорости,
 // которую можно настраивать изменением разницы приоритетов
+                }
+                task = ptr; // winner
             }
-            task = ptr; // winner
-        }
 skip_task:
-    // we should do this check after EACH task so can't use "continue" which skips ALL loop. 
-    // And we can't move this to begin of loop because then interrupted task does not participate in the comparison of priorities
-        if(ptr == me) { 
-            break;   // 'me' is the task that works now, so full loop - now we have most-priority task so let it run!
+        // we should do this check after EACH task so can't use "continue" which skips ALL loop. 
+        // And we can't move this to begin of loop because then interrupted task does not participate in the comparison of priorities
+            if(ptr == me) { 
+                break;   // 'me' is the task that works now, so full loop - now we have most-priority task so let it run!
+            }
         }
     }
 

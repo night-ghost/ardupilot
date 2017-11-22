@@ -53,15 +53,18 @@ using namespace REVOMINI;
 
 
 
-extern "C" void    spi_spiSend(uint8_t b);
-extern "C" uint8_t spi_spiRecv(void);
-extern "C" uint8_t spi_spiXchg(uint8_t b);
-extern "C" void spi_spiTransfer(const uint8_t *send, uint32_t send_len,  uint8_t *recv, uint32_t recv_len);
-extern "C" void spi_chipSelectHigh(void);
-extern "C" bool spi_chipSelectLow(bool take_sem);
-extern "C" void spi_yield();
-extern "C" uint8_t spi_detect();
-extern "C" uint32_t get_fattime();
+extern "C" {
+    void    spi_spiSend(uint8_t b);
+    uint8_t spi_spiRecv(void);
+    uint8_t spi_spiXchg(uint8_t b);
+    void spi_spiTransfer(const uint8_t *send, uint32_t send_len,  uint8_t *recv, uint32_t recv_len);
+    void spi_chipSelectHigh(void);
+    bool spi_chipSelectLow(bool take_sem);
+    void spi_yield();
+    uint8_t spi_waitFor(uint8_t out, spi_WaitFunc cb, uint16_t dly);
+    uint8_t spi_detect();
+    uint32_t get_fattime();
+};
 
 
 class Sd2Card {

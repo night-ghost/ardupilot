@@ -8,6 +8,7 @@
 
 extern "C" {
     extern int usb_close(void);
+    extern void SCSI_Init();
 }
 
 namespace REVOMINI {

@@ -28,8 +28,8 @@ void MassStorage::setup() const {
     usb_open(); 
 
     usb_default_attr(&usb_attr);
-    usb_attr.preempt_prio = 13; // very low to allow to run timers
-    usb_attr.sub_prio = 13;
+    usb_attr.preempt_prio = MASSSTORAGE_PRIORITY; // very low to allow to run timers
+    usb_attr.sub_prio = 0;
     usb_attr.use_present_pin = 1;
     usb_attr.present_port = PIN_MAP[BOARD_USB_SENSE].gpio_device;
     usb_attr.present_pin =  PIN_MAP[BOARD_USB_SENSE].gpio_bit;
@@ -44,6 +44,8 @@ void MassStorage::setup() const {
     MAL_massBlockCount[0] = fs->sectorCount();   // in blocks
     
     SD.sync(); // consistent state
+
+    SCSI_Init(); // start USB IO task
 
     USBD_Init(&USB_OTG_dev, USB_OTG_FS_CORE_ID, &USR_MSC_desc, &USBD_MSC_cb, &USR_cb);
 }

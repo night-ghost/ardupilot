@@ -2,9 +2,10 @@
 #define _SPI_H_
 
 
-#include <gpio_hal.h>
+#include "gpio_hal.h"
 #include <stm32f4xx.h>
-#include <dma.h>
+#include "dma.h"
+#include "nvic.h"
 
 
 /*
@@ -286,9 +287,11 @@ static inline void spi_attach_interrupt(const spi_dev *dev, Handler handler){
     dev->state->handler = handler;
     
     IRQn_Type irq=dev->irq;
-    NVIC_ClearPendingIRQ(irq);
-    NVIC_EnableIRQ(irq);
-    NVIC_SetPriority(irq, SPI_INT_PRIORITY); 
+    
+//    NVIC_ClearPendingIRQ(irq);
+//    NVIC_EnableIRQ(irq);
+//    NVIC_SetPriority(irq, SPI_INT_PRIORITY); 
+    enable_nvic_irq(irq, SPI_INT_PRIORITY); 
 }
 
 static inline void spi_detach_interrupt(const spi_dev *dev){

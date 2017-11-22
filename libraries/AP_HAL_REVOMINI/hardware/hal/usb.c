@@ -227,10 +227,6 @@ void USBD_USR_Init(void)
 {  
     usb_connected = 0;
     usb_opened = 0;
-#ifdef USB_MASSSTORAGE    
-    extern void SCSI_Init();
-    SCSI_Init(); // start USB IO task
-#endif
 }
 
 void USBD_USR_DeviceReset(uint8_t speed )
@@ -373,23 +369,28 @@ void usb_setParams(usb_attr_t * attr)
 
 void USB_OTG_BSP_EnableInterrupt(USB_OTG_CORE_HANDLE *pdev)
 {
+/*
     NVIC_InitTypeDef NVIC_InitStructure;
     NVIC_InitStructure.NVIC_IRQChannel = OTG_FS_IRQn;
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = preempt_prio;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = sub_prio;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure);
+*/
+    enable_nvic_irq(OTG_FS_IRQn, preempt_prio);
 }
 
 void USB_OTG_BSP_DisableInterrupt()
 {
+/*
 	NVIC_InitTypeDef NVIC_InitStructure;
 	NVIC_InitStructure.NVIC_IRQChannel = OTG_FS_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = DISABLE;
 	NVIC_Init(&NVIC_InitStructure);
-
+*/
+    NVIC_DisableIRQ(OTG_FS_IRQn);
 }
 
 void USB_OTG_BSP_mDelay (const uint32_t msec)

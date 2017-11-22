@@ -2,7 +2,10 @@
 #define BOARD_STM32V1F4
 
 #include <boards.h>
+#include "../../SPIDevice.h"
+#include <AP_Common/AP_Common.h>
 
+using namespace REVOMINI;
 
 extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
 
@@ -130,30 +133,45 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
 
 
 extern const struct TIM_Channel PWM_Channels[] __FLASH__ =   {
-    //CH1 and CH2 also for PPMSUM / SBUS / DSM
-	    { // 0 RC_IN1
-		.pin         = 101,
-	    },
-	    { // 1 RC_IN2
-		.pin         = 25,
-	    },
-	    { // 2 RC_IN3
-		.pin         = 12,
-	    },
-	    { // 3 RC_IN4
-		.pin         = 13,
-	    },
-	    { // 4 RC_IN5
-		.pin         = 14,
-	    },
-	    { // 5 RC_IN6
-		.pin         = 15,
-	    },
-    };
+//CH1 and CH2 also for PPMSUM / SBUS / DSM
+    { // 0 RC_IN1
+	.pin         = 101,
+    },
+    { // 1 RC_IN2
+	.pin         = 25,
+    },
+    { // 2 RC_IN3
+	.pin         = 12,
+    },
+    { // 3 RC_IN4
+	.pin         = 13,
+    },
+    { // 4 RC_IN5
+	.pin         = 14,
+    },
+    { // 5 RC_IN6
+	.pin         = 15,
+    },
+};
 
 
-//  SIZEOF(PIN_MAP) / SIZEOF(stm32_pin_info)
+/*
+     DMA modes:
+     
+0 - disable
+1 - enable on large transfers
+2 - enable alaways
 
+*/
+extern const SPIDesc spi_device_table[] = {    // different SPI tables per board subtype
+//               name            device   bus  mode         cs_pin                 speed_low       speed_high   dma                    priority
+     { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,    SPI_1_125MHZ,   SPI_9MHZ,   SPI_TRANSFER_DMA,       DMA_Priority_VeryHigh }, 
+     { BOARD_SDCARD_NAME,        _SPI2,   2,  SPI_MODE_0, 255,                     SPI_1_125MHZ,   SPI_18MHZ,  SPI_TRANSFER_FORCE_DMA, DMA_Priority_Medium }, 
+     { HAL_BARO_BMP280_NAME,     _SPI3,   3,  SPI_MODE_3, BOARD_BMP280_CS_PIN,     SPI_1_125MHZ,   SPI_9MHZ,   SPI_TRANSFER_DMA,       DMA_Priority_High }, 
+     { BOARD_OSD_NAME,           _SPI3,   3,  SPI_MODE_0, BOARD_OSD_CS_PIN,        SPI_1_125MHZ,   SPI_4_5MHZ, SPI_TRANSFER_DMA,       DMA_Priority_Low },
+};
+
+extern const uint8_t REVOMINI_SPI_DEVICE_NUM_DEVICES = ARRAY_SIZE(spi_device_table);
 
 void boardInit(void) {
 

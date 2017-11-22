@@ -10,10 +10,12 @@
 #include "HAL_REVOMINI_Class.h"
 #include "RCInput.h"
 #include "Util.h"
-#include <AP_HAL_Empty/AP_HAL_Empty.h>
-#include <AP_HAL_Empty/AP_HAL_Empty_Private.h>
+//#include <AP_HAL_Empty/AP_HAL_Empty.h>
+//#include <AP_HAL_Empty/AP_HAL_Empty_Private.h>
 
 #include <AP_Param_Helper/AP_Param_Helper.h>
+
+#include "UART_PPM.h"
 
 #if defined(USE_SOFTSERIAL)
 #include "UART_SoftDriver.h"
@@ -67,7 +69,8 @@ static REVOMINIUARTDriver uart6Driver(_USART6); // pin 7&8(REVO)/5&6(RevoMini) o
  static REVOMINIUARTDriver uart4Driver(_UART4);  // pin 5&6 of servo port
 #endif
 
-
+static UART_PPM uartPPM2(1); // PPM2 input 
+//static UART_PPM uartPPM1(0); // PPM1 input 
 
 
 
@@ -130,7 +133,8 @@ HAL_REVOMINI::HAL_REVOMINI() :
 #elif defined(BOARD_OSD_NAME) && defined(USE_SOFTSERIAL) && defined(BOARD_SOFTSERIAL_TX) && defined(BOARD_SOFTSERIAL_RX)
         &softDriver,            /* uartE softSerial on boards with OSD*/
 #else
-        NULL,                   /* no uartE */
+//        NULL,                   /* no uartE */
+        &uartPPM2,              /* uartE - input data from PPM2 pin */
 #endif
 
 #if defined(BOARD_OSD_NAME)
@@ -208,6 +212,7 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
         {
             extern void usb_init();     //      init as VCP
             usb_init(); // moved from boards.cpp
+            printf("\nUSB init done at %ldms\n", millis());            
 
             uartA->begin(115200); // uartA is the USB serial port used for the console, so lets make sure it is initialized at boot 
 
@@ -239,6 +244,7 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
     }
 
 
+    printf("\nHAL init done at %ldms\n", millis());            
 
     callbacks->setup();
 
@@ -252,6 +258,9 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
     scheduler->system_initialized(); // clear bootloader flag
 
     REVOMINIScheduler::start_stats_task(); 
+
+    printf("\nLoop started at %ldms\n", millis());            
+
 
 // main application loop hosted here!
     for (;;) {

@@ -380,7 +380,6 @@ enum I2C_state {
     moved from low layer to be properly integrated to multitask
 
 */
-//#pragma GCC optimize ("Og")
 
 
 
