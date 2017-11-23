@@ -2,7 +2,6 @@
 
 #include <hal.h>
 #include "adc.h"
-//#include "gpiopins.h"
 #include <stdbool.h>
 
 const adc_dev _adc1 = {
@@ -77,8 +76,9 @@ void adc_init(const adc_dev *dev) {
     ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
     ADC_InitStructure.ADC_NbrOfConversion = 1;
     ADC_Init(dev->adcx, &ADC_InitStructure);
-     
 }
+
+#if 0 // unused
 
 /**
  * @brief Perform a single synchronous software triggered conversion on a
@@ -171,3 +171,4 @@ uint16_t vref_read(void)
 
   return (res>>2);
 }
+#endif

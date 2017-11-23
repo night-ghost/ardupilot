@@ -872,9 +872,6 @@ static inline void enable_irq(const timer_dev *dev, timer_interrupt_id iid, uint
     if(priority  & PRIO_DISABLE_FLAG){
         NVIC_DisableIRQ(irq);
     }else {
-//        NVIC_ClearPendingIRQ(irq);
-//        NVIC_EnableIRQ(irq);
-//        NVIC_SetPriority(irq,priority);
         enable_nvic_irq(irq, priority);
     }
 

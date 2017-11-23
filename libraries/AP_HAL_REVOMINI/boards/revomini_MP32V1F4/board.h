@@ -2,8 +2,6 @@
 #define _BOARD_STM32V1F4_H_
 
 
-void boardInit(void);
-
 #define BOARD_OWN_NAME "REVOMINI"
 
 /**

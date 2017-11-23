@@ -71,13 +71,9 @@ void REVOMINIAnalogIn::_register_channel(REVOMINIAnalogSource* ch) {
     }
     _channels[_num_channels] = ch;
 
-//    hal.console->printf("Register Channel:%u on pin:%u \n", _num_channels, ch->_pin );
-
     // *NO* need to lock to increment _num_channels INSPITE OF it is used by the interrupt to access _channels 
     // because we first fill _channels[]
-//    noInterrupts();
     _num_channels++;
-//    interrupts();
 }
 
 
@@ -95,10 +91,11 @@ void REVOMINIAnalogIn::_timer_event(void)
     }
 
     if (cnv_started && !(dev->adcx->SR & ADC_SR_EOC))	{
-	    // ADC Conversion is still running - this should not happen, as we are called at 1khz.
+	    // ADC Conversion is still running - this should not happens, as we are called at 1khz.
 	    // SO - more likely we forget to start conversion or some went wrong...
 	    // let's fix it
-	    ADC_SoftwareStartConv(dev->adcx);
+//	    ADC_SoftwareStartConv(dev->adcx);
+	    adc_start_conv(dev);
 	    return;
     }
 
@@ -106,7 +103,9 @@ void REVOMINIAnalogIn::_timer_event(void)
     if (_channel_repeat_count < CHANNEL_READ_REPEAT ||
         !_channels[_active_channel]->reading_settled())  {
         // Start a new conversion on the same channel, throw away the current conversion 
-        ADC_SoftwareStartConv(dev->adcx);
+        //ADC_SoftwareStartConv(dev->adcx);
+        adc_start_conv(dev);
+
         cnv_started=true;
         return;
     }
@@ -130,7 +129,8 @@ next_channel:
 
     if(dev != NULL) {
         /* Start conversion */
-        ADC_SoftwareStartConv(dev->adcx);
+        //ADC_SoftwareStartConv(dev->adcx);
+        adc_start_conv(dev);
         cnv_started=true;
     }
 

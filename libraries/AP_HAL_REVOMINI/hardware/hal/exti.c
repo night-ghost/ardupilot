@@ -89,11 +89,8 @@ void exti_attach_interrupt(afio_exti_num num,
 	EXTI_Init(&EXTI_InitStructure);
 
 	/* Enable and set EXTI Line Interrupt to the lowest priority */
-	NVIC_InitStructure.NVIC_IRQChannel = exti_channels[num].irq_type;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = GPIO_INT_PRIORITY;  // we init NVIC for 4 bit preemption,  0 bit subpriority 
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&NVIC_InitStructure);  	
+        enable_nvic_irq(exti_channels[num].irq_type, GPIO_INT_PRIORITY);  // we init NVIC for 4 bit preemption,  0 bit subpriority 
+
 }
 
 void exti_attach_interrupt_pri(afio_exti_num num,
@@ -131,14 +128,6 @@ void exti_attach_interrupt_pri(afio_exti_num num,
 	EXTI_Init(&EXTI_InitStructure);
 
 	/* Enable and set EXTI Line Interrupt to the given priority */
-/*
-	NVIC_InitTypeDef   NVIC_InitStructure;
-	NVIC_InitStructure.NVIC_IRQChannel = exti_channels[num].irq_type;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = priority;  // we init NVIC for 4 bit preemption,  0 bit subpriority 
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_Init(&NVIC_InitStructure);  	
-*/
         enable_nvic_irq(exti_channels[num].irq_type, priority);  // we init NVIC for 4 bit preemption,  0 bit subpriority 
 
 }
@@ -158,13 +147,7 @@ void exti_detach_interrupt(afio_exti_num num)
 
 
 
-/*
-	NVIC_InitTypeDef   NVIC_InitStructure;
-	NVIC_InitStructure.NVIC_IRQChannel = exti_channels[num].irq_type;
-	NVIC_InitStructure.NVIC_IRQChannelCmd = DISABLE;
-	NVIC_Init(&NVIC_InitStructure);
-
-or
+/* do not disable interrupt in NVIC because it can be shared
         NVIC_DisableIRQ(exti_channels[num].irq_type);
 */
 

@@ -130,6 +130,8 @@
 * 'boards' folder moved from 'wirish' to HAL directory, to help to find them
 * added translation of decoded serial data from PPMn input port to fake UARTs
 * reduced to ~1.5uS time from interrupt to resuming task that was waiting that interrupt
+* unified NVIC handling
+* fixed bug in parsing of .osd file
 * ...
 * a lot of minor enhancements
 
@@ -172,6 +174,7 @@ task 5 (0x804CD492000CF20) time:    0.34% mean     14.0uS max    43uS full     8
 task 6 (0x80547D92000CFA0) time:    3.38% mean     33.2uS max    49uS full     168uS wait sem.      8uS
 task 7 (0x0000000080ADE5D) time:    0.01% mean     84.5uS max   107uS full    7044uS wait sem.      0uS
 
+OSD task uses 0.5% of CPU
 
 Timer usage:
 

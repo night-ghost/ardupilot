@@ -28,7 +28,7 @@
 #endif
 
 /*
-interrupts priorities:
+ interrupts priorities:
 */
 
 #define PWM_INT_PRIORITY       0 // PWM input (10uS between interrupts)
@@ -44,7 +44,7 @@ interrupts priorities:
 //                            10
 #define USB_INT_PRIORITY      11 // usb
 #define IOC_INT_PRIORITY      12 // driver's io_completion
-#define MASSSTORAGE_PRIORITY  13 // USB in mass-storage mode
+//                            13
 #define SVC_INT_PRIORITY      14 // scheduler - Timer7, tail timer, svc
 #define PENDSV_INT_PRIORITY   15 // Pend_Sw
 

@@ -125,6 +125,7 @@ extern const uint8_t boardUsedPins[];
  */
 void init(void);
 
+
 /**
  * @brief Board-specific initialization function.
  *
@@ -135,6 +136,7 @@ void init(void);
  * @see init()
  */
 extern void boardInit(void);
+
 
 #ifdef __cplusplus
  extern "C" {

@@ -142,6 +142,10 @@ REVOMINIScheduler::REVOMINIScheduler()
 static void idle_task(){
     while(1){
         __WFE(); 
+        // see RM090 12.2.3
+        TIMER6->regs->SR &= TIMER_SR_UIF;    // reset pending bit
+        NVIC_ClearPendingIRQ(TIM6_DAC_IRQn); // timer6 as event generator - reset IRQ
+        
         REVOMINIScheduler::yield(0);
     }
 }
@@ -664,7 +668,7 @@ void REVOMINIScheduler::_print_stats(){
             for(uint8_t i=0; i<n; i++){
                 REVOI2CDevice * d = REVOI2CDevice::get_device(i);
                 if(d){
-                    printf("bus %d addr %x errors %ld last error=%d\n",d->get_bus(), d->get_addr(), d->get_error_count(), d->get_last_error());   
+                    printf("bus %d addr %x errors %ld last error=%d state=%d\n",d->get_bus(), d->get_addr(), d->get_error_count(), d->get_last_error(), d->get_last_error_state());   
                 }
             }
             }break;

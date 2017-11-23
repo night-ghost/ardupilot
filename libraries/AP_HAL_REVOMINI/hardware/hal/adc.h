@@ -31,6 +31,7 @@ void adc_init(const adc_dev *dev);
 //void adc_set_extsel(const adc_dev *dev, adc_extsel_event event);
 void adc_foreach(void (*fn)(const adc_dev*));
 //void adc_set_sample_rate(const adc_dev *dev, adc_smp_rate smp_rate);
+
 uint16_t adc_read(const adc_dev *dev, uint8_t channel);
 uint16_t vref_read(void);
 uint16_t temp_read(void);
@@ -69,7 +70,9 @@ static inline void adc_set_reg_seqlen(const adc_dev *dev, uint8_t length) {
  */
 static inline void adc_enable(const adc_dev *dev) {
     /* Enable ADCx */
-    ADC_Cmd(dev->adcx, ENABLE);
+//    ADC_Cmd(dev->adcx, ENABLE);
+    /* Set the ADON bit to wake up the ADC from power down mode */
+    dev->adcx->CR2 |= (uint32_t)ADC_CR2_ADON;
 }
 
 /**
@@ -77,7 +80,8 @@ static inline void adc_enable(const adc_dev *dev) {
  * @param dev ADC device to disable
  */
 static inline void adc_disable(const adc_dev *dev) {
-	ADC_Cmd(dev->adcx, DISABLE);
+//    ADC_Cmd(dev->adcx, DISABLE);
+    dev->adcx->CR2 &= (uint32_t)(~ADC_CR2_ADON);
 }
 
 /**
@@ -85,6 +89,12 @@ static inline void adc_disable(const adc_dev *dev) {
  */
 static inline void adc_disable_all(void) {
     adc_foreach(adc_disable);
+}
+
+static inline void adc_start_conv(const adc_dev *dev)
+{
+  /* Enable the selected ADC conversion for regular group */
+  dev->adcx->CR2 |= (uint32_t)ADC_CR2_SWSTART;
 }
 
 #ifdef __cplusplus

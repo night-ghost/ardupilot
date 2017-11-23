@@ -116,6 +116,7 @@ public:
 
     inline uint32_t get_error_count() { return _lockup_count; }
     inline uint8_t  get_last_error() { return last_error; }
+    inline uint8_t  get_last_error_state() { return last_error_state; }
     inline uint8_t  get_bus()  { return _bus; }
     inline uint8_t  get_addr() { return _address; }
     
@@ -123,8 +124,6 @@ public:
     static inline REVOMINI::REVOI2CDevice * get_device(uint8_t i) { return devices[i]; }
 
     void do_bus_reset();
-
-    void _io_cb();
 
 private:
     void init();
@@ -142,6 +141,7 @@ private:
     uint32_t _lockup_count;
     bool     _initialized;
     uint8_t  last_error;
+    uint8_t  last_error_state;
     bool     _slow;
     bool     _failed;
     bool     need_reset;
@@ -160,7 +160,7 @@ private:
     Handler _completion_cb;
 
     uint8_t _state; // state of transfer for ISR
-    uint8_t _error; // error from ISR
+    volatile uint8_t _error; // error from ISR
     uint8_t _addr;      //      data for ISR
     const uint8_t *_tx_buff;
     uint8_t  _tx_len;

@@ -28,7 +28,7 @@ void MassStorage::setup() const {
     usb_open(); 
 
     usb_default_attr(&usb_attr);
-    usb_attr.preempt_prio = MASSSTORAGE_PRIORITY; // very low to allow to run timers
+    usb_attr.preempt_prio = USB_INT_PRIORITY;
     usb_attr.sub_prio = 0;
     usb_attr.use_present_pin = 1;
     usb_attr.present_port = PIN_MAP[BOARD_USB_SENSE].gpio_device;

@@ -312,7 +312,9 @@ again:
 
         if((_retries-retries) > 0 || ret==I2C_BUS_ERR){ // not reset bus or log error on 1st try, except ArbitrationLost error
             last_error = ret;   // remember
+            last_error_state = _state; // remember to show
             if(last_op) last_error+=50; // to distinguish read and write errors
+
             _lockup_count ++;  
             _initialized=false; // will be reinitialized at next transfer
         
@@ -327,9 +329,6 @@ again:
     return false;
 }
 
-void REVOI2CDevice::_io_cb(){
-
-}
 
 void REVOI2CDevice::do_bus_reset(){ // public - with semaphores
     if(_semaphores[_bus].take(HAL_SEMAPHORE_BLOCK_FOREVER)){
@@ -406,30 +405,27 @@ uint32_t REVOI2CDevice::i2c_write(uint8_t addr, const uint8_t *tx_buff, uint8_t 
     // Send START condition
     _dev->I2Cx->CR1 |= I2C_CR1_START;
 
+    // need to wait until  transfer complete 
+    uint32_t t = hal_micros();
+    uint32_t timeout = i2c_bit_time * 9 * (len+1) * 8 + 100; // time to transfer all data *8 plus 100uS
+
+    _task = REVOMINIScheduler::get_current_task();// if function called from task - store it and pause
+
     noInterrupts();
     _dev->I2Cx->CR2 |= I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN;    // Enable interrupts
 
-    // need to wait until  transfer complete 
-    uint32_t t = hal_micros();
-    uint32_t timeout = i2c_bit_time * 9 * (len+1) * 4 + 100; // time to transfer all data *4 plus 100uS
-    _task = REVOMINIScheduler::get_current_task();// if function called from task - store it and pause
     if(_task) REVOMINIScheduler::task_pause(timeout);
     interrupts();
 
     if(_completion_cb) return I2C_PENDING;
         
-
-
-    while (hal_micros() - t < timeout) {
-        if(_error!=I2C_ERR_TIMEOUT) break; // error changed
-        
+    while (hal_micros() - t < timeout && _error==I2C_ERR_TIMEOUT) {        
         hal_yield(0);
     }
 
     if(_error==I2C_ERR_TIMEOUT) finish_transfer();                        
 
-    return _error;
-        
+    return _error;    
 }
 
 uint32_t REVOI2CDevice::i2c_read(uint8_t addr, const uint8_t *tx_buff, uint8_t txlen, uint8_t *rx_buff, uint8_t rxlen)
@@ -457,23 +453,20 @@ uint32_t REVOI2CDevice::i2c_read(uint8_t addr, const uint8_t *tx_buff, uint8_t t
     
     _dev->I2Cx->CR1 |= I2C_CR1_START;    // Send START condition
 
+    t = hal_micros();
+    uint32_t timeout = i2c_bit_time * 9 * (txlen+rxlen) * 8 + 100; // time to transfer all data *8 plus 100uS
+    _task = REVOMINIScheduler::get_current_task(); // if function called from task - store it and pause
 
     noInterrupts();
     _dev->I2Cx->CR2 |= I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN;    // Enable interrupts
 
-
-    t = hal_micros();
-    uint32_t timeout = i2c_bit_time * 9 * (txlen+rxlen) * 4 + 100; // time to transfer all data *4 plus 100uS
-    // need to wait until DMA transfer complete  - before interrupt enable, so ISR shoul not be where _task still not set
-    _task = REVOMINIScheduler::get_current_task(); // if function called from task - store it and pause
     if(_task) REVOMINIScheduler::task_pause(timeout);
     interrupts();
 
     if(_completion_cb) return I2C_PENDING;
             
-    while (hal_micros() - t < timeout) {
-        if(_error!=I2C_ERR_TIMEOUT) break; // error occures
-        
+    // need to wait until DMA transfer complete
+    while (hal_micros() - t < timeout && _error==I2C_ERR_TIMEOUT) {    
         hal_yield(0);
     }
 
@@ -629,9 +622,9 @@ void REVOI2CDevice::finish_transfer(){
     _dev->I2Cx->CR2 &= ~(I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN);    // Disable interrupts
     i2c_clear_isr_handler(_dev);
 
+
     Handler h;
     if( (h=_completion_cb) ){    // io completion
-        
         _completion_cb=0; // only once and before call because handler can set it itself
         
         revo_call_handler(h, (uint32_t)_dev);

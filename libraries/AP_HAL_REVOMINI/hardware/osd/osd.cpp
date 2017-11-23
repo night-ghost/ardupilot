@@ -230,12 +230,12 @@ static OSD_pan pan_tbl[]={
     { offsetof(Settings,horiz_kPitch_a),  sizeof(sets.horiz_kPitch_a),'f', 0, }, //        "pitch_kn",         // 50
     { offsetof(Settings,pwm_dst),         sizeof(sets.pwm_dst),       'b', 0, }, //        "PWMDST",           // 51
     { offsetof(Settings,pwm_src),         sizeof(sets.pwm_src),       'b', 0, }, //        "PWMSRC",           // 52
-    { 0, 0, ID_of(RadarScale), },         //        "Radar Scale",      // 53
-    { 0, 0, ID_of(COG), },                //        "Real heading",     // 54
-    { 0, 0, ID_of(roll), },               //        "Roll",             // 55
+    { 0, 0, 0, ID_of(RadarScale), },         //        "Radar Scale",      // 53
+    { 0, 0, 0, ID_of(COG), },                //        "Real heading",     // 54
+    { 0, 0, 0, ID_of(roll), },               //        "Roll",             // 55
     { offsetof(Settings,horiz_kRoll),    sizeof(sets.horiz_kRoll),    'f', 0, }, //        "roll_k",           // 56
     { offsetof(Settings,horiz_kRoll_a),  sizeof(sets.horiz_kRoll_a),  'f', 0, }, //        "roll_kn",          // 57
-    { 0, 0, ID_of(RSSI), },               //        "RSSI",             // 58
+    { 0, 0, 0, ID_of(RSSI), },               //        "RSSI",             // 58
     { offsetof(Settings,RSSI_raw),       sizeof(sets.RSSI_raw),       'b', 0, }, //        "RSSI Enable Raw",  // 59
     { offsetof(Settings,RSSI_16_high),   sizeof(sets.RSSI_16_high),   'w', 0, }, //        "RSSI High",        // 60
     { offsetof(Settings,eRSSI_koef),     sizeof(sets.eRSSI_koef),     'f', 0, }, //        "rssi_k",           // 61
@@ -442,14 +442,20 @@ static void prepare_dma_buffer(){
 
 
 uint32_t get_word(char *buf, char * &ptr){
+    uint32_t sel_len=0;
+    uint8_t  sel_id=0;
+    
     for(uint32_t i=0; i<ARRAY_SIZE(words); i++){
         uint32_t len=strlen(words[i]);
         if(strncmp(buf, words[i],len)==0){
-            ptr=buf+len;
-            return i+1;
+            if(len > sel_len) { // longest match
+                sel_len = len;
+                sel_id = i+1;
+            }
         }
     }
-    return 0;  // not found
+    ptr=buf+sel_len;
+    return sel_id;
 }
 
 char * get_lex(char * &ptro){
