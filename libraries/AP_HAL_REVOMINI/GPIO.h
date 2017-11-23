@@ -180,9 +180,11 @@ public:
 };
 
 
-static inline exti_trigger_mode exti_out_mode(ExtIntTriggerMode mode) {
+static inline exti_trigger_mode exti_out_mode(ExtIntTriggerMode mode) { 
     return (exti_trigger_mode)mode;
 }
 
+static inline void digitalWrite(uint8_t pin, uint8_t value) { REVOMINI::REVOMINIGPIO::_write(pin, value); }
+static inline uint8_t digitalRead(uint8_t pin) { return REVOMINI::REVOMINIGPIO::_read(pin); }
 
 #endif // __AP_HAL_REVOMINI_GPIO_H__

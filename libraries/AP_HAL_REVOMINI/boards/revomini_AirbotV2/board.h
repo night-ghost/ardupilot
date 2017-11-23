@@ -71,6 +71,9 @@
 //#define BOARD_SOFTSERIAL_RX 15
 
 
+# define BOARD_BLUE_LED_PIN        36  // BLUE
+# define BOARD_GREEN_LED_PIN        6   // NC - PC0 pin 8
+
 # define BOARD_GPIO_A_LED_PIN        36  // BLUE
 # define BOARD_GPIO_B_LED_PIN        6   // NC - PC0 pin 8
 

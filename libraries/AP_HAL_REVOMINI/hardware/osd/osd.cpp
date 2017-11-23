@@ -566,6 +566,8 @@ static void load_config(){
                         case 'w':
                             val.w=(uint16_t)strtoul(p[0], nullptr, 10);
                             break;                    
+                        default:
+                            continue; // ignore this line
                         }                    
                         memmove(         ((uint8_t*)(&sets)) + pan_tbl[word].dst, &val, pan_tbl[word].size);
                         eeprom_write_len(((uint8_t*)(&sets)) + pan_tbl[word].dst, EEPROM_offs(sets) + pan_tbl[word].dst,  pan_tbl[word].size);
@@ -586,15 +588,15 @@ static void load_config(){
         }
         fd.close();
 
-        readSettings(); // re-read new values
+        // we don't save flags when parsing so lets do it now
+        eeprom_write_len( &sets.flags.pad[0],  EEPROM_offs(sets) + ((byte *)&sets.flags.pad - (byte *)&sets),  sizeof(sets.flags.pad));
+
+        readSettings(); // re-read new values back, for settings that not in config.osd get all-1 state
         
         sets.CHK1_VERSION = VER;        // set version - EEPROM OK
         sets.CHK2_VERSION = (VER ^ 0x55);
         eeprom_write_len( &sets.CHK1_VERSION,  EEPROM_offs(sets) + ((byte *)&sets.CHK1_VERSION - (byte *)&sets),  2 );
-
-
     }
-
 }
 
 static void load_font(){
