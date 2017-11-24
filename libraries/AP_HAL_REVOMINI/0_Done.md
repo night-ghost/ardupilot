@@ -132,6 +132,8 @@
 * reduced to ~1.5uS time from interrupt to resuming task that was waiting that interrupt
 * unified NVIC handling
 * fixed bug in parsing of .osd file
+* fixed bug in scheduler that can cause task freeze
+* fixed bug in OSD_Uart that cause hang if port not listened
 * ...
 * a lot of minor enhancements
 

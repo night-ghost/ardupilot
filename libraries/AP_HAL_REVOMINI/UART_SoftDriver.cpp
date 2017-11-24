@@ -18,7 +18,7 @@
 
 #include <gpio_hal.h>
 
-#define RX_RC_CHANNEL 5 // setup like in PWM capture - on this pin
+//#define RX_RC_CHANNEL 5 // setup like in PWM capture - on this pin
 
 
 using namespace REVOMINI;
@@ -49,8 +49,11 @@ bool                    SerialDriver::rxSkip=false;
 bool                    SerialDriver::activeRX=false;
 bool                    SerialDriver::activeTX=false;
 
-const timer_dev *timer  = PIN_MAP[PWM_Channels[RX_RC_CHANNEL].pin].timer_device;
-const uint8_t   channel = PIN_MAP[PWM_Channels[RX_RC_CHANNEL].pin].timer_channel;
+//const timer_dev *timer  = PIN_MAP[PWM_Channels[RX_RC_CHANNEL].pin].timer_device;
+//const uint8_t   channel = PIN_MAP[PWM_Channels[RX_RC_CHANNEL].pin].timer_channel;
+
+const timer_dev *timer  = PIN_MAP[RX_PIN].timer_device;
+const uint8_t   channel = PIN_MAP[RX_PIN].timer_channel;
 
 
 void SerialDriver::begin(uint32_t baud) {
@@ -85,7 +88,7 @@ void SerialDriver::begin(uint32_t baud) {
     rxSetCapture(); // wait for start bit
     {
         Revo_handler h = { .isr = rxNextBit };
-        timer_attach_interrupt(timer, TIMER_RX_INTERRUPT,   h.h, SOFT_UART_INT_PRIORITY);
+        timer_attach_interrupt(timer, PIN_MAP[RX_PIN].timer_channel /* TIMER_RX_INTERRUPT */ ,   h.h, SOFT_UART_INT_PRIORITY);
     }
     {
         Revo_handler h = { .isr = txNextBit };

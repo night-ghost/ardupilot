@@ -220,7 +220,10 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
     
         uint32_t t = hal_micros();
         while(_desc.dev->state->busy){ //       wait for previous transfer finished
-            if(hal_micros() - t > 2000) break; // SPI transfer can't be so long so let grab the bus
+            if(hal_micros() - t > 5000){
+            // TODO increment grab counter
+                 break; // SPI transfer can't be so long so let grab the bus
+            }
             hal_yield(0);
         }
         
@@ -773,6 +776,7 @@ uint16_t  SPIDevice::send_strobe(const uint8_t *buffer, uint16_t len){ // send i
     return _send_len;
 }
 
+//  TODO works bad and requires debug
 uint8_t SPIDevice::wait_for(uint8_t out, spi_WaitFunc cb, uint16_t dly){ // wait for needed byte in ISR
     _send_len = out;
     _isr_mode = SPI_ISR_COMPARE;

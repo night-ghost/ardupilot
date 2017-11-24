@@ -246,6 +246,11 @@ void REVOMINIScheduler::start_stats_task(){
     set_task_priority(task, 100); // like main task has
 #endif
 
+// task list is filled. so now we can do a trick -
+//    dequeue_task(_idle_task); // exclude idle task from task queue, it will be used by direct link.
+                              //  its own .next still shows to next task so no problems will
+
+
 }
 
 void REVOMINIScheduler::_delay(uint16_t ms)
@@ -794,6 +799,7 @@ void REVOMINIScheduler::stop_task(void *h){
     }
 }
 
+
 #endif
 
 // task's executor, which calls user's function having semaphore
@@ -828,8 +834,27 @@ void REVOMINIScheduler::do_task(task_t *task) {
             task->curr_prio = task->priority - 6;  // just activated task will have a highest priority for one quant
         }
         yield(0);        // give up quant remainder
-    }// endless loop
+    } // endless loop
 }
+
+void REVOMINIScheduler::enqueue_task(task_t &tp) { // add new task to run queue, starting main task
+    tp.next = &s_main;  // prepare for insert task into linked list
+    tp.prev = s_main.prev;
+    tp.id = ++task_n; // counter - new task is created
+
+    noInterrupts();     // we will break linked list so do it in critical section
+    s_main.prev->next = &tp;
+    s_main.prev = &tp;
+    interrupts();       // now TCB is ready to task scheduler
+}
+
+void REVOMINIScheduler::dequeue_task(task_t &tp) { // remove task from run queue
+    noInterrupts();     // we will break linked list so do it in critical section
+    tp.prev->next = tp.next;
+    tp.next->prev = tp.prev;
+    interrupts();       // done
+}
+
 
 // Create task descriptor and add it last to run queue
 uint32_t REVOMINIScheduler::fill_task(task_t &tp){
@@ -844,16 +869,6 @@ uint32_t REVOMINIScheduler::fill_task(task_t &tp){
 #endif
     tp.guard = STACK_GUARD;
 
-    // now we can add new task to run queue
-    
-    noInterrupts(); // we will break linked list so do it in critical section
-    tp.next = &s_main;  // insert task to linked list
-    tp.prev = s_main.prev;
-    s_main.prev->next = &tp;
-    s_main.prev = &tp;
-    tp.id = ++task_n; // counter - new task is created
-    interrupts();       // now TCB is ready to task scheduler, active==0 excludes task from execution so context will be prepared later
-
     return (uint32_t)&tp;
 }
 
@@ -862,10 +877,10 @@ void * REVOMINIScheduler::init_task(Handler handler, const uint8_t* stack){
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align" // yes I know
 
-    task_t *task = (task_t *)((uint32_t)(stack-sizeof(task_t)) & 0xFFFFFFFCUL); // control block below top of stack, 4-byte alignment
+    task_t *task = (task_t *)((uint32_t)(stack-sizeof(task_t)) & 0xFFFFFFFCUL); // control block below memory top, 4-byte alignment
 #pragma GCC diagnostic pop
 
-    fill_task(*task);  // Add task as last to run queue (starting main task), task will not be executed because active==0
+    fill_task(*task);  // fill task descriptor
     task->stack  = stack;
 
     /*
@@ -889,7 +904,7 @@ void * REVOMINIScheduler::init_task(Handler handler, const uint8_t* stack){
     task->sp=(uint8_t *)sp;           // set stack pointer of task
 
     // task is not active so we need not to disable interrupts
-    task->handle = handler; // save handler to task to enable to change it later
+    task->handle = handler; // save handler to TCB
 
     return (void *)task;
 }
@@ -905,7 +920,6 @@ void * NOINLINE REVOMINIScheduler::_start_task(Handler handle, size_t stackSize)
     if(in_interrupt()) {
         AP_HAL::panic("start_task called from ISR 0x%x", (uint8_t)(SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk));
     }
-
 
     // Adjust stack size with size of task context
     stackSize += sizeof(task_t)+8; // for alignment
@@ -923,8 +937,12 @@ void * NOINLINE REVOMINIScheduler::_start_task(Handler handle, size_t stackSize)
     stack_bottom = (caddr_t)sp;   // and remember for memory allocator
     s_top += stackSize;           // adjust used size at stack top
 
+
+    enqueue_task(*task);          // task is ready, now we can add new task to run queue
+                                  //  task will not be executed because .active==0
+
     // task->active = true;          // now task is ready to run but let it stays paused
-    return (void *)task; // return address of task descriptor
+    return (void *)task; // return address of task descriptor as task handle
 }
 
 // task should run periodically, period in uS. this will be high-priority task
@@ -936,19 +954,6 @@ void REVOMINIScheduler::set_task_period(void *h, uint32_t period){
     task->period = period;
 }
 
-void REVOMINIScheduler::set_task_priority(void *h, uint8_t prio){
-    task_t *task = (task_t *)h;
-
-    task->curr_prio= prio;
-    task->priority = prio;
-}
-
-// task wants to run only with this semaphore owned
-void REVOMINIScheduler::set_task_semaphore(void *h, REVOMINI::Semaphore *sem){
-    task_t *task = (task_t *)h;
-    
-    task->sem = sem;
-}
 
 #ifdef SHED_DEBUG
 static uint16_t next_log_ptr(uint16_t sched_log_ptr){
@@ -1017,12 +1022,6 @@ task_t *REVOMINIScheduler::get_next_task(){
         while(true) { // lets try to find task to switch to
             ptr = ptr->next; // Next task in run queue will continue
 
-#if 0
-            if(!(ADDRESS_IN_RAM(ptr) || ADDRESS_IN_CCM(ptr)) ){
-                AP_HAL::panic("PANIC: s_rinning spoiled in process %d\n", me->id);
-            }
-#endif
-            
             if(!ptr->handle) goto skip_task; // skip finished tasks
         
 //              if(ptr->f_yield) {
@@ -1389,7 +1388,7 @@ void REVOMINIScheduler::_switch_task(){
         s_running->sw_type=2;
         tsched_sw_count_y++;
 #endif
-        plan_context_switch();   // plan context switch
+        plan_context_switch();   
     }
 #ifdef MTASK_PROF
       else if(next_task == _idle_task){ // the same task

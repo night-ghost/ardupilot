@@ -971,7 +971,11 @@ int16_t osd_available(){
 }
 
 void osd_queue(uint8_t c) {    // push bytes from OSD to FC around in the ring buffer
-    while(rb_is_full(&osd_rxrb)) hal_yield(100);
+    uint8_t cnt=10;
+    while(rb_is_full(&osd_rxrb)) {
+        hal_yield(0);
+        if(--cnt == 0) return; // destination don't listen
+    }
     rb_push_insert(&osd_rxrb, c);
 }
 
@@ -982,9 +986,11 @@ int16_t osd_getc(){ // get char from ring buffer
 
 
 void osd_putc(uint8_t c){ 
+    uint8_t cnt=10;
     while(rb_is_full(&osd_txrb)) {
         REVOMINIScheduler::set_task_priority(task_handle, OSD_HIGH_PRIORITY); // to run in time of yield()
-        hal_yield(100);
+        hal_yield(0);
+        if(--cnt == 0) break; // destination don't listen
     }
     rb_push_insert(&osd_txrb, c);
     REVOMINIScheduler::set_task_priority(task_handle, OSD_LOW_PRIORITY); // restore priority to low

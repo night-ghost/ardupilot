@@ -70,4 +70,5 @@ this project got donations from:
 * Andrea Belloni
 * Sebastian Thoem
 * Alexander Malishev
+* Alexandr Kuzmitski
 

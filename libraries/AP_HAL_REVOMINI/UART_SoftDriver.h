@@ -74,12 +74,6 @@ in case of RevoMini we have pins
 #define TX_PIN BOARD_SOFTSERIAL_TX
 #define RX_PIN BOARD_SOFTSERIAL_RX
 
-#define RX_TIMER_CHANNEL   TIMER_CH4
-#define RX_TIMER_MASK      TIMER_DIER_CC4IE_BIT
-#define RX_TIMER_PENDING   TIMER_SR_CC4IF_BIT
-#define RX_CCR             CCR4
-#define TIMER_RX_INTERRUPT TIMER_CC4_INTERRUPT
-
 
 extern const struct TIM_Channel PWM_Channels[];
 

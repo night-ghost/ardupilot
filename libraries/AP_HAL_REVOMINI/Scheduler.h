@@ -65,17 +65,17 @@ struct task_t {
         uint32_t in_isr;        // time in ISR when task runs
         uint32_t def_ttw;       // default TTW - not as hard as period
         uint8_t sw_type;        // type of task switch
-        uint64_t time;  // full time
-        uint32_t max_time; //  maximal execution time of task - to show
-        uint32_t count;     // call count to calc mean
-        uint32_t work_time; // max time of full task
-        uint32_t sem_max_wait; // max time of semaphore waiting
-        uint32_t quants;       // count of ticks
-        uint32_t quants_time;  // sum of quatn's times
-        uint32_t t_paused;   // time task was paused on IO
-        uint32_t count_paused; // count task was paused on IO
-        uint32_t max_paused;   // max time task was paused on IO
-        uint32_t max_c_paused; // count task was paused on IO
+        uint64_t time;          // full time
+        uint32_t max_time;      //  maximal execution time of task - to show
+        uint32_t count;         // call count to calc mean
+        uint32_t work_time;     // max time of full task
+        uint32_t sem_max_wait;  // max time of semaphore waiting
+        uint32_t quants;        // count of ticks
+        uint32_t quants_time;   // sum of quatn's times
+        uint32_t t_paused;      // time task was paused on IO
+        uint32_t count_paused;  // count task was paused on IO
+        uint32_t max_paused;    // max time task was paused on IO
+        uint32_t max_c_paused;  // count task was paused on IO
 #endif
         uint32_t guard; // stack guard
 };
@@ -248,7 +248,7 @@ public:
    * called from main task. The functions are executed by the
    * task. The taskLoop function is repeatedly called. Returns 
    * not-NULL if successful otherwise NULL (no memory for new task).
-   * @param[in] taskLoop function (may not be NULL).
+   * @param[in] taskLoop function to call.
    * @param[in] stackSize in bytes.
    * @return address of TCB.
    */
@@ -269,9 +269,22 @@ public:
 // functions to alter task's properties
 //[ this functions called only at task start
   static void set_task_period(void *h, uint32_t period);                // task will be auto-activated by this period
-  static void set_task_semaphore(void *h, REVOMINI::Semaphore *sem);    // taskLoop function will be called owning this semaphore
-  static void set_task_priority(void *h, uint8_t prio);                 // priority is a relative speed of task
+
+  static inline void set_task_priority(void *h, uint8_t prio){ // priority is a relative speed of task
+    task_t *task = (task_t *)h;
+
+    task->curr_prio= prio;
+    task->priority = prio;
+  }
+
+  // task wants to run only with this semaphore owned
+  static inline void set_task_semaphore(void *h, REVOMINI::Semaphore *sem){ // taskLoop function will be called owning this semaphore
+    task_t *task = (task_t *)h;
+
+    task->sem = sem;
+  }
 //]
+
 
 // this functions are atomic so don't need to disable interrupts
   static inline void *get_current_task() { 
@@ -280,7 +293,6 @@ public:
   }
   static inline void set_task_active(void *h) {   // tasks are created in stopped state
     task_t * task = (task_t*)h; 
-//    task->curr_prio = 70;  //   will get 1st quant 100%
     task->active=true; 
 }
 
@@ -298,29 +310,25 @@ public:
       task->curr_prio = 70;
       context_switch_isr();
 #else
-//      next_task = task;  - damages all statistics
-//      plan_context_switch();
-        _forced_task = task; // force it
+        _forced_task = task; // force it. Tus we exclude loop to select task
         context_switch_isr();
 #endif 
       uint32_t dt= _micros() - task->sem_start_wait;
       task->t_paused += dt;
   } 
 #else
-  static void inline task_pause(uint16_t t) {   s_running->ttw=t;  }                      // called from task when it starts IO transfer
-  static void inline task_resume(void *h)   {   
+  static void inline task_pause(uint16_t t) {   s_running->ttw=t;  }  // called from task when it starts IO transfer
+  static void inline task_resume(void *h)   {    // called from IO_Complete ISR to resume task, and will get 1st quant 100%
       task_t * task = (task_t*)h; 
 #if 0
       task->curr_prio = 70;
       context_switch_isr();
 #else
-//      next_task = task; // force it
-//      plan_context_switch();
         _forced_task = task; // force it
         context_switch_isr();
 #endif 
 
-  } // called from IO_Complete ISR to resume task, and   will get 1st quant 100%
+  } 
 #endif
 //]  
 
@@ -445,6 +453,8 @@ protected:
 
     // prepares TCB
     static uint32_t fill_task(task_t &tp);
+    static void enqueue_task(task_t &tp); // add new task to run queue
+    static void dequeue_task(task_t &tp); // remove task from run queue
 
     // plan context switch
     static void switch_task();
