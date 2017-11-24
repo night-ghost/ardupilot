@@ -1098,6 +1098,10 @@ task_t *REVOMINIScheduler::get_next_task(){
 // которую можно настраивать изменением разницы приоритетов
                 }
                 task = ptr; // winner
+            } else { // ptr loose a chance - increase priority
+                if(ptr->priority != 255) { // not for idle task
+                    if(ptr->curr_prio>1)  ptr->curr_prio--;
+                }            
             }
 skip_task:
         // we should do this check after EACH task so can't use "continue" which skips ALL loop. 
@@ -1137,7 +1141,7 @@ skip_task:
         AP_HAL::panic("PANIC: stack guard spoiled in process %d (from %d)\n", task->id, me->id);
     }
 
-    if(want_tail) { // we have a task that want to be started next in the middle of tick
+    if(want_tail && want_tail->curr_prio >= task->curr_prio) { // we have a high-prio task that want to be started next in the middle of tick
         if(partial_quant < TIMER_PERIOD-10) { // if time less than tick
             timer_set_count(TIMER14, 0);
             timer_set_reload(TIMER14, partial_quant+2); // +2 to garantee

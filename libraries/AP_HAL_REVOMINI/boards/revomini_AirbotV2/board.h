@@ -74,8 +74,8 @@
 # define BOARD_BLUE_LED_PIN        36  // BLUE
 # define BOARD_GREEN_LED_PIN        6   // NC - PC0 pin 8
 
-# define BOARD_GPIO_A_LED_PIN        36  // BLUE
-# define BOARD_GPIO_B_LED_PIN        6   // NC - PC0 pin 8
+# define BOARD_GPIO_A_LED_PIN      36  // BLUE
+# define BOARD_GPIO_B_LED_PIN       6   // NC - PC0 pin 8
 
 # define BOARD_LED_ON           LOW
 # define BOARD_LED_OFF          HIGH
@@ -84,9 +84,9 @@
 #define BOARD_NR_GPIO_PINS      109
 
 
-#define BOARD_I2C_BUS_INT 1  // hardware internal I2C
+#define BOARD_I2C_BUS_INT 1    // hardware internal I2C
 //#define BOARD_I2C_BUS_EXT 1  // external I2C
-#define BOARD_I2C_BUS_SLOW 1 // slow down bus with this number
+#define BOARD_I2C_BUS_SLOW 1   // slow down bus with this number
 
 #define BOARD_I2C1_DISABLE
 
@@ -151,10 +151,13 @@
 #define SERVO_PIN_5 48 // PA1
 #define SERVO_PIN_6 22 // PA8
 
-//#define HAL_CONSOLE USB_Driver // console on USB
-#define HAL_CONSOLE_PORT 1
-#define HAL_CONSOLE uart1Driver // console on radio
-
+#if 1
+ #define HAL_CONSOLE USB_Driver // console on USB
+ #define HAL_CONSOLE_PORT 0
+#else
+ #define HAL_CONSOLE uart1Driver // console on radio
+ #define HAL_CONSOLE_PORT 1
+#endif
 
 /*
 
