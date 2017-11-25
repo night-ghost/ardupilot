@@ -187,7 +187,7 @@ void Plane::update_loiter(uint16_t radius)
         }
     } else if ((loiter.start_time_ms == 0 &&
                 control_mode == AUTO &&
-                !auto_state.no_crosstrack &&
+                auto_state.crosstrack &&
                 get_distance(current_loc, next_WP_loc) > radius*3) ||
                (control_mode == RTL && quadplane.available() && quadplane.rtl_mode == 1)) {
         /*
@@ -288,8 +288,7 @@ void Plane::update_fbwb_speed_height(void)
         target_altitude.last_elevator_input = elevator_input;
     }
     
-    // check for FBWB altitude limit
-    check_minimum_altitude();
+    check_fbwb_minimum_altitude();
 
     altitude_error_cm = calc_altitude_error_cm();
     

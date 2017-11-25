@@ -1229,12 +1229,12 @@ void GCS_MAVLINK_Sub::handleMessage(mavlink_message_t* msg)
             if (is_equal(packet.param1,1.0f) || is_equal(packet.param1,3.0f)) {
                 // Send an invalid signal to the motors to prevent spinning due to neutral (1500) pwm pulse being cut short
                 // For that matter, send an invalid signal to all channels to prevent undesired/unexpected behavior
-                hal.rcout->cork();
+                SRV_Channels::cork();
                 for (int i=0; i<NUM_RC_CHANNELS; i++) {
                     // Set to 1 because 0 is interpreted as flag to ignore update
                     hal.rcout->write(i, 1);
                 }
-                hal.rcout->push();
+                SRV_Channels::push();
 
                 result = MAV_RESULT_ACCEPTED;
                 // send ack before we reboot
@@ -1626,11 +1626,6 @@ Compass *GCS_MAVLINK_Sub::get_compass() const
 AP_Mission *GCS_MAVLINK_Sub::get_mission()
 {
     return &sub.mission;
-}
-
-AP_GPS *GCS_MAVLINK_Sub::get_gps() const
-{
-    return &sub.gps;
 }
 
 AP_Camera *GCS_MAVLINK_Sub::get_camera() const

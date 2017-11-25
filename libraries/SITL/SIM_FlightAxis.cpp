@@ -37,6 +37,41 @@ using namespace SITL;
 // the asprintf() calls are not worth checking for SITL
 #pragma GCC diagnostic ignored "-Wunused-result"
 
+static const struct {
+    const char *name;
+    float value;
+} sim_defaults[] = {
+    { "AHRS_EKF_TYPE", 10 },
+    { "INS_GYR_CAL", 0 },
+    { "SERVO1_MIN", 1000 },
+    { "SERVO1_MAX", 2000 },
+    { "SERVO2_MIN", 1000 },
+    { "SERVO2_MAX", 2000 },
+    { "SERVO3_MIN", 1000 },
+    { "SERVO3_MAX", 2000 },
+    { "SERVO4_MIN", 1000 },
+    { "SERVO4_MAX", 2000 },
+    { "SERVO5_MIN", 1000 },
+    { "SERVO5_MAX", 2000 },
+    { "SERVO6_MIN", 1000 },
+    { "SERVO6_MAX", 2000 },
+    { "SERVO6_MIN", 1000 },
+    { "SERVO6_MAX", 2000 },
+    { "INS_ACC2OFFS_X",    0.001 },
+    { "INS_ACC2OFFS_Y",    0.001 },
+    { "INS_ACC2OFFS_Z",    0.001 },
+    { "INS_ACC2SCAL_X",    1.001 },
+    { "INS_ACC2SCAL_Y",    1.001 },
+    { "INS_ACC2SCAL_Z",    1.001 },
+    { "INS_ACCOFFS_X",     0.001 },
+    { "INS_ACCOFFS_Y",     0.001 },
+    { "INS_ACCOFFS_Z",     0.001 },
+    { "INS_ACCSCAL_X",     1.001 },
+    { "INS_ACCSCAL_Y",     1.001 },
+    { "INS_ACCSCAL_Z",     1.001 },
+};
+
+
 FlightAxis::FlightAxis(const char *home_str, const char *frame_str) :
     Aircraft(home_str, frame_str)
 {
@@ -48,30 +83,8 @@ FlightAxis::FlightAxis(const char *home_str, const char *frame_str) :
     if (colon) {
         controller_ip = colon+1;
     }
-    // FlightAxis sensor data is not good enough for EKF. Use fake EKF by default
-    AP_Param::set_default_by_name("AHRS_EKF_TYPE", 10);
-    AP_Param::set_default_by_name("INS_GYR_CAL", 0);
-
-    if (strstr(frame_str, "pitch270")) {
-        // rotate tailsitter airframes for fixed wing view
-        rotation = ROTATION_PITCH_270;
-    }
-    if (strstr(frame_str, "pitch90")) {
-        // rotate tailsitter airframes for fixed wing view
-        rotation = ROTATION_PITCH_90;
-    }
-
-    switch (rotation) {
-    case ROTATION_NONE:
-        break;
-    case ROTATION_PITCH_90:
-        att_rotation.from_euler(0, radians(90), 0);
-        break;
-    case ROTATION_PITCH_270:
-        att_rotation.from_euler(0, radians(270), 0);
-        break;
-    default:
-        AP_HAL::panic("Unsupported flightaxis rotation %u\n", (unsigned)rotation);
+    for (uint8_t i=0; i<ARRAY_SIZE(sim_defaults); i++) {
+        AP_Param::set_default_by_name(sim_defaults[i].name, sim_defaults[i].value);
     }
 
     /* Create the thread that will be waiting for data from FlightAxis */
@@ -90,7 +103,9 @@ void *FlightAxis::update_thread(void *arg)
 {
     FlightAxis *flightaxis = (FlightAxis *)arg;
 
+#ifndef __CYGWIN__
     pthread_setname_np(pthread_self(), "ardupilot-flightaxis");
+#endif
     
     flightaxis->update_loop();
     return nullptr;
@@ -390,14 +405,6 @@ void FlightAxis::update(const struct sitl_input &input)
     accel_body(state.m_accelerationBodyAX_MPS2,
                state.m_accelerationBodyAY_MPS2,
                state.m_accelerationBodyAZ_MPS2);
-
-    if (rotation != ROTATION_NONE) {
-        dcm.transpose();
-        dcm = att_rotation * dcm;
-        dcm.transpose();
-        gyro.rotate(rotation);
-        accel_body.rotate(rotation);
-    }
 
     // accel on the ground is nasty in realflight, and prevents helicopter disarm
     if (state.m_isTouchingGround) {

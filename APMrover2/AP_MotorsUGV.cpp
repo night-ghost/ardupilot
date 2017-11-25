@@ -45,7 +45,7 @@ const AP_Param::GroupInfo AP_MotorsUGV::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("SAFE_DISARM", 3, AP_MotorsUGV, _disarm_disable_pwm, 0),
 
-    // @Param: THR_SLEWRATE
+    // @Param: SLEWRATE
     // @DisplayName: Throttle slew rate
     // @Description: maximum percentage change in throttle per second. A setting of 10 means to not change the throttle by more than 10% of the full throttle range in one second. A value of zero means no limit. A value of 100 means the throttle can change over its full range in one second. Note that for some NiMH powered rovers setting a lower value like 40 or 50 may be worthwhile as the sudden current demand on the battery of a big rise in throttle may cause a brownout.
     // @Units: %/s
@@ -200,9 +200,9 @@ void AP_MotorsUGV::output(bool armed, float dt)
 
     // send values to the PWM timers for output
     SRV_Channels::calc_pwm();
-    hal.rcout->cork();
+    SRV_Channels::cork();
     SRV_Channels::output_ch_all();
-    hal.rcout->push();
+    SRV_Channels::push();
     _last_throttle = _throttle;
 }
 
@@ -442,9 +442,9 @@ bool AP_MotorsUGV::output_test_pct(motor_test_order motor_seq, float pct)
             return false;
     }
     SRV_Channels::calc_pwm();
-    hal.rcout->cork();
+    SRV_Channels::cork();
     SRV_Channels::output_ch_all();
-    hal.rcout->push();
+    SRV_Channels::push();
     return true;
 }
 
@@ -488,8 +488,8 @@ bool AP_MotorsUGV::output_test_pwm(motor_test_order motor_seq, float pwm)
             return false;
     }
     SRV_Channels::calc_pwm();
-    hal.rcout->cork();
+    SRV_Channels::cork();
     SRV_Channels::output_ch_all();
-    hal.rcout->push();
+    SRV_Channels::push();
     return true;
 }

@@ -270,7 +270,7 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
     auto_state.inverted_flight = false;
 
     // don't cross-track when starting a mission
-    auto_state.next_wp_no_crosstrack = true;
+    auto_state.next_wp_crosstrack = false;
 
     // reset landing check
     auto_state.checked_for_autoland = false;
@@ -295,7 +295,10 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
 #if FRSKY_TELEM_ENABLED == ENABLED
     frsky_telemetry.update_control_mode(control_mode);
 #endif
-    
+#if CAMERA == ENABLED
+    camera.set_is_auto_mode(control_mode == AUTO);
+#endif
+
     if (previous_mode == AUTOTUNE && control_mode != AUTOTUNE) {
         // restore last gains
         autotune_restore();
