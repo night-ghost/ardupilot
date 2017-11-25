@@ -57,7 +57,7 @@ static REVOMINIUARTDriver uart6Driver(_USART6); // pin 7&8(REVO)/5&6(RevoMini) o
 #elif defined(BOARD_SOFT_UART3)
  static SerialDriver uart3Driver(false);              // soft UART on pins 7&8 of input port
 #elif defined(USE_SOFTSERIAL)
- static SerialDriver softDriver(false);  // pin 7&8 of input port
+ static SerialDriver softDriver(false) IN_CCM;  // pin 7&8 of input port
 #endif
 
 
@@ -69,7 +69,7 @@ static REVOMINIUARTDriver uart6Driver(_USART6); // pin 7&8(REVO)/5&6(RevoMini) o
  static REVOMINIUARTDriver uart4Driver(_UART4);  // pin 5&6 of servo port
 #endif
 
-static UART_PPM uartPPM2(1); // PPM2 input 
+static UART_PPM uartPPM2(1); // PPM2 input IN_CCM
 //static UART_PPM uartPPM1(0); // PPM1 input 
 
 

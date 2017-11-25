@@ -134,6 +134,8 @@
 * fixed bug in parsing of .osd file
 * fixed bug in scheduler that can cause task freeze
 * fixed bug in OSD_Uart that cause hang if port not listened
+* SoftSerial driver rewritten to not use PWM dependency. Now it can use any pin with timer for RX and any pin for TX, and there 
+  can be any number of SoftSerial UARTs
 * ...
 * a lot of minor enhancements
 

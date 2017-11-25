@@ -49,10 +49,8 @@ typedef struct I2C_DMA {
 
 
 typedef struct I2c_state {
-//    uint8_t *dst;
-//    uint16_t len;
-//    uint8_t  buff[DMA_BUFSIZE];
     Handler handler;
+    bool    busy;
 } i2c_state;
 
 

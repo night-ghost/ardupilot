@@ -291,6 +291,9 @@ public:
     if(in_interrupt()) return NULL;
     return s_running; 
   }
+  static inline void *get_current_task_isr() { 
+    return s_running; 
+  }
   static inline void set_task_active(void *h) {   // tasks are created in stopped state
     task_t * task = (task_t*)h; 
     task->active=true; 

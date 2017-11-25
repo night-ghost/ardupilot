@@ -79,9 +79,21 @@ extern const struct TIM_Channel PWM_Channels[];
 
 class REVOMINI::SerialDriver : public AP_HAL::UARTDriver  {
 public:
-    SerialDriver(bool inverseLogic)
+    SerialDriver( uint8_t tx_pin, uint8_t rx_pin, bool inverseLogic) 
+    :_inverse(inverseLogic)
+    , _initialized(false)
+    , _blocking(true)
+    , txSkip(false)
+    , rxSkip(false)
+    , activeRX(false)
+    , activeTX(false)
+    ,_tx_pin(tx_pin)
+    ,_rx_pin(rx_pin)
+    , tx_pp(PIN_MAP[tx_pin])
+    , rx_pp(PIN_MAP[rx_pin])
+    , timer(rx_pp.timer_device)
+    , channel(rx_pp.timer_channel)
     { 
-        _inverse = inverseLogic;
     }
 
 
@@ -107,61 +119,60 @@ public:
 
 private:
 
-    static bool _inverse;
-    static bool _initialized;
-    static bool _blocking;
+    bool _inverse;
+    bool _initialized;
+    bool _blocking;
     
-//    static const struct TIM_Channel *channel;
-    static const timer_dev          *timer;
-    static const uint8_t             channel;
-    
-    static uint16_t                  bitPeriod;
+    uint16_t                  bitPeriod;
 
 #ifdef SS_DEBUG
-    static volatile uint8_t          bufferOverflow;
+    volatile uint8_t          bufferOverflow;
 #endif
 
-    static volatile int8_t           rxBitCount;
-    static volatile uint16_t         receiveBufferWrite;
-    static volatile uint16_t         receiveBufferRead;
-    static volatile uint8_t          receiveBuffer[SSI_RX_BUFF_SIZE];
-    static uint8_t receiveByte;
+    volatile int8_t           rxBitCount;
+    volatile uint16_t         receiveBufferWrite;
+    volatile uint16_t         receiveBufferRead;
+    volatile uint8_t          receiveBuffer[SSI_RX_BUFF_SIZE];
+    uint8_t receiveByte;
 
-    static volatile int8_t           txBitCount;
-    static volatile uint16_t         transmitBufferWrite;
-    static volatile uint16_t         transmitBufferRead;
-    static volatile uint8_t          transmitBuffer[SSI_RX_BUFF_SIZE];
+    volatile int8_t           txBitCount;
+    volatile uint16_t         transmitBufferWrite;
+    volatile uint16_t         transmitBufferRead;
+    volatile uint8_t          transmitBuffer[SSI_RX_BUFF_SIZE];
     
-    static bool txSkip;
-    static bool rxSkip;
+    bool txSkip;
+    bool rxSkip;
     
-    static bool activeRX;
-    static bool activeTX;
+    bool activeRX;
+    bool activeTX;
     
+    uint8_t _tx_pin;
+    uint8_t _rx_pin;
+    const stm32_pin_info &tx_pp; 
+    const stm32_pin_info &rx_pp; 
+    
+//    const struct TIM_Channel *channel;
+    const timer_dev          *timer;
+    const uint8_t             channel;
 
     // Clear pending interrupt and enable receive interrupt
     // Note: Clears pending interrupt
-    static inline void txEnableInterrupts() {
-
+    inline void txEnableInterrupts() {
         timer->regs->SR &= ~TIMER_SR_UIF;
-        timer_enable_irq(timer, TIMER_UPDATE_INTERRUPT);
-        
-//          *bb_perip(&(channel->tim->SR), TX_TIMER_PENDING) = 0; // Clear int pending
-//          *bb_perip(&(channel->tim->DIER), TX_TIMER_MASK) = 1; // enable
+        timer_enable_irq(timer, TIMER_UPDATE_INTERRUPT);    
     }
 
     // Mask transmit interrupt
-    static inline void txDisableInterrupts() {
-//          *bb_perip(&(channel->tim->DIER), TX_TIMER_MASK) = 0;
+    inline void txDisableInterrupts() {
         timer_disable_irq(timer, TIMER_UPDATE_INTERRUPT);
     }
     
-    static void rxSetCapture();
-    static void rxSetCompare();
+    void rxSetCapture();
+    void rxSetCompare();
     
-    static void txNextBit(uint32_t v /* TIM_TypeDef *tim */ );
-    static void rxNextBit(uint32_t v /* TIM_TypeDef *tim */ );
-    
+    void txNextBit( /* TIM_TypeDef *tim */ );
+    void rxNextBit( /* TIM_TypeDef *tim */ );
+        
 };
 
 #endif

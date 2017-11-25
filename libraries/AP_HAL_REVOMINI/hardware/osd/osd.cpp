@@ -344,16 +344,25 @@ static uint32_t sem_count=0;
 
 void max7456_on(){
     
-    if(sem_count++ > 0 || osd_spi_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) { // take sem only if 0
-        max7456_cs_on();
+    max7456_cs_on();
 
-        osd_spi->set_speed(AP_HAL::Device::SPEED_HIGH);
+    osd_spi->set_speed(AP_HAL::Device::SPEED_HIGH);
+}
+
+static void max7456_sem_on(){
+    
+    if(osd_spi_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+        max7456_on();
     }
 }
 
 void max7456_off(){
     max7456_cs_off();
-    if(--sem_count == 0 ) osd_spi_sem->give(); // give sem on last count
+}
+
+static void max7456_sem_off(){
+    max7456_off();
+    osd_spi_sem->give(); // give sem on last count
 }
 
 void MAX_write(byte addr, byte data){
@@ -770,7 +779,7 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
         hal_yield(1000);
     }
 
-    max7456_on();
+    max7456_sem_on();
 
     write_buff_to_MAX(true);
 
@@ -791,6 +800,7 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 
     load_font();
 
+    max7456_sem_off();
 
 #define REL_1 int(RELEASE_NUM/100)
 #define REL_2 int((RELEASE_NUM - REL_1*100 )/10) 
@@ -806,6 +816,7 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
     
     logo();
 
+    
 #ifdef BOARD_OSD_VSYNC_PIN
     Revo_hal_handler h = { .vp = vsync_ISR };
     
@@ -1013,7 +1024,7 @@ void osd_dequeue() {
 static uint8_t max_err_cnt=0;
 
 void update_max_buffer(const uint8_t *buffer, uint16_t len){
-    max7456_on();
+    max7456_sem_on();
 
     uint16_t cnt=0;
     
@@ -1166,7 +1177,7 @@ void update_max_buffer(const uint8_t *buffer, uint16_t len){
 
 #endif    
 
-    max7456_off();
+    max7456_sem_off();
 }
 
 

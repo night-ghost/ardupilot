@@ -18,48 +18,17 @@
 
 #include <gpio_hal.h>
 
-//#define RX_RC_CHANNEL 5 // setup like in PWM capture - on this pin
-
 
 using namespace REVOMINI;
 
-bool SerialDriver::_initialized=false;
-bool SerialDriver::_inverse=false;
-bool SerialDriver::_blocking=true;
 
-uint16_t                SerialDriver::bitPeriod;
-
-#ifdef SS_DEBUG
-    volatile uint8_t    SerialDriver::bufferOverflow;
-#endif
-
-volatile int8_t         SerialDriver::rxBitCount;
-volatile uint16_t       SerialDriver::receiveBufferWrite;
-volatile uint16_t       SerialDriver::receiveBufferRead;
-volatile uint8_t        SerialDriver::receiveBuffer[SSI_RX_BUFF_SIZE] IN_CCM;
-uint8_t                 SerialDriver::receiveByte;
-
-volatile int8_t         SerialDriver::txBitCount;
-volatile uint16_t       SerialDriver::transmitBufferWrite;
-volatile uint16_t       SerialDriver::transmitBufferRead;
-volatile uint8_t        SerialDriver::transmitBuffer[SSI_TX_BUFF_SIZE] IN_CCM;
-
-bool                    SerialDriver::txSkip=false;
-bool                    SerialDriver::rxSkip=false;
-bool                    SerialDriver::activeRX=false;
-bool                    SerialDriver::activeTX=false;
-
-//const timer_dev *timer  = PIN_MAP[PWM_Channels[RX_RC_CHANNEL].pin].timer_device;
-//const uint8_t   channel = PIN_MAP[PWM_Channels[RX_RC_CHANNEL].pin].timer_channel;
-
-const timer_dev *timer  = PIN_MAP[RX_PIN].timer_device;
-const uint8_t   channel = PIN_MAP[RX_PIN].timer_channel;
-
+// hardware RX and software TX
 
 void SerialDriver::begin(uint32_t baud) {
-    REVOMINIGPIO::_write(TX_PIN, _inverse?LOW:HIGH);
-    REVOMINIGPIO::_pinMode(RX_PIN, INPUT_PULLUP);
-    REVOMINIGPIO::_pinMode(TX_PIN, OUTPUT);
+    gpio_write_bit(tx_pp.gpio_device, tx_pp.gpio_bit, _inverse?LOW:HIGH);
+    gpio_set_mode(tx_pp.gpio_device, tx_pp.gpio_bit, GPIO_OUTPUT_PP);
+    gpio_set_mode(rx_pp.gpio_device, rx_pp.gpio_bit, GPIO_INPUT_PU);
+    
 
     timer_pause(timer);
     uint32_t prescaler;
@@ -86,14 +55,8 @@ void SerialDriver::begin(uint32_t baud) {
     rxBitCount = 9;
 
     rxSetCapture(); // wait for start bit
-    {
-        Revo_handler h = { .isr = rxNextBit };
-        timer_attach_interrupt(timer, PIN_MAP[RX_PIN].timer_channel /* TIMER_RX_INTERRUPT */ ,   h.h, SOFT_UART_INT_PRIORITY);
-    }
-    {
-        Revo_handler h = { .isr = txNextBit };
-        timer_attach_interrupt(timer, TIMER_UPDATE_INTERRUPT, h.h, SOFT_UART_INT_PRIORITY); // also enables interrupt, so 1st interrupt will be ASAP
-    }
+    timer_attach_interrupt(timer, channel,                REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SerialDriver::rxNextBit,void)), SOFT_UART_INT_PRIORITY);
+    timer_attach_interrupt(timer, TIMER_UPDATE_INTERRUPT, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SerialDriver::txNextBit,void)), SOFT_UART_INT_PRIORITY); // also enables interrupt, so 1st interrupt will be ASAP
     
     // Load the timer values and start it
     timer_generate_update(timer);
@@ -104,6 +67,7 @@ void SerialDriver::begin(uint32_t baud) {
 
 
 void SerialDriver::rxSetCapture(){
+#if 0
     TIM_ICInitTypeDef TIM_ICInitStructure;
 
     // input capture ************************************************************/
@@ -113,6 +77,10 @@ void SerialDriver::rxSetCapture(){
     TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
     TIM_ICInitStructure.TIM_ICFilter    = 0x3;
     TIM_ICInit(timer->regs, &TIM_ICInitStructure);
+#else
+    timer_ic_set_mode(timer, channel, TIM_ICSelection_DirectTI | TIM_ICPSC_DIV1, 3);
+    timer_cc_set_pol(timer,  channel, _inverse?TIMER_POLARITY_RISING:TIMER_POLARITY_FALLING);
+#endif
 }
 
 void SerialDriver::rxSetCompare(){
@@ -122,7 +90,7 @@ void SerialDriver::rxSetCompare(){
 
 void SerialDriver::end() {
     timer_pause(timer);
-    REVOMINIGPIO::_write(TX_PIN, 1);
+    gpio_write_bit(tx_pp.gpio_device, tx_pp.gpio_bit, 1);
     _initialized = false;
 
 }
@@ -141,8 +109,7 @@ bool SerialDriver::tx_pending() {
 
 uint32_t SerialDriver::available() {
 
-    int i = (receiveBufferWrite + SS_MAX_RX_BUFF - receiveBufferRead) % SS_MAX_RX_BUFF;
-    return i;
+    return (receiveBufferWrite + SS_MAX_RX_BUFF - receiveBufferRead) % SS_MAX_RX_BUFF;
 }
 
 uint32_t SerialDriver::txspace() {
@@ -209,7 +176,7 @@ size_t SerialDriver::write(const uint8_t *buffer, size_t size)
 #define bitRead(value, bit)            (((value) >> (bit)) & 0x01)
 
 // Transmits next bit. Called by timer update interrupt
-void SerialDriver::txNextBit(uint32_t v /* TIM_TypeDef *tim */) { // ISR
+void SerialDriver::txNextBit(void /* TIM_TypeDef *tim */) { // ISR
 
     txSkip= !txSkip;
     
@@ -219,9 +186,9 @@ void SerialDriver::txNextBit(uint32_t v /* TIM_TypeDef *tim */) { // ISR
     // State 0 through 7 - transmit bits
     if (txBitCount <= 7) {
         if (bitRead(transmitBuffer[transmitBufferRead], txBitCount) == (_inverse?0:1)) {
-            REVOMINIGPIO::_write(TX_PIN,HIGH); 
+            gpio_write_bit(tx_pp.gpio_device, tx_pp.gpio_bit,HIGH); 
         } else {
-            REVOMINIGPIO::_write(TX_PIN,LOW);
+            gpio_write_bit(tx_pp.gpio_device, tx_pp.gpio_bit,LOW);
         }
 
         // Bump the bit/state counter to state 8
@@ -237,7 +204,7 @@ void SerialDriver::txNextBit(uint32_t v /* TIM_TypeDef *tim */) { // ISR
     } else if (txBitCount == 8) {
 
         // Send the stop bit
-        REVOMINIGPIO::_write(TX_PIN, _inverse?LOW:HIGH); 
+        gpio_write_bit(tx_pp.gpio_device, tx_pp.gpio_bit, _inverse?LOW:HIGH); 
 
         transmitBufferRead = (transmitBufferRead == SS_MAX_TX_BUFF ) ? 0 : transmitBufferRead + 1;
 
@@ -251,7 +218,7 @@ void SerialDriver::txNextBit(uint32_t v /* TIM_TypeDef *tim */) { // ISR
 
     // Send  start bit for new byte
     } else if (txBitCount >= 10) {
-        REVOMINIGPIO::_write(TX_PIN, _inverse?HIGH:LOW);
+        gpio_write_bit(tx_pp.gpio_device, tx_pp.gpio_bit, _inverse?HIGH:LOW);
 
         txBitCount = 0;                    
     }
@@ -261,7 +228,7 @@ void SerialDriver::txNextBit(uint32_t v /* TIM_TypeDef *tim */) { // ISR
 
 
 // Receive next bit. Called by timer channel interrupt
-void SerialDriver::rxNextBit(uint32_t v /* TIM_TypeDef *tim */) { // ISR
+void SerialDriver::rxNextBit(void /* TIM_TypeDef *tim */) { // ISR
 
     if(!activeRX) { // capture start bit
 
@@ -284,7 +251,7 @@ void SerialDriver::rxNextBit(uint32_t v /* TIM_TypeDef *tim */) { // ISR
 
         if(!rxSkip) return; // not the middle of bit
         
-        uint8_t d = REVOMINIGPIO::_read(RX_PIN);
+        uint8_t d = gpio_read_bit( rx_pp.gpio_device, rx_pp.gpio_bit);
         
         if (rxBitCount == 9) {   // check start bit again
             if ( d == _inverse?HIGH:LOW) { // start OK
@@ -294,7 +261,6 @@ void SerialDriver::rxNextBit(uint32_t v /* TIM_TypeDef *tim */) { // ISR
                 rxSetCapture(); // turn back to capture mode
             }
         } else if (rxBitCount < 8) { // get bits
-            //receiveBuffer[receiveBufferWrite] >>= 1;  
             receiveByte >>= 1;  
             
             
@@ -319,7 +285,7 @@ void SerialDriver::rxNextBit(uint32_t v /* TIM_TypeDef *tim */) { // ISR
                 //  Else if it is now full set the buffer overflow flag 
                 // FYI - With this logic we effectively only have an (SS_MAX_RX_BUFF - 1) buffer size
             
-                if (REVOMINIGPIO::_read(RX_PIN) == _inverse?LOW:HIGH) // valid STOP
+                if (gpio_read_bit( rx_pp.gpio_device, rx_pp.gpio_bit) == _inverse?LOW:HIGH) // valid STOP
                     receiveBuffer[receiveBufferWrite] = receiveByte;
             
                  uint8_t next = (receiveBufferWrite + 1) % SS_MAX_RX_BUFF;

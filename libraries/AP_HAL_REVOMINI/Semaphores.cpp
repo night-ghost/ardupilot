@@ -77,7 +77,7 @@ void Semaphore::save_log(enum Sem_OP op, bool result){
     
     lp.time=REVOMINIScheduler::_micros();
     lp.sem  = this;
-    lp.task = REVOMINIScheduler::get_current_task();
+    lp.task = REVOMINIScheduler::get_current_task_isr();
     lp.op = op;
     lp.result=result;
     
@@ -102,7 +102,7 @@ bool Semaphore::svc_give() {
 }
 
 bool Semaphore::svc_take_nonblocking() {
-    void *me = REVOMINIScheduler::get_current_task();
+    void *me = REVOMINIScheduler::get_current_task_isr();
     if (!_taken) {
         _taken = true;
         _task = me;     // remember task which owns semaphore 
@@ -126,7 +126,7 @@ bool Semaphore::svc_take_nonblocking() {
 }
 
 bool Semaphore::svc_take(uint32_t timeout_ms) {
-    void *me = REVOMINIScheduler::get_current_task();
+    void *me = REVOMINIScheduler::get_current_task_isr();
     if (!_taken) {
         _taken = true;
         _task = me; // remember task which owns semaphore 
