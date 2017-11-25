@@ -88,13 +88,12 @@ EXTRAFLAGS += -DGIT_VERSION="\"$(GIT_VERSION) $(shell date --rfc-3339=seconds)\"
 
 #-Werror
 WARNFLAGS       =   -Wall -Wshadow -Wpointer-arith -Wcast-align -Wno-psabi -Wno-unused-parameter -Wno-error=cast-align -Wno-error=unused-but-set-variable
-WARNFLAGS      +=   -Wwrite-strings -Wformat=2 -Wshadow -Wfloat-equal -Wpointer-arith -Wlogical-op -Wmissing-declarations -Wpacked -Wno-pragmas
+WARNFLAGS      +=   -Wwrite-strings -Wformat=2 -Wshadow -Wfloat-equal -Wpointer-arith -Wlogical-op -Wmissing-declarations -Wpacked -Wno-pragmas -Wno-trigraphs
 WARNFLAGS      +=   -Wextra -Wlogical-op  -Wno-unknown-pragmas -Wno-redundant-decls -Wno-packed -Wno-error=double-promotion -Wno-error=type-limits
 WARNFLAGS      +=   -Wno-error=unused-variable -Wno-error=reorder -Wno-error=float-equal -Wno-error=unused-parameter -Wno-missing-field-initializers
 WARNFLAGS      +=   -Wno-error=pmf-conversions -Wno-error=missing-declarations -Wno-error=unused-function -Werror=format-security -Werror=array-bounds
 WARNFLAGS      +=   -Wno-error=unused-label
 
-#OPTFLAGS        = -Og
 OPTFLAGS        = -Os
 OPTFLAGS       += -fsingle-precision-constant -g3 -fno-strict-aliasing -fno-strength-reduce -fomit-frame-pointer
 OPTFLAGS       += -fno-builtin-printf -fno-aggressive-loop-optimizations -fpredictive-commoning
@@ -146,10 +145,7 @@ GLOBAL_CXXFLAGS := -fno-rtti       #Disable generation of information about ever
 GLOBAL_CXXFLAGS += -fno-exceptions -fno-threadsafe-statics # not true C++
 GLOBAL_CXXFLAGS += -fconserve-space -fno-enforce-eh-specs  -fno-use-cxa-atexit
 
-#GLOBAL_CXXFLAGS += -Wall  -std=gnu++0x
 GLOBAL_CXXFLAGS += -Wall  -std=gnu++11
-#GLOBAL_CXXFLAGS += -Wall  -std=gnu++1y
-#GLOBAL_CXXFLAGS += -Wall  -std=c++11
 
 # Downgrade some diagnostics about nonconformant code from errors to warnings. Thus, using "-fpermissive" will allow some nonconforming code to compile.
 GLOBAL_CXXFLAGS += -fpermissive $(GLOBAL_CFLAGS)
@@ -186,8 +182,6 @@ LDFLAGS         += -Wl,--relax
 
 TGT_BIN := 
 
-
-
 COREINCLUDES = -I$(HAL_PATH) -I$(STM32_PATH) -I$(WIRISH_PATH) -I$(BOARDS_PATH)/$(BOARD) -I$(STM32USB_PATH) \
  -I$(HARDWARE_PATH) \
  -I$(STM32_PATH)/Libraries/STM32F4xx_StdPeriph_Driver/inc \
@@ -195,8 +189,6 @@ COREINCLUDES = -I$(HAL_PATH) -I$(STM32_PATH) -I$(WIRISH_PATH) -I$(BOARDS_PATH)/$
  -I$(STM32_PATH)/Libraries/CMSIS/Device/ST/STM32F4xx/Include \
  -I$(BUILDROOT)/libraries/GCS_MAVLink/ \
  -I$(BUILDROOT)/libraries/GCS_MAVLink/include/mavlink/v2.0
-
-# -I$(HARDWARE_PATH)/osd/osd_core \
 
 
 TGT_ASFLAGS = $(COREINCLUDES)
@@ -211,7 +203,6 @@ include $(MK_DIR)/find_tools.mk
 include $(WIRISH_PATH)/rules.mk
 include $(HARDWARE_PATH)/hal/rules.mk
 include $(HARDWARE_PATH)/4way/rules.mk
-#include $(HARDWARE_PATH)/osd/rules.mk - per board
 include $(HARDWARE_PATH)/sd/rules.mk
 include $(HARDWARE_PATH)/STM32_USB_Driver/rules.mk
 include $(HARDWARE_PATH)/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/rules.mk
@@ -370,4 +361,3 @@ $(BUILD_PATH)/$(BOARD).bin: $(SKETCHELF)
 #
 # Build sketch objects
 #
-
