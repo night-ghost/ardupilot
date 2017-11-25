@@ -550,7 +550,7 @@ void timer_foreach(void (*fn)(const timer_dev*)) {
  * @see timer_interrupt_id
  * @see timer_channel
  */
-void timer_attach_interrupt(const timer_dev *dev, uint8_t interrupt, Handler handler, uint8_t priority) {
+void timer_attach_interrupt(const timer_dev *dev, timer_interrupt_id interrupt, Handler handler, uint8_t priority) {
     if(interrupt>=dev->n_handlers) return;
 
     dev->handlers[interrupt] = handler;
@@ -577,7 +577,7 @@ void timer_attach_all_interrupts(const timer_dev *dev,  Handler handler) {
  * @see timer_interrupt_id
  * @see timer_channel
  */
-void timer_detach_interrupt(const timer_dev *dev, uint8_t interrupt) {
+void timer_detach_interrupt(const timer_dev *dev, timer_interrupt_id interrupt) {
     timer_disable_irq(dev, interrupt);
     if(interrupt>=dev->n_handlers) return;
     dev->handlers[interrupt] = 0;

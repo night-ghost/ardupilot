@@ -1112,7 +1112,7 @@ static inline void timer_ic_set_mode(const timer_dev *dev,
  * @see timer_interrupt_id
  * @see timer_channel
  */
-static inline void timer_enable_irq(const timer_dev *dev, uint8_t interrupt) {
+static inline void timer_enable_irq(const timer_dev *dev, timer_interrupt_id interrupt) {
 //    *bb_perip(&(dev->regs->DIER), interrupt) = 1;
     dev->regs->DIER |= 1<<interrupt;
 }
@@ -1125,7 +1125,7 @@ static inline void timer_enable_irq(const timer_dev *dev, uint8_t interrupt) {
  * @see timer_interrupt_id
  * @see timer_channel
  */
-static inline void timer_disable_irq(const timer_dev *dev, uint8_t interrupt) {
+static inline void timer_disable_irq(const timer_dev *dev, timer_interrupt_id interrupt) {
 //    *bb_perip(&(dev->regs->DIER), interrupt) = 0;
     dev->regs->DIER &= ~(1<<interrupt);
 }
