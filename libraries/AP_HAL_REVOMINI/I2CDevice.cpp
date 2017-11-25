@@ -251,16 +251,16 @@ again:
      }
 #endif
 
-    // ist wait for bus free
-    // uint32_t t=REVOMINIScheduler::_micros();
-    //while(dev->state->busy){
-    //  hal_yield(0);
-    //  if(REVOMINIScheduler::_micros() > 5000) {
-    //        grab_count++;
-    //        break;
-    //  }
-    //}
-    //dev->state->busy=trye;
+    // 1st wait for bus free
+    uint32_t t=REVOMINIScheduler::_micros();
+    while(_dev->state->busy){
+        hal_yield(0);
+        if(REVOMINIScheduler::_micros() - t > 5000) {
+//            grab_count++;
+            break;
+        }
+    }
+    _dev->state->busy=true;
 
     if(recv_len==0) { // only write
         last_op=1;
@@ -292,7 +292,7 @@ again:
     if(ret == I2C_PENDING) return true; // transfer with callback
 
     if(ret == I2C_OK) {
-        
+        _dev->state->busy=false;
         return true;
     }
     
@@ -314,7 +314,7 @@ again:
         Revo_handler h = { .mp=FUNCTOR_BIND_MEMBER(&REVOI2CDevice::do_bus_reset, void) }; // schedule reset as io_task
         REVOMINIScheduler::_register_io_process(h.h, IO_ONCE); 
         
-        // dev->state->busy=false;
+        _dev->state->busy=false;
         return true; // data is OK
     } 
     
@@ -337,7 +337,7 @@ again:
             _do_bus_reset();
         
             if(_failed) {
-                // dev->state->busy=false;
+                _dev->state->busy=false;
                 return false;
             }
         }
@@ -345,7 +345,7 @@ again:
 
     if(retries--) goto again;
 
-    // dev->state->busy=false;
+    _dev->state->busy=false;
     return false;
 }
 
@@ -358,7 +358,7 @@ void REVOI2CDevice::do_bus_reset(){ // public - with semaphores
 }
 
 void REVOI2CDevice::_do_bus_reset(){ // private
-
+    _dev->state->busy=true;
     _dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_SWRST); // clear soft reset flag
 
     if(!need_reset) return; // already done
@@ -368,6 +368,7 @@ void REVOI2CDevice::_do_bus_reset(){ // private
         _failed = true;         // can't do it in limited time
     }
     need_reset = false; // done
+    _dev->state->busy=false;
 }
 
 
