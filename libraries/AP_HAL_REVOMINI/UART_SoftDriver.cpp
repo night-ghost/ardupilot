@@ -41,7 +41,6 @@ void SerialDriver::begin(uint32_t baud) {
         prescaler=16;
     }
 
-
     timer_set_prescaler(timer, prescaler-1);
     
     timer_set_reload(timer, bitPeriod/2); // for TX needs
@@ -57,9 +56,9 @@ void SerialDriver::begin(uint32_t baud) {
     rxSetCapture(); // wait for start bit
     timer_attach_interrupt(timer, channel,                REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SerialDriver::rxNextBit,void)), SOFT_UART_INT_PRIORITY);
     timer_attach_interrupt(timer, TIMER_UPDATE_INTERRUPT, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SerialDriver::txNextBit,void)), SOFT_UART_INT_PRIORITY); // also enables interrupt, so 1st interrupt will be ASAP
-    
-    // Load the timer values and start it
-    timer_generate_update(timer);
+    // there will be interrupt after enabling TX interrupts, it will be disabled in handler
+        
+    timer_generate_update(timer);     // Load the timer values and start it
     timer_resume(timer);
     
     _initialized = true;
@@ -132,7 +131,6 @@ int16_t SerialDriver::read() {
 
 size_t SerialDriver::write(uint8_t c) {
     if (!_initialized) return 0;
-
 
     // Blocks if buffer full
     uint16_t n_try=3;
@@ -232,7 +230,6 @@ void SerialDriver::rxNextBit(void /* TIM_TypeDef *tim */) { // ISR
 
     if(!activeRX) { // capture start bit
 
-
         // Test if this is really the start bit and not a spurious edge
         if (rxBitCount == 9) {  
 
@@ -251,6 +248,7 @@ void SerialDriver::rxNextBit(void /* TIM_TypeDef *tim */) { // ISR
 
         if(!rxSkip) return; // not the middle of bit
         
+// now in middle of bit
         uint8_t d = gpio_read_bit( rx_pp.gpio_device, rx_pp.gpio_bit);
         
         if (rxBitCount == 9) {   // check start bit again

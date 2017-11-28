@@ -9,8 +9,8 @@ FlexiPort - OSD, Serial2
 Input Port - PWM input is not supported - this is general trend
 pin 1 of Input port is GND
 pin 2 of Input port is +5
-pin 3 of Input port is 1st PPM/SBUS/DSM input or Servo9 (if you use RC via UART)
-pin 4 of Input port is 2nd PPM/SBUS/DSM input or Servo10 - same
+pin 3 of Input port is 1st PPM/SBUS/DSM/SUMD input or Servo9 (if you use RC via UART)
+pin 4 of Input port is 2nd PPM/SBUS/DSM/SUMD input or Servo10, also can work as RX-only UART (for GPS)
 pins 5&6 of Input port are Tx and Rx of Serial3 (for GPS)
 pins 7&8 of Input port are SCL and SDA of external I2C (or Tx and Rx for SoftSerial if I2C moved to FlexiPort) - or Servos 7&8
 
@@ -18,7 +18,7 @@ pins 7&8 of Input port are SCL and SDA of external I2C (or Tx and Rx for SoftSer
 Output Port for MOTORs
 Connect to PWM output pins in ArduCopter, CleanFlight or OpenPilot order, and set parameter HAL_MOTOR_LAYOUT accordingly
 
-5&6 PWM Output pins are Rx and Tx of Serial4 - but only for quads or planes
+5&6 PWM Output pins are Rx and Tx of Serial4 - but only for quads (except motor layout 1, see below) or planes
 
 also pins 1&2 of OutputPort can be used as servos, in this case connect motors to pins 3-6 in ArduCopter order
 
@@ -41,6 +41,7 @@ pin 2 is +5(DSM sat requires 3.3!)
 pin 3 is Rx 
 pin 4 is Enable for 3.3 stab.
 
+Also Oplink port can be used as external SPI
 
 Airspeed & RSSI 
 

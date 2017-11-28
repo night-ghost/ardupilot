@@ -1,6 +1,9 @@
 /*----------------------------------------------------------------------------/
 /  FatFs - FAT file system module  R0.11                 (C)ChaN, 2015
 /-----------------------------------------------------------------------------/
+
+// 2017 @NG - changed to use GCC's builtin functions memmove(), memset() etc
+
 / FatFs module is a free software that opened under license policy of
 / following conditions.
 /

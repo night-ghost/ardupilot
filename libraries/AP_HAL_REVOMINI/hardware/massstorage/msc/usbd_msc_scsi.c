@@ -614,7 +614,8 @@ static int8_t SCSI_Read10(uint8_t lun , uint8_t *params)
     hal_set_task_active(task_handle); // resume task 
     hal_context_switch_isr();         // and reschedule tasks after interrupt
     return 0;
-#else  
+#else  // as it was before
+
   MSC_BOT_DataLen = MSC_MEDIA_PACKET;  
   return SCSI_ProcessRead(lun);
 #endif
@@ -729,12 +730,13 @@ static int8_t SCSI_Write10 (uint8_t lun , uint8_t *params)
     hal_set_task_active(task_handle); // resume task
     hal_context_switch_isr();         // and reschedule tasks after interrupt
     return 0;
-#else  
+#else   // as it was before
+
     return SCSI_ProcessWrite(lun);
 #endif  
 }
 
-
+//[ real data read/write executed as task
 static void usb_task(){
 
     while(usb_read_ptr != usb_write_ptr) { // there are samples
@@ -778,6 +780,7 @@ static void usb_task(){
         }
     }
 }
+//]
 
 
 /**

@@ -8,7 +8,6 @@
 * stack now in CCM memory
 * PPM and PWM inputs works via Timer's driver handlers
 * added DSM and SBUS parsing on PPM input
-* high-frequency (8kHz) advanced scheduler, common for all needs, capable to use semaphores with (optional) performance statistics
 * all hardware description tables are now 'const' and locates in flash
 * more reliable reset for I2C bus on hangups
 * all drivers support set_retries()
@@ -31,16 +30,12 @@
 * added support to reboot to DFU mode (via "reboot to PX4 bootloader" in MP)
 * after any Fault or Panic() automatically reboots to DFU mode
 * diversity on RC_Input
-* reverted idiotic mainline change in Periodic interface
-* all used drivers altered to use "reschedule me" HAL feature
-* added usage for Compass' DataReady pin
 * unified exception handling 
 * added ability to bind Spectrum satellite without managed 3.3 DC-DC (requires short power off)
 * added support for Arduino32 reset sequence - negative DTR edge on 1200 baud or '1eaf' packet with high DTR
 * fixed hang on dataflash malfunction
 * fixed USB characters loss *without* hangup if disconnected
 * added failsafe on receiver's hangup - if no channel changes in 60 seconds
-* added HAL parameters support
 * changed to simplify support of slightly different boards - eg. AirbotF4
 * full support for AirbotF4 (separate binaries)
 * added support for servos on Input port unused pins
@@ -60,10 +55,9 @@
 * support for logs on SD card for AirbotV2 board
 * fixed 2nd Dataflash logs bug from mainstream - now logs are persists between reboots even on boards having chips with 64k sector
 * I2C wait time limited to 0.3s - no more forever hangs by external compass errors
-* FlexiPort can be switced between UART and I2C by parameters
+* FlexiPort can be switched between UART and I2C by parameters
 * The RCoutput module has been completely rewritten.
 * For the PWM outputs, the error in setting the timer frequency has been compensated.
-* Fixed bug with OneShot
 * added parameter to set PWM mode
 * added used memory reporting
 * added I2C error reporting
@@ -71,28 +65,25 @@
 * added HAL_RC_INPUT parameter to allow to force RC input module
 * added used stack reporting
 * added generation of .DFU file
-* time-consuming operations moved out from interrupt level to IO_Completion level with lowest possible priority
+* time-consuming operations moved out from interrupt level to IO_Completion level with low priority
 * added support for Clock Security System - if HSE fails in air system will use HSI instead
 * added boardEmergencyHandler which will be called on any Fault or Panic() before halt - eg. to release parachute
 * motor layout switched to per-board basis
 * console assignment switched to per-board basis
 * HAL switched to new DMA api with completion interrupts
-* AirbotV2 is fully supported with SD card and OSD (OSD not tested, just compiles)
+* AirbotV2 is fully supported with SD card and OSD
 * added support for reading from SD card via USB - HAL parameter allows to be USB MassStorege
-* fixed BUG in scheduler which periodically causes HardFault
 * added check for stack overflow for low priority tasks
 * all boards formats internal flash chip as FAT and allows access via USB
 * added spi flash autodetection
 * added support for TRIM command on FAT-formatted Dataflash
-* fixed bug in hardware I2C driver which spoils writes to I2C2
-* fixed bug in log write with different meanings of flags in FatFs and Posix
 * rewritten SD library to support 'errno' and early distinguish between file and dir
 * compass processing (4027uS) and baro processing(1271uS)  moved out from interrupt level to low-priority io level, because its
  execution time spoils loop time (500Hz = 2000uS for all)
 * added reformatting of DataFlash in case of hard filesystem errors, which fixes FatFs bug when there is no free space 
  after file overflows and then deleted
 * added autodetect for all known types of baro on external I2C bus
-* added autodetect for all known types ofcompass on external I2C bus
+* added autodetect for all known types of compass on external I2C bus
 * added check to I2C_Mgr for same device on same bus - to prevent autodetection like MS5611 (already initialized) as BMP_085
 * added time offset HAL parameter
 * added time syncronization between board's time and GPS time - so logs now will show real local date&time
@@ -106,7 +97,7 @@
 * added support for SUMD via UARTs
 * MPU not uses FIFO - data readed out via interrupts
 * added parametr allowing to defer EEPROM save up to disarm
-* optimized multitask to not switch context if next task is the same as current. Real context switch occures in ~4% of calls to task scheduler
+* optimized preemptive multitask, which does not context switch if next task is the same as current. Real context switch occures in ~4% of calls to task scheduler
 * all work with task list moved out to ISR level so there is no race condition anymore
 * all work with semaphores moved out to the same ISR level so serialized by hardware and don't requires disabling interrupts
 * added parameter RC_FS to enable all RC failsafe
@@ -136,6 +127,7 @@
 * fixed bug in OSD_Uart that cause hang if port not listened
 * SoftSerial driver rewritten to not use PWM dependency. Now it can use any pin with timer for RX and any pin for TX, and there 
   can be any number of SoftSerial UARTs
+* added per-task stack usage
 * ...
 * a lot of minor enhancements
 
@@ -179,6 +171,21 @@ task 6 (0x80547D92000CFA0) time:    3.38% mean     33.2uS max    49uS full     1
 task 7 (0x0000000080ADE5D) time:    0.01% mean     84.5uS max   107uS full    7044uS wait sem.      0uS
 
 OSD task uses 0.5% of CPU
+
+writing logs:
+
+sched time: by timer  0.84% sw  0.83% in yield 98.53% sw  3.76% in tails  0.63% sw 95.18%
+task 0 (0x0000000080B86E5) time:   12.63% mean     72.8uS max   124uS full       0uS wait sem.     10uS free stack 0x484
+task 1 (0x0000000080B94E9) time:   15.40% mean      4.5uS max    42uS full       0uS wait sem.      0uS free stack 0x8C
+task 2 (0x80B9C5D100056B4) time:    0.68% mean     13.6uS max    50uS full      92uS wait sem.      0uS free stack 0x15C
+task 3 (0x00000000801C935) time:    0.25% mean      8.2uS max   115uS full   15739uS wait sem.      0uS free stack 0x1AC
+task 4 (0x805122320008468) time:    0.23% mean     17.1uS max    56uS full    1457uS wait sem.   1387uS free stack 0x224
+task 5 (0x0000000080B9889) time:   67.24% mean      5.8uS max   111uS full  582173uS wait sem.      0uS free stack 0xD6C
+task 6 (0x80B270520007D68) time:    0.01% mean      6.2uS max    31uS full      88uS wait sem.      0uS free stack 0x17C
+task 7 (0x805BA1520010798) time:    3.26% mean     29.8uS max    79uS full     151uS wait sem.     19uS free stack 0x184
+task 8 (0x0000000080B8D81) time:    0.01% mean     88.3uS max   114uS full   11783uS wait sem.      0uS free stack 0x1A4
+
+
 
 Timer usage:
 

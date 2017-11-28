@@ -35,8 +35,6 @@ void USBDriver::begin(uint32_t baud) {
 
 /*    _usb_present = gpio_read_bit(PIN_MAP[BOARD_USB_SENSE].gpio_device,PIN_MAP[BOARD_USB_SENSE].gpio_bit); 
    using of this bit prevents USB hotplug
-
-
 */
 
     _initialized = true; // real USB initialization was much earlier
@@ -77,10 +75,10 @@ size_t USBDriver::write(const uint8_t *buffer, size_t size)
             n+=k;
             buffer+=k;
             
-            if(!_blocking && REVOMINIScheduler::_millis() - t > 300 ){        // время ожидания превысило 300мс - что-то пошло не так...
+            if(!_blocking && REVOMINIScheduler::_millis() - t > 30 ){        // время ожидания превысило 30мс - что-то пошло не так...
                 reset_usb_opened();
                 return n;
-            } 
+            }
         }
         return n;
     }

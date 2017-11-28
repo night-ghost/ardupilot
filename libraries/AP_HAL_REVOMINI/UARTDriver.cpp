@@ -38,7 +38,7 @@ REVOMINIUARTDriver::REVOMINIUARTDriver(const struct usart_dev *usart):
 {
 }
 
-//uint8_t mode = (UART_Parity_No <<4) | UART_Stop_Bits_1
+//uint8_t mode = (UART_Parity_No <<16) | UART_Stop_Bits_1
 void REVOMINIUARTDriver::begin(uint32_t baud, uint32_t bmode) {
 
     if(!_usart_device) return;
@@ -140,4 +140,3 @@ size_t REVOMINIUARTDriver::write(const uint8_t *buffer, size_t size)
 }
 
 #endif // CONFIG_HAL_BOARD
-

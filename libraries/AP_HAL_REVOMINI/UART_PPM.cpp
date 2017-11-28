@@ -48,7 +48,7 @@ int16_t UART_PPM::read() {
 }
 
 void UART_PPM::putch(uint8_t c, uint8_t n){
-    /* If the buffer is full and the user defines USART_SAFE_INSERT, ignore new bytes. */
+    /* If the buffer is full  ignore new bytes. */
     rb_safe_insert(&ppm_rxrb[n], c);
 }
 

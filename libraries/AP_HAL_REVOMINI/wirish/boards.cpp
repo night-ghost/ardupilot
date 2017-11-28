@@ -80,9 +80,11 @@ FPU_FPCCR_LSPEN_Msk
 
 static INLINE void setupCCM(){
     extern unsigned _sccm,_eccm; // defined by link script
-
+/* enabled by startup code
     RCC->AHB1ENR |= RCC_AHB1ENR_CCMDATARAMEN;
     asm volatile("dsb \n");
+*/
+
 
 //    volatile unsigned *src = &_siccm; // CCM initializers in flash
     volatile unsigned  *dest = &_sccm; // start of CCM
@@ -137,14 +139,9 @@ static INLINE void setupNVIC()
 void board_set_rtc_register(uint32_t sig, uint16_t reg)
 {
         PWR->CR   |= PWR_CR_DBP;
-
-        
+    
         RTC_WriteBackupRegister(reg, sig);
 
-//        PWR_BackupAccessCmd(DISABLE);
-
-        // disable the backup registers
-//        RCC->BDCR &= RCC_BDCR_RTCEN;
         PWR->CR   &= ~PWR_CR_DBP;
 }
 
@@ -156,10 +153,7 @@ uint32_t board_get_rtc_register(uint16_t reg)
 
         uint32_t ret = RTC_ReadBackupRegister(reg);
 
-        // disable the backup registers
-//        RCC->BDCR &= RCC_BDCR_RTCEN;
-        PWR->CR   &= ~PWR_CR_DBP;
-        
+        PWR->CR   &= ~PWR_CR_DBP;    
         return ret;
 }
 

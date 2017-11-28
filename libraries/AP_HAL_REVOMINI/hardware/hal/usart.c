@@ -264,17 +264,6 @@ void usart_setup(const usart_dev *dev, uint32_t baudRate, uint16_t wordLength,
         USART_ClearFlag(dev->USARTx, USART_FLAG_TC);
     }    
 #endif
-
-/*
-    NVIC_InitTypeDef NVIC_InitStructure;
-    // Enable the USART Interrupt 
-    NVIC_InitStructure.NVIC_IRQChannel = dev->irq;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = UART_INT_PRIORITY;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
-*/
-
     enable_nvic_irq(dev->irq, UART_INT_PRIORITY);
 }
 
@@ -314,7 +303,6 @@ uint32_t usart_tx(const usart_dev *dev, const uint8_t *buf, uint32_t len)
     }
     if (dev->state->txbusy == 0 && sent > 0)	    {
 	dev->state->txbusy = 1;
-//	USART_ITConfig(dev->USARTx, USART_IT_TXE, ENABLE);
         dev->USARTx->CR1 |= USART_MASK_TXEIE;
     }
 
@@ -346,7 +334,6 @@ static inline void usart_rx_irq(const usart_dev *dev)    {
 #endif
 
 	/* Check on Receive Data register Not Empty interrupt */
-//	if( USART_GetITStatus(dev->USARTx, USART_IT_RXNE) != RESET ){
         uint16_t sr = dev->USARTx->SR;
 	if( (sr & USART_F_RXNE) && (dev->USARTx->CR1 & USART_MASK_RXNEIE) ){
 #ifdef USART_SAFE_INSERT
@@ -357,14 +344,11 @@ static inline void usart_rx_irq(const usart_dev *dev)    {
 	    rb_push_insert(dev->rxrb, (uint8_t)dev->USARTx->DR);
 #endif
 
-//            USART_ClearFlag(dev->USARTx, USART_FLAG_RXNE); datasheet: It is cleared by a read to the USART_DR register
-
             if(dev->state->callback) {
                 revo_call_handler(dev->state->callback, (uint32_t)dev); 
             }
 	}
 
-//	if( USART_GetFlagStatus(dev->USARTx, USART_FLAG_ORE) != RESET ){
         if( sr & USART_F_ORE ){
 	    (void)dev->USARTx->DR; // cleared after reading sr, dr
 	}
@@ -382,7 +366,6 @@ static inline void usart_tx_irq(const usart_dev *dev) {
     uint32_t t=stopwatch_getticks();
 #endif
     /* Check USART Transmit Data Register Empty Interrupt */
-//    if (USART_GetITStatus(dev->USARTx, USART_IT_TXE) != RESET) {
     uint16_t sr = dev->USARTx->SR;
     if( (sr & USART_F_TXE) && (dev->USARTx->CR1 & USART_MASK_TXEIE) ){
 
@@ -391,7 +374,6 @@ static inline void usart_tx_irq(const usart_dev *dev) {
 	    dev->state->txbusy = 1;
 	} else   {
 	    /* Disable the USART Transmit Data Register Empty Interrupt */
-	    //USART_ITConfig(dev->USARTx, USART_IT_TXE, DISABLE);
 	    dev->USARTx->CR1 &= ~USART_MASK_TXEIE;
 	    dev->state->txbusy = 0;
 	    // nops needed to deactivate the irq before irq handler is left

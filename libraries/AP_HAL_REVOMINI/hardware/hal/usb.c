@@ -37,7 +37,7 @@ static enum reset_state_t reset_state = DTR_UNSET;
 static const U16 rxfifo_size = USB_RXFIFO_SIZE;
 //static const U16 txfifo_size = USB_TXFIFO_SIZE;
 
-static ring_buffer _rxfifo;
+static ring_buffer _rxfifo IN_CCM;
 //static ring_buffer _txfifo;
 
 static ring_buffer *rxfifo = &_rxfifo;                /* Rx FIFO */
@@ -52,7 +52,7 @@ static U8 usb_ready;
 static U8 UsbTXBlock = 1;
 
 
-LINE_CODING linecoding =
+LINE_CODING linecoding = // not const!
   {
     115200, /* baud rate*/
     0x00,   /* stop bits-1*/
@@ -112,7 +112,7 @@ static const USBD_DEVICE USR_CDC_desc =
 };
 
 /* USB Standard Device Descriptor */
-__ALIGN_BEGIN U8 USBD_DeviceDesc[USB_SIZ_DEVICE_DESC] __ALIGN_END =
+__ALIGN_BEGIN U8 const USBD_DeviceDesc[USB_SIZ_DEVICE_DESC] __ALIGN_END =
   {
     0x12,                       /*bLength */
     USB_DEVICE_DESCRIPTOR_TYPE, /*bDescriptorType*/
@@ -369,27 +369,11 @@ void usb_setParams(usb_attr_t * attr)
 
 void USB_OTG_BSP_EnableInterrupt(USB_OTG_CORE_HANDLE *pdev)
 {
-/*
-    NVIC_InitTypeDef NVIC_InitStructure;
-    NVIC_InitStructure.NVIC_IRQChannel = OTG_FS_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = preempt_prio;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = sub_prio;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
-*/
     enable_nvic_irq(OTG_FS_IRQn, preempt_prio);
 }
 
 void USB_OTG_BSP_DisableInterrupt()
 {
-/*
-	NVIC_InitTypeDef NVIC_InitStructure;
-	NVIC_InitStructure.NVIC_IRQChannel = OTG_FS_IRQn;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelCmd = DISABLE;
-	NVIC_Init(&NVIC_InitStructure);
-*/
     NVIC_DisableIRQ(OTG_FS_IRQn);
 }
 
@@ -778,7 +762,6 @@ void usb_reset_rx(){
 
 void usb_reset_tx(){  
       APP_Rx_ptr_in = 0;    
-//      rb_reset(txfifo);  
 }
 
 uint16_t usb_tx_pending(void){     

@@ -56,7 +56,7 @@ const uint32_t pageBase1 = 0x0800c000; // Page3
 // it is possible to move EEPROM area to sectors 1&2 to free sector 3 for code (firmware from 0x0800c000)
 // or use 3 sectors for EEPROM as wear leveling
 
-static EEPROMClass eeprom;
+static EEPROMClass eeprom IN_CCM;
 bool REVOMINIStorage::write_deferred IN_CCM;
 
 

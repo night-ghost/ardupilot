@@ -170,7 +170,6 @@ void gpio_set_mode(const gpio_dev* const dev, uint8_t pin, gpio_pin_mode mode)
 	config.GPIO_OType = GPIO_OType_OD;
 	break;
     default:
-	//errno_r = EINVAL;
 	return;
     }
 
@@ -257,7 +256,6 @@ void afio_cfg_debug_ports(afio_debug_cfg config)
 	case AFIO_DEBUG_FULL_SWJ:
 		break;
 	default:
-		//errno_r = EINVAL;
 		return;
 	}
 }

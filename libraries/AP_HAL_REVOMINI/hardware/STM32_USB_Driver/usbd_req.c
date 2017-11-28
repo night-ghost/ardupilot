@@ -98,7 +98,7 @@ __ALIGN_BEGIN uint32_t  USBD_cfg_status __ALIGN_END  = 0;
   #endif
 #endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */
 
-__ALIGN_BEGIN uint8_t USBD_StrDesc[USB_MAX_STR_DESC_SIZ] __ALIGN_END ;
+__ALIGN_BEGIN uint8_t USBD_StrDesc[USB_MAX_STR_DESC_SIZ] __ALIGN_END ; // work buffer
 /**
   * @}
   */ 
@@ -128,7 +128,7 @@ static void USBD_SetFeature(USB_OTG_CORE_HANDLE  *pdev,
 static void USBD_ClrFeature(USB_OTG_CORE_HANDLE  *pdev, 
                             USB_SETUP_REQ *req);
 
-static uint8_t USBD_GetLen(uint8_t *buf);
+static uint8_t USBD_GetLen(const uint8_t *buf);
 /**
   * @}
   */ 
@@ -820,14 +820,12 @@ void USBD_GetString(const uint8_t *desc, uint8_t *unicode, uint16_t *len)
 {
   uint8_t idx = 0;
   
-  if (desc != NULL) 
-  {
+  if (desc != NULL) {
     *len =  USBD_GetLen(desc) * 2 + 2;    
     unicode[idx++] = *len;
     unicode[idx++] =  USB_DESC_TYPE_STRING;
     
-    while (*desc != NULL) 
-    {
+    while (*desc != NULL) {
       unicode[idx++] = *desc++;
       unicode[idx++] =  0x00;
     }
@@ -840,12 +838,11 @@ void USBD_GetString(const uint8_t *desc, uint8_t *unicode, uint16_t *len)
    * @param  buf : pointer to the ascii string buffer
   * @retval string length
   */
-static uint8_t USBD_GetLen(uint8_t *buf)
+static uint8_t USBD_GetLen(const uint8_t *buf)
 {
     uint8_t  len = 0;
 
-    while (*buf != NULL) 
-    {
+    while (*buf != NULL) {
         len++;
         buf++;
     }

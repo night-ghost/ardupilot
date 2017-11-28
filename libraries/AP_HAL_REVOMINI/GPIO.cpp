@@ -34,7 +34,7 @@ void REVOMINIGPIO::_pinMode(uint8_t pin, uint8_t mode)
     case OUTPUT:
     case OUTPUT_OPEN_DRAIN:
     case INPUT:
-//    case INPUT_FLOATING:
+//    case INPUT_FLOATING: synonim and cause doubled 'case'
     case INPUT_ANALOG:
     case INPUT_PULLUP:
     case INPUT_PULLDOWN:
@@ -159,7 +159,7 @@ void REVOMINIDigitalSource::mode(uint8_t md)
         return;
     }
 
-    gpio_set_mode(_device, _bit, outputMode);
+    gpio_set_mode( _device, _bit, outputMode);
     gpio_set_speed(_device, _bit, GPIO_Speed_100MHz); // to use as CS
 }
 

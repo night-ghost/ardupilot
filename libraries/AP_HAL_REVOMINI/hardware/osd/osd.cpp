@@ -1,3 +1,10 @@
+/*
+  wrapper for OSD code (https://github.com/night-ghost/minimosd-extra) to run in the HAL as independent process
+
+    night_ghost@ykoctpa.ru 2017
+
+*/
+
 #include <AP_HAL/AP_HAL.h>
 
 #ifdef BOARD_OSD_CS_PIN
@@ -174,7 +181,7 @@ typedef struct OSD_PAN {
 
 #define m1 ((uint8_t)-1)
 
-static OSD_pan pan_tbl[]={
+static const OSD_pan pan_tbl[]={
     { 0, 0, 0, 0, },
     { 0, 0, 0, ID_of(airSpeed), },     //    "Air Speed",        // 1
     { 0, 0, 0, ID_of(alt), },          //    "Altitude",         // 2
@@ -308,11 +315,12 @@ mavlink_system_t mavlink_system = {12,1};  // sysid, compid
  #define DMA_BUFFER_SIZE 510
     static uint8_t  dma_buffer[DMA_BUFFER_SIZE+1]; // in RAM for DMA
     static uint16_t dma_transfer_length IN_CCM;
+
+static uint8_t shadowbuf[sizeof(OSD::osdbuf)] IN_CCM;
+
 #endif
 
 static bool diff_done;
-
-static uint8_t shadowbuf[sizeof(OSD::osdbuf)] IN_CCM;
 
 
 extern void heartBeat();
@@ -715,7 +723,9 @@ static void write_buff_to_MAX(bool all){
             MAX_write(MAX7456_DMDI_reg, c);
             max7456_cs_off();
         }
+#ifdef OSD_DMA_TRANSFER
         shadowbuf[cnt] = c;
+#endif
     }
     max7456_off();
 }
@@ -754,7 +764,9 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
 
     // clear memory
     memset(OSD::osdbuf,0x20, sizeof(OSD::osdbuf));
+#ifdef OSD_DMA_TRANSFER
     memset(shadowbuf,  0x20, sizeof(shadowbuf));
+#endif
 
 /*
     lets try to load settings from SD card

@@ -46,7 +46,7 @@ inline uint32_t i2c_get_operation_time(uint16_t *psr1){
 
 
 
-void REVOI2CDevice::lateInit(){
+void REVOI2CDevice::lateInit() {
     lateInitDone=true;
 }
 
@@ -386,13 +386,13 @@ bool REVOI2CDevice::read_registers_multiple(uint8_t first_reg, uint8_t *recv,
 
 
 enum I2C_state {
-    I2C_want_SB,
-    I2C_want_ADDR,
-    I2C_want_TXE,
-    I2C_want_RX_SB,
-    I2C_want_RX_ADDR,
-    I2C_want_RXNE,
-    I2C_done
+    I2C_want_SB=0,
+    I2C_want_ADDR,   // 1
+    I2C_want_TXE,    // 2
+    I2C_want_RX_SB,  // 3
+    I2C_want_RX_ADDR,// 4
+    I2C_want_RXNE,   // 5
+    I2C_done         // 6
 } ;
 
 
@@ -499,6 +499,7 @@ uint32_t REVOI2CDevice::i2c_read(uint8_t addr, const uint8_t *tx_buff, uint8_t t
 void REVOI2CDevice::isr_ev(){
     bool err;
 
+    // get err parameter 
     asm volatile("MOV     %0, r1\n\t"  : "=rm" (err));
 
     uint32_t sr1itflags = _dev->I2Cx->SR1;
@@ -570,9 +571,6 @@ void REVOI2CDevice::isr_ev(){
             }else {      // receive
                 if(_rx_len == 1) {                 // Disable Acknowledge for 1-byte transfer
                     _dev->I2Cx->CR1 &= ~I2C_CR1_ACK;
-//                } else if(_rx_len == 2) {              // Disable Acknowledge and change NACK position
-//                    _dev->I2Cx->CR1 |= I2C_NACKPosition_Next; // move NACK to next byte
-//                    _dev->I2Cx->CR1 &= ~I2C_CR1_ACK;
                 } else {
                     _dev->I2Cx->CR1 |= I2C_CR1_ACK;
                 }

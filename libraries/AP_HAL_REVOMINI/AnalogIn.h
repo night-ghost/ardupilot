@@ -61,8 +61,7 @@ public:
     /* new_sample(): called with value of ADC measurments, from interrput */
     void new_sample(uint16_t);
 
-    /* setup_read(): called to setup ADC registers for next measurment,
-     * from interrupt */
+    /* setup_read(): called to setup ADC registers for next measurment, from interrupt */
     void setup_read();
 
     /* stop_read(): called to stop device measurement */
@@ -119,13 +118,13 @@ protected:
     REVOMINIAnalogSource* _create_channel(uint8_t num);
     void _register_channel(REVOMINIAnalogSource*);
     void _timer_event(void);
-    REVOMINIAnalogSource* _channels[REVOMINI_INPUT_MAX_CHANNELS];
+    static REVOMINIAnalogSource* _channels[REVOMINI_INPUT_MAX_CHANNELS];
     int16_t _num_channels;
     int16_t _active_channel;
     uint16_t _channel_repeat_count;
 
 private:
-    REVOMINIAnalogSource _vcc;
+    static REVOMINIAnalogSource _vcc;
 
     bool cnv_started;
 };

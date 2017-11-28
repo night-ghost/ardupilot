@@ -1,4 +1,17 @@
 /*
+   night_ghost@ykoctpa.ru 2017
+    
+    a port of SparkFun's SD class to FatFs (c) Chan
+     because it much better and faster than sdfatlib
+    
+    also it was rewritten to:
+* distinguish between flie at directory by stat(), not by try to open
+* provide last error code and its text description
+* added tracking of opened files for global sync()
+* some new functions added
+    
+  original SparkFun readme below
+----------------------------------------------
 
  SD - a slightly more friendly wrapper for sdfatlib
 

@@ -134,14 +134,14 @@ static uint8_t  *USBD_cdc_GetOtherCfgDesc (uint8_t speed, uint16_t *length);
   * @{
   */ 
 extern CDC_IF_Prop_TypeDef  APP_FOPS;
-extern uint8_t USBD_DeviceDesc   [USB_SIZ_DEVICE_DESC];
+extern const uint8_t USBD_DeviceDesc   [USB_SIZ_DEVICE_DESC];
 
 #ifdef USB_OTG_HS_INTERNAL_DMA_ENABLED
   #if defined ( __ICCARM__ ) /*!< IAR Compiler */
     #pragma data_alignment=4   
   #endif
 #endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */
-__ALIGN_BEGIN uint8_t usbd_cdc_CfgDesc  [USB_CDC_CONFIG_DESC_SIZ] __ALIGN_END ;
+__ALIGN_BEGIN uint8_t const usbd_cdc_CfgDesc  [USB_CDC_CONFIG_DESC_SIZ] __ALIGN_END ;
 
 #ifdef USB_OTG_HS_INTERNAL_DMA_ENABLED
   #if defined ( __ICCARM__ ) /*!< IAR Compiler */
@@ -198,7 +198,7 @@ static uint32_t cdcCmd = 0xFF;
 static uint32_t cdcLen = 0;
 
 /* CDC interface class callbacks structure */
-USBD_Class_cb_TypeDef  USBD_CDC_cb = 
+USBD_Class_cb_TypeDef const  USBD_CDC_cb = 
 {
   usbd_cdc_Init,
   usbd_cdc_DeInit,
@@ -222,7 +222,7 @@ USBD_Class_cb_TypeDef  USBD_CDC_cb =
   #endif
 #endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */
 /* USB CDC device Configuration Descriptor */
-__ALIGN_BEGIN uint8_t usbd_cdc_CfgDesc[USB_CDC_CONFIG_DESC_SIZ]  __ALIGN_END =
+__ALIGN_BEGIN uint8_t const  usbd_cdc_CfgDesc[USB_CDC_CONFIG_DESC_SIZ]  __ALIGN_END =
 {
   /*Configuration Descriptor*/
   0x09,   /* bLength: Configuration Descriptor size */
@@ -327,7 +327,7 @@ __ALIGN_BEGIN uint8_t usbd_cdc_CfgDesc[USB_CDC_CONFIG_DESC_SIZ]  __ALIGN_END =
     #pragma data_alignment=4   
   #endif
 #endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */ 
-__ALIGN_BEGIN uint8_t usbd_cdc_OtherCfgDesc[USB_CDC_CONFIG_DESC_SIZ]  __ALIGN_END =
+__ALIGN_BEGIN uint8_t const  usbd_cdc_OtherCfgDesc[USB_CDC_CONFIG_DESC_SIZ]  __ALIGN_END =
 { 
   0x09,   /* bLength: Configuation Descriptor size */
   USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION,   
@@ -515,7 +515,7 @@ static uint8_t  usbd_cdc_Setup (void  *pdev,
                                 USB_SETUP_REQ *req)
 {
   uint16_t len=USB_CDC_DESC_SIZ;
-  uint8_t  *pbuf=usbd_cdc_CfgDesc + 9;
+  uint8_t const  *pbuf=usbd_cdc_CfgDesc + 9;
   
   switch (req->bmRequest & USB_REQ_TYPE_MASK)
   {

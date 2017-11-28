@@ -1,3 +1,13 @@
+/*
+
+    EEPROM emulation for OSD needs. Uses 1 16K  page of flash to provide 2K of eeprom so it does wear 
+     leveling of 8, excluding the case when we should write 0xff value, but OSD never writes it
+
+    in time of page erase all data buffered in RAM so will be lost in case of unexpected power off, but there is no in-flight writes
+
+    night_ghost@ykoctpa.ru 2017
+*/
+
 #include "osd_eeprom.h"
 
 #include <AP_HAL/AP_HAL.h>
@@ -11,7 +21,7 @@ extern const AP_HAL::HAL& hal;
 #include <stdlib.h>
 
 uint32_t OSD_EEPROM::ee_ptr=0;
-static uint8_t data[EEPROM_SIZE] IN_CCM; // don't use malloc() because memory can be eated out by AP_Wayback
+static uint8_t data[EEPROM_SIZE] IN_CCM; // buffer for all data to be cached
 
 
 void OSD_EEPROM::init(){
@@ -58,7 +68,7 @@ void OSD_EEPROM::_write(uint16_t addr, uint8_t val){
         goto done;
     }
 
-    if(val != 0xFF){ // the only way to write FF is to clear all
+    if(val != 0xFF){ // the only way to write FF is to clear all - but OSD don't writes it
         for(uint8_t i=0; i<PAGE_SIZE/EEPROM_SIZE; i++){
             // look 0xFF 
             uint32_t ea = EEPROM_PAGE + i*EEPROM_SIZE + addr;

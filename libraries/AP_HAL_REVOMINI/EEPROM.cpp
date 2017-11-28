@@ -213,7 +213,7 @@ again:
 // something went wrong, try to recover
         if(_init() == EEPROM_OK) goto again;
 
-// all bad - -_init() fails
+// all bad - -_init() fails. TODO: Panic()?
         return 0;
 }
 
@@ -429,7 +429,7 @@ uint16_t EEPROMClass::_init(void) //
 
 	erased0 = read_16(PageBase0 + 2);
 	if (erased0 == 0xffff) erased0 = 0;
-	// Print number of EEprom write cycles - but  it cleared each reflash
+	// Print number of EEprom write cycles - but it cleared each reflash
 #ifdef DEBUG_BUILD
 	printf("\nEEprom write cycles %d\n ", erased0);
 #endif

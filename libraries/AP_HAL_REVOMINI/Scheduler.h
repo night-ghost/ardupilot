@@ -31,8 +31,8 @@
 #define TIMER_PERIOD 100  // task timeslice period in uS
 
 
-#define MAIN_STACK_SIZE    10240U   // measured use of stack is only 1.5K - but it grows up to 4K when using FatFs, also this includes 1K stack for ISR
-#define IO_STACK_SIZE       8192U   // IO_tasks stack size - io_thread can do work with filesystem
+#define MAIN_STACK_SIZE     7168U   // measured use of stack is only 1.5K - but it grows up to 4K when using FatFs, also this includes 1K stack for ISR
+#define IO_STACK_SIZE       4096U   // IO_tasks stack size - io_thread can do work with filesystem
 #define DEFAULT_STACK_SIZE  1024U   // Default tasks stack size 
 #define SMALL_TASK_STACK    1024U   // small stack for sensors
 #define STACK_MAX          65536U
@@ -76,6 +76,7 @@ struct task_t {
         uint32_t count_paused;  // count task was paused on IO
         uint32_t max_paused;    // max time task was paused on IO
         uint32_t max_c_paused;  // count task was paused on IO
+        uint32_t stack_free;    // free stack
 #endif
         uint32_t guard; // stack guard
 };
@@ -84,6 +85,7 @@ extern "C" {
     extern unsigned _estack; // defined by link script
     extern uint32_t us_ticks;
     extern void *_sdata;
+    extern void *_edata;
     extern void *_sccm;  // start of CCM
     extern void *_eccm;  // end of CCM vars
 

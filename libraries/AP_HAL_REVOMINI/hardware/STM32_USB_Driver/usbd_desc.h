@@ -77,7 +77,7 @@
 /** @defgroup USBD_DESC_Exported_Variables
   * @{
   */ 
-extern  uint8_t USBD_DeviceDesc  [USB_SIZ_DEVICE_DESC];
+extern  const uint8_t USBD_DeviceDesc  [USB_SIZ_DEVICE_DESC];
 extern  const uint8_t USBD_OtherSpeedCfgDesc[USB_LEN_CFG_DESC]; 
 extern  const uint8_t USBD_DeviceQualifierDesc[USB_LEN_DEV_QUALIFIER_DESC];
 extern  const uint8_t USBD_LangIDDesc[USB_SIZ_STRING_LANGID];

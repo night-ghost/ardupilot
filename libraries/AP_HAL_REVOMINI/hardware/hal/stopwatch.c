@@ -11,13 +11,7 @@ uint32_t us_ticks;
 
 void stopwatch_init(void)
 {
-	RCC_ClocksTypeDef	clocks;
-	
-	/* compute the number of system clocks per microsecond */
-	RCC_GetClocksFreq(&clocks);
-	us_ticks = clocks.SYSCLK_Frequency / 1000000;
-	
-	//assert_param(us_ticks > 1);
+	us_ticks = SystemCoreClock / 1000000;
 	
 	/* turn on access to the DWT registers */
 	DEMCR |= DEMCR_TRCENA; 
@@ -29,7 +23,7 @@ void stopwatch_init(void)
 
 
 void stopwatch_delay_us(uint32_t us){
-//	stopwatch_reset(); we can't do that because any delay() in interrupt will reset main counter. It should be free running
+//	 we don't call stopwatch_reset() because any delay() in interrupt will reset main counter. It should be free running
     uint32_t ts = stopwatch_getticks(); // start time in ticks
     uint32_t dly = us * us_ticks;       // delay in ticks
     while(1) {

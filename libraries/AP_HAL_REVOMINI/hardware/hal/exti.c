@@ -145,8 +145,6 @@ void exti_detach_interrupt(afio_exti_num num)
 	EXTI_InitStructure.EXTI_LineCmd = DISABLE;
 	EXTI_Init(&EXTI_InitStructure);
 
-
-
 /* do not disable interrupt in NVIC because it can be shared
         NVIC_DisableIRQ(exti_channels[num].irq_type);
 */

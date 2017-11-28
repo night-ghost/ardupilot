@@ -325,10 +325,6 @@ void timer_reset(const timer_dev *dev) {
         RCC_APB1PeriphResetCmd(dev->clk, DISABLE);
     }
 
-//    TIM_DeInit(dev->regs);
-    
-
-
 }
 
 /**
@@ -363,7 +359,6 @@ uint32_t configTimeBase(const timer_dev *dev, uint16_t period, uint16_t khz)
 
     timer_init(dev); // turn it on
     
-//    timer_reset(dev); - initial init done before
     timer_pause(dev);
 
     dev->regs->CR1 = TIMER_CR1_ARPE;
@@ -460,32 +455,7 @@ static void disable_channel(const timer_dev *dev, uint8_t channel) {
 
 static void pwm_mode(const timer_dev *dev, uint8_t channel) {
     timer_disable_irq(dev, channel);
-
-#if 0 
-    switch (channel){
-    case TIMER_CH1:
-        TIM_SelectOCxM(dev->regs, TIM_Channel_1, BOARD_PWM_MODE);
-        TIM_OC1PreloadConfig(dev->regs, TIM_OCPreload_Enable);
-        break;
-    case TIMER_CH2:
-        TIM_SelectOCxM(dev->regs, TIM_Channel_2, BOARD_PWM_MODE);
-        TIM_OC2PreloadConfig(dev->regs, TIM_OCPreload_Enable);
-        break;
-
-    case TIMER_CH3:
-        TIM_SelectOCxM(dev->regs, TIM_Channel_3, BOARD_PWM_MODE);
-        TIM_OC3PreloadConfig(dev->regs, TIM_OCPreload_Enable);
-        break;
-
-    case TIMER_CH4:
-        TIM_SelectOCxM(dev->regs, TIM_Channel_4, BOARD_PWM_MODE);
-        TIM_OC4PreloadConfig(dev->regs, TIM_OCPreload_Enable);
-        break;
-    }
-#else
     timer_oc_set_mode(dev, channel, BOARD_PWM_MODE, TIMER_OC_PE);
-#endif
-
     timer_cc_enable(dev, channel);
 }
 

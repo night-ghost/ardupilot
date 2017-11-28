@@ -25,6 +25,8 @@ static inline caddr_t get_stack_top(void)
 }
 
 caddr_t _sbrk(int nbytes);
+caddr_t sbrk_ccm(int nbytes);
+
 int _open(const char *path, int flags, ...);
 int _close(int fd);
 int _fstat(int fd, struct stat *st);

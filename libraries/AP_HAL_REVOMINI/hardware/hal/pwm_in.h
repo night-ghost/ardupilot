@@ -61,28 +61,7 @@ extern struct PPM_State PPM_Inputs[];
 
 
 struct TIM_Channel {
-
-#if 0 //{ TODO: remove it
-        uint16_t tim_cc;
-
-        TIM_TypeDef * tim;
-        const timer_dev * timer;// 
-        uint16_t tim_channel;
-        uint8_t channel_n;      // for work with Timer driver
-
-        uint32_t tim_clk;
-        rcc_clockcmd tim_clkcmd;
-
-        GPIO_TypeDef * gpio_port;
-        uint32_t gpio_clk;
-        rcc_clockcmd gpio_clkcmd;
-
-        uint16_t gpio_pin;
-        uint8_t  gpio_af;
-        uint8_t  gpio_af_tim;
-#endif //}
-
-        uint8_t pin;       // pin number - to remove all GPIO-related data
+    uint8_t pin;       // pin number
 }; 
 
 extern const struct TIM_Channel PWM_Channels[];

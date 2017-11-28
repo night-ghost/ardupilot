@@ -3,7 +3,7 @@ sp              := $(sp).x
 dirstack_$(sp)  := $(d)
 d               := $(dir)
 BUILDDIRS       += $(BUILD_PATH)/$(d)/Libraries/STM32F4xx_StdPeriph_Driver/src
-BUILDDIRS       += $(BUILD_PATH)/$(d)/Libraries/CMSIS/Device/ST/STM32F4xx/Source/Templates/gcc_ride7
+#BUILDDIRS       += $(BUILD_PATH)/$(d)/Libraries/CMSIS/Device/ST/STM32F4xx/Source/Templates/gcc_ride7
 
 LIBRARY_INCLUDES += -I$(STM32_PATH)/Libraries/STM32F4xx_StdPeriph_Driver/inc
 LIBRARY_INCLUDES += -I$(STM32_PATH)/Libraries/CMSIS/Include
@@ -24,7 +24,6 @@ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_exti
 cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_flash.c
 cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_gpio.c
 cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_i2c.c
-#cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_iwdg.c
 cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_pwr.c
 cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_rcc.c
 cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_rtc.c
@@ -32,7 +31,6 @@ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_spi.
 cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_syscfg.c
 cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_tim.c
 cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_usart.c
-#cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_wwdg.c
 
 sSRCS_$(d) := 
 

@@ -70,11 +70,6 @@ in case of RevoMini we have pins
 #define  SS_MAX_RX_BUFF (SSI_RX_BUFF_SIZE - 1)  // RX buffer size
 #define  SS_MAX_TX_BUFF (SSI_TX_BUFF_SIZE - 1)   // TX buffer size
 
-//#define SERIAL_TIMER TIMER8
-#define TX_PIN BOARD_SOFTSERIAL_TX
-#define RX_PIN BOARD_SOFTSERIAL_RX
-
-
 extern const struct TIM_Channel PWM_Channels[];
 
 class REVOMINI::SerialDriver : public AP_HAL::UARTDriver  {
@@ -136,9 +131,9 @@ private:
     uint8_t receiveByte;
 
     volatile int8_t           txBitCount;
-    volatile uint16_t         transmitBufferWrite;
+    uint16_t                  transmitBufferWrite;
     volatile uint16_t         transmitBufferRead;
-    volatile uint8_t          transmitBuffer[SSI_RX_BUFF_SIZE];
+    uint8_t                   transmitBuffer[SSI_RX_BUFF_SIZE];
     
     bool txSkip;
     bool rxSkip;

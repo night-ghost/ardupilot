@@ -113,7 +113,6 @@ GLOBAL_FLAGS    += -DMCU_$(MCU)
 GLOBAL_FLAGS    += -DCONFIG_HAL_BOARD=$(HAL_BOARD)
 GLOBAL_FLAGS    += -DSTM32F4XX
 GLOBAL_FLAGS    += -DUSE_STDPERIPH_DRIVER
-GLOBAL_FLAGS    += -DHSE_VALUE=8000000
 GLOBAL_FLAGS    += -DARM_MATH_CM4
 GLOBAL_FLAGS    += -DUSE_OTG_FS_CORE
 GLOBAL_FLAGS    += -DUSE_USB_OTG_FS
@@ -144,8 +143,7 @@ GLOBAL_CFLAGS   += -include $(BOARDS_PATH)/$(BOARD)/board.h
 GLOBAL_CXXFLAGS := -fno-rtti       #Disable generation of information about every class with virtual functions for use by the C++ runtime type identification features
 GLOBAL_CXXFLAGS += -fno-exceptions -fno-threadsafe-statics # not true C++
 GLOBAL_CXXFLAGS += -fconserve-space -fno-enforce-eh-specs  -fno-use-cxa-atexit
-
-GLOBAL_CXXFLAGS += -Wall  -std=gnu++11
+GLOBAL_CXXFLAGS += -std=gnu++11
 
 # Downgrade some diagnostics about nonconformant code from errors to warnings. Thus, using "-fpermissive" will allow some nonconforming code to compile.
 GLOBAL_CXXFLAGS += -fpermissive $(GLOBAL_CFLAGS)
@@ -173,7 +171,6 @@ LDFLAGS         += -Wl,--warn-common
 #let's linker optimize whole program itself
 LDFLAGS         += -Wl,--relax
 #LDFLAGS         += -fwhole-program
-#LDFLAGS         += -Wl,--cref
 ##
 # -fwhole-program
 #--plugin=/usr/local/arm-none-eabi/lib/gcc/arm-none-eabi/5.2.1/liblto_plugin.so

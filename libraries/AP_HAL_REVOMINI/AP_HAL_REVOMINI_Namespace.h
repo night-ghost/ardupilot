@@ -32,12 +32,20 @@ namespace REVOMINI {
     class SBUS_parser;
     class NRF_parser;
     class SerialDriver;
-//#if defined(BOARD_OSD_CS_PIN)
     class UART_OSD;
     class UART_PPM;
     class MassStorage;
 }
 
+
+inline void * operator new(size_t size, caddr_t ptr)
+{
+    if (size < 1) {
+        size = 1;
+    }
+    memset(ptr,0,size);
+    return ptr;
+}
 
 
 #endif // __AP_HAL_REVOMINI_NAMESPACE_H__

@@ -94,8 +94,12 @@ void AP_WayBack::init()
     
     _epsilon = TRACK_EPS; // initial track error
 #if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
-    _task = REVOMINIScheduler::register_timer_task(100000, FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void), NULL); // 10Hz
-    REVOMINIScheduler::set_task_priority(_task, 116); // max speed 1/16 of main task
+    _task = REVOMINIScheduler::start_task(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void), 512);
+    if(_task){
+        REVOMINIScheduler::set_task_priority(_task, 116); // max speed 1/16 of main task
+        REVOMINIScheduler::set_task_period(_task, 100000); // setting of period allows task to run
+        initialized=true;
+    }
 #else
     hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void));
 #endif
@@ -109,16 +113,20 @@ void AP_WayBack::init(float eps, uint16_t points, bool bs /*, AP_AHRS& ahrs*/ ) 
     _epsilon = eps;
     _points_max = points;
     _params.blind_shortcut=bs;
-//    _ahrs = ahrs;
     
 #if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
-    _task = REVOMINIScheduler::register_timer_task(100000, FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void), NULL); // 10Hz
-    REVOMINIScheduler::set_task_priority(_task, 116); // max speed 1/16 of main task
+    _task = REVOMINIScheduler::start_task(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void), 512);
+    if(_task){
+        REVOMINIScheduler::set_task_priority(_task, 116); // max speed 1/16 of main task
+        REVOMINIScheduler::set_task_period(_task, 100000); // setting of period allows task to run
+        initialized=true;
+    }
+        
 #else
     hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void));
-    
-#endif
     initialized=true;
+#endif
+    
 }
 
 
@@ -152,7 +160,7 @@ bool AP_WayBack::start(){
         max_alt=0;
     }
     
-    
+DBG_PRINT("start ");
     recording=true;    
     return true;
 }
@@ -161,6 +169,8 @@ void AP_WayBack::stop(){
     recording=false;
     
     if(num_points) num_points -= 1; // skip the last point - current coordinates
+
+DBG_PRINT("stop ");
 
     simplify(last_reduce, num_points); // reduce all remaining points
 
@@ -207,7 +217,7 @@ void AP_WayBack::push_point(Vector3f p){
     }
             
 #if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
-    REVOMINIScheduler::set_task_active(_task); // resume task because there is new point
+    REVOMINIScheduler::task_resume(_task); // resume task because there is new point
 #endif
     
 
@@ -330,10 +340,13 @@ void AP_WayBack::add_point(float x, float y){
     uint16_t p1;       // leg end
 
 //    uint16_t last_point = 0;
+    uint32_t start_t=REVOMINIScheduler::_micros();
 
     if(dist(x,y,points[num_points-1]) > _epsilon) { // we can add a point
 
         Point &p = points[num_points];
+
+    DBG_PRINTF("got a point (x,y)=%f,%f\n",x,y);  
 
         p.x=x;
         p.y=y;
@@ -441,6 +454,11 @@ again:
     // do it only if was any reductions
     if(was_reduce) {
         squizze();      // remove bad points
+    }
+
+    uint32_t dt = REVOMINIScheduler::_micros() - start_t;
+    if(dt>0) {
+        DBG_PRINTF("point process time=%d\n",dt);  
     }
 
 }

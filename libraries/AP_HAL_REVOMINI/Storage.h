@@ -41,7 +41,7 @@ public:
   void _write_byte(uint16_t loc, uint8_t value);
 //  void format_eeprom(void);
 private:
-     static void do_on_disarm();
+    static void do_on_disarm();
     static bool write_deferred;
     
     static void error_parse(uint16_t status);

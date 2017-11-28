@@ -16,7 +16,7 @@ class REVOMINI::REVOMINIUtil : public AP_HAL::Util {
 public:
     REVOMINIUtil(): gps_shift(0) {}
 
-    bool run_debug_shell(AP_HAL::BetterStream *stream) { return false; }
+    bool run_debug_shell(AP_HAL::BetterStream *stream) { return false; } // shell in FC? you must be kidding!
 
     void set_soft_armed(const bool b) { 
         if(soft_armed != b){ 
@@ -46,7 +46,7 @@ public:
         memset(serialid, 0, sizeof(serialid));
         get_board_serial(serialid);
 
-        const char *board_type = "RevoMini";
+        const char *board_type = BOARD_OWN_NAME;
 
         // this format is chosen to match the human_readable_serial()
         // function in auth.c
@@ -60,6 +60,7 @@ public:
     
     // create a new semaphore
     Semaphore *new_semaphore(void)  override { return new REVOMINI::Semaphore; } 
+    
 private:
     uint64_t gps_shift; // shift from board time to real time
 };

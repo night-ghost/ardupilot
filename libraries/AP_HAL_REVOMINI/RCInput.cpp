@@ -49,21 +49,8 @@ input_channels:
     15, // PC9  T8/4  - Soft_sda / soft_RX
 */
 
-_parser *REVOMINIRCInput::parsers[] = { // individual parsers on each PPM pin and DSM/SBUS USART
-    new PPM_parser, 
-    new PPM_parser, 
-#ifdef BOARD_SPEKTRUM_RX_PIN
-    new DSM_parser, 
-#endif
-#ifdef BOARD_NRF_CS_PIN
-    new NRF_parser,
-#endif
-#ifdef BOARD_SBUS_UART
-    new SBUS_parser,
-#endif
-}; 
-
-#define PPM_INPUTS (ARRAY_SIZE(parsers))
+_parser * REVOMINIRCInput::parsers[MAX_RC_PARSERS] IN_CCM;  // individual parsers on each PPM pin and DSM/SBUS USART
+uint8_t   REVOMINIRCInput::num_parsers IN_CCM;
 
 
 uint8_t           REVOMINIRCInput::_valid_channels IN_CCM; //  = 0;
@@ -96,6 +83,7 @@ REVOMINIRCInput::REVOMINIRCInput()
 {   }
 
 void REVOMINIRCInput::init() {
+    caddr_t ptr;
 
     memset((void *)&_override[0],   0, sizeof(_override));
 
@@ -103,9 +91,9 @@ void REVOMINIRCInput::init() {
 1       2       3       4       5       6       7
                PD2     PA15                
 gnd    +5      26      103                     
-used as:
-               rx      pow
-               int     cs
+used as
+for DSM:       rx      pow
+for RFM        int     cs
 
 */
 
@@ -117,7 +105,30 @@ used as:
 
     pwmInit(is_PPM); // PPM sum mode
 
-    for(uint8_t i=0; i<PPM_INPUTS;i++) {
+    uint8_t pp=0;
+
+    ptr = sbrk_ccm(sizeof(PPM_parser)); // allocate memory in CCM
+    parsers[pp++] = new(ptr) PPM_parser;
+    
+    ptr = sbrk_ccm(sizeof(PPM_parser)); // allocate memory in CCM
+    parsers[pp++] = new(ptr) PPM_parser;
+
+#ifdef BOARD_SPEKTRUM_RX_PIN
+    ptr = sbrk_ccm(sizeof(DSM_parser)); // allocate memory in CCM
+    parsers[pp++] =new(ptr) DSM_parser; 
+#endif
+#ifdef BOARD_NRF_CS_PIN
+    ptr = sbrk_ccm(sizeof(NRF_parser)); // allocate memory in CCM
+    parsers[pp++] =new(ptr) NRF_parser;
+#endif
+#ifdef BOARD_SBUS_UART
+    ptr = sbrk_ccm(sizeof(SBUS_parser)); // allocate memory in CCM
+    parsers[pp++] =new(ptr) SBUS_parser;
+#endif
+
+    num_parsers = pp; // counter
+
+    for(uint8_t i=0; i<num_parsers;i++) {
         parsers[i]->init(i);
     }
 
@@ -126,7 +137,7 @@ used as:
 
 void REVOMINIRCInput::late_init(uint8_t b) {
 
-    for(uint8_t i=0; i<PPM_INPUTS;i++) {
+    for(uint8_t i=0; i<num_parsers;i++) {
         parsers[i]->late_init(b);
     }
     
@@ -139,13 +150,13 @@ bool REVOMINIRCInput::new_input()
     if(_override_valid) return true;
 
     uint8_t inp=hal_param_helper->_rc_input;
-    if(inp &&  inp < PPM_INPUTS+1){
+    if(inp &&  inp < num_parsers+1){
         inp-=1;
         
         return parsers[inp]->get_last_signal() >_last_read;
     }
 
-    for(uint8_t i=0; i<PPM_INPUTS;i++) {
+    for(uint8_t i=0; i<num_parsers;i++) {
         if(parsers[i]->get_last_signal() >_last_read) return true;
     }
     
@@ -190,7 +201,7 @@ uint16_t REVOMINIRCInput::read(uint8_t ch)
 
 
     uint8_t inp=hal_param_helper->_rc_input;
-    if(inp &&  inp < sizeof(parsers)/sizeof(_parser *)+1 ){
+    if(inp &&  inp < num_parsers+1 ){
         inp-=1;
 
         const _parser *p = parsers[inp];
@@ -202,7 +213,7 @@ uint16_t REVOMINIRCInput::read(uint8_t ch)
     } else {
         uint32_t best_t=(uint32_t) -1;
         
-        for(uint8_t i=0; i<PPM_INPUTS;i++) {
+        for(uint8_t i=0; i<num_parsers;i++) {
             const _parser *p = parsers[i];
             pulse = p->get_last_signal();
             last  = p->get_last_change();

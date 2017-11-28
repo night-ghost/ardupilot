@@ -52,12 +52,14 @@ static USBDriver USB_Driver(1);                 // ACM
 static REVOMINIUARTDriver uart1Driver(_USART1); // main port
 static REVOMINIUARTDriver uart6Driver(_USART6); // pin 7&8(REVO)/5&6(RevoMini) of input port
 
+
+
 #ifdef BOARD_HAS_UART3
  static REVOMINIUARTDriver uart3Driver(_USART3); // flexi port
 #elif defined(BOARD_SOFT_UART3)
- static SerialDriver uart3Driver(false);              // soft UART on pins 7&8 of input port
+ static SerialDriver IN_CCM uart3Driver(BOARD_SOFTSERIAL_TX, BOARD_SOFTSERIAL_RX, false); // soft UART on pins 7&8 of input port
 #elif defined(USE_SOFTSERIAL)
- static SerialDriver softDriver(false);  // pin 7&8 of input port
+ static SerialDriver IN_CCM softDriver(BOARD_SOFTSERIAL_TX, BOARD_SOFTSERIAL_RX, false);  // pin 7&8 of input port
 #endif
 
 
@@ -95,7 +97,7 @@ gnd    +5      26      103
 */
 
 static REVOMINI::SPIDeviceManager spiDeviceManager;
-static REVOMINIAnalogIn  analogIn;
+static REVOMINIAnalogIn  analogIn IN_CCM;
 static REVOMINIStorage   storageDriver;
 static REVOMINIGPIO      gpioDriver;
 static REVOMINIRCInput   rcinDriver;
@@ -123,7 +125,7 @@ HAL_REVOMINI::HAL_REVOMINI() :
 #ifdef BOARD_HAS_UART3
         &uart3Driver,           /* uartD - flexi port */
 #elif defined(BOARD_SOFT_UART3)
-        &uart3Driver,           /* uartD - sotf UART on pins 7&8 */
+        &uart3Driver,           /* uartD - soft UART on pins 7&8 */
 #else
         NULL,                   /* no uartD */
 #endif
@@ -167,7 +169,7 @@ HAL_REVOMINI::HAL_REVOMINI() :
     uint32_t sig = board_get_rtc_register(RTC_CONSOLE_REG);
     if( (sig & ~CONSOLE_PORT_MASK) == CONSOLE_PORT_SIGNATURE) {
         AP_HAL::UARTDriver** up = uarts[sig & CONSOLE_PORT_MASK];
-        if(up){        
+        if(up){
             console =  *up;
         }
     }
@@ -212,9 +214,9 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
         {
             extern void usb_init();     //      init as VCP
             usb_init(); // moved from boards.cpp
-            printf("\nUSB init done at %ldms\n", millis());            
 
             uartA->begin(115200); // uartA is the USB serial port used for the console, so lets make sure it is initialized at boot 
+            printf("\nUSB init done at %ldms\n", millis());            
 
         }
     }
@@ -556,7 +558,6 @@ void HAL_REVOMINI::connect_uart(AP_HAL::UARTDriver* uartL,AP_HAL::UARTDriver* ua
 static const HAL_REVOMINI hal_revo;
 
 const AP_HAL::HAL& AP_HAL::get_HAL() {
-//    static const HAL_REVOMINI hal_revo;
     return hal_revo;
 }
 

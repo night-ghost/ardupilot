@@ -114,6 +114,11 @@ static caddr_t _sbrk_ccm(int nbytes) {
     }
 }
 
+caddr_t sbrk_ccm(int nbytes) {
+    nbytes = (nbytes & ~3)+4; // alignment
+    return _sbrk_ccm(nbytes);
+}
+
 
 caddr_t _sbrk(int nbytes) {
 #if 0
@@ -152,22 +157,6 @@ int isatty(int fd) {
 int _lseek(int fd, off_t pos, int whence) {
     return -1;
 }
-
-/* in system.c
-
-unsigned char getch(void) {
-    return 0;
-}
-
-int _read(int fd, char *buf, size_t cnt) {
-    *buf = getch();
-
-    return 1;
-}
-
-void putch(unsigned char c) {
-}
-*/
 
 
 void cgets(char *s, int bufsize) {
@@ -217,12 +206,8 @@ int _write(int fd, const char *buf, size_t cnt) {
 
     return cnt;
 }
-/*
-char *fgets(char *s, int bufsize, void *f) {
-    cgets(s, bufsize);
-    return s;
-}
-*/
+
+
 void clock_gettime(uint32_t a1, void *a2) { return; } 
 
 int val_read(void *dest, volatile const void *src, int bytes)

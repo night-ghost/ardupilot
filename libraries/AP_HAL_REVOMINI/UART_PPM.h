@@ -45,8 +45,8 @@ private:
     uint8_t _id;
     
     static ring_buffer ppm_rxrb[2] IN_CCM;
-    static uint8_t rx_buf[2][USART_PPM_BUF_SIZE] IN_CCM;
-    
+    static uint8_t     rx_buf[2][USART_PPM_BUF_SIZE] IN_CCM;
+
 };
 
 #endif

@@ -15,6 +15,8 @@
 #define __Vendor_SysTickConfig    0       /*!< Set to 1 if different SysTick Config is used  */
 #define __FPU_PRESENT             1       /*!< FPU present      */
 
+#define HSE_VALUE (8000000)
+
 #define CYCLES_PER_MICROSECOND  (SystemCoreClock / 1000000)
 #define SYSTICK_RELOAD_VAL      (CYCLES_PER_MICROSECOND*1000-1)
 

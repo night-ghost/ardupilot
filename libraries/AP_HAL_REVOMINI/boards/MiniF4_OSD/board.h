@@ -2,6 +2,7 @@
 #define _BOARD_STM32V1F4_H_
 
 
+
 /**
  * @brief Configuration of the Cortex-M4 Processor and Core Peripherals
  */
@@ -10,6 +11,8 @@
 #define __NVIC_PRIO_BITS          4       /*!< STM32F4XX uses 4 Bits for the Priority Levels */
 #define __Vendor_SysTickConfig    0       /*!< Set to 1 if different SysTick Config is used  */
 #define __FPU_PRESENT             1       /*!< FPU present      */
+
+#define HSE_VALUE (8000000)
 
 #define CYCLES_PER_MICROSECOND  (SystemCoreClock / 1000000)
 #define SYSTICK_RELOAD_VAL      (CYCLES_PER_MICROSECOND*1000-1)

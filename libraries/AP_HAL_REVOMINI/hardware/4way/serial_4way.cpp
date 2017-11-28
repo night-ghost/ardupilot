@@ -1,6 +1,6 @@
 /*
  * based on Cleanflight 4way driver
- *
+ * night_ghost@ykoctpa.ru 2017
 */
 
 #include <AP_HAL/AP_HAL.h>

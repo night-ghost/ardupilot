@@ -594,7 +594,6 @@ void SPIDevice::disable_dma(){
     dma_detach_interrupt(dp.stream_rx); // we attach interrupt each request
 
     // Disable SPI RX/TX request 
-//    SPI_I2S_DMACmd(_desc.dev->SPIx, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, DISABLE);
     spi_disable_dma_req(_desc.dev, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx);
 
     dma_clear_isr_bits(dp.stream_rx); dma_clear_isr_bits(dp.stream_tx);

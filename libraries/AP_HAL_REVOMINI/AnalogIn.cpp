@@ -42,15 +42,25 @@ using namespace REVOMINI;
  * This seems to be determined empirically */
 #define CHANNEL_READ_REPEAT 1
 
-REVOMINIAnalogIn::REVOMINIAnalogIn():
-	_vcc(REVOMINIAnalogSource(ANALOG_INPUT_REVOMINI_VCC))
-{}
+
+
+
+REVOMINIAnalogSource* IN_CCM REVOMINIAnalogIn::_channels[REVOMINI_INPUT_MAX_CHANNELS];
+REVOMINIAnalogSource  IN_CCM REVOMINIAnalogIn::_vcc(ANALOG_INPUT_REVOMINI_VCC);
+
+
+REVOMINIAnalogIn::REVOMINIAnalogIn(){}
 
 
 void REVOMINIAnalogIn::init() {
 
     // Register _timer_event in the scheduler. 
-    REVOMINIScheduler::_register_timer_process(FUNCTOR_BIND_MEMBER(&REVOMINIAnalogIn::_timer_event,void), 5000); // 200Hz is enough
+//    REVOMINIScheduler::_register_timer_process(FUNCTOR_BIND_MEMBER(&REVOMINIAnalogIn::_timer_event,void), 2000); // 500Hz is enough
+    void *_task = REVOMINIScheduler::start_task(FUNCTOR_BIND_MEMBER(&REVOMINIAnalogIn::_timer_event, void), 512); // small stack
+    if(_task){
+        REVOMINIScheduler::set_task_priority(_task, DRIVER_PRIORITY); 
+        REVOMINIScheduler::set_task_period(_task, 2000); // setting of period allows task to run
+    }
 
     _register_channel(&_vcc);     // Register each private channel with REVOMINIAnalogIn. 
     
@@ -60,7 +70,13 @@ void REVOMINIAnalogIn::init() {
 
 REVOMINIAnalogSource* REVOMINIAnalogIn::_create_channel(uint8_t chnum) {
 
-    REVOMINIAnalogSource *ch = new REVOMINIAnalogSource(chnum);
+#if 0
+    REVOMINIAnalogSource *ch = new REVOMINIAnalogSource(chnum); 
+#else
+    caddr_t ptr = sbrk_ccm(sizeof(REVOMINIAnalogSource)); // allocate memory in CCM
+    REVOMINIAnalogSource *ch = new(ptr) REVOMINIAnalogSource(chnum);
+#endif
+
     _register_channel(ch);
     return ch;
 }

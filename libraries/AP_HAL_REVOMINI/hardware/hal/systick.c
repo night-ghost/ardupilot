@@ -9,7 +9,7 @@
 volatile uint64_t systick_uptime_millis IN_CCM;
 voidFuncPtr boardEmergencyHandler IN_CCM;
 
-#define MAX_SYSTICK_HANDLERS 8
+#define MAX_SYSTICK_HANDLERS 4
 static Handler systick_handlers[MAX_SYSTICK_HANDLERS] IN_CCM;
 static uint8_t num_handlers=0;
 
@@ -117,7 +117,7 @@ void __attribute__((noreturn)) error_throb(uint32_t num){
 
 
 // new common exception code
-// TODO: we have task switching so if fault occures in task we can just remove task
+// TODO: we have task switching so if fault occures in task we can just remove task from queue
 //
 void __attribute__((noreturn)) __error(uint32_t num, uint32_t pc, uint32_t lr)
 {
