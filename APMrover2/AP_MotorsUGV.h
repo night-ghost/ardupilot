@@ -48,9 +48,6 @@ public:
     // output to motors and steering servos
     void output(bool armed, float dt);
 
-    // set when to use slew rate limiter
-    void slew_limit_throttle(bool value) { _use_slew_rate = value; }
-
     // test steering or throttle output as a percentage of the total (range -100 to +100)
     // used in response to DO_MOTOR_TEST mavlink command
     bool output_test_pct(motor_test_order motor_seq, float pct);
@@ -96,7 +93,7 @@ protected:
     AP_Int8 _pwm_type;  // PWM output type
     AP_Int8 _pwm_freq;  // PWM output freq for brushed motors
     AP_Int8 _disarm_disable_pwm;    // disable PWM output while disarmed
-    AP_Int8 _slew_rate; // slew rate expressed as a percentage / second
+    AP_Int16 _slew_rate; // slew rate expressed as a percentage / second
     AP_Int8 _throttle_min; // throttle minimum percentage
     AP_Int8 _throttle_max; // throttle maximum percentage
     AP_Float _skid_friction;    // skid steering vehicle motor output compensation for friction while stopped
@@ -104,6 +101,5 @@ protected:
     // internal variables
     float   _steering;  // requested steering as a value from -4500 to +4500
     float   _throttle;  // requested throttle as a value from -100 to 100
-    float   _last_throttle;
-    bool    _use_slew_rate; // true if we should slew limit the throttle for one interation
+    float   _throttle_prev; // throttle input from previous iteration
 };
