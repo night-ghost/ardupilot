@@ -84,7 +84,7 @@ extern int printf(const char *msg, ...);
 
 #if defined(BOARD_SDCARD_CS_PIN)
 
-//#define WAIT_IN_ISR - works bad
+#define WAIT_IN_ISR
 
 static BYTE CardType;			/* Card type flags */
 static BYTE was_write=0;

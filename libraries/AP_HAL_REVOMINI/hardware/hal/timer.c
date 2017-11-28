@@ -38,7 +38,7 @@
 #include "timer.h"
 #include "dma.h"
 #include <string.h>
-
+#include "nvic.h"
 
 /* Just like the corresponding DIER bits:
  * [0] = Update handler;

@@ -29,6 +29,7 @@
 #include "usb_core.h"
 #include "usb_bsp.h"
 
+#pragma GCC diagnostic ignored "-Wcast-align"
 
 /** @addtogroup USB_OTG_DRIVER
 * @{

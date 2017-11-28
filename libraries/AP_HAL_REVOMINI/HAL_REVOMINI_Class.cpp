@@ -72,7 +72,7 @@ static REVOMINIUARTDriver uart6Driver(_USART6); // pin 7&8(REVO)/5&6(RevoMini) o
 #endif
 
 static UART_PPM uartPPM2(1); // PPM2 input
-//static UART_PPM uartPPM1(0); // PPM1 input 
+static UART_PPM uartPPM1(0); // PPM1 input 
 
 
 
@@ -130,22 +130,23 @@ HAL_REVOMINI::HAL_REVOMINI() :
         NULL,                   /* no uartD */
 #endif
 
-#if FRAME_CONFIG == QUAD_FRAME && defined(BOARD_USART4_RX_PIN)
-        &uart4Driver,           /* uartE  - PWM pins 5&6 */
-#elif defined(BOARD_OSD_NAME) && defined(USE_SOFTSERIAL) && defined(BOARD_SOFTSERIAL_TX) && defined(BOARD_SOFTSERIAL_RX)
-        &softDriver,            /* uartE softSerial on boards with OSD*/
+#if defined(BOARD_OSD_NAME)
+        &uartOSDdriver,         /* uartE  - OSD emulated UART */
+#elif defined(USE_SOFTSERIAL) && defined(BOARD_SOFTSERIAL_TX) && defined(BOARD_SOFTSERIAL_RX)
+        &softDriver,   /* uartE softSerial */
 #else
-//        NULL,                   /* no uartE */
         &uartPPM2,              /* uartE - input data from PPM2 pin */
 #endif
 
-#if defined(BOARD_OSD_NAME)
-        &uartOSDdriver,         /* uartF  - OSD emulated UART */
-#elif defined(USE_SOFTSERIAL) && defined(BOARD_SOFTSERIAL_TX) && defined(BOARD_SOFTSERIAL_RX)
-        &softDriver,   /* uartF softSerial */
+
+#if FRAME_CONFIG == QUAD_FRAME && defined(BOARD_USART4_RX_PIN)
+        &uart4Driver,           /* uartF  - PWM pins 5&6 */
+#elif defined(BOARD_OSD_NAME) && defined(USE_SOFTSERIAL) && defined(BOARD_SOFTSERIAL_TX) && defined(BOARD_SOFTSERIAL_RX)
+        &softDriver,            /* uartF softSerial on boards with OSD*/
 #else
-        NULL,                   /* no uartF */
+        &uartPPM1,              /* uartF - input data from PPM1 pin */
 #endif
+
         &i2c_mgr_instance,
         &spiDeviceManager,  /* spi */
         &analogIn,          /* analogin */

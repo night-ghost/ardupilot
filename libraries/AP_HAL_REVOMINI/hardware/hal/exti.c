@@ -3,6 +3,7 @@
 #include "exti.h"
 #include "hal.h"
 #include "util.h"
+#include "nvic.h"
 
 
 typedef struct exti_channel {
@@ -66,7 +67,6 @@ void exti_attach_interrupt(afio_exti_num num,
 	assert_param(port >= 0 && num <= 4);
 	
 	EXTI_InitTypeDef   EXTI_InitStructure;
-	NVIC_InitTypeDef   NVIC_InitStructure;
   	
 	// Register the handler 
 	handlers[num] = handler;

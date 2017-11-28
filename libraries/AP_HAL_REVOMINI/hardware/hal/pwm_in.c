@@ -121,47 +121,43 @@ struct PPM_State  {
 }
 
 static inline void pwmInitializeInput(uint8_t ppmsum){
-    TIM_ICInitTypeDef TIM_ICInitStructure;
+    uint8_t i;
+    uint8_t last_tim=99;
 
-    { // ppm mode
-        uint8_t i;
-        uint8_t last_tim=99;
+    for (i = 0; i < num_ppm_channels; i++)   {
+        const struct TIM_Channel *channel = &PWM_Channels[i];
 
-	for (i = 0; i < num_ppm_channels; i++)   {
-            const struct TIM_Channel *channel = &PWM_Channels[i];
-
-            const stm32_pin_info *p     = &PIN_MAP[channel->pin];
-            const gpio_dev       *dev   = p->gpio_device;
-            uint8_t               bit   = p->gpio_bit;
-            const timer_dev      *timer = p->timer_device;
+        const stm32_pin_info *p     = &PIN_MAP[channel->pin];
+        const gpio_dev       *dev   = p->gpio_device;
+        uint8_t               bit   = p->gpio_bit;
+        const timer_dev      *timer = p->timer_device;
 	
-            gpio_set_mode(dev, bit, GPIO_AF_OUTPUT_OD_PU);
-            gpio_set_af_mode(dev, bit, timer->af); // connect pin to timer 
+        gpio_set_mode(dev, bit, GPIO_AF_OUTPUT_OD_PU);
+        gpio_set_af_mode(dev, bit, timer->af); // connect pin to timer 
 
-            timer_pause(timer);
+        timer_pause(timer);
 
-	    if(last_tim != timer->id) {
-                configTimeBase(timer, 0, 2000); // 2MHz
+	if(last_tim != timer->id) {
+            configTimeBase(timer, 0, 2000); // 2MHz
 
-	        Revo_hal_handler h = { .isr = pwmIRQHandler };
-                timer_attach_all_interrupts(timer, h.h); 
-                timer_enable_NVICirq(timer, p->timer_channel, PWM_INT_PRIORITY); // almost highest - bit time is ~10uS only - ~1680 commands	
+	    Revo_hal_handler h = { .isr = pwmIRQHandler };
+            timer_attach_all_interrupts(timer, h.h); 
+            timer_enable_NVICirq(timer, p->timer_channel, PWM_INT_PRIORITY); // almost highest - bit time is ~10uS only - ~1680 commands	
 
-	        last_tim = timer->id;
-            }
-            
-	    // PWM input capture ************************************************************
-            timer_ic_set_mode(timer, p->timer_channel, TIM_ICSelection_DirectTI | TIM_ICPSC_DIV1, 0);
-            timer_cc_set_pol(timer,  p->timer_channel, TIMER_POLARITY_FALLING);
-
-	    timer_cc_enable( timer, p->timer_channel); // enable capture
-
-	    // timer_enable *****************************************************************
-            timer_resume(timer);
-
-	    // enable the CC interrupt request **********************************************
-            timer_enable_irq(timer, p->timer_channel);
+	    last_tim = timer->id;
         }
+            
+	// PWM input capture ************************************************************
+        timer_ic_set_mode(timer, p->timer_channel, TIM_ICSelection_DirectTI | TIM_ICPSC_DIV1, 0);
+        timer_cc_set_pol(timer,  p->timer_channel, TIMER_POLARITY_FALLING);
+
+        timer_cc_enable( timer, p->timer_channel); // enable capture
+
+        // timer_enable *****************************************************************
+        timer_resume(timer);
+
+        // enable the CC interrupt request **********************************************
+        timer_enable_irq(timer, p->timer_channel);
     }
 }
 

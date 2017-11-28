@@ -3,8 +3,6 @@
 
 #include <string.h>
 #include "hal_types.h"
-//#include "gpio_hal.h"
-//#include "hal.h"
 
 #ifdef __cplusplus
   extern "C" {
