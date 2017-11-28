@@ -264,7 +264,8 @@ File::File(const char* fname)
 {
     _name = (char*)malloc(strlen(fname) +1);
     assert(_name  != NULL );
-    sprintf(_name, "%s", fname);
+    //sprintf(_name, "%s", fname);
+    strcpy(_name, fname);
     _fil.fs = 0;
     _dir.fs = 0;
 }
@@ -463,9 +464,9 @@ UINT File::gets(char* buf, size_t len)
         if(c=='\n') break;
         if(c=='\r') continue;
         *buf++=c;
+        *buf=0;   // close string
         bytesread++;
     }        
-    if(len) *buf++=0; // close string
     return bytesread;
 
 }

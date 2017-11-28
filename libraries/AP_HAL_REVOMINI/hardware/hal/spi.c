@@ -7,9 +7,9 @@
  * SPI devices
  */
 
-static spi_state spi1_state;
-static spi_state spi2_state;
-static spi_state spi3_state;
+static spi_state spi1_state IN_CCM;
+static spi_state spi2_state IN_CCM;
+static spi_state spi3_state IN_CCM;
 
 static const spi_dev spi1 = {
     .SPIx     = SPI1,

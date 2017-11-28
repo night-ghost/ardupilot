@@ -10,7 +10,6 @@
 #define IN_CCM  __attribute__((section(".ccm")))
 #endif
 
-//#define  USE_SOFTSERIAL
 
 /**
  * Umbrella header for AP_HAL_REVOMINI module.

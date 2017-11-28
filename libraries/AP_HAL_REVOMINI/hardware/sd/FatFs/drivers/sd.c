@@ -856,7 +856,7 @@ static uint32_t erase_size = BOARD_DATAFLASH_ERASE_SIZE;
    static uint8_t erase_cmd=JEDEC_SECTOR_ERASE;
  #endif
 
-static uint8_t cmd[4];
+static uint8_t cmd[4]; // for DMA transfer
 
 
 static bool chip_is_clear=false;

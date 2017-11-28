@@ -9,6 +9,7 @@
 #include <usart.h>
 #include "RC_parser.h"
 #include "Config.h"
+#include "c++.h"
 
 
 #define BOARD_RC_FAILSAFE 2 // flag that failsafe is enabled

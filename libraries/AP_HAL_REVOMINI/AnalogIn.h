@@ -22,6 +22,10 @@
 #include <AP_HAL/AP_HAL.h>
 
 #include "AP_HAL_REVOMINI.h"
+#include "c++.h"
+
+
+
 extern void setupADC(void);
 
 #define REVOMINI_INPUT_MAX_CHANNELS 12

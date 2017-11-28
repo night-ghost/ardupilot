@@ -162,7 +162,7 @@ protected:
 
     static REVOMINI::Semaphore _semaphores[MAX_BUS_NUM]; // per bus 
     static void * owner[MAX_BUS_NUM];
-    static uint8_t buffer[MAX_BUS_NUM][SPI_BUFFER_SIZE];
+    static uint8_t *buffer[MAX_BUS_NUM]; // array of pointers, allocate on 1st use
 
     bool _initialized;
     uint8_t  byte_time; // in 0.25uS

@@ -19,10 +19,10 @@ typedef struct SPI_DMA {
 } Spi_DMA;
 
 typedef struct SPI_state {
+    Handler  handler;
     uint8_t *dst;
     uint16_t len;
     bool     busy;
-    Handler  handler;
 } spi_state;
 
 /** SPI device type */

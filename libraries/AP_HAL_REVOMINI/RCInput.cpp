@@ -53,8 +53,8 @@ _parser * REVOMINIRCInput::parsers[MAX_RC_PARSERS] IN_CCM;  // individual parser
 uint8_t   REVOMINIRCInput::num_parsers IN_CCM;
 
 
-uint8_t           REVOMINIRCInput::_valid_channels IN_CCM; //  = 0;
-uint64_t          REVOMINIRCInput::_last_read IN_CCM; // = 0;
+uint8_t   REVOMINIRCInput::_valid_channels IN_CCM; //  = 0;
+uint64_t  REVOMINIRCInput::_last_read IN_CCM; // = 0;
 
 
 uint16_t REVOMINIRCInput::_override[REVOMINI_RC_INPUT_NUM_CHANNELS] IN_CCM;

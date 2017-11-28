@@ -592,7 +592,7 @@ void mem_set (void* dst, BYTE val, UINT cnt) {
 }
 
 /* Compare memory to memory */
-static
+static inline
 int mem_cmp (const void* dst, const void* src, UINT cnt) {
     return memcmp(dst,src, cnt);
 }

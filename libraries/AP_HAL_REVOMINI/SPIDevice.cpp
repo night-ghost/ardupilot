@@ -51,7 +51,7 @@ static const spi_pins board_spi_pins[] = {
 
 REVOMINI::Semaphore SPIDevice::_semaphores[MAX_BUS_NUM] IN_CCM; // per bus data
 void *              SPIDevice::owner[MAX_BUS_NUM] IN_CCM;
-uint8_t             SPIDevice::buffer[MAX_BUS_NUM][SPI_BUFFER_SIZE]; // DMA buffer in RAM
+uint8_t *           SPIDevice::buffer[MAX_BUS_NUM] IN_CCM;      // DMA buffers in RAM
 
 #ifdef DEBUG_SPI 
 struct spi_trans SPIDevice::spi_trans_array[SPI_LOG_SIZE]  IN_CCM;
@@ -249,10 +249,16 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
                         was_dma=true;
                     } else {
                         if(send_len<=SPI_BUFFER_SIZE){
-                            uint8_t *buf = &buffer[_desc.bus-1][0];
-                            memmove(buf,out,send_len);
-                            ret=dma_transfer(buf, NULL, send_len);
-                            was_dma=true;
+                            uint8_t nb = _desc.bus-1;
+                            
+                            if(buffer[nb] == NULL){             // allocate only on 1st use
+                                buffer[nb] = (uint8_t *)malloc(SPI_BUFFER_SIZE);
+                            }
+                            if(buffer[nb]){
+                                memmove(buffer[nb],out,send_len);
+                                ret=dma_transfer(buffer[nb], NULL, send_len);
+                                was_dma=true;
+                            }
                         }
                     }
                 } 
@@ -269,13 +275,17 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
                         was_dma=true;
                     }else {
                         if(send_len<=SPI_BUFFER_SIZE){
-                            uint8_t *buf = &buffer[_desc.bus-1][0];
+                            uint8_t nb = _desc.bus-1;
+                            if(buffer[nb] == NULL){             // allocate only on 1st use
+                                buffer[nb] = (uint8_t *)malloc(SPI_BUFFER_SIZE);
+                            }
+                            if(buffer[nb]){
+                                _desc.dev->state->len=recv_len;
+                                _desc.dev->state->dst=recv;
                             
-                            _desc.dev->state->len=recv_len;
-                            _desc.dev->state->dst=recv;
-                            
-                            ret=dma_transfer(NULL, buf, recv_len); 
-                            was_dma=true;
+                                ret=dma_transfer(NULL, buffer[nb], recv_len); 
+                                was_dma=true;
+                            }
                         }
                     }
                 } 
