@@ -95,9 +95,10 @@ WARNFLAGS      +=   -Wno-error=pmf-conversions -Wno-error=missing-declarations -
 WARNFLAGS      +=   -Wno-error=unused-label
 
 OPTFLAGS        = -Os
-OPTFLAGS       += -fsingle-precision-constant -g3 -fno-strict-aliasing -fno-strength-reduce -fomit-frame-pointer
+OPTFLAGS       += -fsingle-precision-constant -g3 -fno-strict-aliasing  -fomit-frame-pointer -frename-registers
+#-fno-strength-reduce
 OPTFLAGS       += -fno-builtin-printf -fno-aggressive-loop-optimizations -fpredictive-commoning
-OPTFLAGS       += -fassociative-math
+#OPTFLAGS       += -fassociative-math
 # -freciprocal-math -ffast-math - cause EKF errors
 OPTFLAGS       += -fno-signed-zeros -fno-trapping-math 
 OPTFLAGS       += -finline-functions-called-once -fearly-inlining -finline-small-functions

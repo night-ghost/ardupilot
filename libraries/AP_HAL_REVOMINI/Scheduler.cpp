@@ -580,6 +580,7 @@ void REVOMINIScheduler::stats_proc(void){
 
 extern "C" {
     extern  void *__brkval;
+    extern  void *__brkval_ccm;
 }
 
 
@@ -616,7 +617,7 @@ void REVOMINIScheduler::_print_stats(){
             printf("MPU overflows: %ld restarts %ld max samples %ld time %ld\n", MPU_overflow_cnt, MPU_restart_cnt, MPU_count, MPU_Time); MPU_overflow_cnt=0; MPU_restart_cnt=0; MPU_count=0; MPU_Time=0;
 #endif
 
-            printf("PPM max buffer size: %d\n", REVOMINIRCInput::max_num_pulses); REVOMINIRCInput::max_num_pulses=0;
+            printf("\nPPM max buffer size: %d\n", REVOMINIRCInput::max_num_pulses); REVOMINIRCInput::max_num_pulses=0;
 #endif
                         
         } break;
@@ -666,13 +667,14 @@ void REVOMINIScheduler::_print_stats(){
             }break;
 
         case 4: {
-            uint32_t heap_ptr = (uint32_t)__brkval; // here should be upper bound of sbrk()
-            uint32_t bottom=(uint32_t)&_sdata;
+            uint32_t heap_ptr = (uint32_t)__brkval; // upper bound of sbrk()
+            uint32_t bottom   = (uint32_t)&_sdata;
             
             // 48K after boot 72K while logging on
             printf("\nMemory used: static %ldk full %ldk:\n",((uint32_t)&_edata-bottom+1023)/1024, (heap_ptr-bottom+1023)/1024);
             printf("Free stack: %ldk:\n",(lowest_stack - (uint32_t)&_eccm)/1024);
             printf("Main stack use: %ldk\n",((uint32_t)&_sccm + 0x10000 /* 64K CCM */ - main_stack)/1024);
+            printf("CCM use: %ldk\n",((uint32_t)__brkval_ccm - (uint32_t)&_sccm)/1024);
 
             } break;
         

@@ -93,8 +93,9 @@ void AP_WayBack::init()
     if(initialized) return;
     
     _epsilon = TRACK_EPS; // initial track error
+/*
 #if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
-    _task = REVOMINIScheduler::start_task(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void), 512);
+    _task = REVOMINIScheduler::start_task(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void), 2048);
     if(_task){
         REVOMINIScheduler::set_task_priority(_task, 116); // max speed 1/16 of main task
         REVOMINIScheduler::set_task_period(_task, 100000); // setting of period allows task to run
@@ -103,6 +104,7 @@ void AP_WayBack::init()
 #else
     hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void));
 #endif
+*/
     initialized=true;
 }
 
@@ -114,18 +116,7 @@ void AP_WayBack::init(float eps, uint16_t points, bool bs /*, AP_AHRS& ahrs*/ ) 
     _points_max = points;
     _params.blind_shortcut=bs;
     
-#if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
-    _task = REVOMINIScheduler::start_task(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void), 512);
-    if(_task){
-        REVOMINIScheduler::set_task_priority(_task, 116); // max speed 1/16 of main task
-        REVOMINIScheduler::set_task_period(_task, 100000); // setting of period allows task to run
-        initialized=true;
-    }
-        
-#else
-    hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void));
     initialized=true;
-#endif
     
 }
 
@@ -135,6 +126,8 @@ bool AP_WayBack::start(){
     if(points==NULL) {
         max_num_points = _points_max;
         while(1){
+DBG_PRINTF("\nAP_WayBack: allocating memory for %d poins\n", max_num_points);
+
             uint32_t sz = sizeof(Point) * max_num_points;
             points = (Point *)malloc(sz); // try to allocate buffer
             if(points!=NULL) {
@@ -158,6 +151,21 @@ bool AP_WayBack::start(){
         last_raw_point=0;   
         
         max_alt=0;
+
+
+// moved starting task here to it be the last one
+#if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
+        _task = REVOMINIScheduler::start_task(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void), 2048);
+        if(_task){
+            REVOMINIScheduler::set_task_priority(_task, 116); // max speed 1/16 of main task
+            REVOMINIScheduler::set_task_period(_task, 100000); // setting of period allows task to run
+            initialized=true;
+        } else return false; // no stack space to start a task
+#else
+        hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void));
+        initialized=true;
+#endif
+
     }
     
 DBG_PRINT("start ");

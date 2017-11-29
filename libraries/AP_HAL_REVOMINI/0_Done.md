@@ -136,55 +136,6 @@ Warning!!!
 EEPROM emulation in Flash cause periodic program hunging on time of sector erase! So to allow auto-save parameters
 like MOT_THST_HOVER - MOT_HOVER_LEARN to be 2 you should defer parameter writing (Param HAL_EE_DEFER)
 
---------
-Старый расклад времени:
-25.7 опрос датчиков, из них 7.7% ожидание
-остается 74.3%, из них 65% ожидание
-собственно на расчет с частотой 400 раз в секунду уходит около 10% всего времени
-
-Новый расклад времени:
-task 0 (0x0000000080ACE09) time:   12.18% mean     77.3uS max   131uS full       0uS wait sem.    122uS main task
-task 1 (0x0000000080AD735) time:   78.50% mean      4.2uS max    33uS full       0uS wait sem.      0uS idle
-task 2 (0x80AE3E920004CD0) time:    0.28% mean     13.9uS max    38uS full      38uS wait sem.      0uS analog IO
-task 3 (0x8049C0120007E50) time:    1.90% mean     44.8uS max   116uS full     617uS wait sem.      8uS baro
-task 4 (0x0000000080ADACD) time:    1.88% mean      9.5uS max    35uS full    1003uS wait sem.      0uS IO tasks
-task 5 (0x804CB7F2000CF08) time:    1.74% mean     51.3uS max   117uS full     763uS wait sem.    189uS compass
-task 6 (0x80546152000CFA0) time:    3.40% mean     33.5uS max    45uS full     155uS wait sem.     10uS MPU
-task 7 (0x0000000080AE225) time:    0.01% mean     85.6uS max   112uS full    1928uS wait sem.      0uS stats
-занято 21.5% , из них 7.5% опрос датчиков и 12.2 это основной процесс
-
-Шедулер:
-by timer 12.05% sw  5.88%  таймерный планировщик составляет 12% от всех вызовов, при этом контекст переключается в 6% случаев, итог - 0.72% 
-in yield 79.97% sw 97.13%  добровольное завершение кванта с вызовом планировщика это 80%, вероятность переключения 97%, итог - 77.6%
-in tails  7.98% sw 71.75%  переключение по таймеру до истечения кванта - 8%, вероятность 72%, итог - 5.8%
-вывод: кооперативная многозадачность на 77% :)
-
-new I2C driver stats:
-sched time: by timer 10.53% sw 12.38% in yield 82.38% sw 99.62% in tails  7.09% sw 65.64%
-task 0 (0x0000000080ACA3D) time:   12.23% mean     78.4uS max   121uS full       0uS wait sem.     28uS
-task 1 (0x0000000080AD369) time:   81.32% mean      4.3uS max    33uS full       0uS wait sem.      0uS
-task 2 (0x80AE02120004C9C) time:    0.28% mean     13.9uS max    37uS full      40uS wait sem.      0uS
-task 3 (0x8049CE920007E38) time:    0.38% mean     12.0uS max    40uS full     900uS wait sem.    557uS
-task 4 (0x0000000080AD705) time:    1.94% mean      9.7uS max    35uS full     444uS wait sem.      0uS
-task 5 (0x804CD492000CF20) time:    0.34% mean     14.0uS max    43uS full     856uS wait sem.    378uS
-task 6 (0x80547D92000CFA0) time:    3.38% mean     33.2uS max    49uS full     168uS wait sem.      8uS
-task 7 (0x0000000080ADE5D) time:    0.01% mean     84.5uS max   107uS full    7044uS wait sem.      0uS
-
-OSD task uses 0.5% of CPU
-
-writing logs:
-
-sched time: by timer  0.84% sw  0.83% in yield 98.53% sw  3.76% in tails  0.63% sw 95.18%
-task 0 (0x0000000080B86E5) time:   12.63% mean     72.8uS max   124uS full       0uS wait sem.     10uS free stack 0x484
-task 1 (0x0000000080B94E9) time:   15.40% mean      4.5uS max    42uS full       0uS wait sem.      0uS free stack 0x8C
-task 2 (0x80B9C5D100056B4) time:    0.68% mean     13.6uS max    50uS full      92uS wait sem.      0uS free stack 0x15C
-task 3 (0x00000000801C935) time:    0.25% mean      8.2uS max   115uS full   15739uS wait sem.      0uS free stack 0x1AC
-task 4 (0x805122320008468) time:    0.23% mean     17.1uS max    56uS full    1457uS wait sem.   1387uS free stack 0x224
-task 5 (0x0000000080B9889) time:   67.24% mean      5.8uS max   111uS full  582173uS wait sem.      0uS free stack 0xD6C
-task 6 (0x80B270520007D68) time:    0.01% mean      6.2uS max    31uS full      88uS wait sem.      0uS free stack 0x17C
-task 7 (0x805BA1520010798) time:    3.26% mean     29.8uS max    79uS full     151uS wait sem.     19uS free stack 0x184
-task 8 (0x0000000080B8D81) time:    0.01% mean     88.3uS max   114uS full   11783uS wait sem.      0uS free stack 0x1A4
-
 
 
 Timer usage:
@@ -205,5 +156,3 @@ Timer usage:
 14 schedule tail timer
 
 
-stacks:
-main 0x1000FC00 revoMini uses up to f600 so uses only 0x600 bytes

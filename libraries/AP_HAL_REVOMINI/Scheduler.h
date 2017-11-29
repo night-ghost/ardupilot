@@ -31,7 +31,7 @@
 #define TIMER_PERIOD 100  // task timeslice period in uS
 
 
-#define MAIN_STACK_SIZE     7168U   // measured use of stack is only 1.5K - but it grows up to 4K when using FatFs, also this includes 1K stack for ISR
+#define MAIN_STACK_SIZE     7168U   // measured use of stack is only 1.5K - but it grows up to 5K when using FatFs, also this includes 1K stack for ISR
 #define IO_STACK_SIZE       4096U   // IO_tasks stack size - io_thread can do work with filesystem
 #define DEFAULT_STACK_SIZE  1024U   // Default tasks stack size 
 #define SMALL_TASK_STACK    1024U   // small stack for sensors

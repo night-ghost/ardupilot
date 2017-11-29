@@ -55,10 +55,9 @@ REVOMINIAnalogIn::REVOMINIAnalogIn(){}
 void REVOMINIAnalogIn::init() {
 
     // Register _timer_event in the scheduler. 
-//    REVOMINIScheduler::_register_timer_process(FUNCTOR_BIND_MEMBER(&REVOMINIAnalogIn::_timer_event,void), 2000); // 500Hz is enough
     void *_task = REVOMINIScheduler::start_task(FUNCTOR_BIND_MEMBER(&REVOMINIAnalogIn::_timer_event, void), 512); // small stack
     if(_task){
-        REVOMINIScheduler::set_task_priority(_task, DRIVER_PRIORITY); 
+        REVOMINIScheduler::set_task_priority(_task, DRIVER_PRIORITY+1);  // slightly less
         REVOMINIScheduler::set_task_period(_task, 2000); // setting of period allows task to run
     }
 

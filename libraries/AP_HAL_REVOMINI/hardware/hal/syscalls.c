@@ -66,6 +66,7 @@ int _getpid(void)
  */
  
 void *__brkval=0;
+void *__brkval_ccm=0;
 
 caddr_t stack_bottom=0;
 bool sbrk_need_dma=false;
@@ -108,6 +109,7 @@ static caddr_t _sbrk_ccm(int nbytes) {
     {
         base = heap_ptr;
         heap_ptr += nbytes;
+        __brkval_ccm = heap_ptr;
         return (base);
     } else {
         return ((caddr_t)-1);
