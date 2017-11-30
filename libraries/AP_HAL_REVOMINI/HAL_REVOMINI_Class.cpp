@@ -157,13 +157,13 @@ HAL_REVOMINI::HAL_REVOMINI() :
         &rcoutDriver,       /* rcoutput */
         &schedulerInstance, /* scheduler */
         &utilInstance,	    /* util */
-        nullptr,            /* no optical flow */
+        nullptr,            /* no onboard optical flow */
         nullptr             /* no CAN */
     )
     
-           //  0     1       2       3        4       5
-           // USB    Main    Flexi   UART6    Uart4   Soft/Osd
-    , uarts{ &uartA, &uartC, &uartD, &uartB,  &uartE, &uartF }
+           //  0     1       2       3        4         5
+           // USB    UART6   Main    Flexi    Uart4/OSD Soft/Uart4
+    , uarts{ &uartA, &uartB, &uartC, &uartD,  &uartE,   &uartF }
 
 {
 
@@ -241,7 +241,7 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
 #endif
 
 #if defined(BOARD_OSD_NAME)
-        uartF->begin(57600); // init OSD after SD but before call to lateInit(), but only if not in USB_STORAGE
+        uartE->begin(57600); // init OSD after SD but before call to lateInit(), but only if not in USB_STORAGE
 #endif
 
     }
@@ -370,7 +370,7 @@ void HAL_REVOMINI::lateInit() {
                 if(up && *up){
                     connect_uart(uartA,*up, NULL);
                 }
-            }
+            } else printf("\nWrong HAL_CONNECT_COM selected!");
     
         }
     }
@@ -404,7 +404,7 @@ void HAL_REVOMINI::lateInit() {
                 if(up && *up){
                     REVOMINIRCOutput::do_4way_if(*up);
                 }
-            }
+            } else printf("\nWrong HAL_CONNECT_ESC selected!");
         }
     }
 #endif
@@ -517,9 +517,7 @@ void HAL_REVOMINI::lateInit() {
                     }
                 }
             }
-
         }
-        
     }
 done:
 #endif

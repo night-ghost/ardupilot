@@ -35,7 +35,7 @@ public:
 
     void begin(uint32_t b, uint32_t mode); // must be
     inline void begin(uint32_t b, uint16_t rxS, uint16_t txS) {   begin(b); }
-    inline void end() {  usart_disable(_usart_device); _initialized=false; }
+    inline void end() { _initialized=false; if(_usart_device) usart_disable(_usart_device);  }
     void flush();
     inline bool is_initialized(){ return _initialized; }
   

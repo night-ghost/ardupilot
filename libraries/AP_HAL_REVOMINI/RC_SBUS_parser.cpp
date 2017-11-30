@@ -62,12 +62,19 @@ void SBUS_parser::late_init(uint8_t b){
             REVOMINIGPIO::_pinMode(BOARD_SBUS_INVERTER, OUTPUT);
             REVOMINIGPIO::_write(  BOARD_SBUS_INVERTER, HIGH); // do inverse
 #endif
-            uartSDriver = new REVOMINIUARTDriver(UARTS[hal_param_helper->_uart_sbus]);
-            // initialize SBUS UART
-            uartSDriver->end();
-            uartSDriver->begin(100000, (UART_Parity_Even <<4) | UART_Stop_Bits_2);
-            Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&SBUS_parser::add_uart_input, void) };
-            uartSDriver->setCallback(h.h);
+
+            const usart_dev * uart = UARTS[hal_param_helper->_uart_sbus];
+            if(uart) {
+                uartSDriver = new REVOMINIUARTDriver(uart);
+            
+                // initialize SBUS UART
+                uartSDriver->end();
+                uartSDriver->begin(100000, (UART_Parity_Even <<4) | UART_Stop_Bits_2);
+                if(uartSDriver->is_initialized() ) {
+                    Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&SBUS_parser::add_uart_input, void) };
+                    uartSDriver->setCallback(h.h);
+                }
+            } else printf("\nWrong HAL_SBUS_UART selected!");
         }
 }
 

@@ -153,6 +153,7 @@ uint8_t SPIDevice::transfer(uint8_t out){
 
 
 uint8_t SPIDevice::_transfer(uint8_t data) {
+    (void)_desc.dev->SPIx->DR; // read fake data out
 
     //wait for TXE before send
     while (!spi_is_tx_empty(_desc.dev)) {    // надо дожидаться окончания передачи.
@@ -160,14 +161,14 @@ uint8_t SPIDevice::_transfer(uint8_t data) {
     }
 
     //write 1byte
-    spi_tx_reg(_desc.dev, data); //    _desc.dev->SPIx->DR = data;
+    _desc.dev->SPIx->DR = data;
 
-    //read one byte
+    //wait for read byte
     while (!spi_is_rx_nonempty(_desc.dev)) {    // надо дожидаться окончания передачи.
         if(!spi_is_busy(_desc.dev) ) break;
     }
     
-    return (uint8_t)spi_rx_reg(_desc.dev);
+    return (uint8_t)(_desc.dev->SPIx->DR); // we got a byte so transfer complete
 }
 
 void SPIDevice::send(uint8_t out) {
@@ -179,6 +180,8 @@ void SPIDevice::send(uint8_t out) {
     spi_tx_reg(_desc.dev, out); //    _desc.dev->SPIx->DR = data;
 }
 
+
+// TODO eliminate usage of spimaster_transfer(), use interrupts instead
 
 bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, uint32_t recv_len){
     
@@ -197,6 +200,9 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
     }
 
 #ifdef BOARD_SOFTWARE_SPI
+
+// not deleted for case of needs for external SPI on arbitrary pins
+
     if(_desc.mode == SPI_TRANSFER_SOFT) {
         spi_soft_set_speed();
 
@@ -217,7 +223,6 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
     } else 
 #endif
     {
-    
         uint32_t t = hal_micros();
         while(_desc.dev->state->busy){ //       wait for previous transfer finished
             if(hal_micros() - t > 5000){
@@ -228,75 +233,113 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
         }
         
         spi_set_speed(_desc.dev, determine_baud_rate(_speed));
-        _desc.dev->state->busy = true; // we got bus for bus
+        _desc.dev->state->busy = true; // we got bus
 
-#define MIN_DMA_BYTES 3 // write to 2-byte register not uses DMA
+        _send_address = out;    //      remember transfer params
+        _send_len     = send_len;
+        _recv_address = recv;
+        _recv_len     = recv_len;
+
+
+#define MIN_DMA_BYTES 3 // write to 2-byte register not uses DMA, 4-byte command to DataFlash will
 
         _cs_assert();
 
+#if 0 // should be
+
+        if(send_len + recv_len < MIN_DMA_BYTES) {
+            _isr_mode = SPI_ISR_SEND;
+            return isr_transfer();
+        }
+#endif
         switch(_desc.mode){
-        case SPI_TRANSFER_INTR: // interrupts
-            break;
             
         case SPI_TRANSFER_DMA: // DMA
-        case SPI_TRANSFER_FORCE_DMA: // only DMA
+        case SPI_TRANSFER_FORCE_DMA: {// only DMA
+            get_dma_ready();
+            uint8_t nb = _desc.bus-1;
+
+#if 0
+            // alloc buffer if recv needed - to not in ISR
+            if(recv_len && !ADDRESS_IN_RAM(recv)){   //not in CCM
+                if(buffer[nb] == NULL){             
+                    buffer[nb] = (uint8_t *)malloc(SPI_BUFFER_SIZE); // allocate only on 1st use
+                }
+            } 
+
+#endif
+            
             if(send_len){
+                bool can_dma = false;
                 if((send_len >= MIN_DMA_BYTES || _desc.mode==SPI_TRANSFER_FORCE_DMA)){ // long enough 
                     _desc.dev->state->len=0;
 
                     if(ADDRESS_IN_RAM(out)){   // not in CCM
-                        ret=dma_transfer(out, NULL, send_len);
-                        was_dma=true;
+                        can_dma=true;
                     } else {
-                        if(send_len<=SPI_BUFFER_SIZE){
-                            uint8_t nb = _desc.bus-1;
-                            
+                        if(send_len<=SPI_BUFFER_SIZE){                        
                             if(buffer[nb] == NULL){             // allocate only on 1st use
                                 buffer[nb] = (uint8_t *)malloc(SPI_BUFFER_SIZE);
                             }
                             if(buffer[nb]){
                                 memmove(buffer[nb],out,send_len);
-                                ret=dma_transfer(buffer[nb], NULL, send_len);
-                                was_dma=true;
+                                out = buffer[nb];
+                                _send_len=0;
+                                can_dma=true;
                             }
                         }
                     }
                 } 
-                
-                if(!was_dma) {
+
+                if(can_dma){
+                    ret=dma_transfer(out, NULL, send_len);
+                    was_dma=true;
+                } else {
                     ret=spimaster_transfer(_desc.dev, out, send_len, NULL, 0);
+                    //_isr_mode     = SPI_ISR_SEND_DMA;
+                    //ret = isr_transfer();
                 }
+                // TODO переключение на передачу сделать в обработчике завершения обмена DMA
             }
             if(recv_len) {
+                bool can_dma = false;
                 if((recv_len>=MIN_DMA_BYTES || _desc.mode==SPI_TRANSFER_FORCE_DMA) ) { // long enough or always DMA
                     if(ADDRESS_IN_RAM(recv)){   //not in CCM
                         _desc.dev->state->len=0;
-                        ret=dma_transfer(NULL, recv, recv_len);
-                        was_dma=true;
+                        can_dma=true;
                     }else {
-                        if(send_len<=SPI_BUFFER_SIZE){
-                            uint8_t nb = _desc.bus-1;
+                        if(recv_len<=SPI_BUFFER_SIZE){
                             if(buffer[nb] == NULL){             // allocate only on 1st use
                                 buffer[nb] = (uint8_t *)malloc(SPI_BUFFER_SIZE);
                             }
                             if(buffer[nb]){
                                 _desc.dev->state->len=recv_len;
                                 _desc.dev->state->dst=recv;
-                            
-                                ret=dma_transfer(NULL, buffer[nb], recv_len); 
-                                was_dma=true;
+                                recv = buffer[nb];
+                                can_dma=true;
                             }
                         }
                     }
                 } 
-                if(!was_dma) {
+                if(can_dma){
+                    ret=dma_transfer(NULL, recv, recv_len);
+                    was_dma=true;
+                } else {
                     ret=spimaster_transfer(_desc.dev, NULL, 0, recv, recv_len);
+                    //ret = isr_transfer();
                 }
             }
-            break;
+            }break;
+
         case SPI_TRANSFER_POLL: // polling
             ret = spimaster_transfer(_desc.dev, out, send_len, recv, recv_len);
             break;
+
+        case SPI_TRANSFER_INTR: // interrupts
+            _isr_mode = SPI_ISR_SEND;
+            ret = isr_transfer();
+            break;
+
         default: 
             break;
         }
@@ -340,7 +383,7 @@ done:
 
 }
 
-    
+
 
 
 
@@ -493,6 +536,19 @@ spi_baud_rate SPIDevice::determine_baud_rate(SPIFrequency freq)
 }
 
 
+void SPIDevice::get_dma_ready(){
+    const Spi_DMA &dp = _desc.dev->dma;
+
+//  проверить, не занят ли поток DMA перед использованием
+    uint32_t t = hal_micros();
+    while(dma_is_stream_enabled(dp.stream_rx) || dma_is_stream_enabled(dp.stream_tx) ) {   // wait for previous transfer termination
+        if(hal_micros() - t > 1000) break; // DMA transfer can't be more than 1ms
+        hal_yield(0);
+    } 
+
+    spi_disable_irq(_desc.dev, SPI_RXNE_TXE_INTERRUPTS); // just for case
+}
+
 
 // DMA dummy workplace 
 static uint32_t rw_workbyte[] = { 0xffff }; // not in stack!
@@ -504,16 +560,6 @@ uint8_t  SPIDevice::dma_transfer(const uint8_t *out, const uint8_t *recv, uint32
     DMA_StructInit(&DMA_InitStructure);
 
     const Spi_DMA &dp = _desc.dev->dma;
-
-
-//  проверить, не занят ли поток DMA перед использованием
-    uint32_t t = hal_micros();
-    while(dma_is_stream_enabled(dp.stream_rx) || dma_is_stream_enabled(dp.stream_tx) ) {   // wait for previous transfer termination
-        if(hal_micros() - t > 1000) break; // DMA transfer can't be more than 1ms
-        hal_yield(0);
-    } 
-
-    spi_disable_irq(_desc.dev, SPI_RXNE_TXE_INTERRUPTS); // just for case
 
     dma_init(dp.stream_rx); dma_init(dp.stream_tx);
 
@@ -563,7 +609,7 @@ uint8_t  SPIDevice::dma_transfer(const uint8_t *out, const uint8_t *recv, uint32
 
     if(_completion_cb) {// we should call it after completion via interrupt    
         spi_enable_dma_req(_desc.dev, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx); /* Enable SPI TX/RX request */
-        return 0;                                                             // ann another in ISR
+        return 0;                                                             // all another in ISR
     }
 
     // no callback - need to wait
@@ -572,7 +618,7 @@ uint8_t  SPIDevice::dma_transfer(const uint8_t *out, const uint8_t *recv, uint32
 
     uint8_t ret=1;
     
-    t=hal_micros();
+    uint32_t t=hal_micros();
     _task = REVOMINIScheduler::get_current_task();
 
     noInterrupts(); // we are in multitask so if task switch occures between enable and pause then all transfer occures before task will be paused
@@ -592,7 +638,7 @@ uint8_t  SPIDevice::dma_transfer(const uint8_t *out, const uint8_t *recv, uint32
         disable_dma();          //   disable DMA
         isr_transfer_finish();  //   disable interrupts
     } else
-       ret=0;   // OK
+        ret=0;   // OK
 
     return ret; 
 }
@@ -741,6 +787,38 @@ bool SPIDevice::set_speed(AP_HAL::Device::Speed speed)
 }
 
 
+uint8_t SPIDevice::isr_transfer() {
+
+    spi_attach_interrupt(_desc.dev, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SPIDevice::spi_isr, void)) );    
+
+    uint32_t timeout = (_send_len + _recv_len) * 15; // time to transfer all data - 15uS per byte
+
+    uint32_t t = hal_micros();
+    _desc.dev->state->busy=true;
+
+   (void)_desc.dev->SPIx->DR; // read fake data out
+
+    // wee need not to use IO_Completion callback in ISR mode
+
+    // need to wait until transfer complete 
+    _task = REVOMINIScheduler::get_current_task();
+
+    noInterrupts(); 
+    spi_irq_enable(_desc.dev, SPI_I2S_IT_TXE);   // enable - will be interrupt just immediate
+
+    if(_task) REVOMINIScheduler::task_pause(timeout); // if function called from task - store it and pause
+    interrupts();
+
+    while (hal_micros() - t < timeout && _desc.dev->state->busy) {
+        hal_yield(0);
+    }
+
+    _task = NULL; // already resumed
+    if(_desc.dev->state->busy) isr_transfer_finish(); // timeout
+
+    return (_send_len == 0 && _recv_len == 0)? 0 : 1;
+}
+
 uint16_t  SPIDevice::send_strobe(const uint8_t *buffer, uint16_t len){ // send in ISR and strobe each byte by CS
     while(_desc.dev->state->busy) hal_yield(0); // wait for previous transfer finished
     
@@ -789,7 +867,7 @@ uint16_t  SPIDevice::send_strobe(const uint8_t *buffer, uint16_t len){ // send i
 uint8_t SPIDevice::wait_for(uint8_t out, spi_WaitFunc cb, uint16_t dly){ // wait for needed byte in ISR
     _send_len = out;
     _isr_mode = SPI_ISR_COMPARE;
-    _recv_len = 0;
+    _recv_len = 0;  // we sholdn't receive after wait
     _compare_cb = cb;    
 
     spi_attach_interrupt(_desc.dev, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SPIDevice::spi_isr, void)) );    
@@ -797,11 +875,10 @@ uint8_t SPIDevice::wait_for(uint8_t out, spi_WaitFunc cb, uint16_t dly){ // wait
     uint32_t t = hal_micros();
     _desc.dev->state->busy=true;
 
-    (void)_desc.dev->SPIx->DR; // read fake data out
-
     // need to wait until transfer complete 
     _task = REVOMINIScheduler::get_current_task();
 
+    (void)_desc.dev->SPIx->DR; // read fake data out
     _desc.dev->SPIx->DR = out; // start transfer and clear flag
 
     spi_irq_enable(_desc.dev, SPI_I2S_IT_RXNE); 
@@ -811,10 +888,10 @@ uint8_t SPIDevice::wait_for(uint8_t out, spi_WaitFunc cb, uint16_t dly){ // wait
     if(_task)  REVOMINIScheduler::task_pause(dly); // if function called from task - store it and pause
     interrupts();
 
-    while (hal_micros() - t < dly) {
+    while (hal_micros() - t < dly && _desc.dev->state->busy) {
         hal_yield(0);
-        if(_send_len == 0) break;
     }
+
     _task = NULL; // already resumed
     if(_desc.dev->state->busy) isr_transfer_finish(); // timeout
     return  _recv_data;
@@ -855,8 +932,20 @@ void SPIDevice::spi_isr(){
         if(_send_len) {    
             switch(_isr_mode) {
             case SPI_ISR_NONE:
+                (void)_desc.dev->SPIx->DR;          // reset RXNE  
+                spi_disable_irq(_desc.dev, SPI_TXE_INTERRUPT);  // disable TXE interrupt
+                spi_enable_irq(_desc.dev,  SPI_RXNE_INTERRUPT); // enable - will be interrupt after byte finished
+                _isr_mode=SPI_ISR_FINISH; // should  releases SPI bus after last RXNE is set
+                break;
+                
+            case SPI_ISR_SEND:
+            case SPI_ISR_SEND_DMA:
                 _send_len--;
                 _desc.dev->SPIx->DR = *_send_address++;
+                break;
+
+            case SPI_ISR_RECEIVE:
+                _desc.dev->SPIx->DR = 0xFF; // dummy byte
                 break;
             
             case SPI_ISR_COMPARE:
@@ -872,19 +961,24 @@ void SPIDevice::spi_isr(){
             
             spi_disable_irq(_desc.dev, SPI_TXE_INTERRUPT);  // disable TXE interrupt
             spi_enable_irq(_desc.dev,  SPI_RXNE_INTERRUPT); // enable - will be interrupt after byte finished
+            
             if(_recv_len) {
-                // we need to switch to receive mode
+                if(_isr_mode==SPI_ISR_SEND) {
+                _isr_mode=SPI_ISR_RECEIVE;                  // switch receive mode after receiving of fake RX byte
+                } else if(_isr_mode==SPI_ISR_SEND_DMA) {
+                    _isr_mode=SPI_ISR_WAIT_RX_DMA;          // will switch to DMA receive mode after receiving of fake RX byte
+                } else {
+                    _isr_mode=SPI_ISR_FINISH; // should release SPI bus after last RXNE is set
+                }
             } else {
-                _isr_mode=SPI_ISR_FINISH; // should  releases SPI bus after last RXNE is set
+                _isr_mode=SPI_ISR_FINISH; // should release SPI bus after last RXNE is set            
             }
+            
         }
     }
 
     if(spi_is_rx_nonempty(_desc.dev) /* && spi_is_irq_enabled(_desc.dev, SPI_RXNE_INTERRUPT) */) {
         switch(_isr_mode) {
-        case SPI_ISR_FINISH:
-            isr_transfer_finish();                // releases SPI bus after last RXNE is set
-            break;
 
         case SPI_ISR_STROBE: {
             (void)_desc.dev->SPIx->DR; // read fake data out
@@ -904,7 +998,12 @@ void SPIDevice::spi_isr(){
 
             } break;
 
-        case SPI_ISR_NONE:
+
+        case SPI_ISR_SEND:
+            (void)_desc.dev->SPIx->DR; // read fake data out
+            break;
+
+        case SPI_ISR_RECEIVE:
             if(_recv_len){
                 _recv_len--;
                 *_recv_address++ = _desc.dev->SPIx->DR;
@@ -918,19 +1017,31 @@ void SPIDevice::spi_isr(){
             _recv_data = _desc.dev->SPIx->DR;
             if(_compare_cb(_recv_data) ) { // ok
                 if(_recv_len){
-                    _isr_mode = SPI_ISR_NONE; // we should receive after wait ?
+                    _isr_mode = SPI_ISR_RECEIVE; // we should receive after wait ?
                 } else {
-                    _send_len=0;             // mark transfer finished
+                    _send_len=0;                 // mark transfer finished
                     isr_transfer_finish();
                 }
             } // else do nothing
             break;
 
+        case SPI_ISR_WAIT_RX_DMA: // now we should program DMA for receive or turn on ISR mode receiving if can't DMA
+            (void)_desc.dev->SPIx->DR; // read fake data out
+            // now we should set up DMA transfer
+            break;
+
+        case SPI_ISR_WAIT_RX:           //  turn on ISR mode receiving 
+            (void)_desc.dev->SPIx->DR;          // read fake data out
+            _isr_mode = SPI_ISR_RECEIVE;                // we should receive 
+            spi_enable_irq(_desc.dev, SPI_TXE_INTERRUPT);  // enable TXE interrupt so new TX interrupt will be just after return from ISR
+            break;
+
+        case SPI_ISR_FINISH:
+        case SPI_ISR_NONE:
         default:
             isr_transfer_finish();                // releases SPI bus
             break;
         }
     }
-
 }
 

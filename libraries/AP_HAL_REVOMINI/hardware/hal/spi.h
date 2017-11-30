@@ -13,16 +13,16 @@
  */
 
 typedef struct SPI_DMA {
-    uint32_t channel;
+    uint32_t   channel;
     dma_stream stream_rx;
     dma_stream stream_tx;
 } Spi_DMA;
 
 typedef struct SPI_state {
-    Handler  handler;
-    uint8_t *dst;
-    uint16_t len;
-    bool     busy;
+    Handler        handler;
+    uint8_t *      dst;
+    uint16_t       len;
+    volatile bool  busy;
 } spi_state;
 
 /** SPI device type */

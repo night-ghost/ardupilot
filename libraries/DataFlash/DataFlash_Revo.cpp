@@ -439,7 +439,7 @@ bool DataFlash_Revo::_sem_take(uint8_t timeout)
 }
 
 bool DataFlash_Revo::cs_assert(){
-    if (!_sem_take(100))
+    if (!_sem_take(HAL_SEMAPHORE_BLOCK_FOREVER))
         return false;
 
     _spi->set_speed(AP_HAL::Device::SPEED_HIGH);
@@ -458,18 +458,25 @@ void DataFlash_Revo::cs_release(){
 // This function is mainly to test the device
 void DataFlash_Revo::ReadManufacturerID()
 {
-    // activate dataflash command decoder
     if (!cs_assert()) return;
 
     // Read manufacturer and ID command...
+#if 0
     spi_write(JEDEC_DEVICE_ID); //
 
     df_manufacturer = spi_read();
     df_device = spi_read(); //memorytype
     df_device = (df_device << 8) | spi_read(); //capacity
-    spi_read();
+    spi_read(); // ignore 4th byte
+#else
+    cmd[0] = JEDEC_DEVICE_ID;
 
-    // release SPI bus for use by other sensors
+    _spi->transfer(cmd, 1, buffer[1], 4);
+
+    df_manufacturer =  buffer[1][0];
+    df_device       = (buffer[1][1] << 8) | buffer[1][2]; //capacity
+#endif
+
     cs_release();
 }
 
@@ -560,9 +567,15 @@ uint8_t DataFlash_Revo::ReadStatusReg()
     if (!cs_assert()) return JEDEC_STATUS_BUSY;
 
     // Read status command
+#if 0 
     spi_write(JEDEC_READ_STATUS);
     tmp = spi_read(); // We only want to extract the READY/BUSY bit
+#else
+    cmd[0] = JEDEC_READ_STATUS;
 
+    _spi->transfer(cmd, 1, &cmd[1], 1);
+    tmp = cmd[1];
+#endif
     // release SPI bus for use by other sensors
     cs_release();
     
@@ -591,9 +604,7 @@ void DataFlash_Revo::PageToBuffer(unsigned char BufferNum, uint16_t pageNum)
     cmd[2] = (PageAdr >>  8) & 0xff;
     cmd[3] = (PageAdr >>  0) & 0xff;
 
-    _spi->transfer(cmd, 4, NULL, 0);
-
-    _spi->transfer(NULL,0, buffer[BufferNum], DF_PAGE_SIZE);
+    _spi->transfer(cmd, 4, buffer[BufferNum], DF_PAGE_SIZE);
     
     cs_release();
 }

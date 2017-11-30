@@ -49,8 +49,8 @@ typedef struct I2C_DMA {
 
 
 typedef struct I2c_state {
-    Handler handler;
-    bool    busy;
+    Handler        handler;
+    volatile bool  busy;
 } i2c_state;
 
 

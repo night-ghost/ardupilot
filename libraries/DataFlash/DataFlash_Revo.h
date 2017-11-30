@@ -84,10 +84,9 @@ private:
     bool cs_assert(); // Select device 
     void cs_release(); // Deselect device
 
-    uint8_t spi_read(void) { uint8_t b;  _spi->transfer(NULL,0, &b, 1); return b; }
-    void    spi_write(uint8_t b) {       _spi->transfer(&b,1, NULL, 0);  }
-    
-    void spi_write(int data) { spi_write((uint8_t)data); }
+//    uint8_t spi_read(void) { uint8_t b;  _spi->transfer(NULL,0, &b, 1); return b; }
+    inline void    spi_write(uint8_t b) {       _spi->transfer(&b,1, NULL, 0);  }
+    inline void spi_write(int data) { spi_write((uint8_t)data); }
 
     static bool flash_died;
 

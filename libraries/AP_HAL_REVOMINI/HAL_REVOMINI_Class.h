@@ -23,7 +23,10 @@
 #endif
 
 /*
-Backup SRAM 4KByte - 0x4002 4000 - 0x4002 4FFF
+Backup SRAM 4KByte - 0x4002 4000 - 0x4002 4FFF can be used as EEPROM buffer?
+
+ideally it should be used for state storage for recovery from in-flight reboots but we never comes this from upstream...
+
 */
 
 
@@ -45,7 +48,7 @@ public:
 
     void lateInit();
 
-    static HAL_state state;
+    static HAL_state state; // hal is const so we should move out its internal state
     
 private:
     AP_HAL::UARTDriver** uarts[6];

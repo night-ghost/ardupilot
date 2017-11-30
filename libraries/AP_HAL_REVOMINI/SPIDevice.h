@@ -57,19 +57,24 @@ typedef enum SPI_TRANSFER_MODE {
 } SPI_transferMode;
 
 typedef struct SPIDESC {
-    const char * const name;
+    const char * const    name;
     const spi_dev * const dev;
-    uint8_t bus;
-    spi_mode sm;
-    uint16_t cs_pin;
-    SPIFrequency lowspeed;
-    SPIFrequency highspeed;
-    SPI_transferMode mode;  // mode of operations: 0 - polling, 1&2 DMA, 3 interrupts, 4 software
-    uint32_t prio; // DMA priority
+    uint8_t               bus;
+    spi_mode              sm;
+    uint16_t              cs_pin;
+    SPIFrequency          lowspeed;
+    SPIFrequency          highspeed;
+    SPI_transferMode      mode;  // mode of operations: 0 - polling, 1&2 DMA, 3 interrupts, 4 software
+    uint32_t              prio; // DMA priority
 } SPIDesc;
 
 enum SPI_ISR_MODE {
     SPI_ISR_NONE,
+    SPI_ISR_SEND,
+    SPI_ISR_SEND_DMA,  // want DMA but can't
+    SPI_ISR_WAIT_RX,   // wait for receiving of last fake byte from TX
+    SPI_ISR_WAIT_RX_DMA, // wait for receiving of last fake byte from TX
+    SPI_ISR_RECEIVE,
     SPI_ISR_STROBE,
     SPI_ISR_COMPARE,
     SPI_ISR_FINISH,
@@ -179,7 +184,10 @@ protected:
     uint8_t _transfer_s(uint8_t bt);
     uint8_t _transfer(uint8_t data);
 
+    void  get_dma_ready();
+
     uint8_t dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t btr );
+    uint8_t isr_transfer();
     
     Handler _completion_cb;
     void   *_task;
@@ -188,7 +196,7 @@ protected:
     // vars for send_strobe() and wait_for()
     const uint8_t *_send_address;
     uint16_t       _send_len;
-    uint8_t *_recv_address;
+    uint8_t       *_recv_address;
     uint16_t       _recv_len;
 
     SPI_ISR_MODE   _isr_mode;

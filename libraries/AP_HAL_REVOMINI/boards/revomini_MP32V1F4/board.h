@@ -196,7 +196,7 @@
     // @Param: UART_SBUS
     // @DisplayName: What UART to use as SBUS input
     // @Description: Allows to use any UART as SBUS input
-    // @Values: 0:disabled,1:UART1, 2:UART2 etc
+    // @Values: 0:disabled,1:UART1(Main port)
     // @User: Advanced
     AP_GROUPINFO("UART_SBUS", 3, AP_Param_Helper, _uart_sbus, 0), \
 
@@ -216,8 +216,8 @@
 
     // @Param: CONNECT_COM
     // @DisplayName: connect to COM port
-    // @Description: Allows to connect USB to arbitrary UART, thus allowing to configure devices on that UARTs. Auto-reset.
-    // @Values: 0:disabled, 1:connect to port 1, 2:connect to port 2, etc
+    // @Description: Allows to connect USB to arbitrary Serial Port, thus allowing to configure devices on that Serial Ports. Auto-reset.
+    // @Values: 0:disabled, 1:connect to Serial1, 2:connect to Serial2, etc
     // @User: Advanced
     AP_GROUPINFO("CONNECT_COM", 2, AP_Param_Helper, _connect_com, 0) \
 

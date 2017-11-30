@@ -1,3 +1,7 @@
+bugs:
+
+SBUS on RevoMini UART1 not works, but hardware inverter works
+
 
 still not tested/works:
 
