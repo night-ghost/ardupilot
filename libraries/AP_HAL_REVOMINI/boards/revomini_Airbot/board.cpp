@@ -150,9 +150,9 @@ extern const struct TIM_Channel PWM_Channels[] =   {
 */
 // different SPI tables per board subtype
 extern const SPIDesc spi_device_table[] = {    
-//              name            device   bus  mode         cs_pin                       speed_low       speed_high  dma                      priority
-     { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  SPI_TRANSFER_DMA,       DMA_Priority_VeryHigh }, 
-     { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* device controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, SPI_TRANSFER_FORCE_DMA, DMA_Priority_Medium },
+//              name            device   bus  mode         cs_pin                       speed_low       speed_high     mode               priority           assert_dly release_dly
+     { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  SPI_TRANSFER_DMA,  DMA_Priority_VeryHigh,   1,          5 }, 
+     { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* device controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, SPI_TRANSFER_DMA,  DMA_Priority_Medium,     1,          1 },
 };
 
 extern const uint8_t REVOMINI_SPI_DEVICE_NUM_DEVICES = ARRAY_SIZE(spi_device_table);

@@ -363,6 +363,13 @@ public:
 
     static void SVC_Handler(uint32_t * svc_args); // many functions called via SVC for hardware serialization
 
+    // execute callback at SVC level
+    static inline void do_in_critical_section(Handler h){ 
+        asm volatile("svc 4\r\n");
+    }
+    static inline void do_in_critical_section(Handler h, uint32_t arg){ 
+        asm volatile("svc 4\r\n");
+    }
 //}
 
 

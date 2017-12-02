@@ -188,11 +188,11 @@ extern const struct TIM_Channel PWM_Channels[] __FLASH__ =   {
 
 // different SPI tables per board subtype
 extern const SPIDesc spi_device_table[] = {    
-//               name            device   bus  mode         cs_pin                 speed_low       speed_high dma   priority
-     { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,    SPI_1_125MHZ,   SPI_9MHZ,  SPI_TRANSFER_DMA,       DMA_Priority_VeryHigh }, 
-     { BOARD_SDCARD_NAME,        _SPI2,   2,  SPI_MODE_0, 255,                     SPI_1_125MHZ,   SPI_18MHZ, SPI_TRANSFER_FORCE_DMA, DMA_Priority_Medium  }, 
-     { HAL_BARO_BMP280_NAME,     _SPI3,   3,  SPI_MODE_3, BOARD_BMP280_CS_PIN,     SPI_1_125MHZ,   SPI_9MHZ,  SPI_TRANSFER_DMA,       DMA_Priority_High }, 
-     { BOARD_OSD_NAME,           _SPI3,   3,  SPI_MODE_3, 255,                     SPI_1_125MHZ,   SPI_18MHZ, SPI_TRANSFER_DMA,       DMA_Priority_Low  },
+//           name            device   bus  mode         cs_pin                      speed_low       speed_high   mode               priority          assert_dly release_dly
+  { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_3, BOARD_MPU6000_CS_PIN,        SPI_1_125MHZ,   SPI_9MHZ,   SPI_TRANSFER_DMA,  DMA_Priority_VeryHigh, 1,          5 }, 
+  { BOARD_SDCARD_NAME,        _SPI2,   2,  SPI_MODE_0, 255, /* caller controls CS*/ SPI_1_125MHZ,   SPI_18MHZ,  SPI_TRANSFER_DMA,  DMA_Priority_Medium,   0,          0 }, 
+  { HAL_BARO_BMP280_NAME,     _SPI3,   3,  SPI_MODE_3, BOARD_BMP280_CS_PIN,         SPI_1_125MHZ,   SPI_9MHZ,   SPI_TRANSFER_DMA,  DMA_Priority_High,     1,          1 }, 
+  { BOARD_OSD_NAME,           _SPI3,   3,  SPI_MODE_3, BOARD_OSD_CS_PIN,            SPI_1_125MHZ,   SPI_4_5MHZ, SPI_TRANSFER_DMA,  DMA_Priority_Low,      2,          2 },
 
 };
 

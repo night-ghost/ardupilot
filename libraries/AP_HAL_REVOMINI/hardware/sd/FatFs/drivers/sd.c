@@ -279,13 +279,13 @@ static int8_t xmit_datablock (	/* 1:OK, 0:Failed */
 
 	xchg_spi(token);				/* Send token */
 	if (token != 0xFD) {				/* Send data if token is other than StopTran */
-		xmit_spi_multi(buff, 512);		/* Data */
-		xchg_spi(0xFF); xchg_spi(0xFF);	/* Dummy CRC */
+	    xmit_spi_multi(buff, 512);		/* Data */
+	    xchg_spi(0xFF); xchg_spi(0xFF);	/* Dummy CRC */
 
-		resp = xchg_spi(0xFF);			/* Receive data resp */
-		if ((resp & 0x1F) != 0x05) {
-		    return 0;	/* Function fails if the data packet was not accepted */
-		}
+	    resp = xchg_spi(0xFF);			/* Receive data resp */
+	    if ((resp & 0x1F) != 0x05) {
+	        return 0;	/* Function fails if the data packet was not accepted */
+	    }
 	}
 	return 1;
 }
@@ -390,9 +390,9 @@ DSTATUS sd_initialize() {
 
 	ty = 0;
 	n = send_cmd(CMD0, 0);
-	if (n == 1 || n==0) {			/* Put the card SPI/Idle state */
-		Timer1 = 1000;						/* Initialization timeout = 1 sec */
-		if (send_cmd(CMD8, 0x1AA) == 1) {	/* SDv2? */
+	if (n == 1 || n==0) {			                                /* Put the card SPI/Idle state */
+		Timer1 = 1000;			                        	/* Initialization timeout = 1 sec */
+		if (send_cmd(CMD8, 0x1AA) == 1) {	                        /* SDv2? */
 			for (n = 0; n < 4; n++) ocr[n] = xchg_spi(0xFF);	/* Get 32 bit return value of R7 resp */
 			if (ocr[2] == 0x01 && ocr[3] == 0xAA) {			/* Is the card supports vcc of 2.7-3.6V? */
 				while (Timer1 && send_cmd(ACMD41, 1UL << 30)) ;	/* Wait for end of initialization with ACMD41(HCS) */
@@ -401,7 +401,7 @@ DSTATUS sd_initialize() {
 					ty = (ocr[0] & 0x40) ? CT_SD2 | CT_BLOCK : CT_SD2;	/* Card id SDv2 */
 				}
 			}
-		} else {	/* Not SDv2 card */
+		} else {	                              /* Not SDv2 card */
 			if (send_cmd(ACMD41, 0) <= 1) 	{	/* SDv1 or MMC? */
 				ty = CT_SD1; cmd = ACMD41;	/* SDv1 (ACMD41(0)) */
 			} else {
@@ -415,7 +415,6 @@ DSTATUS sd_initialize() {
 	    ty=0;
 	}
 	CardType = ty;	/* Card type */
-	deselect();
 
 	if (ty) {			/* OK */
 	    Stat &= ~STA_NOINIT;	/* Clear STA_NOINIT flag */
@@ -428,6 +427,7 @@ DSTATUS sd_initialize() {
 	    Stat = STA_NOINIT;
 	}
 
+	deselect();
 
 	return Stat;
 }
@@ -453,6 +453,7 @@ BYTE sd_getSectorCount(DWORD *ptr){
 	    csize = (csd[8] >> 6) + ((WORD)csd[7] << 2) + ((WORD)(csd[6] & 3) << 10) + 1;
 	    *ptr = csize << (n - 9);
 	}
+
 	return RES_OK;
     }
     return RES_ERROR;
@@ -634,11 +635,15 @@ DRESULT sd_write (
 		}
 	    }
 	}
-	deselect();
 
-	if(count) return RES_ERROR;
+	if(count) {
+            deselect();
+	    return RES_ERROR;
+	}
 
         uint8_t ret = sd_get_state(); // reset errors
+
+	deselect();
 	
 	if(ret) return RES_ERROR;
 
@@ -856,8 +861,14 @@ static uint32_t erase_size = BOARD_DATAFLASH_ERASE_SIZE;
    static uint8_t erase_cmd=JEDEC_SECTOR_ERASE;
  #endif
 
-static uint8_t cmd[4]; // for DMA transfer
+#pragma pack(push,1)
 
+static struct {
+    uint8_t cmd[4]; // for DMA transfer
+    uint8_t sector[DF_PAGE_SIZE]; // we ALWAYS can use DMA!
+} buf;
+
+#pragma pack(pop)
 
 static bool chip_is_clear=false;
 
@@ -932,12 +943,21 @@ static void ReadManufacturerID()
     if (!cs_assert()) return;
 
     // Read manufacturer and ID command...
+#if 0
     spi_write(JEDEC_DEVICE_ID); //
-
+    
     df_manufacturer = spi_read();
     df_device = spi_read(); //memorytype
     df_device = (df_device << 8) | spi_read(); //capacity
-    spi_read(); // dummy byte
+    spi_read(); // ignore 4th byte
+#else
+    buf.cmd[0] = JEDEC_DEVICE_ID;
+
+    spi_spiTransfer(buf.cmd, 1, buf.cmd, 4);
+    
+    df_manufacturer =  buf.cmd[0];
+    df_device       = (buf.cmd[1] << 8) | buf.cmd[2]; //capacity
+#endif
 
     // release SPI bus for use by other sensors
     cs_release();
@@ -949,25 +969,28 @@ static uint8_t ReadStatusReg()
 {
     uint8_t tmp;
 
-    // activate dataflash command decoder
     if (!cs_assert()) return JEDEC_STATUS_BUSY;
 
     // Read status command
+#if 0 
     spi_write(JEDEC_READ_STATUS);
     tmp = spi_read(); // We only want to extract the READY/BUSY bit
+#else
+    buf.cmd[0] = JEDEC_READ_STATUS;
 
-    // release SPI bus for use by other sensors
+    spi_spiTransfer(buf.cmd, 1, &buf.cmd[1], 1);
+    tmp = buf.cmd[1];
+#endif
+
     cs_release();
-
     return tmp;
 }
 
 static uint8_t ReadStatus()
 {
   // We only want to extract the READY/BUSY bit
-    int32_t status = ReadStatusReg();
-    if (status < 0)
-            return -1;
+    uint8_t status = ReadStatusReg();
+
     return status & JEDEC_STATUS_BUSY;
 }
 
@@ -1006,29 +1029,26 @@ static void Flash_Jedec_WriteEnable(void){
     cs_release();
 }
 
-static uint8_t sector_buf[DF_PAGE_SIZE]; // we ALWAYS can use DMA!
 
-static bool read_page( BYTE *buf, DWORD pageNum){
+static bool read_page( BYTE *ptr, DWORD pageNum){
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
     if (!wait_ready(500)) return 0;  /* Wait for card ready */
 
     if (!cs_assert()) return 0;
 
-    cmd[0] = JEDEC_READ_DATA;
-    cmd[1] = (PageAdr >> 16) & 0xff;
-    cmd[2] = (PageAdr >>  8) & 0xff;
-    cmd[3] = (PageAdr >>  0) & 0xff;
+    buf.cmd[0] = JEDEC_READ_DATA;
+    buf.cmd[1] = (PageAdr >> 16) & 0xff;
+    buf.cmd[2] = (PageAdr >>  8) & 0xff;
+    buf.cmd[3] = (PageAdr >>  0) & 0xff;
 
     
-    write_spi_multi(cmd, 4);
-
-    read_spi_multi(sector_buf, DF_PAGE_SIZE);
+    spi_spiTransfer(buf.cmd, 4, buf.sector, DF_PAGE_SIZE);
 
     cs_release();
     uint16_t i;
     for(i=0; i<DF_PAGE_SIZE;i++){
-        buf[i] = ~sector_buf[i];    // let filesystem will be inverted, this allows extend files without having to Read-Modify-Write on FAT
+        ptr[i] = ~buf.sector[i];    // let filesystem will be inverted, this allows extend files without having to Read-Modify-Write on FAT
                                     // original: 0xFF is clear and 0 can be programmed any time
                                     // inverted: 0 is clear and 1 can be programmed any time
                                     // to mark cluster as used it should be set 1 in the FAT. Also new entries in dirs can be created without RMW
@@ -1038,26 +1058,29 @@ static bool read_page( BYTE *buf, DWORD pageNum){
 }
 
 
-static bool write_page(const BYTE *buf, DWORD pageNum){
+static bool write_page(const BYTE *ptr, DWORD pageNum){
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
     uint16_t i;
     for(i=0; i<DF_PAGE_SIZE;i++){
-        sector_buf[i] = ~buf[i];       // let filesystem will be inverted, this allows extend files without having to Read-Modify-Write on FAT
+        buf.sector[i] = ~ptr[i];       // let filesystem will be inverted, this allows extend files without having to Read-Modify-Write on FAT
     }
 
     Flash_Jedec_WriteEnable();
 
     if (!cs_assert()) return 0;
 
-    cmd[0] = JEDEC_PAGE_WRITE;
-    cmd[1] = (PageAdr >> 16) & 0xff;
-    cmd[2] = (PageAdr >>  8) & 0xff;
-    cmd[3] = (PageAdr >>  0) & 0xff;
+    buf.cmd[0] = JEDEC_PAGE_WRITE;
+    buf.cmd[1] = (PageAdr >> 16) & 0xff;
+    buf.cmd[2] = (PageAdr >>  8) & 0xff;
+    buf.cmd[3] = (PageAdr >>  0) & 0xff;
 
-    write_spi_multi(cmd, 4);
-
-    write_spi_multi(sector_buf, DF_PAGE_SIZE);
+#if 0 
+    write_spi_multi(buf.cmd, 4);
+    write_spi_multi(buf.sector, DF_PAGE_SIZE);
+#else
+    write_spi_multi(buf.cmd, 4 + DF_PAGE_SIZE);
+#endif
     cs_release();
     return 1;
 }
@@ -1069,13 +1092,13 @@ static bool erase_page(uint16_t pageNum)
 
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
-    cmd[0] = erase_cmd;
-    cmd[1] = (PageAdr >> 16) & 0xff;
-    cmd[2] = (PageAdr >>  8) & 0xff;
-    cmd[3] = (PageAdr >>  0) & 0xff;
+    buf.cmd[0] = erase_cmd;
+    buf.cmd[1] = (PageAdr >> 16) & 0xff;
+    buf.cmd[2] = (PageAdr >>  8) & 0xff;
+    buf.cmd[3] = (PageAdr >>  0) & 0xff;
 
     if (!cs_assert()) return 0;
-    write_spi_multi(cmd, 4);
+    write_spi_multi(buf.cmd, 4);
     cs_release();
     return 1;
 }
@@ -1083,13 +1106,13 @@ static bool erase_page(uint16_t pageNum)
 static void ChipErase()
 {
 
-    cmd[0] = JEDEC_BULK_ERASE;
+    buf.cmd[0] = JEDEC_BULK_ERASE;
 
     Flash_Jedec_WriteEnable();
     
     if (!cs_assert()) return;
 
-    write_spi_multi(cmd, 1);    
+    write_spi_multi(buf.cmd, 1);    
     
     chip_is_clear=true;
     
@@ -1194,7 +1217,6 @@ DSTATUS sd_initialize () {
 
     sd_getSectorCount(&sd_max_sectors);
 
-    
     initialized=1;
 
     Stat=0;

@@ -569,6 +569,7 @@ void REVOI2CDevice::isr_ev(){
                 // all flags set before
                 _state = I2C_want_TXE;
             }else {      // receive
+                _dev->I2Cx->CR2 |= I2C_CR2_ITBUFEN; // enable RXNE interrupt
                 if(_rx_len == 1) {                 // Disable Acknowledge for 1-byte transfer
                     _dev->I2Cx->CR1 &= ~I2C_CR1_ACK;
                 } else {
@@ -612,14 +613,14 @@ void REVOI2CDevice::isr_ev(){
                 }
             }
         }
-        if((sr1itflags & I2C_FLAG_BTF & I2C_FLAG_MASK) != RESET) {// TXE set 
+        if((sr1itflags & I2C_FLAG_BTF & I2C_FLAG_MASK) != RESET) {// BTF set 
             if((sr2itflags & (I2C_FLAG_TRA>>16) & I2C_FLAG_MASK) != RESET) {    // I2C in mode Transmitter
                 // BTF on transmit
                 if(_rx_len) {
                     // Send START condition a second time
                     _dev->I2Cx->CR1 |= I2C_CR1_START;
                     _state = I2C_want_RX_SB;
-                    _dev->I2Cx->CR2 |= I2C_CR2_ITBUFEN; // enable TXE interrupt
+                    // _dev->I2Cx->CR2 |= I2C_CR2_ITBUFEN; // enable TXE interrupt - too early! only after ADDR
                 } else {   
                     _dev->I2Cx->CR1 |= I2C_CR1_STOP;     // Send STOP condition
                     _error = I2C_OK;                    // TX is done

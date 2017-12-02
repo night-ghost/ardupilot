@@ -1,10 +1,9 @@
-* near a half of code is fully rewritten
-* added check for all input parameters - no more HardFaults if setted wrong pin number
+* almost all code is fully rewritten
+* added check for all input parameters - no more HardFaults if setted wrong pin numbers
 * external I2C bus moved out from FlexiPort by Soft_I2C driver so we always has at least 3 UARTs
 * added 1 full-functional UART (only for quads) and 1 RX-only UART for DSM satellite receiver on OpLink connector
 * Unlike many other boards, fully implemented registerPeriodicCallback & Co calls
-* implemented register_io_process via simple cooperative multitasking
-* added buzzer support
+* implemented simple preemptive multitasking
 * stack now in CCM memory
 * PPM and PWM inputs works via Timer's driver handlers
 * added DSM and SBUS parsing on PPM input
@@ -21,12 +20,12 @@
 * EEPROM emulation altered to ensure the reliability of data storage at power failures
 * optimized EEPROM usage by changing from 1-byte to 2-byte writes
 * all internal calls use static private methods
-* removed unused files from "wirish" folder
-* micros() call uses 32-bit hardware timer instead of systick_micros()
+* removed unused files
+* micros() call uses 32-bit hardware timer instead of awful systick_micros()
 * added parameters support for HAL
 * OneShot supported
 * added translation layer between system PWM modes and borad PWM modes
-* added descriptors for all internal hardware
+* added descriptors for all STM internal hardware
 * added support to reboot to DFU mode (via "reboot to PX4 bootloader" in MP)
 * after any Fault or Panic() automatically reboots to DFU mode
 * diversity on RC_Input
@@ -46,7 +45,7 @@
 * EEPROM error handling
 * fixed Ardupilot's stealing of Servos even they marked as "Unused"
 * added compilation date & time to log output
-* added SBUS input via USART1 as on Airbot boards
+* added SBUS input via any USART with hardware inverter as on Airbot boards
 * added per-board read_me.md files
 * fixed Dataflash logs bug from mainstream - now logs are persists between reboots!
 * DMA mode for lagre SPI transfers
@@ -54,18 +53,18 @@
 * any UART can be connected to ESC for 4-way interface
 * support for logs on SD card for AirbotV2 board
 * fixed 2nd Dataflash logs bug from mainstream - now logs are persists between reboots even on boards having chips with 64k sector
-* I2C wait time limited to 0.3s - no more forever hangs by external compass errors
-* FlexiPort can be switched between UART and I2C by parameters
+* I2C wait time limited to 30ms - no more forever hangs by external compass errors
+* FlexiPort can be switched between UART and I2C by parameter
 * The RCoutput module has been completely rewritten.
 * For the PWM outputs, the error in setting the timer frequency has been compensated.
 * added parameter to set PWM mode
 * added used memory reporting
 * added I2C error reporting
-* realized low-power idle state with WFE, TIMER6 used to generate events each 1uS
-* added HAL_RC_INPUT parameter to allow to force RC input module
+* realized low-power idle state with WFE, TIMER6 is used to generate events each 1uS
+* added HAL_RC_INPUT parameter to allow to force RC input mode
 * added used stack reporting
 * added generation of .DFU file
-* time-consuming operations moved out from interrupt level to IO_Completion level with low priority
+* time-consuming operations moved out from ISR level to IO_Completion level with low priority
 * added support for Clock Security System - if HSE fails in air system will use HSI instead
 * added boardEmergencyHandler which will be called on any Fault or Panic() before halt - eg. to release parachute
 * motor layout switched to per-board basis
@@ -73,12 +72,12 @@
 * HAL switched to new DMA api with completion interrupts
 * AirbotV2 is fully supported with SD card and OSD
 * added support for reading from SD card via USB - HAL parameter allows to be USB MassStorege
-* added check for stack overflow for low priority tasks
+* added check for stack overflow for all tasks
 * all boards formats internal flash chip as FAT and allows access via USB
 * added spi flash autodetection
 * added support for TRIM command on FAT-formatted Dataflash
 * rewritten SD library to support 'errno' and early distinguish between file and dir
-* compass processing (4027uS) and baro processing(1271uS)  moved out from interrupt level to low-priority io level, because its
+* compass processing (4027uS) and baro processing(1271uS)  moved out from interrupt level to task level, because its
  execution time spoils loop time (500Hz = 2000uS for all)
 * added reformatting of DataFlash in case of hard filesystem errors, which fixes FatFs bug when there is no free space 
  after file overflows and then deleted
@@ -109,11 +108,11 @@
 * greatly reduced time of reformatting of DataFlash to FAT
 * I2C driver fully rewritten again to work via interrupts - no DMA, no polling
 * compass and baro gives bus semaphore ASAP to allow bus operations when calculations does
-* buzzer support
 * full status on only 2 leds - GPS sats count, failsafe, compass calibration, autotune etc
 * support for SBUS on any UART
 * PWM_IN is rewritten to use HAL drivers, as result its size decreased four times (!)
 * working PPM on AirbotV2/V3
+* buzzer support
 * added ability to connect buzzer to arbitrary pin (parameter BUZZ_PIN)
 * added priority to SPI DMA transfers
 * overclocking support
@@ -122,12 +121,13 @@
 * added translation of decoded serial data from PPMn input port to fake UARTs
 * reduced to ~1.5uS time from interrupt to resuming task that was waiting that interrupt
 * unified NVIC handling
-* fixed bug in parsing of .osd file
-* fixed bug in scheduler that can cause task freeze
-* fixed bug in OSD_Uart that cause hang if port not listened
 * SoftSerial driver rewritten to not use PWM dependency. Now it can use any pin with timer for RX and any pin for TX, and there 
   can be any number of SoftSerial UARTs
 * added per-task stack usage
+* SPI driver rewritten: added ISR mode instead of polling, all transfers are monolitic (not divdded to send and receive part),  setup for receive now in ISR
+* all DataFlash reads and writes now in single SPI transfer
+* added CS assert/release delays to SPI device descriptrion table
+
 * ...
 * a lot of minor enhancements
 

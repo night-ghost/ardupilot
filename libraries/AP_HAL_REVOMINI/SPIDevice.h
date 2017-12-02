@@ -51,7 +51,6 @@ struct spi_pins {
 typedef enum SPI_TRANSFER_MODE {
     SPI_TRANSFER_POLL=0,
     SPI_TRANSFER_DMA,
-    SPI_TRANSFER_FORCE_DMA,
     SPI_TRANSFER_INTR,
     SPI_TRANSFER_SOFT,
 } SPI_transferMode;
@@ -66,6 +65,8 @@ typedef struct SPIDESC {
     SPIFrequency          highspeed;
     SPI_transferMode      mode;  // mode of operations: 0 - polling, 1&2 DMA, 3 interrupts, 4 software
     uint32_t              prio; // DMA priority
+    uint8_t               assert_dly;  // delay after  CS goes low
+    uint8_t               release_dly; // delay before CS goes high
 } SPIDesc;
 
 enum SPI_ISR_MODE {
@@ -174,21 +175,23 @@ protected:
 
     void init(void);
 
-    inline void _cs_assert(){                   if(_cs){_cs->write(0); delay_ns100(1);} } // Select device and wait a little
-    inline void _cs_release(){ spi_wait_busy(_desc.dev); if(_cs){      delay_ns100(5); _cs->write(1); } } // Deselect device, time from http://datasheetspdf.com/mobile/735133/MPU-6000.html page 19
+    inline void _cs_assert(){                   if(_cs){_cs->write(0); delay_ns100(_desc.assert_dly); } }                 // Select device and wait a little
+    inline void _cs_release(){ spi_wait_busy(_desc.dev); if(_cs){      delay_ns100(_desc.release_dly); _cs->write(1); } } // Deselect device after some delay
 
     const spi_pins* dev_to_spi_pins(const spi_dev *dev);
 
     spi_baud_rate determine_baud_rate(SPIFrequency freq);
 
-    uint8_t _transfer_s(uint8_t bt);
     uint8_t _transfer(uint8_t data);
 
-    void  get_dma_ready();
+    void get_dma_ready();
 
-    uint8_t dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t btr );
-    uint8_t isr_transfer();
-    
+    void setup_dma_transfer(const uint8_t *send, const uint8_t *recv, uint32_t btr );
+    void setup_isr_transfer();
+
+    void    start_dma_transfer();
+    uint8_t do_transfer(bool is_DMA);
+
     Handler _completion_cb;
     void   *_task;
 
@@ -218,6 +221,8 @@ protected:
 
     uint16_t dly_time;
     void spi_soft_set_speed();
+    uint8_t _transfer_s(uint8_t bt);
+
 #endif
 
 #ifdef DEBUG_SPI    

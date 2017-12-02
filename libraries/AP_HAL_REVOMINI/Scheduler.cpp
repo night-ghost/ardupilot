@@ -1351,7 +1351,15 @@ void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
         }
         break;
     
-    //case 4: // whats more we can do via SVC?
+    case 4: {
+            Revo_handler h = { .h = 0 };
+            h.w[0] = svc_args[0];
+            h.w[1] = svc_args[1];
+            revo_call_handler(h.h, svc_args[2]);
+        }
+        break;
+    
+    //case 5: // whats more we can do via SVC?
 
     default:                // Unknown SVC - just ignore
         break;    

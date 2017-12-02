@@ -608,7 +608,7 @@ bool AP_InertialSensor_Revo::_accumulate(uint8_t *samples, uint8_t n_samples)
         _rotate_and_correct_accel(_accel_instance, accel);
         _rotate_and_correct_gyro(_gyro_instance, gyro);
 
-#if 0 // filter out samples if vector length changed by 100%
+#if 1 // filter out samples if vector length changed by 100%
 
 #define FILTER_KOEF 0.1
         float len = accel.length();
