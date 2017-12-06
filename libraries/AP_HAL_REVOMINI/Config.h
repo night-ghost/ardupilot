@@ -13,6 +13,7 @@
 #define REVOMINI_RC_INPUT_NUM_CHANNELS 20
 
 
+
 //#define I2C_DEBUG
 //#define DEBUG_SPI
 
@@ -25,6 +26,8 @@
 //#define SHED_DEBUG
 //#define SEM_DEBUG
 //#define MPU_DEBUG
+
+#define USE_MPU // guard page in process stack
 
 #endif
 

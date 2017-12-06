@@ -227,30 +227,6 @@ void usart_setup(const usart_dev *dev, uint32_t baudRate, uint16_t wordLength,
 
     USART_Init(dev->USARTx, &USART_config);
 
-#if 0
-    USART_ITConfig(dev->USARTx, USART_IT_PE, DISABLE);
-    USART_ITConfig(dev->USARTx, USART_IT_IDLE, DISABLE);
-    USART_ITConfig(dev->USARTx, USART_IT_LBD, DISABLE);
-
-    if (IS_USART_1236_PERIPH(dev->USARTx))
-	USART_ITConfig(dev->USARTx, USART_IT_CTS, DISABLE);
-
-    USART_ITConfig(dev->USARTx, USART_IT_ERR, DISABLE);
-    USART_ITConfig(dev->USARTx, USART_IT_TC, DISABLE);
-
-    if(mode & USART_Mode_Rx) { /* Enable Rx request */
-        USART_ClearFlag(dev->USARTx, USART_FLAG_RXNE);
-        USART_ITConfig(dev->USARTx, USART_IT_RXNE, ENABLE);
-    } else {
-        USART_ITConfig(dev->USARTx, USART_IT_RXNE, DISABLE);
-    }
-
-    USART_ITConfig(dev->USARTx, USART_IT_TXE, DISABLE);
-    if(mode & USART_Mode_Tx) {
-        USART_ClearFlag(dev->USARTx, USART_FLAG_TC);
-//        USART_ITConfig(dev->USARTx, USART_IT_TXE, ENABLE); will enable after first write()
-    }
-#else
     dev->USARTx->CR1 &= ~(USART_MASK_IDLEIE | USART_MASK_RXNEIE | USART_MASK_TCEIE | USART_MASK_TXEIE | USART_MASK_PEIE);
     dev->USARTx->CR2 &= ~(USART_MASK2_LBDIE);
     dev->USARTx->CR3 &= ~(USART_MASK3_CTSIE | USART_MASK3_EIE);
@@ -263,7 +239,7 @@ void usart_setup(const usart_dev *dev, uint32_t baudRate, uint16_t wordLength,
     if(mode & USART_Mode_Tx) {
         USART_ClearFlag(dev->USARTx, USART_FLAG_TC);
     }    
-#endif
+
     enable_nvic_irq(dev->irq, UART_INT_PRIORITY);
 }
 

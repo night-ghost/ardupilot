@@ -102,15 +102,21 @@ __default_exc:
     ldr r2, [r2]
     ldr r2, SHCSR
     ldr r2, [r2]
+    ldr r2, MMFAR
+    ldr r2, [r2]
 
     mov r12, r1
     ldr r2, NVIC_CCR            @ Enable returning to thread mode even if there are
     mov r1 ,#1                  @ pending exceptions. See flag NONEBASETHRDENA - http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0337e/Cihcbadd.html
     str r1, [r2]
     cpsid i                     @ Disable global interrupts
-    ldr r2, SYSTICK_CSR         @ Disable systick handler
+
     mov r1, #0
+    ldr r2, SYSTICK_CSR         @ Disable systick handler
     str r1, [r2]
+    ldr r2, MPU_CTRL            @ disable MPU
+    str r1, [r2]
+    
     ldr r1, CPSR_MASK           @ Set default CPSR
     mov r2, r12
     push {r1}                   @                        SP+4
@@ -166,6 +172,7 @@ EXC_RETURN_PSP: .word 0xFFFFFFFD
 TARGET_PC:     .word __error
 NVIC_CCR:      .word 0xE000ED14    @ NVIC configuration control register
 SYSTICK_CSR:   .word 0xE000E010    @ Systick control register
+MPU_CTRL:      .word 0xE000ED94    @ MPU Control register
 
 BFAR:          .word 0xE000ED38
 CFSR:          .word 0xE000ED28
@@ -173,6 +180,7 @@ HFSR:          .word 0xE000ED2C
 DFSR:          .word 0xE000ED30
 AFSR:          .word 0xE000ED3C
 SHCSR:         .word 0xE000ED24
+MMFAR:         .word 0xE000ED34   @ MemManage Fault Address register
 
 px_running:     .word s_running    
 px_nextTask:    .word next_task

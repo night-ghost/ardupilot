@@ -76,6 +76,7 @@ enum SPI_ISR_MODE {
     SPI_ISR_WAIT_RX,   // wait for receiving of last fake byte from TX
     SPI_ISR_WAIT_RX_DMA, // wait for receiving of last fake byte from TX
     SPI_ISR_RECEIVE,
+    SPI_ISR_RXTX,     // full duplex
     SPI_ISR_STROBE,
     SPI_ISR_COMPARE,
     SPI_ISR_FINISH,
@@ -158,7 +159,7 @@ public:
     void  dma_isr();
     void  spi_isr();
 
-#define SPI_BUFFER_SIZE 512
+#define SPI_BUFFER_SIZE 512 // one SD-card sector
     
 protected:
     const SPIDesc &_desc;

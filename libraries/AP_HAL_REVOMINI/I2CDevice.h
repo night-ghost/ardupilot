@@ -178,7 +178,7 @@ private:
 
 class REVOMINI::I2CDeviceManager : public AP_HAL::I2CDeviceManager {
     friend class REVOMINI::REVOI2CDevice;
-    
+
 public:
     I2CDeviceManager() { }
 

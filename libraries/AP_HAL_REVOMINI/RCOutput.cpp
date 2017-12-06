@@ -195,8 +195,6 @@ void REVOMINIRCOutput::lateInit(){ // 2nd stage with loaded parameters
 
     Revo_handler h = { .vp = isr_handler  };  
     REVOMINIGPIO::_attach_interrupt(spin, h.h, FALLING, 0);
-    
-
 #endif
 }
 
@@ -273,6 +271,8 @@ void REVOMINIRCOutput::_set_output_mode(enum REVOMINIRCOutput::output_mode mode)
         break;
     }
     
+// TODO: remove hardwiring timers, see push() code
+// TODO: we should change mode only for channels with freq > 50Hz
 
     switch(_mode){
 
@@ -306,7 +306,7 @@ void REVOMINIRCOutput::_set_output_mode(enum REVOMINIRCOutput::output_mode mode)
     case BOARD_PWM_ONESHOT42:
         period    = (uint32_t)-1; // max possible
         freq      = ONESHOT42_TIMER_KHZ;       // 16MHz 62.5ns ticks - for 125uS..490Hz OneShot125
-//    at 28Mhz, period with 65536 will be 427Hz so even 16-bit timer should not overflows at 500Hz loop
+//    at 28Mhz, period with 65536 will be 427Hz so even 16-bit timer should not overflows at 500Hz loop, but very close to
         _once_mode=true;
         break;
 
@@ -357,7 +357,7 @@ void REVOMINIRCOutput::set_freq(uint32_t chmask, uint16_t freq_hz) {
 // for true one-shot        if(_once_mode && freq_hz>50) continue; // no frequency in OneShoot modes
             _freq[i] = freq_hz;
 
-            if(_once_mode && freq_hz>50) freq_hz /=2; // divide frequency by 2 in OneShoot modes
+            if(_once_mode && freq_hz>50) freq_hz /= 2; // divide frequency by 2 in OneShoot modes
             const uint8_t pin = output_channels[i];
             const timer_dev *dev = PIN_MAP[pin].timer_device;
             timer_set_reload(dev,  _timer_period(freq_hz)); 
@@ -473,20 +473,10 @@ void REVOMINIRCOutput::read(uint16_t* period_us, uint8_t len)
     }
 }
 
-
 void REVOMINIRCOutput::enable_ch(uint8_t ch)
 {
     if (ch >= REVOMINI_MAX_OUTPUT_CHANNELS) 
         return;
-
-#if 0
-    if (ch >= 8 && !(_enabled_channels & (1U<<ch))) {
-        // this is the first enable of an auxiliary channel - setup
-        // aux channels now. This delayed setup makes it possible to
-        // use BRD_PWM_COUNT to setup the number of PWM channels.
-        _init_alt_channels();
-    }
-#endif
 
     if(_enabled_channels & (1U<<ch) ) return; // already OK
 
@@ -504,7 +494,7 @@ void REVOMINIRCOutput::enable_ch(uint8_t ch)
         const timer_dev *dev = PIN_MAP[pin].timer_device;
     
         uint32_t period    = ((PWM_TIMER_KHZ*1000UL) / 50); // 50Hz by default
-        configTimeBase(dev, period,  PWM_TIMER_KHZ);       // 2MHz 0.5us ticks - for 50..490Hz PWM
+        configTimeBase(dev, period,  PWM_TIMER_KHZ);        // 2MHz 0.5us ticks - for 50..490Hz PWM
         timer_resume(dev);
 
         REVOMINIGPIO::_pinMode(pin, PWM);
@@ -541,7 +531,6 @@ void REVOMINIRCOutput::disable_ch(uint8_t ch)
 
 void REVOMINIRCOutput::push()
 {
-    _corked = false;
 
 #ifdef DEBUG_PWM
     uint8_t spin = output_channels[DEBUG_PWM]; // motor 6 as strobe
@@ -553,14 +542,13 @@ void REVOMINIRCOutput::push()
         set_pwm(ch, _period[ch]);
     }
 
-    if(_once_mode){
-    // generate timer's update on ALL used pins, but only once per timer
+    if(_once_mode){   // generate timer's update on ALL used pins, but only once per timer
 
         for (uint16_t ch = 0; ch < REVOMINI_OUT_CHANNELS; ch++) {
             uint8_t pin = output_channels[ch];
     
             const timer_dev *tim = PIN_MAP[pin].timer_device;
-            tim->state->updated=false;  // reset flag first
+            tim->state->update=false;  // reset flag first
         }
 
         for (uint16_t ch = 0; ch < REVOMINI_OUT_CHANNELS; ch++) {
@@ -569,16 +557,30 @@ void REVOMINIRCOutput::push()
             const stm32_pin_info &p = PIN_MAP[pin];
             const timer_dev *tim = p.timer_device;
     
-            if(!tim->state->updated) { // update each timer once
-                tim->state->updated=true;
-                timer_generate_update(tim);
-            }
-            timer_set_compare(tim, p.timer_channel, 0); // to prevent outputs  in case of timer overflows
+            tim->state->update=true; // set flag for update for needed timer
         }
+
+        for (uint16_t ch = 0; ch < REVOMINI_OUT_CHANNELS; ch++) {
+            uint8_t pin = output_channels[ch];
     
-//        timer_generate_update(TIMER2);
-//        timer_generate_update(TIMER3);
+            const timer_dev *tim = PIN_MAP[pin].timer_device;
+            if(tim->state->update) {
+                timer_generate_update(tim);
+                tim->state->update = false;    // only once
+            }
+        }
+#if 0
+        for (uint16_t ch = 0; ch < REVOMINI_OUT_CHANNELS; ch++) {
+            uint8_t pin = output_channels[ch];
+    
+            const stm32_pin_info &p = PIN_MAP[pin];
+            timer_set_compare(p.timer_device, p.timer_channel, 0); // to prevent outputs  in case of timer overflows
+        }
+#endif
+
     }
+
+    _corked = false;
         
 #ifdef DEBUG_PWM
     REVOMINIGPIO::_write(spin, 0);

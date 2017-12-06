@@ -1,5 +1,6 @@
 #pragma GCC optimize ("O2")
 
+
 #include <systick.h>
 #include <hal.h>
 #include <timer.h>
@@ -116,11 +117,36 @@ void __attribute__((noreturn)) error_throb(uint32_t num){
 }
 
 
+
+
+
 // new common exception code
 // TODO: we have task switching so if fault occures in task we can just remove task from queue
 //
 void __attribute__((noreturn)) __error(uint32_t num, uint32_t pc, uint32_t lr)
 {
+
+#ifdef DEBUG_BUILD
+    static const char * const faults[] = {
+        "", // 0 
+        "", // 1
+        "HardFault", // 2
+        "MemManage fault", // 3 
+        "BusFault", // 4 
+        "UsageFault", // 5 
+        "illegal Flash Write", // 6 
+        "", // 7 
+        "", // 8 
+        "", // 9 
+        "", // 10 
+        "PureVirtual function call", // 11
+        "failed to setup clock", // 12
+        "exit from main()", // 13
+        "", // 14
+    };
+#endif
+
+
         /* Turn off peripheral interrupts */
     __disable_irq();
 
@@ -142,8 +168,12 @@ void __attribute__((noreturn)) __error(uint32_t num, uint32_t pc, uint32_t lr)
     if(boardEmergencyHandler) boardEmergencyHandler(); // call emergency handler
 
 #ifdef ERROR_USART
-    usart_putstr(ERROR_USART, "\r\nexception: ");
+    usart_putstr(ERROR_USART, "\r\n!!! Exception: ");
+#ifdef DEBUG_BUILD
+    usart_putstr(ERROR_USART, faults[num]);
+#else
     usart_putudec(ERROR_USART, num);
+#endif
     usart_putstr(ERROR_USART, " at ");
     usart_putudec(ERROR_USART, pc);
     usart_putstr(ERROR_USART, " lr ");

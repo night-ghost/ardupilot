@@ -54,16 +54,17 @@ Servo6 = 47
 LEDs
 
 All valuable info indicated by 2 LEDs of RevoMini
+
 Blue led: system state
-Very fast blinking - initializing
-Blinking        - ready to arm
-Double blinging - pre-arm check failed
-Solid           - armed
-blinking in flight - failsafe
+ Very fast blinking                     - initializing
+ Blinking                               - ready to arm
+ Double blinging                        - pre-arm check failed
+ Solid                                  - armed
+ blinking (small dark pauses) in flight - failsafe
 
 Green led: GPS state
-Dark: no fix
-Blinking: number of blinks shows number of sats minus 6, so if there is 10 sats LED will blink in 4 pulses
+ Dark: no fix
+ Blinking: number of blinks shows number of sats minus 6, so if there is 10 sats LED will blink in 4 pulses
 
 
 

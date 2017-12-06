@@ -124,9 +124,12 @@
 * SoftSerial driver rewritten to not use PWM dependency. Now it can use any pin with timer for RX and any pin for TX, and there 
   can be any number of SoftSerial UARTs
 * added per-task stack usage
-* SPI driver rewritten: added ISR mode instead of polling, all transfers are monolitic (not divdded to send and receive part),  setup for receive now in ISR
+* SPI driver rewritten: added ISR mode instead of polling, all transfers are monolitic (not divded to send and receive parts), setup for receive now in ISR
 * all DataFlash reads and writes now in single SPI transfer
+* removed usage of one-byte SPI functions from SD driver
+* added support of criticalSections to Scheduler, which protect code from task switch
 * added CS assert/release delays to SPI device descriptrion table
+* added partial MPU support (only to protect from process stack overflow
 
 * ...
 * a lot of minor enhancements

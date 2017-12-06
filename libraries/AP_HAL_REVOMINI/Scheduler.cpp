@@ -590,6 +590,10 @@ void REVOMINIScheduler::_print_stats(){
     if(flag_10s) {
         flag_10s=false;
 
+#if defined(USE_MPU)
+        mpu_disable();      // we need access to all tasks
+#endif
+
         
         uint32_t t=_millis();
         const int Kf=100;
@@ -801,10 +805,10 @@ void REVOMINIScheduler::do_task(task_t *task) {
                     yield(0);   // can't be
                     continue;
                 }
-            }
-            revo_call_handler(task->handle, task->id); 
-            if(task->sem){
+                revo_call_handler(task->handle, task->id); 
                 task->sem->give(); // give semaphore when task finished
+            } else {
+                revo_call_handler(task->handle, task->id); 
             }
 #ifdef MTASK_PROF
             t = _micros()-task->time_start; // execution time
@@ -909,6 +913,10 @@ void * NOINLINE REVOMINIScheduler::_start_task(Handler handle, size_t stackSize)
         AP_HAL::panic("start_task called from ISR 0x%x", (uint8_t)(SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk));
     }
 
+#if defined(USE_MPU)
+    mpu_disable();      // we need access to new tasks TCB which can be overlapped by guard page
+#endif
+
     // Adjust stack size with size of task context
     stackSize += sizeof(task_t)+8; // for alignment
 
@@ -924,12 +932,10 @@ void * NOINLINE REVOMINIScheduler::_start_task(Handler handle, size_t stackSize)
     stack_bottom = (caddr_t)sp;   // and remember for memory allocator
     s_top += stackSize;           // adjust used size at stack top
 
-
     enqueue_task(*task);          // task is ready, now we can add new task to run queue
                                   //  task will not be executed because .active==0
 
-    // task->active = true;          // now task is ready to run but let it stays paused
-    return (void *)task; // return address of task descriptor as task handle
+    return (void *)task;    // return address of task descriptor as task handle
 }
 
 // task should run periodically, period in uS. this will be high-priority task
@@ -967,6 +973,10 @@ task_t *REVOMINIScheduler::get_next_task(){
     uint32_t now =  _micros();
     me->t_yield = now;
 
+#if defined(USE_MPU)
+    mpu_disable();      // we need access to all tasks
+#endif
+
     { // isolate dt
 #if defined(MTASK_PROF) 
         uint32_t dt =  now - me->start;       // time in task
@@ -981,7 +991,6 @@ task_t *REVOMINIScheduler::get_next_task(){
 #ifdef MTASK_PROF
         if(dt > me->max_time) {
             me->max_time = dt; // maximum to show
-//            me->maxt_addr = ret;
         }
 
  #ifdef SHED_DEBUG
@@ -1022,7 +1031,6 @@ task_t *REVOMINIScheduler::get_next_task(){
                     if(own != ptr) { // owner is another task?
                         uint32_t dt = now - ptr->sem_start_wait;   // time since start waiting
                         if(ptr->sem_time == HAL_SEMAPHORE_BLOCK_FOREVER || dt < ptr->sem_time) {
-//                            if(ptr->curr_prio>1) ptr->curr_prio--;      // increase priority as task waiting for a semaphore
                             if(own->curr_prio > ptr->curr_prio) {
                                 own->curr_prio=ptr->curr_prio;
                             }
@@ -1125,16 +1133,18 @@ skip_task:
 
     // выбрали задачу для переключения. 
 
+
+#if !defined(USE_MPU) || 1 
     // проверим сохранность дескриптора
     if(task->guard != STACK_GUARD){
         // TODO исключить задачу из планирования
         AP_HAL::panic("PANIC: stack guard spoiled in process %d (from %d)\n", task->id, me->id);
     }
-
-    if(want_tail && want_tail->curr_prio >= task->curr_prio) { // we have a high-prio task that want to be started next in the middle of tick
+#endif
+    if(want_tail && want_tail->curr_prio < task->curr_prio) { // we have a high-prio task that want to be started next in the middle of tick
         if(partial_quant < TIMER_PERIOD-10) { // if time less than tick
             timer_set_count(TIMER14, 0);
-            timer_set_reload(TIMER14, partial_quant+2); // +2 to garantee
+            timer_set_reload(TIMER14, partial_quant+2); // +2 to guarantee
             timer_resume(TIMER14);
         }
     }
@@ -1271,6 +1281,14 @@ void REVOMINIScheduler::_ioc_timer_event(uint32_t v){ // isr at low priority to 
 
 void PendSV_Handler(){
     REVOMINIScheduler::need_switch_task=false;
+#if defined(USE_MPU)
+    // set the guard page for the next task
+    mpu_configure_region(MPU_REGION_0,                              
+                        (uint32_t)(next_task->stack) & ~31, // end of stack in the guard page
+                         MPU_RASR_ATTR_AP_RO_RO | MPU_RASR_ATTR_NON_CACHEABLE | MPU_RASR_SIZE_32);  // disable write access
+    
+    mpu_enable(MPU_CTRL_PRIVDEFENA); // enable default memory map
+#endif 
     __do_context_switch();
 }
 

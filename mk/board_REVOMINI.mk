@@ -88,11 +88,11 @@ EXTRAFLAGS += -DGIT_VERSION="\"$(GIT_VERSION) $(shell date --rfc-3339=seconds)\"
 
 #-Werror
 WARNFLAGS       =   -Wall -Wshadow -Wpointer-arith -Wcast-align -Wno-psabi -Wno-unused-parameter -Wno-error=cast-align -Wno-error=unused-but-set-variable
-WARNFLAGS      +=   -Wwrite-strings -Wformat=2 -Wshadow -Wfloat-equal -Wpointer-arith -Wlogical-op -Wmissing-declarations -Wpacked -Wno-pragmas -Wno-trigraphs
+WARNFLAGS      +=   -Wwrite-strings -Wformat=2 -Wshadow -Wfloat-equal -Wpointer-arith -Wlogical-op -Wmissing-declarations -Wpacked -Wno-pragmas 
 WARNFLAGS      +=   -Wextra -Wlogical-op  -Wno-unknown-pragmas -Wno-redundant-decls -Wno-packed -Wno-error=double-promotion -Wno-error=type-limits
 WARNFLAGS      +=   -Wno-error=unused-variable -Wno-error=reorder -Wno-error=float-equal -Wno-error=unused-parameter -Wno-missing-field-initializers
 WARNFLAGS      +=   -Wno-error=pmf-conversions -Wno-error=missing-declarations -Wno-error=unused-function -Werror=format-security -Werror=array-bounds
-WARNFLAGS      +=   -Wno-error=unused-label
+WARNFLAGS      +=   -Wno-error=unused-label -Wno-trigraphs
 
 OPTFLAGS        = -Os
 OPTFLAGS       += -fsingle-precision-constant -g3 -fno-strict-aliasing  -fomit-frame-pointer -frename-registers

@@ -432,11 +432,11 @@ uint32_t REVOI2CDevice::i2c_write(uint8_t addr, const uint8_t *tx_buff, uint8_t 
 
     _task = REVOMINIScheduler::get_current_task();// if function called from task - store it and pause
 
-    noInterrupts();
-    _dev->I2Cx->CR2 |= I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN;    // Enable interrupts
+    EnterCriticalSection;
+     _dev->I2Cx->CR2 |= I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN;    // Enable interrupts
 
-    if(_task) REVOMINIScheduler::task_pause(timeout);
-    interrupts();
+     if(_task) REVOMINIScheduler::task_pause(timeout);
+    LeaveCriticalSection;
 
     if(_completion_cb) return I2C_PENDING;
         
@@ -463,9 +463,6 @@ uint32_t REVOI2CDevice::i2c_read(uint8_t addr, const uint8_t *tx_buff, uint8_t t
             
     i2c_set_isr_handler(_dev, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&REVOI2CDevice::isr_ev, void)));
 
-
-    uint32_t t;
-
     _state = I2C_want_SB;
     _error = I2C_ERR_TIMEOUT;
 
@@ -474,15 +471,14 @@ uint32_t REVOI2CDevice::i2c_read(uint8_t addr, const uint8_t *tx_buff, uint8_t t
     
     _dev->I2Cx->CR1 |= I2C_CR1_START;    // Send START condition
 
-    t = hal_micros();
+    uint32_t t = hal_micros();
     uint32_t timeout = i2c_bit_time * 9 * (txlen+rxlen) * 8 + 100; // time to transfer all data *8 plus 100uS
     _task = REVOMINIScheduler::get_current_task(); // if function called from task - store it and pause
 
-    noInterrupts();
-    _dev->I2Cx->CR2 |= I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN;    // Enable interrupts
-
-    if(_task) REVOMINIScheduler::task_pause(timeout);
-    interrupts();
+    EnterCriticalSection;
+     if(_task) REVOMINIScheduler::task_pause(timeout);
+     _dev->I2Cx->CR2 |= I2C_CR2_ITBUFEN | I2C_CR2_ITEVTEN | I2C_CR2_ITERREN;    // Enable interrupts
+    LeaveCriticalSection;
 
     if(_completion_cb) return I2C_PENDING;
             
@@ -536,13 +532,6 @@ void REVOI2CDevice::isr_ev(){
             _dev->I2Cx->CR1 |= I2C_CR1_STOP;          /* Generate Stop */      
         }
 
-/* only in Slave mode  
-        // I2C Over-Run/Under-Run interrupt occurred
-        if(((sr1itflags & I2C_FLAG_OVR) != RESET) && ((itsources & I2C_IT_ERR) != RESET)) {
-           _error = I2C_ERR_OVERRUN;
-           _dev->I2Cx->SR1 = (uint16_t)(~I2C_SR1_OVR); // reset it
-        }
-*/ 
         if(_error) { // смысла ждать больше нет
             finish_transfer();
         }    
@@ -617,6 +606,9 @@ void REVOI2CDevice::isr_ev(){
             if((sr2itflags & (I2C_FLAG_TRA>>16) & I2C_FLAG_MASK) != RESET) {    // I2C in mode Transmitter
                 // BTF on transmit
                 if(_rx_len) {
+                    // wait a little - some devices requires time for internal operations
+                    delay_ns100(3);
+                    
                     // Send START condition a second time
                     _dev->I2Cx->CR1 |= I2C_CR1_START;
                     _state = I2C_want_RX_SB;

@@ -37,6 +37,14 @@
 #define SMALL_TASK_STACK    1024U   // small stack for sensors
 #define STACK_MAX          65536U
 
+#if 1
+ #define EnterCriticalSection __set_BASEPRI(SVC_INT_PRIORITY << (8 - __NVIC_PRIO_BITS))
+ #define LeaveCriticalSection __set_BASEPRI(0)
+#else
+ #define EnterCriticalSection noInterrupts()
+ #define LeaveCriticalSection interrupts()
+#endif
+
 
 /*
  * Task run-time structure (Task control block AKA TCB)
@@ -133,7 +141,7 @@ typedef struct RevoSchedLog {
     uint32_t time_start;    
     uint32_t quant;
     uint32_t in_isr;
-    task_t *want_tail;
+    task_t  *want_tail;
     uint8_t  task_id;
     uint8_t  prio;
     uint8_t  active;

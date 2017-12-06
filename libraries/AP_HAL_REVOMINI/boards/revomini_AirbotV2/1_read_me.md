@@ -3,8 +3,10 @@ board connection:
 just see board's documentation.
 
 default connection:
-Telemetry to UART1 (Serial3 in MP) 
-GPS  to      UART6 (Serial2) 
+USB                (Serial0 in MP)
+GPS  to      UART6 (Serial1) 
+Telemetry to UART1 (Serial2) 
+
 Built-in OSD is     Serial5
 
 this board REQUIRES external Compass via I2C bus
