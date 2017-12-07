@@ -38,7 +38,7 @@ const AP_Param::GroupInfo AP_SmartRTL::var_info[] = {
     // @Description: If enabled, points on track wich are near to each other will be considered as intersection
     // @Values: 0:Disabled,1:Enabled
     // @User: Standard
-    AP_GROUPINFO("_BLIND_CUT",  2, AP_SmartRTL, _blind_shortcut,       1),
+    AP_GROUPINFO("BLIND_CUT",  2, AP_SmartRTL, _blind_shortcut,       1),
 #endif
 
     AP_GROUPEND

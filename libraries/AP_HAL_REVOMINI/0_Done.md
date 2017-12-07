@@ -127,10 +127,10 @@
 * SPI driver rewritten: added ISR mode instead of polling, all transfers are monolitic (not divded to send and receive parts), setup for receive now in ISR
 * all DataFlash reads and writes now in single SPI transfer
 * removed usage of one-byte SPI functions from SD driver
-* added support of criticalSections to Scheduler, which protect code from task switch
+* added support of criticalSections to Scheduler, which protect code from task switch without disabling interrupts
 * added CS assert/release delays to SPI device descriptrion table
-* added partial MPU support (only to protect from process stack overflow
-
+* added partial MPU support (only to protect from process stack overflow)
+* removed -fpermissive from GCC options
 * ...
 * a lot of minor enhancements
 

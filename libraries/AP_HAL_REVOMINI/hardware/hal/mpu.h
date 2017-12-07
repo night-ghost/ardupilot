@@ -12,7 +12,6 @@
 #define MPU_TYPE_DREGION(n)                 (((n) >> 8U) & 255U)
 #define MPU_TYPE_IREGION(n)                 (((n) >> 16U) & 255U)
 
-
 #define MPU_CTRL_ENABLE                     MPU_CTRL_ENABLE_Msk
 #define MPU_CTRL_HFNMIENA                   MPU_CTRL_HFNMIENA_Msk
 #define MPU_CTRL_PRIVDEFENA                 MPU_CTRL_PRIVDEFENA_Msk
@@ -73,15 +72,16 @@
 #define MPU_RASR_ATTR_TEX(n)                ((n) << MPU_RASR_TEX_Pos)
 #define MPU_RASR_ATTR_AP_MASK               MPU_RASR_AP_Msk
 #define MPU_RASR_ATTR_AP(n)                 ((n) << MPU_RASR_AP_Pos)
+#define MPU_RASR_ATTR_XN                    MPU_RASR_XN_Msk
+
+// Human Readable region attributes
 #define MPU_RASR_ATTR_AP_NA_NA              (0U  << MPU_RASR_AP_Pos)
 #define MPU_RASR_ATTR_AP_RW_NA              (1U  << MPU_RASR_AP_Pos)
 #define MPU_RASR_ATTR_AP_RW_RO              (2U  << MPU_RASR_AP_Pos)
 #define MPU_RASR_ATTR_AP_RW_RW              (3U  << MPU_RASR_AP_Pos)
 #define MPU_RASR_ATTR_AP_RO_NA              (5U  << MPU_RASR_AP_Pos)
 #define MPU_RASR_ATTR_AP_RO_RO              (6U  << MPU_RASR_AP_Pos)
-#define MPU_RASR_ATTR_XN                    MPU_RASR_XN_Msk
 
-// Human Readable region attributes
 #define MPU_RASR_ATTR_STRONGLY_ORDERED      (MPU_RASR_ATTR_TEX(0))
 #define MPU_RASR_ATTR_SHARED_DEVICE         (MPU_RASR_ATTR_TEX(0) | MPU_RASR_ATTR_B)
 #define MPU_RASR_ATTR_CACHEABLE_WT_NWA      (MPU_RASR_ATTR_TEX(0) | MPU_RASR_ATTR_C)
@@ -110,19 +110,15 @@ static inline void mpu_enable(uint32_t ctrl) {
 }
 
 static inline void mpu_disable() {
-  SCB->SHCSR &= ~SCB_SHCSR_MEMFAULTENA_Msk;
-  MPU->CTRL = 0;                  
+  SCB->SHCSR &= ~SCB_SHCSR_MEMFAULTENA_Msk;  // disable MemManage fault
+  MPU->CTRL = 0;                     // disable
 }
-
 
 static inline void mpu_configure_region(uint8_t region, uint32_t addr, uint32_t attribs) {
   MPU->RASR = 0; // disable region first
-  MPU->RBAR = ((uint32_t)addr & MPU_RBAR_ADDR_MASK) | region | MPU_RBAR_VALID;                    
-  MPU->RASR = attribs  | MPU_RASR_ENABLE;
+  MPU->RBAR = ((uint32_t)addr & MPU_RBAR_ADDR_MASK) | region | MPU_RBAR_VALID;    // set region number and address
+  MPU->RASR = attribs  | MPU_RASR_ENABLE;                                         // set flags and enable region
 }
-
-
-
 
 #ifdef __cplusplus
 }

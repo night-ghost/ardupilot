@@ -14,6 +14,9 @@ PACK.sh
 /Tools/autotest/jsbsim_start_0.xml
 /tmp/*
 *.bad
+*.diff
+*.h.diff
+*.c.diff
 *.bin
 *.d
 *.dfu
@@ -94,3 +97,7 @@ test.ArduCopter/*
 GPATH
 GRTAGS
 GTAGS
+cov-int/
+ArduCopter/cov-int/*
+ArduCopter/cov-int/
+*.ok

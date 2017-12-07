@@ -13,8 +13,9 @@
 #ifdef USE_WAYBACK
  #include <AP_WayBack/AP_WayBack.h>
 
- // good implementation has no such dumb limits
- #define SMARTRTL_POINTS_DEFAULT          1000    // default _POINTS parameter value. 
+ // good implementation has no such dumb limits. This value is enough to hold track Vladivostok-Kaliningrad by the roads
+ #define SMARTRTL_POINTS_DEFAULT          4000    // default _POINTS parameter value. 
+ 
 #else
  #define SMARTRTL_POINTS_DEFAULT          150    // default _POINTS parameter value.  High numbers improve path pruning but use more memory and CPU for cleanup. Memory used will be 20bytes * this number.
  #define SMARTRTL_POINTS_MAX              500    // the absolute maximum number of points this library can support.

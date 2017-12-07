@@ -420,11 +420,9 @@ again:
     }
     
     // if enabled or we should to clear room for new points: we check one leg per point so number of free points should be more than not checked legs
-    //                  process active    enabled                number of not checked legs          number of free points       corrected by one packet
     if(! was_reduce ) {
     
         // to exclude quadratic complexity we check intersection only one step in time
-
         if(in_loop_reduce){      //  уже обрабатываем или отстали на нужное количество точек 
 
             // check one leg from last_loop_check
@@ -454,8 +452,7 @@ again:
             } else {
                 if(p1 >= hi_loop_border)  in_loop_reduce=false;
             }
- 
-            
+     
             last_loop_check = p1;                    
         }
     }
@@ -465,10 +462,9 @@ again:
     }
 
     uint32_t dt = REVOMINIScheduler::_micros() - start_t;
-    if(dt>0) {
-        DBG_PRINTF("point process time=%d\n",dt);  
+    if(dt>1) { // to exclude noice
+        DBG_PRINTF("point process time=%ld\n",dt);  
     }
-
 }
 
 

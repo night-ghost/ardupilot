@@ -147,7 +147,8 @@ GLOBAL_CXXFLAGS += -fconserve-space -fno-enforce-eh-specs  -fno-use-cxa-atexit
 GLOBAL_CXXFLAGS += -std=gnu++11
 
 # Downgrade some diagnostics about nonconformant code from errors to warnings. Thus, using "-fpermissive" will allow some nonconforming code to compile.
-GLOBAL_CXXFLAGS += -fpermissive $(GLOBAL_CFLAGS)
+GLOBAL_CXXFLAGS += $(GLOBAL_CFLAGS)
+#-fpermissive 
 # missing definitions
 GLOBAL_CXXFLAGS += -c -include $(WIRISH_PATH)/defs.h
 
