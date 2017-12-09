@@ -131,6 +131,9 @@
 * added CS assert/release delays to SPI device descriptrion table
 * added partial MPU support (only to protect from process stack overflow)
 * removed -fpermissive from GCC options
+* class SD is slightly redesigned, reducing the memory consumption by half (!)
+* optimized dma_init_transfer() function: now it twice faster and requires 3 times less memory
+* added SD size to bootlog
 * ...
 * a lot of minor enhancements
 

@@ -204,7 +204,7 @@ void usart_setup(const usart_dev *dev, uint32_t baudRate, uint16_t wordLength,
     dev->state->callback = 0;
 
     /* Disable USARTx */
-    USART_Cmd(dev->USARTx, DISABLE);
+    usart_disable(dev);
 
     rb_init(dev->txrb, USART_TX_BUF_SIZE, dev->state->tx_buf);
     rb_init(dev->rxrb, USART_RX_BUF_SIZE, dev->state->rx_buf);
@@ -242,22 +242,6 @@ void usart_setup(const usart_dev *dev, uint32_t baudRate, uint16_t wordLength,
 
     enable_nvic_irq(dev->irq, UART_INT_PRIORITY);
 }
-
-
-void usart_disable(const usart_dev *dev)
-{
-    /* Check the parameters */
-    assert_param(IS_USART_ALL_PERIPH(dev->USARTx));
-
-    /* Enable USART */
-    USART_Cmd(dev->USARTx, DISABLE);
-
-    /* Clean up buffer */
-    usart_reset_rx(dev);
-    usart_reset_tx(dev);
-    dev->state->is_used=false;
-}
-
 
 
 

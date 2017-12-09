@@ -196,47 +196,43 @@ int spimaster_transfer(const spi_dev *dev,
                        uint8_t *rxbuf,
                        uint16_t rxcount)
 {
-
-    uint16_t tmp;
-
     uint16_t txc_in=txcount;
 
-	// Transfer command data out
+    // Transfer command data out
 
-	while (txcount--){
-	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_TXE)){ // just for case
-                if(!spi_is_busy(dev) ) break;
-            }	    
-	    dev->SPIx->DR = *txbuf++;
-	    uint16_t dly=1000; // ~20uS so byte already transferred
-	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE)) {
-	        if(--dly==0) break;
-	    }
-	    (void) dev->SPIx->DR; // read out unneeded data
-	}
+    while (txcount--){
+        while (!(dev->SPIx->SR & SPI_I2S_FLAG_TXE)){ // just for case
+            if(!spi_is_busy(dev) ) break;
+        }	    
+        dev->SPIx->DR = *txbuf++;
+        uint16_t dly=1000; // ~20uS so byte already transferred
+        while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE)) {
+            if(--dly==0) break;
+        }
+        (void) dev->SPIx->DR; // read out unneeded data
+    }
 
-        if(txc_in && rxcount) delay_ns100(5); // small delay between TX and RX, to give the chip time to think over domestic affairs
+    if(txc_in && rxcount) delay_ns100(5); // small delay between TX and RX, to give the chip time to think over domestic affairs
 
-	// Transfer response data in
-	while (rxcount--){
-	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_TXE));
-	    dev->SPIx->DR = 0xFF;
-	    uint16_t dly=1000;
-	    while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE)) {
-	        if(--dly==0) break;
-	    }
-	    *rxbuf++ = dev->SPIx->DR;
-	}
+    // Transfer response data in
+    while (rxcount--){
+        while (!(dev->SPIx->SR & SPI_I2S_FLAG_TXE));
+        dev->SPIx->DR = 0xFF;
+        uint16_t dly=1000;
+        while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE)) {
+            if(--dly==0) break;
+        }
+        *rxbuf++ = dev->SPIx->DR;
+    }
 
-	// Wait until the transfer is complete - to not disable CS too early 
-	uint32_t dly=3000;
-	while (dev->SPIx->SR & SPI_I2S_FLAG_BSY){ // but datasheet prohibits this usage
-            dly--;
-            if(dly==0) break;
-	}
+    // Wait until the transfer is complete - to not disable CS too early 
+    uint32_t dly=3000;
+    while (dev->SPIx->SR & SPI_I2S_FLAG_BSY){ // but datasheet prohibits this usage
+        dly--;
+        if(dly==0) break;
+    }
 
-        tmp = 0;
-	return tmp;
+    return 0;
 }
 
 

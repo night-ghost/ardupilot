@@ -157,8 +157,8 @@ typedef struct {
 typedef struct {
 #if !_FS_TINY
   union{  
-            UINT     d32[_MAX_SS/4];  /* Force 32bits alignement */  
-            BYTE     d8[_MAX_SS];  /* File data read/write buffer */
+        UINT     d32[_MAX_SS/4];  /* Force 32bits alignement */  
+        BYTE     d8[_MAX_SS];  /* File data read/write buffer */
   }buf;
 #endif   
 	FATFS*	fs;				/* Pointer to the owner file system object (**do not change order**) */

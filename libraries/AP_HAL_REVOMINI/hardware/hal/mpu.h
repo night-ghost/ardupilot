@@ -105,7 +105,7 @@ extern "C" {
 #endif
 
 static inline void mpu_enable(uint32_t ctrl) {
-  MPU->CTRL = ctrl | MPU_CTRL_ENABLE; // flags + Enable
+  MPU->CTRL = ctrl | MPU_CTRL_ENABLE;     // flags + Enable
   SCB->SHCSR |= SCB_SHCSR_MEMFAULTENA_Msk;      // enable MemManage fault
 }
 
@@ -116,8 +116,8 @@ static inline void mpu_disable() {
 
 static inline void mpu_configure_region(uint8_t region, uint32_t addr, uint32_t attribs) {
   MPU->RASR = 0; // disable region first
-  MPU->RBAR = ((uint32_t)addr & MPU_RBAR_ADDR_MASK) | region | MPU_RBAR_VALID;    // set region number and address
-  MPU->RASR = attribs  | MPU_RASR_ENABLE;                                         // set flags and enable region
+  MPU->RBAR = (addr & MPU_RBAR_ADDR_MASK) | region | MPU_RBAR_VALID;    // set region number and address
+  MPU->RASR = attribs | MPU_RASR_ENABLE;                                // set flags and enable region
 }
 
 #ifdef __cplusplus

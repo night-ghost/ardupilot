@@ -6,6 +6,7 @@
 */
 
 #include "Sd2Card.h"
+#include "SdFatFs.h"
 #include <stdio.h>
 #include <util.h>
 #include <utility>
@@ -191,7 +192,11 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
 
     _spi_sem->give();
 
-    return disk_initialize(0) == RES_OK;    
+    DSTATUS ret = disk_initialize(0);    
+
+    printf("\nSD initialize: status %d size %ldMb\n", ret, sectorCount()/2048UL);
+
+    return ret == RES_OK;
 }
 
 #elif defined(BOARD_DATAFLASH_FATFS)

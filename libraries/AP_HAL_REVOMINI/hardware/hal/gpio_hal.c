@@ -68,6 +68,7 @@ const gpio_dev* const _GPIOG = &gpiog;
 static const gpio_dev* _gpios[] =  { &gpioa, &gpiob, &gpioc, &gpiod, &gpioe, &gpiof, &gpiog };
 
 
+#if 0 // unused
 
 void gpio_init(const gpio_dev* const dev) 
 {
@@ -77,30 +78,41 @@ void gpio_init(const gpio_dev* const dev)
 	/* Enable the GPIO Clock  */
 	RCC_AHB1PeriphClockCmd(dev->clk, ENABLE);
 }
+#endif
 
 void gpio_init_all(void)
 {
-	GPIO_DeInit(GPIOA);
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-	GPIO_DeInit(GPIOB);
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
-	GPIO_DeInit(GPIOC);
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
-	GPIO_DeInit(GPIOD);
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
-	GPIO_DeInit(GPIOE);
-	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
+    RCC_AHB1PeriphResetCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+    RCC_AHB1PeriphResetCmd(RCC_AHB1Periph_GPIOA, DISABLE);
+
+    RCC_AHB1PeriphResetCmd(RCC_AHB1Periph_GPIOB, ENABLE);
+    RCC_AHB1PeriphResetCmd(RCC_AHB1Periph_GPIOB, DISABLE);
+
+    RCC_AHB1PeriphResetCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+    RCC_AHB1PeriphResetCmd(RCC_AHB1Periph_GPIOC, DISABLE);
+
+    RCC_AHB1PeriphResetCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+    RCC_AHB1PeriphResetCmd(RCC_AHB1Periph_GPIOD, DISABLE);
+
+    RCC_AHB1PeriphResetCmd(RCC_AHB1Periph_GPIOE, ENABLE);
+    RCC_AHB1PeriphResetCmd(RCC_AHB1Periph_GPIOE, DISABLE);
+
+    RCC_AHB1PeriphResetCmd(RCC_AHB1Periph_GPIOF, ENABLE);
+    RCC_AHB1PeriphResetCmd(RCC_AHB1Periph_GPIOF, DISABLE);
+
+    RCC_AHB1PeriphResetCmd(RCC_AHB1Periph_GPIOG, ENABLE);
+    RCC_AHB1PeriphResetCmd(RCC_AHB1Periph_GPIOG, DISABLE);
+
+    
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOF, ENABLE);
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOG, ENABLE);
 }
 
-const gpio_dev * gpio_get_gpio_dev(uint8_t port)
-{
-    // Check the parameters 
-    if(port <= sizeof(_gpios) / sizeof(gpio_dev*) ) {
-	return _gpios[port];
-    } else
-	return NULL;
-    
-}
 
 
 void gpio_set_mode(const gpio_dev* const dev, uint8_t pin, gpio_pin_mode mode)
@@ -178,84 +190,3 @@ void gpio_set_mode(const gpio_dev* const dev, uint8_t pin, gpio_pin_mode mode)
 }
 
 
-
-
-void gpio_set_af_mode(const gpio_dev* const dev, uint8_t pin, uint8_t mode)
-{
-	/* Check the parameters */
-    assert_param(IS_GPIO_ALL_PERIPH(dev->GPIOx));
-    assert_param(IS_GPIO_PIN_SOURCE(pin));
-    assert_param(IS_GPIO_AF(mode));
-    
-    /* Enable the GPIO Clock  */
-    RCC_AHB1PeriphClockCmd(dev->clk, ENABLE);    
-    GPIO_PinAFConfig(dev->GPIOx, pin, mode);
-}
-
-
-// not used
-void afio_remap(const gpio_dev* const dev, uint8_t pin, afio_remap_peripheral remapping)
-{
-	/* Check the parameters */
-    assert_param(IS_GPIO_ALL_PERIPH(dev->GPIOx));
-    assert_param(IS_GPIO_PIN_SOURCE(pin));
-    assert_param(IS_GPIO_AF(remapping));
-    	
-    /* Enable the GPIO Clock  */
-    RCC_AHB1PeriphClockCmd(dev->clk, ENABLE);    	
-    GPIO_PinAFConfig(dev->GPIOx, pin, remapping);
-}
-
-void afio_cfg_debug_ports(afio_debug_cfg config)
-{
-	GPIO_InitTypeDef GPIO_InitStructure;
-
-	switch(config) {
-	case AFIO_DEBUG_NONE:
-		/* Enable GPIOA and GPIOB clocks */
-		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOB , ENABLE);
-		
-		/* Configure PA.13 (JTMS/SWDIO), PA.14 (JTCK/SWCLK) and PA.15 (JTDI) as output push-pull */
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-		GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-		GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-		GPIO_Init(GPIOA, &GPIO_InitStructure);
-
-		/* Configure PB.03 (JTDO) and PB.04 (JTRST) as output push-pull */
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3 | GPIO_Pin_4;
-		GPIO_Init(GPIOB, &GPIO_InitStructure);
-		break;
-
-	case AFIO_DEBUG_SW_ONLY:
-		/* Enable GPIOA clocks */
-		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA , ENABLE);
-		
-		/* Configure PA.13 (JTMS/SWDIO), PA.14 (JTCK/SWCLK) as output push-pull */
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-		GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-		GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-		GPIO_Init(GPIOA, &GPIO_InitStructure);
-		break;
-		
-	case AFIO_DEBUG_FULL_SWJ_NO_NJRST:
-		/* Enable GPIOB clocks */
-		RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB , ENABLE);
-			
-		/* Configure PB.04 (JTRST) as output push-pull */
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
-		GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-		GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-		GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-		GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-		GPIO_Init(GPIOB, &GPIO_InitStructure);
-		break;
-	case AFIO_DEBUG_FULL_SWJ:
-		break;
-	default:
-		return;
-	}
-}

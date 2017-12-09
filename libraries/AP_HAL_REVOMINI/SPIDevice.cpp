@@ -132,7 +132,7 @@ void SPIDevice::spi_soft_set_speed(){
 #endif
 
 void SPIDevice::register_completion_callback(Handler h) { 
-    if(_completion_cb){ // IOC from last call still not called
+    if(_completion_cb){ // IOC from last call still not called - timeout
         // TODO: ???
     }
     _completion_cb = h; 
@@ -181,20 +181,18 @@ void SPIDevice::send(uint8_t out) {
 }
 
 
-// TODO eliminate usage of spimaster_transfer(), use interrupts instead
-
 bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, uint32_t recv_len){
     
-    uint8_t ret=1;
+    uint8_t err=1;
 
 // differrent devices on bus requires different modes
-    if(owner[_desc.bus-1] != this) { // bus was in use by another driver so need reinit
+    if(owner[_desc.bus-1] != this) { // bus was in use by another driver so SPI hardware need reinit
         _initialized=false;
     }
-    
+
     if(!_initialized){
         init();
-        if(!_initialized) goto done;
+        if(!_initialized) return false;
         owner[_desc.bus-1] = this; // Got it!
     }
 
@@ -239,17 +237,17 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
         }
         
         spi_set_speed(_desc.dev, determine_baud_rate(_speed));
+        
         _desc.dev->state->busy = true; // we got bus
+        _cs_assert();
 
-        _send_address = out;    //      remember transfer params
+        _send_address = out;    //      remember transfer params for ISR
         _send_len     = send_len;
         _recv_address = recv;
         _recv_len     = recv_len;
 
 
 #define MIN_DMA_BYTES 3 // write to 2-byte register not uses DMA, 4-byte command to DataFlash will
-
-        _cs_assert();
 
         switch(_desc.mode){
             
@@ -321,7 +319,7 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
                     }
                 }
             
-                ret = do_transfer(can_dma);
+                err = do_transfer(can_dma);
                 break;
             }
             // no break!
@@ -329,11 +327,11 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
         case SPI_TRANSFER_INTR: // interrupts
             _isr_mode = _send_len ? SPI_ISR_SEND : SPI_ISR_RECEIVE;
             setup_isr_transfer();
-            ret=do_transfer(false);
+            err=do_transfer(false);
             break;
 
         case SPI_TRANSFER_POLL: // polling
-            ret = spimaster_transfer(_desc.dev, out, send_len, recv, recv_len);
+            err = spimaster_transfer(_desc.dev, out, send_len, recv, recv_len);
             _cs_release();
             _desc.dev->state->busy=false;
             if(_completion_cb) {
@@ -348,7 +346,6 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
         }
     }
 
-done:
 #ifdef DEBUG_SPI 
     struct spi_trans &p = spi_trans_array[spi_trans_ptr];
 
@@ -373,27 +370,32 @@ done:
 #endif
 
 
-    return ret==0;
+    return err==0;
 
 }
 
 
 
 
+// not used anywhere
 
 bool SPIDevice::transfer_fullduplex(const uint8_t *out, uint8_t *recv, uint32_t len) {
 
+
     if(owner[_desc.bus-1] != this) { // bus was in use by another driver so need reinit
         _initialized=false;
+    }
+    
+    if(!_initialized) {
         init();
         if(!_initialized) return false;
         owner[_desc.bus-1] = this; // Got it!
     }
 
-    _cs_assert();
 
 #ifdef BOARD_SOFTWARE_SPI
     if(_desc.mode == SPI_TRANSFER_SOFT) {
+        _cs_assert();
         spi_soft_set_speed();
 
         if (out != NULL && recv !=NULL && len) {
@@ -401,24 +403,26 @@ bool SPIDevice::transfer_fullduplex(const uint8_t *out, uint8_t *recv, uint32_t 
                 recv[i] = _transfer_s(out[i]);
             }    
         } 
+        return true;
     } else 
 #endif
     {
         spi_set_speed(_desc.dev, determine_baud_rate(_speed)); 
+        _cs_assert();
         
         switch(_desc.mode){
                 
         case SPI_TRANSFER_DMA:
             if((out==NULL || ADDRESS_IN_RAM(out)) && (recv==NULL || ADDRESS_IN_RAM(recv)) ) {
                 setup_dma_transfer(out, recv, len);
-                return do_transfer(true);
+                return do_transfer(true)==0;
             }    
     
         // no break;
         case SPI_TRANSFER_INTR: // interrupts
             _isr_mode = SPI_ISR_RXTX;
             setup_isr_transfer();
-            return do_transfer(false);
+            return do_transfer(false)==0;
 
         case SPI_TRANSFER_POLL: // polling
         default:
@@ -465,7 +469,7 @@ SPIDevice::SPIDevice(const SPIDesc &device_desc)
     if(_desc.cs_pin < BOARD_NR_GPIO_PINS) {
         _cs = REVOMINIGPIO::get_channel(_desc.cs_pin);
         if (!_cs) {
-            AP_HAL::panic("Unable to instantiate cs pin");
+            AP_HAL::panic("SPI: wrong CS pin");
         }
     } else {
         _cs = NULL; // caller itself controls CS
@@ -554,54 +558,55 @@ void SPIDevice::get_dma_ready(){
 static uint32_t rw_workbyte[] = { 0xffff }; // not in stack!
 
 void  SPIDevice::setup_dma_transfer(const uint8_t *out, const uint8_t *recv, uint32_t btr){
-    DMA_InitTypeDef DMA_InitStructure;
-    DMA_StructInit(&DMA_InitStructure);
+    DMA_InitType DMA_InitStructure;
 
     const Spi_DMA &dp = _desc.dev->dma;
+    uint32_t memory_inc;
 
     dma_init(dp.stream_rx); dma_init(dp.stream_tx);
 
     dma_clear_isr_bits(dp.stream_rx); dma_clear_isr_bits(dp.stream_tx);
 
-    /* shared DMA configuration values */
-    DMA_InitStructure.DMA_Channel               = dp.channel;
+
     DMA_InitStructure.DMA_PeripheralBaseAddr    = (uint32_t)(&(_desc.dev->SPIx->DR));
-    DMA_InitStructure.DMA_PeripheralDataSize    = DMA_PeripheralDataSize_Byte;
-    DMA_InitStructure.DMA_MemoryDataSize        = DMA_MemoryDataSize_Byte;
-    DMA_InitStructure.DMA_PeripheralInc         = DMA_PeripheralInc_Disable;
     DMA_InitStructure.DMA_BufferSize            = btr;
-    DMA_InitStructure.DMA_Mode                  = DMA_Mode_Normal;
-    DMA_InitStructure.DMA_Priority              = _desc.prio; 
-    DMA_InitStructure.DMA_FIFOMode              = DMA_FIFOMode_Disable;
-    DMA_InitStructure.DMA_FIFOThreshold         = DMA_FIFOThreshold_Full;
-    DMA_InitStructure.DMA_MemoryBurst           = DMA_MemoryBurst_Single;
-    DMA_InitStructure.DMA_PeripheralBurst       = DMA_PeripheralBurst_Single;
- 
+
+    DMA_InitStructure.DMA_FIFO_flags = DMA_FIFOThreshold_Full | DMA_FIFOMode_Disable; // TODO use FIFO on large transfers
+
   // receive stream
-    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
     if(recv) {
-      DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)recv;
-      DMA_InitStructure.DMA_MemoryInc       = DMA_MemoryInc_Enable;
+        DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)recv;
+        memory_inc                            = DMA_MemoryInc_Enable;
     } else {
-      DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)rw_workbyte;
-      DMA_InitStructure.DMA_MemoryInc       = DMA_MemoryInc_Disable;
+        DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)rw_workbyte;
+        memory_inc                            = DMA_MemoryInc_Disable;
     }
+
+    DMA_InitStructure.DMA_flags      = DMA_PeripheralDataSize_Byte | DMA_MemoryDataSize_Byte |
+                                       DMA_MemoryBurst_Single | DMA_PeripheralBurst_Single |
+                                       DMA_Mode_Normal | DMA_DIR_PeripheralToMemory |
+                                       DMA_PeripheralInc_Disable | memory_inc |
+                                       dp.channel | _desc.prio;
     dma_init_transfer(dp.stream_rx, &DMA_InitStructure);
 
   // transmit stream
-    DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;
     if(out) {
-      DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)out;
-      DMA_InitStructure.DMA_MemoryInc       = DMA_MemoryInc_Enable;
+        DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)out;
+        memory_inc                            = DMA_MemoryInc_Enable;
     } else {
-      DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)rw_workbyte;
-      DMA_InitStructure.DMA_MemoryInc       = DMA_MemoryInc_Disable;
+        DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)rw_workbyte;
+        memory_inc                            = DMA_MemoryInc_Disable;
     }
+    DMA_InitStructure.DMA_flags      = DMA_PeripheralDataSize_Byte | DMA_MemoryDataSize_Byte |
+                                       DMA_MemoryBurst_Single | DMA_PeripheralBurst_Single |
+                                       DMA_Mode_Normal | DMA_DIR_MemoryToPeripheral |
+                                       DMA_PeripheralInc_Disable | memory_inc |
+                                       dp.channel | _desc.prio;
     dma_init_transfer(dp.stream_tx, &DMA_InitStructure);
 
     dma_enable(dp.stream_rx); dma_enable(dp.stream_tx); // run them both!
 
-    // we attach interrupt on RX channel's TransferComplete, so at ISR bus will be free
+    // we attach interrupt on RX channel's TransferComplete, so at ISR time bus will be free
     dma_attach_interrupt(dp.stream_rx, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SPIDevice::dma_isr, void)), DMA_CR_TCIE);
 }
 
@@ -640,7 +645,9 @@ void SPIDevice::dma_isr(){
 
         spi_wait_busy(_desc.dev); // just for case - RX transfer is finished
         
-        delay_ns100(1);         // small delay -  for slow devices which need a time between address and data
+        delay_ns100(3); // small delay between TX and RX, to give the chip time to think over domestic affairs
+                        // for slow devices which need a time between address and data 
+                        // 200ns uses setup_dma_transfer() itself
 
         bool can_dma = false;
         uint8_t *recv = _recv_address;
@@ -660,7 +667,7 @@ void SPIDevice::dma_isr(){
             _isr_mode = SPI_ISR_NONE;
             spi_disable_irq(_desc.dev, SPI_RXNE_INTERRUPT); // disable RXNE interrupt, TXE already disabled
             setup_dma_transfer(NULL, recv, len);
-            _recv_len = 0;
+            _recv_len = 0;      // receive by DMA
             start_dma_transfer();
         } else {
             _isr_mode = SPI_ISR_RECEIVE;  // just receive
@@ -750,13 +757,17 @@ void SPIDevice::init(){
 
 bool SPIDevice::set_speed(AP_HAL::Device::Speed speed)
 {
-
+//* this requires for 1-byte transfers
     if(owner[_desc.bus-1] != this) { // bus was in use by another driver so need reinit
         _initialized=false;
+    }
+    
+    if(!_initialized) {
         init();
         if(!_initialized) return false;
         owner[_desc.bus-1] = this; // Got it!
     }
+//*/
 
     switch (speed) {
     case AP_HAL::Device::SPEED_HIGH:
@@ -1033,6 +1044,8 @@ void SPIDevice::spi_isr(){
                 uint8_t *recv = _recv_address;
                 uint16_t len  = _recv_len;
                 uint8_t nb = _desc.bus-1;
+            
+                delay_ns100(5); // small delay between TX and RX, to give the chip time to think over domestic affairs
             
                 if(ADDRESS_IN_RAM(recv)){   //not in CCM
                     _desc.dev->state->len=0;

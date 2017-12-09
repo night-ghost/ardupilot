@@ -157,7 +157,10 @@ static inline void usart_enable(const usart_dev *dev)
     assert_param(IS_USART_ALL_PERIPH(dev->USARTx));
 
     /* Enable USART */
-    USART_Cmd(dev->USARTx, ENABLE);
+//    USART_Cmd(dev->USARTx, ENABLE);
+    
+    dev->USARTx->CR1 |= USART_CR1_UE; /* Enable the selected USART by setting the UE bit in the CR1 register */
+
 }
 
 
@@ -171,7 +174,13 @@ static inline uint8_t usart_is_used(const usart_dev *dev)
  * @brief Turn off a serial port.
  * @param dev Serial port to be disabled
  */
-void usart_disable(const usart_dev *dev);
+static inline void usart_disable(const usart_dev *dev){
+    /* Disable the selected USART by clearing the UE bit in the CR1 register */
+    dev->USARTx->CR1 &= (uint16_t)~((uint16_t)USART_CR1_UE);
+    
+    /* Clean up buffer */
+    dev->state->is_used=false;
+}
 
 /**
  *  @brief Call a function on each USART.

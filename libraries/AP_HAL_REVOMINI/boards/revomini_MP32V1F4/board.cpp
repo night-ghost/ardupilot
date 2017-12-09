@@ -169,11 +169,6 @@ extern const SPIDesc spi_device_table[] = {    // different SPI tables per board
 extern const uint8_t REVOMINI_SPI_DEVICE_NUM_DEVICES = ARRAY_SIZE(spi_device_table);
 
 void boardInit(void) {
-#ifdef DEBUG_BUILD
-    /* Configure PA.13 (JTMS/SWDIO), PA.14 (JTCK/SWCLK) as output push-pull */
-//    afio_cfg_debug_ports(AFIO_DEBUG_SW_ONLY); // there is error in this function so instead of disabling only JTAG pins it disables SWD pins
-    afio_cfg_debug_ports(AFIO_DEBUG_FULL_SWJ);  // so let's it be fill debug 
-#endif
 
 /* we don't use RFM22! this pins are used for other needs so will be initialized in respective places
     const stm32_pin_info &pp = PIN_MAP[BOARD_RFM22B_CS_PIN];

@@ -75,8 +75,8 @@ extern uint32_t get_fattime ();
 
 static volatile DSTATUS Stat = STA_NOINIT;	/* Physical drive status */
 
-static volatile UINT Timer1, Timer2;	        /* 1kHz decrement timer stopped at zero (disk_timerproc()) */
-static DWORD sd_max_sectors=0;
+static volatile uint16_t Timer1, Timer2;	        /* 1kHz decrement timer stopped at zero (disk_timerproc()) */
+static uint32_t sd_max_sectors=0;
 
 
 
@@ -86,11 +86,11 @@ extern int printf(const char *msg, ...);
 
 //#define WAIT_IN_ISR
 
-static BYTE CardType;			/* Card type flags */
-static BYTE was_write=0;
-static BYTE csd[16]; // for DMA reads
+static uint8_t CardType;			/* Card type flags */
+static uint8_t was_write=0;
+static uint8_t csd[16]; // for DMA reads
 
-static int8_t xmit_datablock (const BYTE *buff,	BYTE token);
+static int8_t xmit_datablock (const uint8_t *buff,	uint8_t token);
 
 
 uint8_t sd_get_type() {
@@ -106,23 +106,23 @@ uint8_t sd_get_type() {
 
 /* Exchange a byte */
 static inline
-BYTE xchg_spi (
-	BYTE dat	/* Data to send */
+uint8_t xchg_spi (
+	uint8_t dat	/* Data to send */
 )
 {
     return spi_spiXchg(dat);
 }
 
 static inline 
-BYTE rcvr_spi(){
+uint8_t rcvr_spi(){
     return xchg_spi(0xFF);
 }
 
 /* Receive multiple byte */
 static inline
 void rcvr_spi_multi (
-	BYTE *buff,		/* Pointer to data buffer */
-	UINT btr		/* Number of bytes to receive (even number) */
+	uint8_t *buff,		/* Pointer to data buffer */
+	uint16_t btr		/* Number of bytes to receive (even number) */
 ){
     spi_spiTransfer(NULL,0, buff, btr);
 }
@@ -131,8 +131,8 @@ void rcvr_spi_multi (
 /* Send multiple byte */
 static inline
 void xmit_spi_multi (
-	const BYTE *buff,	/* Pointer to the data */
-	UINT btx		/* Number of bytes to send (even number) */
+	const uint8_t *buff,	/* Pointer to the data */
+	uint16_t btx		/* Number of bytes to send (even number) */
 )
 {
     spi_spiTransfer(buff, btx, NULL, 0);
@@ -160,10 +160,10 @@ static uint8_t wait_ff(uint8_t b){
 
 static
 int wait_ready (	/* 1:Ready, 0:Timeout */
-	UINT wt		/* Timeout [ms] */
+	uint16_t wt		/* Timeout [ms] */
 )
 {
-    BYTE d;
+    uint8_t d;
 
 
 #if defined(WAIT_IN_ISR)
@@ -230,18 +230,18 @@ static uint8_t wait_noFF(uint8_t b){
 
 static
 int8_t rcvr_datablock (	/* 1:OK, 0:Error */
-	BYTE *buff,	/* Data buffer */
-	UINT btr	/* Data block length (byte) */
+	uint8_t *buff,	/* Data buffer */
+	uint16_t btr	/* Data block length (byte) */
 )
 {
-        BYTE ret=0;
+        uint8_t ret=0;
 
 #if defined(WAIT_IN_ISR)
         ret=spi_waitFor(0xff, wait_noFF, 200);
 
         if(ret != 0xFE) goto done;		// Function fails if invalid DataStart token or timeout 
 #else
-	BYTE token;
+	uint8_t token;
 
 	Timer1 = 200;
 	do {					/* Wait for DataStart token in timeout of 200ms */
@@ -268,11 +268,11 @@ done:
 /*-----------------------------------------------------------------------*/
 
 static int8_t xmit_datablock (	/* 1:OK, 0:Failed */
-	const BYTE *buff,	/* Ponter to 512 byte data to be sent */
-	BYTE token			/* Token */
+	const uint8_t *buff,	/* Ponter to 512 byte data to be sent */
+	uint8_t token			/* Token */
 )
 {
-	BYTE resp;
+	uint8_t resp;
 
 
 	if (!wait_ready(500)) return 0;		/* Wait for card ready */
@@ -302,12 +302,12 @@ static uint8_t wait_0x80(uint8_t b){
 
 
 static
-BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
-	BYTE cmd,		/* Command index */
-	DWORD arg		/* Argument */
+uint8_t send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
+	uint8_t cmd,		/* Command index */
+	uint32_t arg		/* Argument */
 )
 {
-	BYTE crc, res;
+	uint8_t crc, res;
 
 
 	if (cmd & 0x80) {	/* Send a CMD55 prior to ACMD<n> */
@@ -324,11 +324,8 @@ BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 	/* Select the card and wait for ready except to stop multiple block read */
 	if (cmd != CMD12) {
 		deselect();
-		spi_yield(); // sync quant so no interrupts when receiving answer
+//		spi_yield(); // sync quant so no interrupts when receiving answer
 		if (!select()) {
- #ifdef DEBUG_BUILD
-		    printf("can't select SDn");
- #endif
 		    return 0xFF;
 		}
 	}
@@ -340,10 +337,10 @@ BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 
 	/* Send command packet */
 	buf[0] = 0x40 | cmd;			/* Start + command index */
-	buf[1] = (BYTE)(arg >> 24);		/* Argument[31..24] */
-	buf[2] = (BYTE)(arg >> 16);		/* Argument[23..16] */
-	buf[3] = (BYTE)(arg >> 8);		/* Argument[15..8] */
-	buf[4] = (BYTE)arg;			/* Argument[7..0] */
+	buf[1] = (uint8_t)(arg >> 24);		/* Argument[31..24] */
+	buf[2] = (uint8_t)(arg >> 16);		/* Argument[23..16] */
+	buf[3] = (uint8_t)(arg >> 8);		/* Argument[15..8] */
+	buf[4] = (uint8_t)arg;			/* Argument[7..0] */
         buf[5] = crc;                           /* CRC + Stop */
 
         xmit_spi_multi(buf, 6);	        // entire command in one packet
@@ -382,7 +379,7 @@ BYTE send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 /*-----------------------------------------------------------------------*/
 
 DSTATUS sd_initialize() {
-	BYTE n, cmd, ty, ocr[4] ;
+	uint8_t n, cmd, ty, ocr[4] ;
 	
 	if (Stat & STA_NODISK) return Stat;	/* Is card existing in the soket? */
 	if(!(Stat & STA_NOINIT) )  return Stat; // already done
@@ -432,7 +429,7 @@ DSTATUS sd_initialize() {
 	return Stat;
 }
 
-static BYTE restart_card(){
+static uint8_t restart_card(){
     Stat = STA_NOINIT;
     
     sd_initialize();
@@ -441,16 +438,16 @@ static BYTE restart_card(){
     return false;
 }
 
-BYTE sd_getSectorCount(DWORD *ptr){
-    DWORD csize;
+uint8_t sd_getSectorCount(uint32_t *ptr){
+    uint32_t csize;
     
     if ((send_cmd(CMD9, 0) == 0) && rcvr_datablock(csd, 16)) {
         if ((csd[0] >> 6) == 1) {	/* SDC ver 2.00 */
-	    csize = csd[9] + ((WORD)csd[8] << 8) + ((DWORD)(csd[7] & 63) << 16) + 1;
+	    csize = csd[9] + ((uint16_t)csd[8] << 8) + ((uint32_t)(csd[7] & 63) << 16) + 1;
 	    *ptr = csize << 10;
 	} else {					/* SDC ver 1.XX or MMC ver 3 */
-	    BYTE n = (csd[5] & 15) + ((csd[10] & 128) >> 7) + ((csd[9] & 3) << 1) + 2;
-	    csize = (csd[8] >> 6) + ((WORD)csd[7] << 2) + ((WORD)(csd[6] & 3) << 10) + 1;
+	    uint8_t n = (csd[5] & 15) + ((csd[10] & 128) >> 7) + ((csd[9] & 3) << 1) + 2;
+	    csize = (csd[8] >> 6) + ((uint16_t)csd[7] << 2) + ((uint16_t)(csd[6] & 3) << 10) + 1;
 	    *ptr = csize << (n - 9);
 	}
 
@@ -472,7 +469,7 @@ DSTATUS sd_status (){
 uint8_t sd_get_state(){
 
     if(send_cmd(CMD13, 0)<=1){
-        BYTE ret = xchg_spi(0xFF);
+        uint8_t ret = xchg_spi(0xFF);
         return ret;
     }
     
@@ -503,12 +500,12 @@ static bool single_sector_card=false;
 
 
 DRESULT sd_read (
-	BYTE *buff,		/* Pointer to the data buffer to store read data */
-	DWORD sector,	        /* Start sector number (LBA) */
-	UINT count		/* Number of sectors to read (1..128) */
+	uint8_t *buff,		/* Pointer to the data buffer to store read data */
+	uint32_t sector,	        /* Start sector number (LBA) */
+	uint16_t count		/* Number of sectors to read (1..128) */
 )
 {
-        BYTE ret;
+        uint8_t ret;
         uint16_t sectorInc=1;
         
 	if (!count) return RES_PARERR;		        /* Check parameter */
@@ -581,9 +578,9 @@ DRESULT sd_read (
 /*-----------------------------------------------------------------------*/
 
 DRESULT sd_write (
-	const BYTE *buff,	/* Ponter to the data to write */
-	DWORD sector,		/* Start sector number (LBA) */
-	UINT count			/* Number of sectors to write (1..128) */
+	const uint8_t *buff,	/* Ponter to the data to write */
+	uint32_t sector,		/* Start sector number (LBA) */
+	uint16_t count			/* Number of sectors to write (1..128) */
 )
 {
 	if (!count) return RES_PARERR;		/* Check parameter */
@@ -656,15 +653,15 @@ DRESULT sd_write (
 /*-----------------------------------------------------------------------*/
 
 DRESULT sd_ioctl (
-	BYTE cmd,		/* Control command code */
+	uint8_t cmd,		/* Control command code */
 	void *buff		/* Pointer to the conrtol data */
 )
 {
     DRESULT res;
-    BYTE n;
-    DWORD *dp, st, ed;
+    uint8_t n;
+    uint32_t *dp, st, ed;
 
-    BYTE *ptr = (BYTE *)buff;
+    uint8_t *ptr = (uint8_t *)buff;
 
     res = RES_ERROR;
 
@@ -681,7 +678,7 @@ DRESULT sd_ioctl (
              res = RES_OK;
              break;
          case 2: // Sub control code == 2 (POWER_GET) 
-             *(ptr + 1) = (BYTE) MMC_CD;
+             *(ptr + 1) = (uint8_t) MMC_CD;
              break;
          default:
              res = RES_PARERR;
@@ -697,26 +694,26 @@ DRESULT sd_ioctl (
 		if (select()) res = RES_OK;
 		break;
 
-	case GET_SECTOR_COUNT :	/* Get drive capacity in unit of sector (DWORD) */
-	        res=sd_getSectorCount((DWORD*)buff);
+	case GET_SECTOR_COUNT :	/* Get drive capacity in unit of sector (uint32_t) */
+	        res=sd_getSectorCount((uint32_t*)buff);
 		break;
 
-	case GET_BLOCK_SIZE :	/* Get erase block size in unit of sector (DWORD) */
+	case GET_BLOCK_SIZE :	/* Get erase block size in unit of sector (uint32_t) */
 		if (CardType & CT_SD2) {	/* SDC ver 2.00 */
 		    if (send_cmd(ACMD13, 0) == 0) {	/* Read SD status */
 			xchg_spi(0xFF);
 			if (rcvr_datablock(csd, 16)) {				/* Read partial block */
 				for (n = 64 - 16; n; n--) xchg_spi(0xFF);	/* Purge trailing data */
-				*(DWORD*)buff = 16UL << (csd[10] >> 4);
+				*(uint32_t*)buff = 16UL << (csd[10] >> 4);
 				res = RES_OK;
 			}
 		    }
 		} else {				/* SDC ver 1.XX or MMC */
 		    if ((send_cmd(CMD9, 0) == 0) && rcvr_datablock(csd, 16)) {	/* Read CSD */
 			if (CardType & CT_SD1) {	/* SDC ver 1.XX */
-				*(DWORD*)buff = (((csd[10] & 63) << 1) + ((WORD)(csd[11] & 128) >> 7) + 1) << ((csd[13] >> 6) - 1);
+				*(uint32_t*)buff = (((csd[10] & 63) << 1) + ((uint16_t)(csd[11] & 128) >> 7) + 1) << ((csd[13] >> 6) - 1);
 			} else {			/* MMC */
-				*(DWORD*)buff = ((WORD)((csd[10] & 124) >> 2) + 1) * (((csd[11] & 3) << 3) + ((csd[11] & 224) >> 5) + 1);
+				*(uint32_t*)buff = ((uint16_t)((csd[10] & 124) >> 2) + 1) * (((csd[11] & 3) << 3) + ((csd[11] & 224) >> 5) + 1);
 			}
 			res = RES_OK;
 		    }
@@ -788,8 +785,8 @@ DRESULT sd_ioctl (
 
 void sd_timerproc (void)
 {
-	WORD n;
-	BYTE s;
+	uint16_t n;
+	uint8_t s;
 
 
 	n = Timer1;						/* 1kHz decrement timer stopped at 0 */
@@ -885,7 +882,7 @@ uint8_t sd_get_type() {
 
 /* Exchange a byte */
 static inline uint8_t spi_write(
-	BYTE dat	/* Data to send */
+	uint8_t dat	/* Data to send */
 )
 {
     return spi_spiXchg(dat);
@@ -897,8 +894,8 @@ static inline uint8_t spi_read(){
 
 /* Receive multiple byte */
 static inline void read_spi_multi (
-	BYTE *buff,		/* Pointer to data buffer */
-	UINT btr		/* Number of bytes to receive (even number) */
+	uint8_t *buff,		/* Pointer to data buffer */
+	uint16_t btr		/* Number of bytes to receive (even number) */
 ){
 
     spi_spiTransfer(NULL,0, buff, btr);
@@ -907,8 +904,8 @@ static inline void read_spi_multi (
 
 /* Send multiple byte */
 static inline void write_spi_multi (
-	const BYTE *buff,	/* Pointer to the data */
-	UINT btx	        /* Number of bytes to send (even number) */
+	const uint8_t *buff,	/* Pointer to the data */
+	uint16_t btx	        /* Number of bytes to send (even number) */
 )
 {
 
@@ -943,21 +940,12 @@ static void ReadManufacturerID()
     if (!cs_assert()) return;
 
     // Read manufacturer and ID command...
-#if 0
-    spi_write(JEDEC_DEVICE_ID); //
-    
-    df_manufacturer = spi_read();
-    df_device = spi_read(); //memorytype
-    df_device = (df_device << 8) | spi_read(); //capacity
-    spi_read(); // ignore 4th byte
-#else
     buf.cmd[0] = JEDEC_DEVICE_ID;
 
     spi_spiTransfer(buf.cmd, 1, buf.cmd, 4);
     
     df_manufacturer =  buf.cmd[0];
     df_device       = (buf.cmd[1] << 8) | buf.cmd[2]; //capacity
-#endif
 
     // release SPI bus for use by other sensors
     cs_release();
@@ -972,15 +960,10 @@ static uint8_t ReadStatusReg()
     if (!cs_assert()) return JEDEC_STATUS_BUSY;
 
     // Read status command
-#if 0 
-    spi_write(JEDEC_READ_STATUS);
-    tmp = spi_read(); // We only want to extract the READY/BUSY bit
-#else
     buf.cmd[0] = JEDEC_READ_STATUS;
 
     spi_spiTransfer(buf.cmd, 1, &buf.cmd[1], 1);
     tmp = buf.cmd[1];
-#endif
 
     cs_release();
     return tmp;
@@ -999,7 +982,7 @@ static uint8_t ReadStatus()
 /*-----------------------------------------------------------------------*/
 
 static int wait_ready (	/* 1:Ready, 0:Timeout */
-	UINT wt			/* Timeout [ms] */
+	uint16_t wt			/* Timeout [ms] */
 )
 {
     if(flash_died) return 0;
@@ -1030,7 +1013,7 @@ static void Flash_Jedec_WriteEnable(void){
 }
 
 
-static bool read_page( BYTE *ptr, DWORD pageNum){
+static bool read_page( uint8_t *ptr, uint32_t pageNum){
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
     if (!wait_ready(500)) return 0;  /* Wait for card ready */
@@ -1058,7 +1041,7 @@ static bool read_page( BYTE *ptr, DWORD pageNum){
 }
 
 
-static bool write_page(const BYTE *ptr, DWORD pageNum){
+static bool write_page(const uint8_t *ptr, uint32_t pageNum){
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
     uint16_t i;
@@ -1119,7 +1102,7 @@ static void ChipErase()
     cs_release();
 }
 
-BYTE sd_getSectorCount(DWORD *ptr){
+uint8_t sd_getSectorCount(uint32_t *ptr){
 
     uint8_t capacity = df_device & 0xFF;
     uint8_t memtype =  (df_device>>8) & 0xFF;
@@ -1185,7 +1168,7 @@ BYTE sd_getSectorCount(DWORD *ptr){
     if(mfg && size) {
         printf("%s SPI Flash found sectors=%ld\n", mfg, size);
     } else  {
-        printf("unknown Flash!\n");
+        printf("unknown Flash! mfg=%x type=%x cap=%x\n ",df_manufacturer, memtype, capacity);
         size = BOARD_DATAFLASH_PAGES; // as defined 
     } 
 
@@ -1239,9 +1222,9 @@ DSTATUS sd_status (){
 /*-----------------------------------------------------------------------*/
 
 DRESULT sd_read (
-	BYTE *buff,		/* Pointer to the data buffer to store read data */
-	DWORD sector,	        /* Start sector number (LBA) */
-	UINT count		/* Number of sectors to read (1..128) */
+	uint8_t *buff,		/* Pointer to the data buffer to store read data */
+	uint32_t sector,        /* Start sector number (LBA) */
+	uint16_t count		/* Number of sectors to read (1..128) */
 )
 {
         
@@ -1306,9 +1289,9 @@ bool sd_move_block(uint32_t sec_from, uint32_t sec_to, const uint8_t *buff, uint
 
 
 DRESULT sd_write (
-	const BYTE *buff,	/* Ponter to the data to write */
-	DWORD sector,		/* Start sector number (LBA) */
-	UINT count			/* Number of sectors to write (1..128) */
+	const uint8_t *buff,	/* Ponter to the data to write */
+	uint32_t sector,		/* Start sector number (LBA) */
+	uint16_t count			/* Number of sectors to write (1..128) */
 )
 {
 	if (!count) return RES_PARERR;		/* Check parameter */
@@ -1399,8 +1382,8 @@ DRESULT sd_write (
                     } while(--r_count);
 
                     // Yes I know that we could to go out from the buffer end - but this used only for FAT_FS which writes FAT per one sector
-//                  memcpy(cluster+FAT_SECTOR_SIZE*pos, (BYTE *)buff, FAT_SECTOR_SIZE*count); // insert sectors to write to right place
-                    memcpy(ptr, (BYTE *)buff, FAT_SECTOR_SIZE*count); // insert sectors to write to right place
+//                  memcpy(cluster+FAT_SECTOR_SIZE*pos, (uint8_t *)buff, FAT_SECTOR_SIZE*count); // insert sectors to write to right place
+                    memcpy(ptr, (uint8_t *)buff, FAT_SECTOR_SIZE*count); // insert sectors to write to right place
 
                     // skip part that will be rewritten
                     r_count  -= (FAT_SECTOR_SIZE/DF_PAGE_SIZE) * count;
@@ -1454,13 +1437,13 @@ DRESULT sd_write (
 /*-----------------------------------------------------------------------*/
 
 DRESULT sd_ioctl (
-	BYTE ctl,		/* Control command code */
+	uint8_t ctl,		/* Control command code */
 	void *buff		/* Pointer to the conrtol data */
 )
 {
     DRESULT res;
 
-    BYTE *ptr = (BYTE *)buff;
+    uint8_t *ptr = (uint8_t *)buff;
 
     res = RES_ERROR;
 
@@ -1474,7 +1457,7 @@ DRESULT sd_ioctl (
              res = RES_OK;
              break;
          case 2: // Sub control code == 2 (POWER_GET) 
-             *(ptr + 1) = (BYTE) MMC_CD;
+             *(ptr + 1) = (uint8_t) MMC_CD;
              break;
          default:
              res = RES_PARERR;
@@ -1511,7 +1494,7 @@ DRESULT sd_ioctl (
 	    uint32_t  block, last_block=-1;
 	    
 	    if(start_sector>=sd_max_sectors || end_sector>=sd_max_sectors) return RES_PARERR;
-            if(chip_is_clear) {
+            if(chip_is_clear) { // just after full erase
     	        res = RES_OK;	    
     	        chip_is_clear=false;
                 break;
@@ -1554,7 +1537,7 @@ DRESULT sd_ioctl (
 
 void sd_timerproc (void)
 {
-	WORD n;
+	uint16_t n;
 
 	n = Timer1;						/* 1kHz decrement timer stopped at 0 */
 	if (n) Timer1 = --n;

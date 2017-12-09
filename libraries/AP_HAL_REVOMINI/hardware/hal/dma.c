@@ -35,6 +35,7 @@
 #include "bitband.h"
 #include <string.h>
 #include "util.h"
+#include "nvic.h"
 
 /*
  * Devices
@@ -49,7 +50,7 @@ static const dma_dev dma1 = {
     .handlers  = dma1_handlers
 };
 /** DMA1 device */
-const dma_dev * const _DMA1 = &dma1;
+//const dma_dev * const _DMA1 = &dma1;
 
 
 static Handler dma2_handlers[8] IN_CCM;
@@ -62,7 +63,7 @@ static const dma_dev dma2 = {
 
 };
 /** DMA2 device */
-const dma_dev * const _DMA2 = &dma2;
+//const dma_dev * const _DMA2 = &dma2;
 
 static const dma_dev * const DMAS[] = { &dma1, &dma2 };
 
@@ -109,8 +110,6 @@ void dma_attach_interrupt(dma_stream stream, Handler handler, uint8_t flag) {
     enable_nvic_irq(irq, DMA_IOC_INT_PRIORITY);
     
     dev->regs->STREAM[stream].CR |= flag;
-
-
 }
 
 /**
@@ -131,10 +130,10 @@ void dma_detach_interrupt(dma_stream stream) {
     NVIC_DisableIRQ(dev->irq_lines[stream]);
     dev->handlers[stream] = 0;
     
-    dev->regs->STREAM[stream].CR &= !0x1e;
-
+    dev->regs->STREAM[stream].CR &= ~ (DMA_CR_TCIE | DMA_CR_HTIE | DMA_CR_TEIE | DMA_CR_DMEIE ); //0x1e;
 }
 
+#if 0
 inline void dma_setup_transfer(dma_stream    stream,
                                       __IO void     *peripheral_address,
                                       __IO void     *memory_address0,
@@ -163,10 +162,10 @@ inline void dma_setup_transfer_mm(dma_stream    stream,
     dev->regs->STREAM[stream].FCR = fifo_flags & 0x87; // mask out reserved bits
     dev->regs->STREAM[stream].CR = flags & 0x0feffffe; // mask out reserved and enable
 }
+#endif
 
-
-// compatible way
-void dma_init_transfer(dma_stream stream, DMA_InitTypeDef *v){
+// ST similar way
+void dma_init_transfer(dma_stream stream, DMA_InitType *v){
     uint32_t tmpreg;
 
     const dma_dev * dev=DMAS[(stream>>4) & 3]; 
@@ -178,15 +177,15 @@ void dma_init_transfer(dma_stream stream, DMA_InitTypeDef *v){
     DMAy_Streamx->M0AR = (uint32_t)v->DMA_Memory0BaseAddr;
     DMAy_Streamx->NDTR = v->DMA_BufferSize;
 
-  /*------------------------- DMAy Streamx CR Configuration ------------------*/
-  /* Get the DMAy_Streamx CR value */
-  tmpreg = DMAy_Streamx->CR;
+    /*------------------------- DMAy Streamx CR Configuration ------------------*/
+    /* Get the DMAy_Streamx CR value */
+    tmpreg = DMAy_Streamx->CR;
 
-  /* Clear CHSEL, MBURST, PBURST, PL, MSIZE, PSIZE, MINC, PINC, CIRC and DIR bits */
-  tmpreg &= ((uint32_t)~(DMA_SxCR_CHSEL | DMA_SxCR_MBURST | DMA_SxCR_PBURST | \
-                         DMA_SxCR_PL | DMA_SxCR_MSIZE | DMA_SxCR_PSIZE | \
-                         DMA_SxCR_MINC | DMA_SxCR_PINC | DMA_SxCR_CIRC | \
-                         DMA_SxCR_DIR));
+    /* Clear CHSEL, MBURST, PBURST, PL, MSIZE, PSIZE, MINC, PINC, CIRC and DIR bits */
+    tmpreg &= ((uint32_t)~(DMA_SxCR_CHSEL | DMA_SxCR_MBURST | DMA_SxCR_PBURST | \
+                           DMA_SxCR_PL | DMA_SxCR_MSIZE | DMA_SxCR_PSIZE | \
+                           DMA_SxCR_MINC | DMA_SxCR_PINC | DMA_SxCR_CIRC | \
+                           DMA_SxCR_DIR));
 
   /* Configure DMAy Streamx: */
   /* Set CHSEL bits according to DMA_CHSEL value */
@@ -199,35 +198,36 @@ void dma_init_transfer(dma_stream stream, DMA_InitTypeDef *v){
   /* Set PL bits according to DMA_Priority value */
   /* Set MBURST bits according to DMA_MemoryBurst value */
   /* Set PBURST bits according to DMA_PeripheralBurst value */
+    tmpreg |= v->DMA_flags; 
+/*
   tmpreg |= v->DMA_Channel | v->DMA_DIR |
             v->DMA_PeripheralInc | v->DMA_MemoryInc |
             v->DMA_PeripheralDataSize | v->DMA_MemoryDataSize |
             v->DMA_Mode | v->DMA_Priority |
             v->DMA_MemoryBurst | v->DMA_PeripheralBurst;
+*/         
 
-  /* Write to DMAy Streamx CR register */
-  DMAy_Streamx->CR = tmpreg;
+    /* Write to DMAy Streamx CR register */
+    DMAy_Streamx->CR = tmpreg;
 
-  /*------------------------- DMAy Streamx FCR Configuration -----------------*/
-  /* Get the DMAy_Streamx FCR value */
-  tmpreg = DMAy_Streamx->FCR;
+    /*------------------------- DMAy Streamx FCR Configuration -----------------*/
+    /* Get the DMAy_Streamx FCR value */
+    tmpreg = DMAy_Streamx->FCR;
 
-  /* Clear DMDIS and FTH bits */
-  tmpreg &= (uint32_t)~(DMA_SxFCR_DMDIS | DMA_SxFCR_FTH);
+    /* Clear DMDIS and FTH bits */
+    tmpreg &= (uint32_t)~(DMA_SxFCR_DMDIS | DMA_SxFCR_FTH);
   
-  /* Configure DMAy Streamx FIFO: 
-    Set DMDIS bits according to DMA_FIFOMode value 
-    Set FTH bits according to DMA_FIFOThreshold value */
-  tmpreg |= v->DMA_FIFOMode | v->DMA_FIFOThreshold;
+    /* Configure DMAy Streamx FIFO: 
+      Set DMDIS bits according to DMA_FIFOMode value 
+      Set FTH bits according to DMA_FIFOThreshold value */
+    tmpreg |= v->DMA_FIFO_flags;
 
-  /* Write to DMAy Streamx CR */
-  DMAy_Streamx->FCR = tmpreg;
-  
+    /* Write to DMAy Streamx FCR */
+    DMAy_Streamx->FCR = tmpreg;
 }
 
     
 void dma_set_num_transfers(dma_stream stream, uint16_t num_transfers) {
-                                         
     const dma_dev * dev=DMAS[(stream>>4) & 3]; 
     stream &= 0xF;
     dev->regs->STREAM[stream].NDTR = num_transfers;
@@ -342,7 +342,7 @@ uint8_t dma_get_isr_bits(dma_stream stream) {
  * IRQ handlers
  */
 
-static inline void dispatch_handler(dma_stream stream) {
+static void dispatch_handler(dma_stream stream) {
 #ifdef ISR_PERF
     t = stopwatch_getticks();
 #endif

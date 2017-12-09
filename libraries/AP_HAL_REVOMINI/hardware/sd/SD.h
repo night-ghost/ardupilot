@@ -79,6 +79,7 @@ uint8_t const LS_R = 4;
 typedef void (*cb_putc)(char c);
 
 class File {
+    friend class SDClass;
 public:
     File(void);
     File(const char* name);
@@ -116,21 +117,35 @@ public:
     static void printNumber(int16_t n, cb_putc cb);
     static void printStr(const char *s, cb_putc cb);
 
-    void inline sync() {  f_sync(&_fil); };
+    void inline sync() { if(!is_dir)  f_sync(&_d.fil); };
 
-    inline uint32_t firstCluster(){ return _fil.sclust; }
+    inline uint32_t firstCluster(){ return is_dir ? _d.dir.sclust :  _d.fil.sclust; }
 
+    static void syncAll();
+    static void addOpenFile(FIL *f);
+    static void removeOpenFile(FIL *f);
+
+protected:
 // should be private?
     char *_name = NULL; //file or dir name
-    FIL _fil; 
+
+#if 0
+    FIL _fil;  // each struct contains sector buffer so this casue twice of memory use
     DIR _dir;
+#else
+    union {
+        FIL fil;  // each struct contains sector buffer so this casue twice of memory use
+        DIR dir;
+    } _d;
+
+    bool is_dir;
+#endif
+
+
 
 // static list of all open files
     static FIL* openFiles[16];
     static uint8_t num_openFiles;
-    static void syncAll();
-    static void addOpenFile(FIL *f);
-    static void removeOpenFile(FIL *f);
 
 };
 

@@ -29,12 +29,12 @@ void sd_timerproc();
 
 DSTATUS sd_initialize ();
 DSTATUS sd_status ();
-DRESULT sd_read (BYTE* buff, DWORD sector, UINT count);
-DRESULT sd_write (const BYTE* buff, DWORD sector, UINT count);
-DRESULT sd_ioctl (BYTE cmd, void* buff);
+DRESULT sd_read (uint8_t* buff, uint32_t sector, uint16_t count);
+DRESULT sd_write (const uint8_t* buff, uint32_t sector, uint16_t count);
+DRESULT sd_ioctl (uint8_t cmd, void* buff);
 uint8_t sd_get_type();
 uint8_t sd_get_state();
-BYTE    sd_getSectorCount(DWORD *ptr);
+uint8_t sd_getSectorCount(uint32_t *ptr);
 
 
 /* MMC card type flags (MMC_GET_TYPE) */

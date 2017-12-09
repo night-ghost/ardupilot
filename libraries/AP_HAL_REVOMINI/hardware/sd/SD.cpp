@@ -136,14 +136,17 @@ File SDClass::open(const char *filepath)
     }
 
     if(fno.fattrib & AM_DIR) {
-	lastError = f_opendir(&file._dir, filepath);
+	lastError = f_opendir(&file._d.dir, filepath);
+	file.is_dir=true;
         if( lastError != FR_OK) {
             file.close();
 	}
     } else {
-        lastError = f_open(&file._fil, filepath, FA_READ);
+        lastError = f_open(&file._d.fil, filepath, FA_READ);
+	file.is_dir=false;
+
         if( lastError == FR_OK) {
-            File::addOpenFile(&file._fil);
+            File::addOpenFile(&file._d.fil);
         } else {
             file.close();
 	}
@@ -167,7 +170,8 @@ File SDClass::open(const char *filepath, uint8_t mode)
 
     if(lastError == FR_OK && fno.fattrib & AM_DIR) { // exists and is dir
         if(!(mode & FILE_WRITE)){
-            lastError = f_opendir(&file._dir, filepath);
+            lastError = f_opendir(&file._d.dir, filepath);
+            file.is_dir=true;
         } else {
             lastError = FR_IS_DIR;
         }
@@ -178,13 +182,14 @@ File SDClass::open(const char *filepath, uint8_t mode)
             mode &= ~FA_CREATE_NEW;                  //  то убираем флаг создания - а то ошибка будет "файл существует"            
         }
 
-        lastError = f_open(&file._fil, filepath, mode);
+        lastError = f_open(&file._d.fil, filepath, mode);
+        file.is_dir=false;
 
         if( lastError == FR_OK){
             if(mode & O_APPEND){
-                f_lseek(&file._fil, f_size(&file._fil));            
+                f_lseek(&file._d.fil, f_size(&file._d.fil));            
             }
-            File::addOpenFile(&file._fil);
+            File::addOpenFile(&file._d.fil);
         } else {
             file.close();
         }
@@ -207,9 +212,10 @@ File SDClass::openRoot(void)
 {
     File file = File(_fatFs.getRoot());
 
-    lastError = f_opendir(&file._dir, _fatFs.getRoot());
+    lastError = f_opendir(&file._d.dir, _fatFs.getRoot());
+    file.is_dir = true;
     if(lastError != FR_OK) {
-	file._dir.fs = 0;
+	file._d.dir.fs = 0;
     }
     return file;
 }
@@ -230,7 +236,6 @@ uint32_t SDClass::getfree(const char *filepath, uint32_t * fssize){
     fre_sect = fre_clust * fs->csize;
     
     return fre_sect;
-
 }
 
 
@@ -256,18 +261,20 @@ uint8_t SDClass::format(const char *filepath){
 File::File()
 {
     _name = NULL;
-     _fil.fs = 0;
-     _dir.fs = 0;
+     _d.fil.fs = 0;
+     _d.dir.fs = 0;
 }
 
 File::File(const char* fname)
 {
     _name = (char*)malloc(strlen(fname) +1);
-    assert(_name  != NULL );
-    //sprintf(_name, "%s", fname);
+
+    //assert(_name  != NULL );
+    if(_name == NULL) return;  // no HardFault, just not opened
+    
     strcpy(_name, fname);
-    _fil.fs = 0;
-    _dir.fs = 0;
+    _d.fil.fs = 0;
+    _d.dir.fs = 0;
 }
 
 /** List directory contents to given callback
@@ -288,6 +295,8 @@ void File::ls(cb_putc cb, uint8_t flags, uint8_t indent) {
   FILINFO fno;
   char *fn;
 
+    if(!is_dir) return;
+
 #if _USE_LFN
   static char lfn[_MAX_LFN];
   fno.lfname = lfn;
@@ -295,7 +304,7 @@ void File::ls(cb_putc cb, uint8_t flags, uint8_t indent) {
 #endif
 
   while(1) {
-    res = f_readdir(&_dir, &fno);
+    res = f_readdir(&_d.dir, &fno);
     if(res != FR_OK || fno.fname[0] == 0) {
       break;
     }
@@ -433,7 +442,7 @@ int File::read()
 {
     UINT byteread;
     int8_t data;
-    SD.lastError = f_read(&_fil, (void *)&data, 1, &byteread);
+    SD.lastError = f_read(&_d.fil, (void *)&data, 1, &byteread);
     return data;
 }
 
@@ -447,7 +456,7 @@ int File::read(void* buf, size_t len)
 {
     UINT bytesread;
 
-    SD.lastError = f_read(&_fil, buf, len, &bytesread);
+    SD.lastError = f_read(&_d.fil, buf, len, &bytesread);
     return bytesread;
 
 }
@@ -479,20 +488,23 @@ UINT File::gets(char* buf, size_t len)
 void File::close()
 {
     if(_name){
-	if(_fil.fs != 0) {
-	    /* Flush the file before close */
-	    f_sync(&_fil);
+        if(is_dir) {
+            if(_d.dir.fs != 0) {
+	        SD.lastError = f_closedir(&_d.dir);
+	    }
+        } else {
+            if(_d.fil.fs != 0) {
+	        /* Flush the file before close */
+	        f_sync(&_d.fil);
 
-	    /* Close the file */
-	    SD.lastError = f_close(&_fil);
-	}
+                /* Close the file */
+	        SD.lastError = f_close(&_d.fil);
+            }
 
-	if(_dir.fs != 0) {
-	    SD.lastError = f_closedir(&_dir);
+            removeOpenFile(&_d.fil);
+            free(_name);
+	    _name=NULL;
 	}
-        removeOpenFile(&_fil);
-	free(_name);
-	_name=NULL;
     }
 }
 
@@ -504,7 +516,9 @@ void File::close()
   */
 void File::flush()
 {
-    SD.lastError = f_sync(&_fil);
+    if(!is_dir) {
+        SD.lastError = f_sync(&_d.fil);
+    }
 }
 
 /**
@@ -527,7 +541,7 @@ int File::peek()
   */
 uint32_t File::position()
 {
-    return f_tell(&_fil);
+    return f_tell(&_d.fil);
 }
 
 /**
@@ -537,12 +551,14 @@ uint32_t File::position()
   */
 uint8_t File::seek(uint32_t pos)
 {
-  if(pos > size()) {
-    return FALSE;
-  } else {
-    SD.lastError = f_lseek(&_fil, pos);
-    return SD.lastError == FR_OK;
-  }
+    if(is_dir) return false;
+
+    if(pos > size()) {
+        return FALSE;
+    } else {
+        SD.lastError = f_lseek(&_d.fil, pos);
+        return SD.lastError == FR_OK;
+    }
 }
 
 /**
@@ -552,7 +568,8 @@ uint8_t File::seek(uint32_t pos)
   */
 uint32_t File::size()
 {
-    return f_size(&_fil);
+    if(is_dir) return 0;
+    return f_size(&_d.fil);
 }
 
 File::operator bool() const {
@@ -578,7 +595,9 @@ size_t File::write(uint8_t data)
 size_t File::write(const char *buf, size_t sz)
 {
     size_t byteswritten;
-    SD.lastError = f_write(&_fil, (const void *)buf, sz, (UINT *)&byteswritten);
+    if(is_dir) return 0;
+    
+    SD.lastError = f_write(&_d.fil, (const void *)buf, sz, (UINT *)&byteswritten);
     return byteswritten;
 }
 
@@ -644,19 +663,27 @@ char* File::name()
   */
 uint8_t File::isDirectory()
 {
-    FILINFO fno;
-    assert(_name  != NULL );
-    if (_dir.fs != 0)
-    	return TRUE;
-    else if (_fil.fs != 0)
-	return FALSE;
+    //assert(_name  != NULL );
+    
+    if(_name == NULL) return false;
+    
+    
+    if (is_dir){
+        if(_d.dir.fs != 0) return TRUE;
+    } else {
+        if(_d.fil.fs != 0) return FALSE;
+    }
 
     // if not init get info
+    FILINFO fno;
+    
     SD.lastError = f_stat(_name, &fno);
     if (SD.lastError == FR_OK) {
 	if(fno.fattrib & AM_DIR){
+	    is_dir = true;
 	    return TRUE;
 	} else {
+	    is_dir=false;
 	    return FALSE;
 	}
     }
@@ -668,6 +695,8 @@ uint8_t File::isDirectory()
 // TODO: some strange and not works at all
 File File::openNextFile(uint8_t mode)
 {
+    if(!is_dir) return File();
+    
   FRESULT res = FR_OK;
   FILINFO fno;
   char *fn;
@@ -679,11 +708,9 @@ File File::openNextFile(uint8_t mode)
   fno.lfname = lfn;
   fno.lfsize = sizeof(lfn);
 #endif
-  while(1)
-  {
-    res = f_readdir(&_dir, &fno);
-    if(res != FR_OK || fno.fname[0] == 0)
-    {
+  while(1) {
+    res = f_readdir(&_d.dir, &fno);
+    if(res != FR_OK || fno.fname[0] == 0) {
       return File();
     }
     if(fno.fname[0] == '.') {
@@ -715,10 +742,10 @@ File File::openNextFile(uint8_t mode)
 void File::rewindDirectory(void)
 {
     if(isDirectory()) {
-	if(_dir.fs != 0) {
-	    f_closedir(&_dir);
+	if(_d.dir.fs != 0) {
+	    f_closedir(&_d.dir);
 	}
-	f_opendir(&_dir, _name);
+	f_opendir(&_d.dir, _name);
     }
 }
 

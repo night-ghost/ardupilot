@@ -129,7 +129,7 @@ REVOMINIScheduler::REVOMINIScheduler()
 
     s_main.next = &s_main; // linked list
     s_main.prev = &s_main;
-    s_main.priority = 100; // base priority
+    s_main.priority = MAIN_PRIORITY; // base priority
     s_main.active = true;  // not paused
     s_main.handle = h.h;        // to not 0
     s_main.guard = STACK_GUARD; // to check corruption of TCB by stack overflow
@@ -163,7 +163,7 @@ void REVOMINIScheduler::init()
     memset(io_completion, 0, sizeof(io_completion) );
 
 
-    // The PendSV exception is always enabled so set PRIMASK 
+    // The PendSV exception is always enabled so disable interrupts
     // to prevent it from occurring while being configured 
     noInterrupts();
 
@@ -175,8 +175,8 @@ void REVOMINIScheduler::init()
     // Ensure the effect of the priority change occurs before 
     // clearing PRIMASK to ensure that future PendSV exceptions 
     // are taken at the new priority 
-    asm volatile("dsb \n");  //DataSynchronizationBarrier();
-    asm volatile("isb \n");  //InstructionSynchronizationBarrier();
+    asm volatile("dsb \n");
+    asm volatile("isb \n");
 
     interrupts();
 
@@ -184,7 +184,7 @@ void REVOMINIScheduler::init()
     CLEAR_BIT(SCB->SCR, ((uint32_t)SCB_SCR_SLEEPDEEP_Msk)); //we don't need deep sleep
     SET_BIT(  SCB->SCR, ((uint32_t)SCB_SCR_SEVONPEND_Msk)); //we need Event on each interrupt
 
-//*[ DEBUG
+/*[ DEBUG
     SCnSCB->ACTLR |= SCnSCB_ACTLR_DISDEFWBUF_Msk; // disable imprecise exceptions
 //]*/
 
@@ -247,7 +247,7 @@ void REVOMINIScheduler::start_stats_task(){
 // show stats output each 10 seconds
     Revo_handler h = { .vp = _set_10s_flag };
     void *task = _register_timer_task(10000000, h.h, NULL);
-    set_task_priority(task, 100); // like main task has
+    set_task_priority(task, MAIN_PRIORITY); // like main task has
 #endif
 
 // task list is filled. so now we can do a trick -
@@ -262,21 +262,34 @@ void REVOMINIScheduler::_delay(uint16_t ms)
 #ifdef SHED_PROF
     uint32_t t=start;
 #endif
-    
+
+#if 0
     while (ms > 0) {
         if (_delay_cb && _min_delay_cb_ms <= ms) { // MAVlink callback uses 5ms
             _delay_cb();
         } 
-        
-            
-        while ((_micros() - start) >= 1000) {
-
+        while ((dt = _micros() - start) >= 1000) {
             ms--;
             if (ms == 0) break;
             start += 1000;
+            yield(0);
         }
-        yield(0);
     }
+#else
+    uint32_t dt = ms * 1000;
+    uint32_t now;
+
+    while((now=_micros()) - start < dt) {
+        if (_delay_cb && _min_delay_cb_ms <= ms) { // MAVlink callback uses 5ms
+            _delay_cb();
+            yield(1000 - (_micros() - now)); // to not stop MAVlink callback
+        } else {
+            yield(dt); // for full time
+        }
+    }
+
+#endif
+
 
 #ifdef SHED_PROF
     uint32_t us=_micros()-t;
@@ -292,11 +305,10 @@ void REVOMINIScheduler::_delay_microseconds_boost(uint16_t us){
     _delay_microseconds(us);
 }
 
-#define NO_YIELD_TIME 40 // uS
+#define NO_YIELD_TIME 10 // uS
 
 void REVOMINIScheduler::_delay_microseconds(uint16_t us)
 {
-    uint32_t rtime = stopwatch_getticks(); // get start ticks first
 
 #ifdef SHED_PROF
     uint32_t t = _micros(); 
@@ -304,6 +316,9 @@ void REVOMINIScheduler::_delay_microseconds(uint16_t us)
     
     uint16_t no_yield_t;    // guard time for main process
     no_yield_t=NO_YIELD_TIME;
+
+#if 0
+    uint32_t rtime = stopwatch_getticks(); // get start ticks first
 
     uint32_t dt = us_ticks * us;  // delay time in ticks
     uint32_t ny = us_ticks * no_yield_t; // no-yield time in ticks
@@ -315,8 +330,11 @@ void REVOMINIScheduler::_delay_microseconds(uint16_t us)
             yield((dt - tw) / us_ticks); // in micros
         }
     }    
+#else
+    if(us > no_yield_t){
+        yield(us);
 
-#ifdef SHED_PROF
+ #ifdef SHED_PROF
     uint32_t r_us=_micros()-t; // real time
     
     if(_in_timer_proc)
@@ -324,8 +342,13 @@ void REVOMINIScheduler::_delay_microseconds(uint16_t us)
     else
         delay_time     +=r_us;
     
-#endif
+ #endif
 
+    }else{
+        _delay_us_ny(us);
+    }
+
+#endif
 }
 
 void REVOMINIScheduler::_delay_us_ny(uint16_t us){ // precise no yield delay
@@ -380,7 +403,7 @@ void REVOMINIScheduler::_run_io(void)
     }
     _in_io_proc = true;
 
-    // now call the IO based drivers
+    // now call the IO based drivers. TODO: per-task stats
     for (int i = 0; i < _num_io_proc; i++) {
         if (_io_proc[i].h) {
             revo_call_handler(_io_proc[i].h,0);
@@ -571,10 +594,6 @@ void REVOMINIScheduler::reboot(bool hold_in_bootloader) {
 }
 
 
-void REVOMINIScheduler::stats_proc(void){
-//    _print_stats(); only for debug
-
-}
 
 #ifdef DEBUG_BUILD
 
@@ -760,7 +779,7 @@ bool REVOMINIScheduler::unregister_timer_task(AP_HAL::Device::PeriodicHandle h)
 // ]
 
 
-//[ -------- realization of preemptive multitasking --------
+//[ -------- preemptive multitasking --------
 
 bool REVOMINIScheduler::adjust_stack(size_t stackSize)
 {  // Set main task stack size
@@ -853,8 +872,8 @@ uint32_t REVOMINIScheduler::fill_task(task_t &tp){
     memset(&tp,0,sizeof(tp));
 
     // fill required fields
-    tp.priority=100;  // default priority equal to main task
-    tp.curr_prio=100; // current priority the same
+    tp.priority  = MAIN_PRIORITY;  // default priority equal to main task
+    tp.curr_prio = MAIN_PRIORITY;  // current priority the same
 #ifdef MTASK_PROF
     tp.start=_micros(); 
     tp.stack_free = (uint32_t) -1;
@@ -964,6 +983,7 @@ task_t *REVOMINIScheduler::get_next_task(){
     task_t *me = s_running; // current task
     task_t *task=_idle_task; // task to switch to, idle_task by default
 
+
     uint32_t timeFromLast=0;
     uint32_t remains = 0;
 
@@ -1014,16 +1034,19 @@ task_t *REVOMINIScheduler::get_next_task(){
     } else {
 
         task_t *ptr = me; // starting from current task
+        bool was_yield=false;
 
         while(true) { // lets try to find task to switch to
             ptr = ptr->next; // Next task in run queue will continue
 
             if(!ptr->handle) goto skip_task; // skip finished tasks
-        
-//              if(ptr->f_yield) {
-//                    ptr->f_yield=false; // only once
-//                  goto skip_task;     // this allows to execute low-priority tasks 
-//                }
+
+            if(ptr->f_yield) { // task wants to give one quant
+                task->f_yield = false;
+                was_yield = true;
+                goto skip_task; // skip this tasks
+            }
+
         
             if(ptr->sem_wait) { // task want a semaphore
                 if(ptr->sem_wait->is_taken()) { // task blocked on semaphore
@@ -1054,7 +1077,7 @@ task_t *REVOMINIScheduler::get_next_task(){
                     if( timeFromLast < ptr->period) {     //   is less than task's period?
                         remains = ptr->period - timeFromLast;
                         if(remains>10) {
-                            if(remains<partial_quant) {
+                            if(remains<partial_quant && ptr->curr_prio <= want_tail->curr_prio) { // exclude low-prio tasks
                                 partial_quant=remains; // minimal time remains to next task
                                 want_tail = ptr;
                             }
@@ -1073,7 +1096,7 @@ task_t *REVOMINIScheduler::get_next_task(){
                     if(timeFromLast < ptr->ttw){           // still less than ttw ?
                         remains = ptr->ttw - timeFromLast; // remaining time to wait
                         if(remains>4) { // context switch time
-                            if(remains<partial_quant) {
+                            if(remains<partial_quant && ptr->curr_prio <= want_tail->curr_prio) {
                                 partial_quant=remains;
                                 want_tail = ptr;
                             }
@@ -1082,6 +1105,7 @@ task_t *REVOMINIScheduler::get_next_task(){
                     }
                 } 
             }
+
 
             if(ptr->curr_prio <= task->curr_prio){ // select the most priority task, round-robin for equal priorities
                 // task loose tick
@@ -1095,16 +1119,23 @@ task_t *REVOMINIScheduler::get_next_task(){
             } else { // ptr loose a chance - increase priority
                 if(ptr->priority != 255) { // not for idle task
                     if(ptr->curr_prio>1)  ptr->curr_prio--;
-                }            
+                }    
             }
+            
 skip_task:
         // we should do this check after EACH task so can't use "continue" which skips ALL loop. 
         // And we can't move this to begin of loop because then interrupted task does not participate in the comparison of priorities
-            if(ptr == me) { 
-                break;   // 'me' is the task that works now, so full loop - now we have most-priority task so let it run!
+            if(ptr == me) {  // 'me' is the task that works now, so full loop - now we have most-priority task so let it run!
+                if(was_yield && task == _idle_task) { // task wants to yield() but there is no other tasks
+                    was_yield=false;    // reset flag and loop again
+                } else {
+                    break;  
+                }
             }
         }
     }
+
+
 
  #ifdef SHED_DEBUG
     revo_sched_log &lp = logbuf[sched_log_ptr];
@@ -1314,13 +1345,12 @@ void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
     bool ret;
     switch(svc_number)    {        
     case 0:            // Handle SVC 00 - yield()
-//        s_running->ttw=svc_args[0]; // we can do it in yield() itself
-        if(s_running->priority!=255){
+        if(s_running->priority!=255){ // not for idle task
             if(s_running->ttw){ // the task voluntarily gave up its quant and wants delay, so that at the end of the delay it will have the high priority
                 s_running->curr_prio = s_running->priority - 6;
             } else {
-                s_running->curr_prio = s_running->priority + 2; // to guarantee that quant will not return if there is equal priority tasks
-                // popular wait time is 300us so let skip 2 quants
+//                s_running->curr_prio = s_running->priority + 1; 
+                s_running->f_yield = true;      // to guarantee that quant will not return even if there is no high priority tasks
             }
         }
         switch_task();

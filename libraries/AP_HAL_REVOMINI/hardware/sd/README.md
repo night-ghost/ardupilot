@@ -6,7 +6,7 @@ Much faster than old version and supports much more formats
 
 based on:
 
-* Arduino's SD support for STM32F4  (fixed bugs in read() with data size, in open() with "mode==" and so on, and cured Arduinism)
+* Arduino's SD support for STM32F4  (fixed bugs in read() with data size, in open() with "mode==" and so on, twice reduced memory usage  and cured Arduinism)
 * FatFs SDIO for STM32F1
 
 uses FatFS (c) Chan

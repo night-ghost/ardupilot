@@ -168,7 +168,7 @@ void exti_enable_interrupt(afio_exti_num num, bool e){
  */
 
 
-static inline void exti_serv(uint32_t extline, uint8_t num)
+static void exti_serv(uint32_t extline, uint8_t num)
 {
 #ifdef ISR_PERF
     t = stopwatch_getticks();

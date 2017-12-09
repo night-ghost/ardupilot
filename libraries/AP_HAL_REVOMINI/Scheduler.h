@@ -24,6 +24,7 @@
 #define REVOMINI_SCHEDULER_MAX_IO_PROCS 10
 
 
+#define MAIN_PRIORITY  100  // priority for main task
 #define DRIVER_PRIORITY 98  // priority for drivers, speed of main will be 1/4 of this
 #define IO_PRIORITY    107  // main task has 100 so IO tasks will use 1/8 of CPU
 
@@ -59,7 +60,7 @@ struct task_t {
         uint8_t priority;       // priority of task
         uint8_t curr_prio;      // current priority of task, usually higher than priority
         bool active;            // task not ended
-//        bool f_yield;           // task gives its quant
+        bool f_yield;           // task gives its quant
         uint32_t ttw;           // time to wait
         uint32_t t_yield;       // time of yield
         uint32_t period;        // if set then task starts on time basis only
@@ -530,7 +531,6 @@ private:
     static void _run_io(void);
 
     static void _print_stats();
-    static void stats_proc(void);
     static volatile Handler _delay_timer_proc;
     
 #ifdef SHED_PROF
