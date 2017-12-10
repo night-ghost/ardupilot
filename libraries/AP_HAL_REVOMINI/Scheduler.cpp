@@ -1042,7 +1042,7 @@ task_t *REVOMINIScheduler::get_next_task(){
             if(!ptr->handle) goto skip_task; // skip finished tasks
 
             if(ptr->f_yield) { // task wants to give one quant
-                task->f_yield = false;
+                ptr->f_yield = false;
                 was_yield = true;
                 goto skip_task; // skip this tasks
             }
