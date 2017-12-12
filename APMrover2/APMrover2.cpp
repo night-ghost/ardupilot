@@ -72,6 +72,7 @@ const AP_Scheduler::Task Rover::scheduler_tasks[] = {
     SCHED_TASK(update_trigger,         50,    600),
     SCHED_TASK(gcs_failsafe_check,     10,    600),
     SCHED_TASK(compass_accumulate,     50,    900),
+    SCHED_TASK(smart_rtl_update,        3,    100),
     SCHED_TASK(update_notify,          50,    300),
     SCHED_TASK(one_second_loop,         1,   3000),
     SCHED_TASK(compass_cal_update,     50,    100),
@@ -252,8 +253,8 @@ void Rover::update_logging1(void)
         Log_Write_Attitude();
     }
 
-    if (should_log(MASK_LOG_CTUN)) {
-        Log_Write_Control_Tuning();
+    if (should_log(MASK_LOG_THR)) {
+        Log_Write_Throttle();
         Log_Write_Beacon();
     }
 
@@ -268,9 +269,7 @@ void Rover::update_logging1(void)
 void Rover::update_logging2(void)
 {
     if (should_log(MASK_LOG_STEERING)) {
-        if (!control_mode->manual_steering()) {
-            Log_Write_Steering();
-        }
+        Log_Write_Steering();
     }
 
     if (should_log(MASK_LOG_RC)) {

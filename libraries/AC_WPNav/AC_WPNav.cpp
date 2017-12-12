@@ -1272,17 +1272,6 @@ bool AC_WPNav::get_vector_NEU(const Location_Class &loc, Vector3f &vec, bool &te
 /// shared methods
 ///
 
-// get_bearing_cd - return bearing in centi-degrees between two positions
-// To-Do: move this to math library
-float AC_WPNav::get_bearing_cd(const Vector3f &origin, const Vector3f &destination) const
-{
-    float bearing = 9000 + atan2f(-(destination.x-origin.x), destination.y-origin.y) * 5729.57795f;
-    if (bearing < 0) {
-        bearing += 36000;
-    }
-    return bearing;
-}
-
 /// calc_slow_down_distance - calculates distance before waypoint that target point should begin to slow-down assuming it is travelling at full speed
 void AC_WPNav::calc_slow_down_distance(float speed_cms, float accel_cmss)
 {

@@ -139,7 +139,7 @@ public:
     bool set_origin(const Location &loc) override;
 
     // returns the inertial navigation origin in lat/lon/alt
-    bool get_origin(Location &ret) const;
+    bool get_origin(Location &ret) const override;
 
     bool have_inertial_nav() const override;
 
@@ -223,7 +223,7 @@ public:
     // get_hgt_ctrl_limit - get maximum height to be observed by the control loops in meters and a validity flag
     // this is used to limit height during optical flow navigation
     // it will return invalid when no limiting is required
-    bool get_hgt_ctrl_limit(float &limit) const;
+    bool get_hgt_ctrl_limit(float &limit) const override;
 
     // get_llh - updates the provided location with the latest calculated location including absolute altitude
     //  returns true on success (i.e. the EKF knows it's latest position), false on failure

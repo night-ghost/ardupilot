@@ -479,6 +479,9 @@ public:
     // from which to decide the origin on its own
     virtual bool set_origin(const Location &loc) { return false; }
 
+    // returns the inertial navigation origin in lat/lon/alt
+    virtual bool get_origin(Location &ret) const { return false; }
+
     // return true if the AHRS object supports inertial navigation,
     // with very accurate position and velocity
     virtual bool have_inertial_nav(void) const {
@@ -560,6 +563,11 @@ public:
     float getSSA(void);
 
     virtual void update_AOA_SSA(void);
+
+    // get_hgt_ctrl_limit - get maximum height to be observed by the
+    // control loops in meters and a validity flag.  It will return
+    // false when no limiting is required
+    virtual bool get_hgt_ctrl_limit(float &limit) const { return false; };
 
 protected:
     AHRS_VehicleClass _vehicle_class;

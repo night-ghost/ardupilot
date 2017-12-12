@@ -3,11 +3,11 @@
 
 bool ModeGuided::_enter()
 {
-    /*
-      when entering guided mode we set the target as the current
-      location. This matches the behaviour of the copter code.
-    */
-    lateral_acceleration = 0.0f;
+    // initialise waypoint speed
+    set_desired_speed_to_default();
+
+    // when entering guided mode we set the target as the current location.
+    _desired_lat_accel = 0.0f;
     set_desired_location(rover.current_loc);
 
     // guided mode never travels in reverse
@@ -21,16 +21,15 @@ void ModeGuided::update()
     switch (_guided_mode) {
         case Guided_WP:
         {
-            if (!_reached_destination) {
+            if (!_reached_destination || rover.is_boat()) {
                 // check if we've reached the destination
                 _distance_to_destination = get_distance(rover.current_loc, _destination);
-                if (_distance_to_destination <= rover.g.waypoint_radius || location_passed_point(rover.current_loc, _origin, _destination)) {
-                    // trigger reached
+                if (!_reached_destination && (_distance_to_destination <= rover.g.waypoint_radius || location_passed_point(rover.current_loc, _origin, _destination))) {
                     _reached_destination = true;
                     rover.gcs().send_mission_item_reached_message(0);
                 }
                 // drive towards destination
-                calc_steering_to_waypoint(_origin, _destination);
+                calc_steering_to_waypoint(_reached_destination ? rover.current_loc : _origin, _destination);
                 calc_throttle(calc_reduced_speed_for_turn_or_distance(_desired_speed), true);
             } else {
                 stop_vehicle();

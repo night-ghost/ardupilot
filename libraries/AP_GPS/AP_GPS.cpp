@@ -55,7 +55,7 @@
 extern const AP_HAL::HAL &hal;
 
 // baudrates to try to detect GPSes with
-const uint32_t AP_GPS::_baudrates[] = {4800U, 19200U, 38400U, 115200U, 57600U, 9600U, 230400U};
+const uint32_t AP_GPS::_baudrates[] = {9600U, 115200U, 4800U, 19200U, 38400U, 57600U, 230400U};
 
 // initialisation blobs to send to the GPS to try to get it into the
 // right mode
@@ -153,7 +153,7 @@ const AP_Param::GroupInfo AP_GPS::var_info[] = {
     // @Description: Determines whether the configuration for this GPS should be written to non-volatile memory on the GPS. Currently working for UBlox 6 series and above.
     // @Values: 0:Do not save config,1:Save config,2:Save only when needed
     // @User: Advanced
-    AP_GROUPINFO("SAVE_CFG", 11, AP_GPS, _save_config, 0),
+    AP_GROUPINFO("SAVE_CFG", 11, AP_GPS, _save_config, 2),
 
     // @Param: GNSS_MODE2
     // @DisplayName: GNSS system configuration

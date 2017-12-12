@@ -4,60 +4,49 @@
 from __future__ import print_function
 import os
 import shutil
-
 import pexpect
-from pymavlink import mavutil
 
 from common import *
 from pysim import util
 from pysim import vehicleinfo
+from pymavlink import mavutil, mavwp
 
 # get location of scripts
 testdir = os.path.dirname(os.path.realpath(__file__))
 
+#################################################
+# CONFIG
+#################################################
 
-# HOME=mavutil.location(-35.362938,149.165085,584,270)
+# HOME = mavutil.location(-35.362938, 149.165085, 584, 270)
 HOME = mavutil.location(40.071374969556928, -105.22978898137808, 1583.702759, 246)
 homeloc = None
+num_wp = 0
+speedup_default = 10
 
 
-def arm_rover(mavproxy, mav):
-    wait_ready_to_arm(mav);
-
-    mavproxy.send('arm throttle\n')
-    mavproxy.expect('ARMED')
-
-    progress("ROVER ARMED")
-    return True
-
-
-def disarm_rover(mavproxy, mav):
-    mavproxy.send('disarm\n')
-    mavproxy.expect('DISARMED')
-
-    progress("ROVER DISARMED")
-    return True
-
-
+##########################################################
+#   TESTS DRIVE
+##########################################################
 def drive_left_circuit(mavproxy, mav):
     """Drive a left circuit, 50m on a side."""
     mavproxy.send('switch 6\n')
     wait_mode(mav, 'MANUAL')
-    mavproxy.send('rc 3 2000\n')
+    set_rc(mavproxy, mav, 3, 2000)
 
     progress("Driving left circuit")
     # do 4 turns
     for i in range(0, 4):
         # hard left
         progress("Starting turn %u" % i)
-        mavproxy.send('rc 1 1000\n')
+        set_rc(mavproxy, mav, 1, 1000)
         if not wait_heading(mav, 270 - (90*i), accuracy=10):
             return False
-        mavproxy.send('rc 1 1500\n')
+        set_rc(mavproxy, mav, 1, 1500)
         progress("Starting leg %u" % i)
         if not wait_distance(mav, 50, accuracy=7):
             return False
-    mavproxy.send('rc 3 1500\n')
+    set_rc(mavproxy, mav, 3, 1500)
     progress("Circuit complete")
     return True
 
@@ -72,13 +61,9 @@ def drive_RTL(mavproxy, mav):
     return True
 
 
-def setup_rc(mavproxy):
-    """Setup RC override control."""
-    for chan in [1, 2, 3, 4, 5, 6, 7]:
-        mavproxy.send('rc %u 1500\n' % chan)
-    mavproxy.send('rc 8 1800\n')
-
-
+#################################################
+# AUTOTEST ALL
+#################################################
 def drive_mission(mavproxy, mav, filename):
     """Drive a mission from a file."""
     global homeloc
@@ -88,13 +73,14 @@ def drive_mission(mavproxy, mav, filename):
     mavproxy.send('wp list\n')
     mavproxy.expect('Requesting [0-9]+ waypoints')
     mavproxy.send('switch 4\n')  # auto mode
-    mavproxy.send('rc 3 1500\n')
+    set_rc(mavproxy, mav, 3, 1500)
     wait_mode(mav, 'AUTO')
     if not wait_waypoint(mav, 1, 4, max_dist=5):
         return False
     wait_mode(mav, 'HOLD')
     progress("Mission OK")
     return True
+
 
 def do_get_banner(mavproxy, mav):
     mavproxy.send("long DO_SEND_BANNER 1\n")
@@ -111,28 +97,6 @@ def do_get_banner(mavproxy, mav):
 
     return False
 
-def do_get_autopilot_capabilities(mavproxy, mav):
-    mavproxy.send("long REQUEST_AUTOPILOT_CAPABILITIES 1\n")
-    m = mav.recv_match(type='AUTOPILOT_VERSION', blocking=True, timeout=10)
-    if m is None:
-        progress("AUTOPILOT_VERSION not received")
-        return False
-    progress("AUTOPILOT_VERSION received")
-    return True;
-
-def do_set_mode_via_command_long(mavproxy, mav):
-    base_mode = mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED
-    custom_mode = 4 # hold
-    start = time.time()
-    while time.time() - start < 5:
-        mavproxy.send("long DO_SET_MODE %u %u\n" % (base_mode,custom_mode))
-        m = mav.recv_match(type='HEARTBEAT', blocking=True, timeout=10)
-        if m is None:
-            return False
-        if m.custom_mode == custom_mode:
-            return True
-        time.sleep(0.1)
-    return False
 
 def drive_brake_get_stopping_distance(mavproxy, mav, speed):
     # measure our stopping distance:
@@ -146,7 +110,7 @@ def drive_brake_get_stopping_distance(mavproxy, mav, speed):
     set_parameter(mavproxy, 'ATC_ACCEL_MAX', 15)
     mavproxy.send("mode STEERING\n")
     wait_mode(mav, 'STEERING')
-    mavproxy.send('rc 3 2000\n')
+    set_rc(mavproxy, mav, 3, 2000)
     wait_groundspeed(mav, 15, 100)
     initial = mav.location()
     initial_time = time.time()
@@ -155,8 +119,8 @@ def drive_brake_get_stopping_distance(mavproxy, mav, speed):
         start = mav.location()
         if start != initial:
             break
-    mavproxy.send('rc 3 1500\n')
-    wait_groundspeed(mav, 0, 0.2) # why do we not stop?!
+    set_rc(mavproxy, mav, 3, 1500)
+    wait_groundspeed(mav, 0, 0.2)  # why do we not stop?!
     initial = mav.location()
     initial_time = time.time()
     while time.time() - initial_time < 2:
@@ -170,6 +134,7 @@ def drive_brake_get_stopping_distance(mavproxy, mav, speed):
     set_parameter(mavproxy, 'ATC_ACCEL_MAX', old_accel_max)
 
     return delta
+
 
 def drive_brake(mavproxy, mav):
     old_using_brake = get_parameter(mavproxy, 'ATC_BRAKE')
@@ -188,7 +153,7 @@ def drive_brake(mavproxy, mav):
     set_parameter(mavproxy, 'CRUISE_SPEED', old_cruise_speed)
 
     delta = distance_without_brakes - distance_with_brakes
-    if delta < distance_without_brakes*0.05: # 5% isn't asking for much
+    if delta < distance_without_brakes * 0.05:  # 5% isn't asking for much
         progress("Brakes have negligible effect (with=%0.2fm without=%0.2fm delta=%0.2fm)" % (distance_with_brakes, distance_without_brakes, delta))
         return False
     else:
@@ -196,7 +161,47 @@ def drive_brake(mavproxy, mav):
 
     return True
 
+
 vinfo = vehicleinfo.VehicleInfo()
+
+
+def drive_rtl_mission(mavproxy, mav):
+    mission_filepath = os.path.join(testdir, "ArduRover-Missions", "rtl.txt")
+    mavproxy.send('wp load %s\n' % mission_filepath)
+    mavproxy.expect('Flight plan received')
+    mavproxy.send('switch 4\n')  # auto mode
+    set_rc(mavproxy, mav, 3, 1500)
+    wait_mode(mav, 'AUTO')
+    mavproxy.expect('Executing RTL')
+
+    m = mav.recv_match(type='NAV_CONTROLLER_OUTPUT',
+                       blocking=True,
+                       timeout=0.1)
+    if m is None:
+        progress("Did not receive NAV_CONTROLLER_OUTPUT message")
+        return False
+
+    wp_dist_min = 5
+    if m.wp_dist < wp_dist_min:
+        progress("Did not start at least 5 metres from destination")
+        return False
+
+    progress("NAV_CONTROLLER_OUTPUT.wp_dist looks good (%u >= %u)" %
+             (m.wp_dist, wp_dist_min,))
+
+    wait_mode(mav, 'HOLD')
+
+    pos = mav.location()
+    home_distance = get_distance(HOME, pos)
+    home_distance_max = 5
+    if home_distance > home_distance_max:
+        progress("Did not get home (%u metres distant > %u)" %
+              (home_distance,home_distance_max))
+        return False
+    mavproxy.send('switch 6\n')
+    wait_mode(mav, 'MANUAL')
+    progress("RTL Mission OK")
+    return True
 
 def drive_APMrover2(binary, viewerip=None, use_map=False, valgrind=False, gdb=False, frame=None, params=None, gdbserver=False, speedup=10):
     """Drive APMrover2 in SITL.
@@ -217,7 +222,7 @@ def drive_APMrover2(binary, viewerip=None, use_map=False, valgrind=False, gdb=Fa
 
     home = "%f,%f,%u,%u" % (HOME.lat, HOME.lng, HOME.alt, HOME.heading)
     sitl = util.start_SITL(binary, wipe=True, model=frame, home=home, speedup=speedup)
-    mavproxy = util.start_MAVProxy_SITL('APMrover2', options=options)
+    mavproxy = util.start_MAVProxy_SITL('APMrover2')
 
     progress("WAITING FOR PARAMETERS")
     mavproxy.expect('Received [0-9]+ parameters')
@@ -276,21 +281,41 @@ def drive_APMrover2(binary, viewerip=None, use_map=False, valgrind=False, gdb=Fa
         progress("Waiting for a heartbeat with mavlink protocol %s" % mav.WIRE_PROTOCOL_VERSION)
         mav.wait_heartbeat()
         progress("Setting up RC parameters")
-        setup_rc(mavproxy)
+        set_rc_default(mavproxy)
+        set_rc(mavproxy, mav, 8, 1800)
         progress("Waiting for GPS fix")
         mav.wait_gps_fix()
         homeloc = mav.location()
         progress("Home location: %s" % homeloc)
-        if not arm_rover(mavproxy, mav):
+        mavproxy.send('switch 6\n')  # Manual mode
+        wait_mode(mav, 'MANUAL')
+        progress("Waiting reading for arm")
+        wait_ready_to_arm(mav)
+        if not arm_vehicle(mavproxy, mav):
             progress("Failed to ARM")
             failed = True
+
+        progress("#")
+        progress("########## Drive an RTL mission  ##########")
+        progress("#")
+        # Drive a square in learning mode
+        if not drive_rtl_mission(mavproxy, mav):
+            progress("Failed RTL mission")
+            failed = True
+
+        progress("#")
+        progress("########## Drive a square and save WPs with CH7 switch  ##########")
+        progress("#")
+        # Drive a square in learning mode
         if not drive_mission(mavproxy, mav, os.path.join(testdir, "rover1.txt")):
             progress("Failed mission")
             failed = True
+
         if not drive_brake(mavproxy, mav):
             progress("Failed brake")
             failed = True
-        if not disarm_rover(mavproxy, mav):
+
+        if not disarm_vehicle(mavproxy, mav):
             progress("Failed to DISARM")
             failed = True
 

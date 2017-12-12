@@ -165,16 +165,6 @@ public:
     void setup() override;
     void loop() override;
 
-    enum AUTOTUNE_LEVEL_ISSUE {
-        AUTOTUNE_LEVEL_ISSUE_NONE,
-        AUTOTUNE_LEVEL_ISSUE_ANGLE_ROLL,
-        AUTOTUNE_LEVEL_ISSUE_ANGLE_PITCH,
-        AUTOTUNE_LEVEL_ISSUE_ANGLE_YAW,
-        AUTOTUNE_LEVEL_ISSUE_RATE_ROLL,
-        AUTOTUNE_LEVEL_ISSUE_RATE_PITCH,
-        AUTOTUNE_LEVEL_ISSUE_RATE_YAW,
-    };
-
 private:
     static const AP_FWVersion fwver;
 
@@ -270,7 +260,7 @@ private:
 #endif
 
     // Documentation of GLobals:
-    union {
+    typedef union {
         struct {
             uint8_t unused1                 : 1; // 0
             uint8_t simple_mode             : 2; // 1,2     // This is the state of simple mode : 0 = disabled ; 1 = SIMPLE ; 2 = SUPERSIMPLE
@@ -299,7 +289,9 @@ private:
             uint8_t compass_init_location   : 1; // 26      // true when the compass's initial location has been set
         };
         uint32_t value;
-    } ap;
+    } ap_t;
+
+    ap_t ap;
 
     // This is the state of the flight control system
     // There are multiple states defined such as STABILIZE, ACRO,
@@ -316,12 +308,13 @@ private:
         uint32_t last_edge_time_ms;         // system time that switch position was last changed
     } control_switch_state;
 
-    struct {
+    typedef struct {
         bool running;
         float max_speed;
         float alt_delta;
         uint32_t start_ms;
-    } takeoff_state;
+    } takeoff_state_t;
+    takeoff_state_t takeoff_state;
 
     // altitude below which we do no navigation in auto takeoff
     float auto_takeoff_no_nav_alt_cm;
@@ -377,15 +370,16 @@ private:
     // Sometimes we need to remove the scaling for distance calcs
     float scaleLongDown;
 
-    // Location & Navigation
-    int32_t wp_bearing;
     // The location of home in relation to the vehicle in centi-degrees
-    int32_t home_bearing;
+    int32_t home_bearing();
     // distance between vehicle and home in cm
-    int32_t home_distance;
-    // distance between vehicle and next waypoint in cm.
-    uint32_t wp_distance;
+    uint32_t home_distance();
+
+    int32_t _home_bearing;
+    uint32_t _home_distance;
+
     LandStateType land_state = LandStateType_FlyToLocation; // records state of land (flying to location, descending)
+
 
     struct {
         PayloadPlaceStateType state = PayloadPlaceStateType_Calibrating_Hover_Start; // records state of place (descending, releasing, released, ...)
@@ -397,32 +391,6 @@ private:
         float descend_start_altitude;
         float descend_max; // centimetres
     } nav_payload_place;
-
-    // Auto
-    AutoMode auto_mode;   // controls which auto controller is run
-
-    // Guided
-    GuidedMode guided_mode;  // controls which controller is run (pos or vel)
-
-    // RTL
-    RTLState rtl_state;  // records state of rtl (initial climb, returning home, etc)
-    bool rtl_state_complete; // set to true if the current state is completed
-
-    struct {
-        // NEU w/ Z element alt-above-ekf-origin unless use_terrain is true in which case Z element is alt-above-terrain
-        Location_Class origin_point;
-        Location_Class climb_target;
-        Location_Class return_target;
-        Location_Class descent_target;
-        bool land;
-        bool terrain_used;
-    } rtl_path;
-
-    // SmartRTL
-    SmartRTLState smart_rtl_state;  // records state of SmartRTL
-
-    // Circle
-    bool circle_pilot_yaw_override; // true if pilot is overriding yaw
 
     // SIMPLE Mode
     // Used to track the orientation of the vehicle for Simple mode. This value is reset at each arming
@@ -440,26 +408,9 @@ private:
     uint16_t loiter_time_max;                // How long we should stay in Loiter Mode for mission scripting (time in seconds)
     uint32_t loiter_time;                    // How long have we been loitering - The start time in millis
 
-    // Brake
-    uint32_t brake_timeout_start;
-    uint32_t brake_timeout_ms;
-
     // Delay the next navigation command
     int32_t nav_delay_time_max;  // used for delaying the navigation commands (eg land,takeoff etc.)
     uint32_t nav_delay_time_start;
-
-    // Flip
-    Vector3f flip_orig_attitude;         // original vehicle attitude before flip
-
-    // throw mode state
-    struct {
-        ThrowModeStage stage;
-        ThrowModeStage prev_stage;
-        uint32_t last_log_ms;
-        bool nextmode_attempted;
-        uint32_t free_fall_start_ms;    // system time free fall was detected
-        float free_fall_start_velz;     // vertical velocity when free fall was detected
-    } throw_state = {Throw_Disarmed, Throw_Disarmed, 0, false, 0, 0.0f};
 
     // Battery Sensors
     AP_BattMonitor battery = AP_BattMonitor::create();
@@ -528,7 +479,12 @@ private:
 
     // Attitude, Position and Waypoint navigation objects
     // To-Do: move inertial nav up or other navigation variables down here
-    AC_AttitudeControl *attitude_control;
+#if FRAME_CONFIG == HELI_FRAME
+    #define AC_AttitudeControl_t AC_AttitudeControl_Heli
+#else
+    #define AC_AttitudeControl_t AC_AttitudeControl_Multi
+#endif
+    AC_AttitudeControl_t *attitude_control;
     AC_PosControl *pos_control;
     AC_WPNav *wp_nav;
     AC_Circle *circle_nav;
@@ -542,8 +498,6 @@ private:
     uint32_t fast_loopTimer;
     // Counter of main loop executions.  Used for performance monitoring and failsafe processing
     uint16_t mainLoop_count;
-    // Loiter timer - Records how long we have been in loiter
-    uint32_t rtl_loiter_start_time;
     // arm_time_ms - Records when vehicle was armed. Will be Zero if we are disarmed.
     uint32_t arm_time_ms;
 
@@ -573,7 +527,7 @@ private:
 #endif
 
 #if AC_AVOID_ENABLED == ENABLED
-    AC_Avoid avoid = AC_Avoid::create(ahrs, inertial_nav, fence, g2.proximity, &g2.beacon);
+    AC_Avoid avoid = AC_Avoid::create(ahrs, fence, g2.proximity, &g2.beacon);
 #endif
 
     // Rally library
@@ -649,11 +603,12 @@ private:
     ModeFilterInt16_Size5 rotor_speed_deglitch_filter {4};
 
     // Tradheli flags
-    struct {
+    typedef struct {
         uint8_t dynamic_flight          : 1;    // 0   // true if we are moving at a significant speed (used to turn on/off leaky I terms)
         uint8_t init_targets_on_arming  : 1;    // 1   // true if we have been disarmed, and need to reset rate controller targets when we arm
         uint8_t inverted_flight         : 1;    // 2   // true for inverted flight mode
-    } heli_flags;
+    } heli_flags_t;
+    heli_flags_t heli_flags;
 
     int16_t hover_roll_trim_scalar_slew;
 #endif
@@ -744,8 +699,6 @@ private:
     void send_pid_tuning(mavlink_channel_t chan);
     void gcs_data_stream_send(void);
     void gcs_check_input(void);
-    void Log_Write_AutoTune(uint8_t axis, uint8_t tune_step, float meas_target, float meas_min, float meas_max, float new_gain_rp, float new_gain_rd, float new_gain_sp, float new_ddt);
-    void Log_Write_AutoTuneDetails(float angle_cd, float rate_cds);
     void Log_Write_Current();
     void Log_Write_Optflow();
     void Log_Write_Nav_Tuning();
@@ -802,39 +755,8 @@ private:
     bool verify_yaw();
     MAV_RESULT mavlink_compassmot(mavlink_channel_t chan);
     void delay(uint32_t ms);
-    bool acro_init(bool ignore_checks);
-    void acro_run();
     void get_pilot_desired_angle_rates(int16_t roll_in, int16_t pitch_in, int16_t yaw_in, float &roll_out, float &pitch_out, float &yaw_out);
-    bool althold_init(bool ignore_checks);
-    void althold_run();
-    bool auto_init(bool ignore_checks);
-    void auto_run();
-    void auto_takeoff_start(const Location& dest_loc);
-    void auto_takeoff_run();
-    void auto_wp_start(const Vector3f& destination);
-    void auto_wp_start(const Location_Class& dest_loc);
-    void auto_wp_run();
-    void auto_spline_run();
-    void auto_land_start();
-    void auto_land_start(const Vector3f& destination);
-    void auto_land_run();
     void do_payload_place(const AP_Mission::Mission_Command& cmd);
-    void auto_payload_place_start();
-    void auto_payload_place_start(const Vector3f& destination);
-    void auto_payload_place_run();
-    bool auto_payload_place_run_should_run();
-    void auto_payload_place_run_loiter();
-    void auto_payload_place_run_descend();
-    void auto_payload_place_run_release();
-    void auto_rtl_start();
-    void auto_rtl_run();
-    void auto_circle_movetoedge_start(const Location_Class &circle_center, float radius_m);
-    void auto_circle_start();
-    void auto_circle_run();
-    void auto_nav_guided_start();
-    void auto_nav_guided_run();
-    bool auto_loiter_start();
-    void auto_loiter_run();
     uint8_t get_default_auto_yaw_mode(bool rtl);
     void set_auto_yaw_mode(uint8_t yaw_mode);
     void set_auto_yaw_look_at_heading(float angle_deg, float turn_rate_dps, int8_t direction, bool relative_angle);
@@ -842,147 +764,22 @@ private:
     void set_auto_yaw_rate(float turn_rate_cds);
     float get_auto_heading(void);
     float get_auto_yaw_rate_cds();
-    bool autotune_init(bool ignore_checks);
-    void autotune_stop();
-    bool autotune_start(bool ignore_checks);
-    void autotune_run();
-    bool autotune_currently_level();
-    void autotune_attitude_control();
-    void autotune_backup_gains_and_initialise();
-    void autotune_load_orig_gains();
-    void autotune_load_tuned_gains();
-    void autotune_load_intra_test_gains();
-    void autotune_load_twitch_gains();
-    void autotune_save_tuning_gains();
-    void autotune_update_gcs(uint8_t message_id);
-    bool autotune_roll_enabled();
-    bool autotune_pitch_enabled();
-    bool autotune_yaw_enabled();
-    void autotune_twitching_test(float measurement, float target, float &measurement_min, float &measurement_max);
-    void autotune_updating_d_up(float &tune_d, float tune_d_min, float tune_d_max, float tune_d_step_ratio, float &tune_p, float tune_p_min, float tune_p_max, float tune_p_step_ratio, float target, float measurement_min, float measurement_max);
-    void autotune_updating_d_down(float &tune_d, float tune_d_min, float tune_d_step_ratio, float &tune_p, float tune_p_min, float tune_p_max, float tune_p_step_ratio, float target, float measurement_min, float measurement_max);
-    void autotune_updating_p_down(float &tune_p, float tune_p_min, float tune_p_step_ratio, float target, float measurement_max);
-    void autotune_updating_p_up(float &tune_p, float tune_p_max, float tune_p_step_ratio, float target, float measurement_max);
-    void autotune_updating_p_up_d_down(float &tune_d, float tune_d_min, float tune_d_step_ratio, float &tune_p, float tune_p_min, float tune_p_max, float tune_p_step_ratio, float target, float measurement_min, float measurement_max);
-    void autotune_twitching_measure_acceleration(float &rate_of_change, float rate_measurement, float &rate_measurement_max);
-    void autotune_get_poshold_attitude(float &roll_cd, float &pitch_cd, float &yaw_cd);
     void avoidance_adsb_update(void);
-    void autotune_send_step_string();
-    const char *autotune_level_issue_string() const;
-    const char * autotune_type_string() const;
-    void autotune_announce_state_to_gcs();
-    void autotune_do_gcs_announcements();
-    bool autotune_check_level(const enum AUTOTUNE_LEVEL_ISSUE issue, const float current, const float maximum) const;
 
 #if ADVANCED_FAILSAFE == ENABLED
     void afs_fs_check(void);
 #endif
-    bool brake_init(bool ignore_checks);
-    void brake_run();
-    void brake_timeout_to_loiter_ms(uint32_t timeout_ms);
-    bool circle_init(bool ignore_checks);
-    void circle_run();
-    bool drift_init(bool ignore_checks);
-    void drift_run();
-    float get_throttle_assist(float velz, float pilot_throttle_scaled);
-    bool flip_init(bool ignore_checks);
-    void flip_run();
-    bool guided_init(bool ignore_checks);
-    bool guided_takeoff_start(float final_alt_above_home);
-    void guided_pos_control_start();
-    void guided_vel_control_start();
-    void guided_posvel_control_start();
-    void guided_angle_control_start();
-    bool guided_set_destination(const Vector3f& destination, bool use_yaw = false, float yaw_cd = 0.0, bool use_yaw_rate = false, float yaw_rate_cds = 0.0, bool yaw_relative = false);
-    bool guided_set_destination(const Location_Class& dest_loc, bool use_yaw = false, float yaw_cd = 0.0, bool use_yaw_rate = false, float yaw_rate_cds = 0.0, bool yaw_relative = false);
-    void guided_set_velocity(const Vector3f& velocity, bool use_yaw = false, float yaw_cd = 0.0, bool use_yaw_rate = false, float yaw_rate_cds = 0.0, bool yaw_relative = false);
-    void guided_set_destination_posvel(const Vector3f& destination, const Vector3f& velocity, bool use_yaw = false, float yaw_cd = 0.0, bool use_yaw_rate = false, float yaw_rate_cds = 0.0, bool yaw_relative = false);
-    void guided_set_angle(const Quaternion &q, float climb_rate_cms, bool use_yaw_rate, float yaw_rate_rads);
-    void guided_run();
-    void guided_takeoff_run();
-    void guided_pos_control_run();
-    void guided_vel_control_run();
-    void guided_posvel_control_run();
-    void guided_angle_control_run();
-    void guided_set_desired_velocity_with_accel_and_fence_limits(const Vector3f& vel_des);
-    void guided_limit_clear();
-    void guided_limit_set(uint32_t timeout_ms, float alt_min_cm, float alt_max_cm, float horiz_max_cm);
-    void guided_limit_init_time_and_pos();
-    bool guided_limit_check();
-    bool guided_nogps_init(bool ignore_checks);
-    void guided_nogps_run();
-    void guided_set_yaw_state(bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_angle);
-    bool land_init(bool ignore_checks);
-    void land_run();
-    void land_gps_run();
-    void land_nogps_run();
-    int32_t land_get_alt_above_ground(void);
     void land_run_vertical_control(bool pause_descent = false);
     void land_run_horizontal_control();
-    void land_do_not_use_GPS();
     void set_mode_land_with_pause(mode_reason_t reason);
     bool landing_with_GPS();
-    bool loiter_init(bool ignore_checks);
-    void loiter_run();
-#if PRECISION_LANDING == ENABLED
-    bool do_precision_loiter();
-    void precision_loiter_xy();
-    void set_precision_loiter_enabled(bool value) { _precision_loiter_enabled = value; }
-    bool _precision_loiter_enabled;
-#endif
-    bool poshold_init(bool ignore_checks);
-    void poshold_run();
-    void poshold_update_pilot_lean_angle(float &lean_angle_filtered, float &lean_angle_raw);
-    int16_t poshold_mix_controls(float mix_ratio, int16_t first_control, int16_t second_control);
-    void poshold_update_brake_angle_from_velocity(int16_t &brake_angle, float velocity);
-    void poshold_update_wind_comp_estimate();
-    void poshold_get_wind_comp_lean_angles(int16_t &roll_angle, int16_t &pitch_angle);
-    void poshold_roll_controller_to_pilot_override();
-    void poshold_pitch_controller_to_pilot_override();
 
-    // Throw to launch functionality
-    bool throw_init(bool ignore_checks);
-    void throw_run();
-    bool throw_detected();
-    bool throw_attitude_good();
-    bool throw_height_good();
-    bool throw_position_good();
+    void smart_rtl_save_position(); // method for scheduler to call
 
-    bool rtl_init(bool ignore_checks);
-    void rtl_restart_without_terrain();
-    void rtl_run(bool disarm_on_land=true);
-    void rtl_climb_start();
-    void rtl_return_start();
-    void rtl_climb_return_run();
-    void rtl_loiterathome_start();
-    void rtl_loiterathome_run();
-    void rtl_descent_start();
-    void rtl_descent_run();
-    void rtl_land_start();
-    void rtl_land_run(bool disarm_on_land);
-    void rtl_build_path(bool terrain_following_allowed);
-    void rtl_compute_return_target(bool terrain_following_allowed);
-    bool smart_rtl_init(bool ignore_checks);
-    void smart_rtl_exit();
-    void smart_rtl_run();
-    void smart_rtl_wait_cleanup_run();
-    void smart_rtl_path_follow_run();
-    void smart_rtl_pre_land_position_run();
-    void smart_rtl_land();
-    void smart_rtl_save_position();
-    bool sport_init(bool ignore_checks);
-    void sport_run();
-    bool stabilize_init(bool ignore_checks);
-    void stabilize_run();
     void crash_check();
     void parachute_check();
     void parachute_release();
     void parachute_manual_release();
-
-    // support for AP_Avoidance custom flight mode, AVOID_ADSB
-    bool avoid_adsb_init(bool ignore_checks);
-    void avoid_adsb_run();
-    bool avoid_adsb_set_velocity(const Vector3f& velocity_neu);
 
     void ekf_check();
     bool ekf_over_threshold();
@@ -1012,20 +809,12 @@ private:
     void update_sensor_status_flags(void);
     bool set_mode(control_mode_t mode, mode_reason_t reason);
     void update_flight_mode();
-    void exit_mode(control_mode_t old_control_mode, control_mode_t new_control_mode);
-    bool mode_requires_GPS(control_mode_t mode);
-    bool mode_has_manual_throttle(control_mode_t mode);
-    bool mode_allows_arming(control_mode_t mode, bool arming_from_gcs);
-    void notify_flight_mode(control_mode_t mode);
+    void notify_flight_mode();
     void heli_init();
     void check_dynamic_flight(void);
     void update_heli_control_dynamics(void);
     void heli_update_landing_swash();
     void heli_update_rotor_speed_targets();
-    bool heli_acro_init(bool ignore_checks);
-    void heli_acro_run();
-    bool heli_stabilize_init(bool ignore_checks);
-    void heli_stabilize_run();
     void read_inertia();
     bool land_complete_maybe();
     void update_land_and_crash_detectors();
@@ -1036,7 +825,7 @@ private:
     void update_notify();
     void motor_test_output();
     bool mavlink_motor_test_check(mavlink_channel_t chan, bool check_rc);
-    uint8_t mavlink_motor_test_start(mavlink_channel_t chan, uint8_t motor_seq, uint8_t throttle_type, uint16_t throttle_value, float timeout_sec, uint8_t motor_count);
+    MAV_RESULT mavlink_motor_test_start(mavlink_channel_t chan, uint8_t motor_seq, uint8_t throttle_type, uint16_t throttle_value, float timeout_sec, uint8_t motor_count);
     void motor_test_stop();
     void arm_motors_check();
     void auto_disarm_check();
@@ -1045,16 +834,9 @@ private:
     void motors_output();
     void lost_vehicle_check();
     void run_nav_updates(void);
-    void calc_distance_and_bearing();
-    void calc_wp_distance();
-    void calc_wp_bearing();
-    void calc_home_distance_and_bearing();
-    void run_autopilot();
     Vector3f pv_location_to_vector(const Location& loc);
     float pv_alt_above_origin(float alt_above_home_cm);
     float pv_alt_above_home(float alt_above_origin_cm);
-    float pv_get_bearing_cd(const Vector3f &origin, const Vector3f &destination);
-    float pv_get_horizontal_distance_cm(const Vector3f &origin, const Vector3f &destination);
     float pv_distance_to_home_cm(const Vector3f &destination);
     void default_dead_zones();
     void init_rc_in();
@@ -1173,6 +955,62 @@ private:
     void accel_cal_update(void);
     
     uint16_t get_pilot_speed_dn();    
+
+#include "mode.h"
+
+    Copter::Mode *flightmode;
+
+#if FRAME_CONFIG == HELI_FRAME
+    Copter::ModeAcro_Heli mode_acro{*this};
+#else
+    Copter::ModeAcro mode_acro{*this};
+#endif
+
+    Copter::ModeAltHold mode_althold{*this};
+
+    Copter::ModeAuto mode_auto{*this, mission, circle_nav};
+
+#if AUTOTUNE_ENABLED == ENABLED
+    Copter::ModeAutoTune mode_autotune{*this};
+#endif
+
+    Copter::ModeBrake mode_brake{*this};
+
+    Copter::ModeCircle mode_circle{*this, circle_nav};
+
+    Copter::ModeDrift mode_drift{*this};
+
+    Copter::ModeFlip mode_flip{*this};
+
+    Copter::ModeGuided mode_guided{*this};
+
+    Copter::ModeLand mode_land{*this};
+
+    Copter::ModeLoiter mode_loiter{*this};
+
+    Copter::ModePosHold mode_poshold{*this};
+
+    Copter::ModeRTL mode_rtl{*this};
+
+#if FRAME_CONFIG == HELI_FRAME
+    Copter::ModeStabilize_Heli mode_stabilize{*this};
+#else
+    Copter::ModeStabilize mode_stabilize{*this};
+#endif
+
+    Copter::ModeSport mode_sport{*this};
+
+    Copter::ModeAvoidADSB mode_avoid_adsb{*this};
+
+    Copter::ModeThrow mode_throw{*this};
+
+    Copter::ModeGuidedNoGPS mode_guided_nogps{*this};
+
+    Copter::ModeSmartRTL mode_smartrtl{*this};
+
+    Copter::Mode *mode_from_mode_num(const uint8_t mode);
+
+    void exit_mode(Mode *&old_flightmode, Mode *&new_flightmode);
 
 public:
     void mavlink_delay_cb();

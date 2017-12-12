@@ -21,12 +21,12 @@ struct PACKED log_AutoTune {
 };
 
 // Write an Autotune data packet
-void Copter::Log_Write_AutoTune(uint8_t axis, uint8_t tune_step, float meas_target, float meas_min, float meas_max, float new_gain_rp, float new_gain_rd, float new_gain_sp, float new_ddt)
+void Copter::ModeAutoTune::Log_Write_AutoTune(uint8_t _axis, uint8_t tune_step, float meas_target, float meas_min, float meas_max, float new_gain_rp, float new_gain_rd, float new_gain_sp, float new_ddt)
 {
     struct log_AutoTune pkt = {
         LOG_PACKET_HEADER_INIT(LOG_AUTOTUNE_MSG),
         time_us     : AP_HAL::micros64(),
-        axis        : axis,
+        axis        : _axis,
         tune_step   : tune_step,
         meas_target : meas_target,
         meas_min    : meas_min,
@@ -36,7 +36,7 @@ void Copter::Log_Write_AutoTune(uint8_t axis, uint8_t tune_step, float meas_targ
         new_gain_sp : new_gain_sp,
         new_ddt     : new_ddt
     };
-    DataFlash.WriteBlock(&pkt, sizeof(pkt));
+    _copter.DataFlash.WriteBlock(&pkt, sizeof(pkt));
 }
 
 struct PACKED log_AutoTuneDetails {
@@ -47,7 +47,7 @@ struct PACKED log_AutoTuneDetails {
 };
 
 // Write an Autotune data packet
-void Copter::Log_Write_AutoTuneDetails(float angle_cd, float rate_cds)
+void Copter::ModeAutoTune::Log_Write_AutoTuneDetails(float angle_cd, float rate_cds)
 {
     struct log_AutoTuneDetails pkt = {
         LOG_PACKET_HEADER_INIT(LOG_AUTOTUNEDETAILS_MSG),
@@ -55,7 +55,7 @@ void Copter::Log_Write_AutoTuneDetails(float angle_cd, float rate_cds)
         angle_cd    : angle_cd,
         rate_cds    : rate_cds
     };
-    DataFlash.WriteBlock(&pkt, sizeof(pkt));
+    _copter.DataFlash.WriteBlock(&pkt, sizeof(pkt));
 }
 #endif
 

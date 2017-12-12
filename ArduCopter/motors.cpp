@@ -46,7 +46,7 @@ void Copter::arm_motors_check()
 
     // full left
     }else if (tmp < -4000) {
-        if (!mode_has_manual_throttle(control_mode) && !ap.land_complete) {
+        if (!flightmode->has_manual_throttle() && !ap.land_complete) {
             arming_counter = 0;
             return;
         }
@@ -98,7 +98,7 @@ void Copter::auto_disarm_check()
     } else {
         bool sprung_throttle_stick = (g.throttle_behavior & THR_BEHAVE_FEEDBACK_FROM_MID_STICK) != 0;
         bool thr_low;
-        if (mode_has_manual_throttle(control_mode) || !sprung_throttle_stick) {
+        if (flightmode->has_manual_throttle() || !sprung_throttle_stick) {
             thr_low = ap.throttle_zero;
         } else {
             float deadband_top = channel_throttle->get_control_mid() + g.throttle_deadzone;
@@ -177,7 +177,7 @@ bool Copter::init_arm_motors(bool arming_from_gcs)
         // Reset home position if it has already been set before (but not locked)
         set_home_to_current_location(false);
     }
-    calc_distance_and_bearing();
+    update_super_simple_bearing(false);
 
     // Reset SmartRTL return location. If activated, SmartRTL will ultimately try to land at this point
     g2.smart_rtl.reset_path(position_ok());
@@ -246,7 +246,7 @@ void Copter::init_disarm_motors()
 
 #if AUTOTUNE_ENABLED == ENABLED
     // save auto tuned parameters
-    autotune_save_tuning_gains();
+    mode_autotune.save_tuning_gains();
 #endif
 
     // we are not in the air

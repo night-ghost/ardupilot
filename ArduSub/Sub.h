@@ -578,7 +578,7 @@ private:
     bool guided_set_destination(const Vector3f& destination);
     bool guided_set_destination(const Location_Class& dest_loc);
     void guided_set_velocity(const Vector3f& velocity);
-    void guided_set_destination_posvel(const Vector3f& destination, const Vector3f& velocity);
+    bool guided_set_destination_posvel(const Vector3f& destination, const Vector3f& velocity);
     void guided_set_angle(const Quaternion &q, float climb_rate_cms);
     void guided_run();
     void guided_pos_control_run();
@@ -628,8 +628,6 @@ private:
     void motors_output();
     Vector3f pv_location_to_vector(const Location& loc);
     float pv_alt_above_origin(float alt_above_home_cm);
-    float pv_get_bearing_cd(const Vector3f &origin, const Vector3f &destination);
-    float pv_get_horizontal_distance_cm(const Vector3f &origin, const Vector3f &destination);
     void init_rc_in();
     void init_rc_out();
     void enable_motor_output();

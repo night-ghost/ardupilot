@@ -1,13 +1,14 @@
 #include "Copter.h"
 
+
 /*
- * Init and run calls for sport flight mode
+ * Init and run calls for althold, flight mode
  */
 
-// sport_init - initialise sport controller
-bool Copter::sport_init(bool ignore_checks)
+// althold_init - initialise althold controller
+bool Copter::ModeAltHold::init(bool ignore_checks)
 {
-    // initialize vertical speed and acceleration
+    // initialize vertical speeds and leash lengths
     pos_control->set_speed_z(-get_pilot_speed_dn(), g.pilot_speed_up);
     pos_control->set_accel_z(g.pilot_accel_z);
 
@@ -17,51 +18,29 @@ bool Copter::sport_init(bool ignore_checks)
         pos_control->set_desired_velocity_z(inertial_nav.get_velocity_z());
     }
 
+    // stop takeoff if running
+    takeoff_stop();
+
     return true;
 }
 
-// sport_run - runs the sport controller
+// althold_run - runs the althold controller
 // should be called at 100hz or more
-void Copter::sport_run()
+void Copter::ModeAltHold::run()
 {
-    SportModeState sport_state;
+    AltHoldModeState althold_state;
     float takeoff_climb_rate = 0.0f;
 
-    // initialize vertical speed and acceleration
+    // initialize vertical speeds and acceleration
     pos_control->set_speed_z(-get_pilot_speed_dn(), g.pilot_speed_up);
     pos_control->set_accel_z(g.pilot_accel_z);
 
-    // apply SIMPLE mode transform
+    // apply SIMPLE mode transform to pilot inputs
     update_simple_mode();
 
-    // get pilot's desired roll and pitch rates
-
-    // calculate rate requests
-    float target_roll_rate = channel_roll->get_control_in() * g.acro_rp_p;
-    float target_pitch_rate = channel_pitch->get_control_in() * g.acro_rp_p;
-
-    // get attitude targets
-    const Vector3f att_target = attitude_control->get_att_target_euler_cd();
-
-    // Calculate trainer mode earth frame rate command for roll
-    int32_t roll_angle = wrap_180_cd(att_target.x);
-    target_roll_rate -= constrain_int32(roll_angle, -ACRO_LEVEL_MAX_ANGLE, ACRO_LEVEL_MAX_ANGLE) * g.acro_balance_roll;
-
-    // Calculate trainer mode earth frame rate command for pitch
-    int32_t pitch_angle = wrap_180_cd(att_target.y);
-    target_pitch_rate -= constrain_int32(pitch_angle, -ACRO_LEVEL_MAX_ANGLE, ACRO_LEVEL_MAX_ANGLE) * g.acro_balance_pitch;
-
-    if (roll_angle > aparm.angle_max){
-        target_roll_rate -=  g.acro_rp_p*(roll_angle-aparm.angle_max);
-    }else if (roll_angle < -aparm.angle_max) {
-        target_roll_rate -=  g.acro_rp_p*(roll_angle+aparm.angle_max);
-    }
-
-    if (pitch_angle > aparm.angle_max){
-        target_pitch_rate -=  g.acro_rp_p*(pitch_angle-aparm.angle_max);
-    }else if (pitch_angle < -aparm.angle_max) {
-        target_pitch_rate -=  g.acro_rp_p*(pitch_angle+aparm.angle_max);
-    }
+    // get pilot desired lean angles
+    float target_roll, target_pitch;
+    get_pilot_desired_lean_angles(channel_roll->get_control_in(), channel_pitch->get_control_in(), target_roll, target_pitch, attitude_control->get_althold_lean_angle_max());
 
     // get pilot's desired yaw rate
     float target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->get_control_in());
@@ -77,37 +56,42 @@ void Copter::sport_run()
     bool takeoff_triggered = ap.land_complete && (target_climb_rate > 0.0f);
 #endif
 
-    // State Machine Determination
+    // Alt Hold State Machine Determination
     if (!motors->armed() || !motors->get_interlock()) {
-        sport_state = Sport_MotorStopped;
+        althold_state = AltHold_MotorStopped;
     } else if (takeoff_state.running || takeoff_triggered) {
-        sport_state = Sport_Takeoff;
+        althold_state = AltHold_Takeoff;
     } else if (!ap.auto_armed || ap.land_complete) {
-        sport_state = Sport_Landed;
+        althold_state = AltHold_Landed;
     } else {
-        sport_state = Sport_Flying;
+        althold_state = AltHold_Flying;
     }
 
-    // State Machine
-    switch (sport_state) {
+    // Alt Hold State Machine
+    switch (althold_state) {
 
-    case Sport_MotorStopped:
+    case AltHold_MotorStopped:
 
         motors->set_desired_spool_state(AP_Motors::DESIRED_SHUT_DOWN);
-        attitude_control->input_euler_rate_roll_pitch_yaw(target_roll_rate, target_pitch_rate, target_yaw_rate);
-#if FRAME_CONFIG == HELI_FRAME
-        // force descent rate and call position controller
-        pos_control->set_alt_target_from_climb_rate(-abs(g.land_speed), G_Dt, false);
-#else
-        attitude_control->relax_attitude_controllers();
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
         attitude_control->reset_rate_controller_I_terms();
         attitude_control->set_yaw_target_to_current_heading();
+#if FRAME_CONFIG == HELI_FRAME    
+        // force descent rate and call position controller
+        pos_control->set_alt_target_from_climb_rate(-abs(g.land_speed), G_Dt, false);
+        heli_flags.init_targets_on_arming=true;
+#else
         pos_control->relax_alt_hold_controllers(0.0f);   // forces throttle output to go to zero
 #endif
         pos_control->update_z_controller();
         break;
 
-    case Sport_Takeoff:
+    case AltHold_Takeoff:
+#if FRAME_CONFIG == HELI_FRAME    
+        if (heli_flags.init_targets_on_arming) {
+            heli_flags.init_targets_on_arming=false;
+        }
+#endif
         // set motors to full range
         motors->set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
 
@@ -127,7 +111,7 @@ void Copter::sport_run()
         target_climb_rate = get_avoidance_adjusted_climbrate(target_climb_rate);
 
         // call attitude controller
-        attitude_control->input_euler_rate_roll_pitch_yaw(target_roll_rate, target_pitch_rate, target_yaw_rate);
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
 
         // call position controller
         pos_control->set_alt_target_from_climb_rate_ff(target_climb_rate, G_Dt, false);
@@ -135,7 +119,7 @@ void Copter::sport_run()
         pos_control->update_z_controller();
         break;
 
-    case Sport_Landed:
+    case AltHold_Landed:
         // set motors to spin-when-armed if throttle below deadzone, otherwise full range (but motors will only spin at min throttle)
         if (target_climb_rate < 0.0f) {
             motors->set_desired_spool_state(AP_Motors::DESIRED_SPIN_WHEN_ARMED);
@@ -143,20 +127,36 @@ void Copter::sport_run()
             motors->set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
         }
 
+#if FRAME_CONFIG == HELI_FRAME    
+        if (heli_flags.init_targets_on_arming) {
+            attitude_control->reset_rate_controller_I_terms();
+            attitude_control->set_yaw_target_to_current_heading();
+            if (motors->get_interlock()) {
+                heli_flags.init_targets_on_arming=false;
+            }
+        }
+#else
         attitude_control->reset_rate_controller_I_terms();
         attitude_control->set_yaw_target_to_current_heading();
-        attitude_control->input_euler_rate_roll_pitch_yaw(target_roll_rate, target_pitch_rate, target_yaw_rate);
+#endif
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
         pos_control->relax_alt_hold_controllers(0.0f);   // forces throttle output to go to zero
         pos_control->update_z_controller();
         break;
 
-    case Sport_Flying:
+    case AltHold_Flying:
         motors->set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
+
+#if AC_AVOID_ENABLED == ENABLED
+        // apply avoidance
+        _copter.avoid.adjust_roll_pitch(target_roll, target_pitch, _copter.aparm.angle_max);
+#endif
+
         // call attitude controller
-        attitude_control->input_euler_rate_roll_pitch_yaw(target_roll_rate, target_pitch_rate, target_yaw_rate);
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate, get_smoothing_gain());
 
         // adjust climb rate using rangefinder
-        if (rangefinder_alt_ok()) {
+        if (_copter.rangefinder_alt_ok()) {
             // if rangefinder is ok, use surface tracking
             target_climb_rate = get_surface_tracking_climb_rate(target_climb_rate, pos_control->get_alt_target(), G_Dt);
         }

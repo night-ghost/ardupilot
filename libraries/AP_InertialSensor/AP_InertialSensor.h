@@ -173,7 +173,7 @@ public:
     /* get_delta_time returns the time period in seconds
      * overwhich the sensor data was collected
      */
-    float get_delta_time() const { return _delta_time; }
+    float get_delta_time() const { return MIN(_delta_time, _loop_delta_t_max); }
 
     // return the maximum gyro drift rate in radians/s/s. This
     // depends on what gyro chips are being used
@@ -270,8 +270,8 @@ public:
     void acal_update();
 
     // simple accel calibration
-    uint8_t simple_accel_cal(AP_AHRS &ahrs);
-    
+    MAV_RESULT simple_accel_cal(AP_AHRS &ahrs);
+
     bool accel_cal_requires_reboot() const { return _accel_cal_requires_reboot; }
 
     // return time in microseconds of last update() call
@@ -378,6 +378,7 @@ private:
     // the selected sample rate
     uint16_t _sample_rate;
     float _loop_delta_t;
+    float _loop_delta_t_max;
 
     // Most recent accelerometer reading
     Vector3f _accel[INS_MAX_INSTANCES];

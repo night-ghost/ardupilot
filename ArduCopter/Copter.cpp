@@ -28,16 +28,6 @@ Copter::Copter(void)
     flight_modes(&g.flight_mode1),
     control_mode(STABILIZE),
     scaleLongDown(1),
-    wp_bearing(0),
-    home_bearing(0),
-    home_distance(0),
-    wp_distance(0),
-    auto_mode(Auto_TakeOff),
-    guided_mode(Guided_TakeOff),
-    rtl_state(RTL_InitialClimb),
-    rtl_state_complete(false),
-    smart_rtl_state(SmartRTL_PathFollow),
-    circle_pilot_yaw_override(false),
     simple_cos_yaw(1.0f),
     simple_sin_yaw(0.0f),
     super_simple_last_bearing(0),
@@ -64,14 +54,11 @@ Copter::Copter(void)
     pmTest1(0),
     fast_loopTimer(0),
     mainLoop_count(0),
-    rtl_loiter_start_time(0),
     auto_trim_counter(0),
     in_mavlink_delay(false),
     param_helper(false),
-#if USE_WAYBACK == ENABLED && 0
-    way_back(ahrs),
-#endif
     param_loader(var_info)
+    flightmode(&mode_stabilize)
 {
     memset(&current_loc, 0, sizeof(current_loc));
 

@@ -80,7 +80,7 @@ float Copter::get_roi_yaw()
     roi_yaw_counter++;
     if (roi_yaw_counter >= 4) {
         roi_yaw_counter = 0;
-        yaw_look_at_WP_bearing = pv_get_bearing_cd(inertial_nav.get_position(), roi_WP);
+        yaw_look_at_WP_bearing = get_bearing_cd(inertial_nav.get_position(), roi_WP);
     }
 
     return yaw_look_at_WP_bearing;
@@ -112,7 +112,7 @@ void Copter::update_throttle_hover()
     }
 
     // do not update in manual throttle modes or Drift
-    if (mode_has_manual_throttle(control_mode) || (control_mode == DRIFT)) {
+    if (flightmode->has_manual_throttle() || (control_mode == DRIFT)) {
         return;
     }
 
