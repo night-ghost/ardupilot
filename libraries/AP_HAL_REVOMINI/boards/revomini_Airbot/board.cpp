@@ -159,16 +159,6 @@ extern const uint8_t REVOMINI_SPI_DEVICE_NUM_DEVICES = ARRAY_SIZE(spi_device_tab
 
 void boardInit(void) {
 
-/* we don't use RFM22! this pins are used for other needs so will be initialized in respective places
-
-    // Init RFM22B SC pin and set to HI
-    gpio_set_mode( PIN_MAP[BOARD_RFM22B_CS_PIN].gpio_device, PIN_MAP[BOARD_RFM22B_CS_PIN].gpio_bit, GPIO_OUTPUT_PP);
-    gpio_write_bit(PIN_MAP[BOARD_RFM22B_CS_PIN].gpio_device, PIN_MAP[BOARD_RFM22B_CS_PIN].gpio_bit, 1);
-    
-    // Init RFM22B EXT_INT pin
-    gpio_set_mode(PIN_MAP[BOARD_RFM22B_INT_PIN].gpio_device, PIN_MAP[BOARD_RFM22B_INT_PIN].gpio_bit, GPIO_INPUT_PU);
-*/
-
 #ifdef BOARD_HMC5883_DRDY_PIN
     // Init HMC5883 DRDY EXT_INT pin - but it not used by driver
     gpio_set_mode(PIN_MAP[BOARD_HMC5883_DRDY_PIN].gpio_device, PIN_MAP[BOARD_HMC5883_DRDY_PIN].gpio_bit, GPIO_INPUT_PU);

@@ -403,51 +403,6 @@ uint32_t configTimeBase(const timer_dev *dev, uint16_t period, uint16_t khz)
 }
 
 
-#if 0 // for PWM on advanced timers
-
-void pwmOCConfig(const timer_dev *dev, uint8_t channel, uint8_t flags)
-{
-    TIM_TypeDef *tim = dev->regs;
-    
-    TIM_OCInitTypeDef  TIM_OCInitStructure;
-
-    TIM_OCStructInit(&TIM_OCInitStructure);
-    TIM_OCInitStructure.TIM_OCMode = BOARD_PWM_MODE; 
-    if (flags & TIMER_OUTPUT_N_CHANNEL) {
-        TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Disable;
-        TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Enable;
-    } else {
-        TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-        TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Disable;
-    }
-    TIM_OCInitStructure.TIM_Pulse = 0; // value will be later
-    TIM_OCInitStructure.TIM_OCPolarity = (flags & TIMER_OUTPUT_INVERTED) ? TIM_OCPolarity_High : TIM_OCPolarity_Low;
-    TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
-
-    switch (channel) {
-    case TIMER_CH1:
-        TIM_OC1Init(tim, &TIM_OCInitStructure);
-        TIM_OC1PreloadConfig(tim, TIM_OCPreload_Enable);
-        break;
-    case TIMER_CH2:
-        TIM_OC2Init(tim, &TIM_OCInitStructure);
-        TIM_OC2PreloadConfig(tim, TIM_OCPreload_Enable);
-        break;
-    case TIMER_CH3:
-        TIM_OC3Init(tim, &TIM_OCInitStructure);
-        TIM_OC3PreloadConfig(tim, TIM_OCPreload_Enable);
-        break;
-    case TIMER_CH4:
-        TIM_OC4Init(tim, &TIM_OCInitStructure);
-        TIM_OC4PreloadConfig(tim, TIM_OCPreload_Enable);
-        break;
-    }
-    
-    timer_oc_set_preload(tim, channel, true);
-
-}
-#endif
-
 static void disable_channel(const timer_dev *dev, uint8_t channel) {
     timer_detach_interrupt(dev, channel);
     timer_cc_disable(dev, channel);

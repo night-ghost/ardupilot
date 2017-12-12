@@ -70,7 +70,6 @@ static inline void adc_set_reg_seqlen(const adc_dev *dev, uint8_t length) {
  */
 static inline void adc_enable(const adc_dev *dev) {
     /* Enable ADCx */
-//    ADC_Cmd(dev->adcx, ENABLE);
     /* Set the ADON bit to wake up the ADC from power down mode */
     dev->adcx->CR2 |= (uint32_t)ADC_CR2_ADON;
 }
@@ -80,7 +79,6 @@ static inline void adc_enable(const adc_dev *dev) {
  * @param dev ADC device to disable
  */
 static inline void adc_disable(const adc_dev *dev) {
-//    ADC_Cmd(dev->adcx, DISABLE);
     dev->adcx->CR2 &= (uint32_t)(~ADC_CR2_ADON);
 }
 

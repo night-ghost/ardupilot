@@ -2,8 +2,9 @@ I tried to maintain compatibility with the OpenPilot documentation. The main dif
 be Serial and external I2C port is on pins 7&8 of Input port. But this can be changed by HAL_FLEXI_I2C parameter
 
 
-Main Port - telemetry, Serial1. As a variant it can be used as SBUS input with hardware inverter (Parameter HAL_UART_SBUS)
-FlexiPort - OSD, Serial2
+Main Port        - telemetry, Serial1. As a variant it can be used as SBUS input with hardware inverter (Parameter HAL_UART_SBUS)
+FlexiPort        - OSD, Serial2
+Uart6 (pins 5&6) - GPS
 
 
 Input Port - PWM input is not supported - this is general trend
@@ -11,7 +12,7 @@ pin 1 of Input port is GND
 pin 2 of Input port is +5
 pin 3 of Input port is 1st PPM/SBUS/DSM/SUMD input or Servo9 (if you use RC via UART)
 pin 4 of Input port is 2nd PPM/SBUS/DSM/SUMD input or Servo10, also can work as RX-only UART (for GPS)
-pins 5&6 of Input port are Tx and Rx of Serial3 (for GPS)
+pins 5&6 of Input port are Tx and Rx of UART6 (for GPS - Serial3)
 pins 7&8 of Input port are SCL and SDA of external I2C (or Tx and Rx for SoftSerial if I2C moved to FlexiPort) - or Servos 7&8
 
 
@@ -58,14 +59,21 @@ All valuable info indicated by 2 LEDs of RevoMini
 Blue led: system state
  Very fast blinking                     - initializing
  Blinking                               - ready to arm
- Double blinging                        - pre-arm check failed
+ Double blinking                        - pre-arm check failed
  Solid                                  - armed
- blinking (small dark pauses) in flight - failsafe
+ blink slowly (around 2Hz) in flight    - battery failsafe
+ blink fast  (around 4Hz) in flight     - radio failsafe
+ blinking (small dark pauses)           - autotune complete
+ double darkening                       - autotune failed
+ 
 
 Green led: GPS state
  Dark: no fix
  Blinking: number of blinks shows number of sats minus 6, so if there is 10 sats LED will blink in 4 pulses
 
+special modes:
+ policy lights                          - ESC calibration or SaveTrim
+ short blinks by both LEDs              - compass calibration
 
 
 this project got donations from:

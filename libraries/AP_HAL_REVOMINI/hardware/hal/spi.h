@@ -110,7 +110,8 @@ typedef enum spi_interrupt {
  
 
 static inline void spi_peripheral_enable(const spi_dev *dev) {
-        SPI_Cmd(dev->SPIx, ENABLE);
+    //    SPI_Cmd(dev->SPIx, ENABLE);
+    dev->SPIx->CR1 |= SPI_CR1_SPE;
 }
 
 /**
@@ -119,7 +120,8 @@ static inline void spi_peripheral_enable(const spi_dev *dev) {
  */
 
 static inline void spi_peripheral_disable(const spi_dev *dev) {
-        SPI_Cmd(dev->SPIx, DISABLE);
+    //SPI_Cmd(dev->SPIx, DISABLE);
+    dev->SPIx->CR1 &= (uint16_t)~((uint16_t)SPI_CR1_SPE);
 }
 
 void spi_reconfigure(const spi_dev *dev, uint8_t ismaster, uint16_t baudPrescaler, uint16_t bitorder, uint8_t mode);
@@ -244,7 +246,7 @@ static inline uint16_t spi_dff(const spi_dev *dev) {
 }
 
 static inline uint8_t spi_is_rx_nonempty(const spi_dev *dev) {
-	return (dev->SPIx->SR & SPI_I2S_FLAG_RXNE);
+    return (dev->SPIx->SR & SPI_I2S_FLAG_RXNE);
 }
 
 static inline uint8_t spi_rx_reg(const spi_dev *dev) {
@@ -252,7 +254,7 @@ static inline uint8_t spi_rx_reg(const spi_dev *dev) {
 }
 
 static inline uint8_t spi_is_tx_empty(const spi_dev *dev) {
-	return (dev->SPIx->SR & SPI_I2S_FLAG_TXE);
+    return (dev->SPIx->SR & SPI_I2S_FLAG_TXE);
 }
 
 static inline void spi_tx_reg(const spi_dev *dev, uint8_t val) {
@@ -260,7 +262,7 @@ static inline void spi_tx_reg(const spi_dev *dev, uint8_t val) {
 }
 
 static inline uint8_t spi_is_busy(const spi_dev *dev) {
-	return (dev->SPIx->SR & SPI_I2S_FLAG_BSY);
+    return (dev->SPIx->SR & SPI_I2S_FLAG_BSY);
 }
 
 static inline void spi_wait_busy(const spi_dev *dev) {

@@ -49,7 +49,6 @@ int _kill(int pid, int sig)
 
 void _exit(int status)
 {
-//	while(1) {;}
     __error(13, status, 0);
 }
 
@@ -177,22 +176,16 @@ void cgets(char *s, int bufsize) {
         switch (c) {
         case '\r' :
         case '\n' :
-            putch('\r');
-            putch('\n');
             *p = '\n';
             return;
 
         case '\b' :
             if (p > s) {
                 *p-- = 0;
-                putch('\b');
-                putch(' ');
-                putch('\b');
             }
             break;
 
         default :
-            putch(c);
             *p++ = c;
             break;
         }

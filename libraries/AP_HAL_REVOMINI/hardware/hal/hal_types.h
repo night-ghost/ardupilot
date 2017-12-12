@@ -31,6 +31,7 @@ extern void revo_call_handler(uint64_t hh, uint32_t arg);
 
 extern uint32_t SystemCoreClock;
 extern void systemInit(uint8_t oc);
+extern uint32_t hal_micros();
 
 #ifdef __cplusplus
   }

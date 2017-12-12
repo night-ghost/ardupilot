@@ -116,49 +116,64 @@ HAL_state HAL_REVOMINI::state;
         AP_HAL::UARTDriver* _uartD, // telem2
         AP_HAL::UARTDriver* _uartE, // 2nd GPS - 
         AP_HAL::UARTDriver* _uartF, // extra1
+
+
+AP_SerialManager.cpp line 159
+    // initialise pointers to serial ports
+    state[1].uart = hal.uartC;  // serial1, uartC, normally telem1
+    state[2].uart = hal.uartD;  // serial2, uartD, normally telem2
+    state[3].uart = hal.uartB;  // serial3, uartB, normally 1st GPS
+    state[4].uart = hal.uartE;  // serial4, uartE, normally 2nd GPS
+    state[5].uart = hal.uartF;  // serial5
+
+
+
 */
+
+
+
 HAL_REVOMINI::HAL_REVOMINI() :
     AP_HAL::HAL(
-        &USB_Driver,            /* uartA - USB console */
-        &uart6Driver,           /* uartB - pin 7&8(REVO)/5&6(RevoMini) of input port - for GPS */
-        &uart1Driver,           /* uartC - main port  - for telemetry */
+        &USB_Driver,            // uartA - USB console                                         - Serial0
+        &uart6Driver,           // uartB - pin 7&8(REVO)/5&6(RevoMini) of input port - for GPS - Serial3
+        &uart1Driver,           // uartC - main port  - for telemetry                          - Serial1
 #ifdef BOARD_HAS_UART3
-        &uart3Driver,           /* uartD - flexi port */
+        &uart3Driver,           // uartD - flexi port                                          - Serial2 
 #elif defined(BOARD_SOFT_UART3)
-        &uart3Driver,           /* uartD - soft UART on pins 7&8 */
+        &uart3Driver,           // uartD - soft UART on pins 7&8 */
 #else
-        NULL,                   /* no uartD */
+        NULL,                   // no uartD 
 #endif
 
 #if defined(BOARD_OSD_NAME)
-        &uartOSDdriver,         /* uartE  - OSD emulated UART */
+        &uartOSDdriver,         // uartE  - OSD emulated UART                                  - Serial4
 #elif defined(USE_SOFTSERIAL) && defined(BOARD_SOFTSERIAL_TX) && defined(BOARD_SOFTSERIAL_RX)
         &softDriver,   /* uartE softSerial */
 #else
-        &uartPPM2,              /* uartE - input data from PPM2 pin */
+        &uartPPM2,              // uartE - input data from PPM2 pin 
 #endif
 
 
 #if FRAME_CONFIG == QUAD_FRAME && defined(BOARD_USART4_RX_PIN)
-        &uart4Driver,           /* uartF  - PWM pins 5&6 */
+        &uart4Driver,           // uartF  - PWM pins 5&6                                       - Serial5 
 #elif defined(BOARD_OSD_NAME) && defined(USE_SOFTSERIAL) && defined(BOARD_SOFTSERIAL_TX) && defined(BOARD_SOFTSERIAL_RX)
-        &softDriver,            /* uartF softSerial on boards with OSD*/
+        &softDriver,            // uartF softSerial on boards with OSD
 #else
-        &uartPPM1,              /* uartF - input data from PPM1 pin */
+        &uartPPM1,              // uartF - input data from PPM1 pin
 #endif
 
         &i2c_mgr_instance,
-        &spiDeviceManager,  /* spi */
-        &analogIn,          /* analogin */
-        &storageDriver,     /* storage */
-        &HAL_CONSOLE,       /* console via radio or USB on per-board basis */
-        &gpioDriver,        /* gpio */
-        &rcinDriver,        /* rcinput */
-        &rcoutDriver,       /* rcoutput */
-        &schedulerInstance, /* scheduler */
-        &utilInstance,	    /* util */
-        nullptr,            /* no onboard optical flow */
-        nullptr             /* no CAN */
+        &spiDeviceManager,  // spi 
+        &analogIn,          // analogin 
+        &storageDriver,     // storage 
+        &HAL_CONSOLE,       // console via radio or USB on per-board basis 
+        &gpioDriver,        // gpio 
+        &rcinDriver,        // rcinput 
+        &rcoutDriver,       // rcoutput 
+        &schedulerInstance, // scheduler 
+        &utilInstance,	    // util 
+        nullptr,            // no onboard optical flow 
+        nullptr             // no CAN 
     )
     
            //  0     1       2       3        4         5
@@ -188,6 +203,8 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
      * Scheduler should likely come first. */
 
     scheduler->init();
+    
+    uint32_t start_t = millis();
 
     gpio->init();
 
@@ -217,8 +234,6 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
             usb_init(); // moved from boards.cpp
 
             uartA->begin(115200); // uartA is the USB serial port used for the console, so lets make sure it is initialized at boot 
-//            printf("\nUSB init done at %ldms\n", millis());            
-
         }
     }
     
@@ -227,11 +242,13 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
         console->begin(57600);  // init telemetry port as console
     }
 
+
     rcin->init();
 
     storage->init(); // Uses EEPROM.*, flash_stm* reworked
     analogin->init();
 
+    printf("\nHAL startup  at %ldms\n", start_t);            
 
     if(!state.sd_busy) {
 
@@ -250,7 +267,7 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
     }
 
 
-    printf("\nHAL init done at %ldms\n", millis());            
+    printf("\nHAL init done at %ldms\n", millis());
 
     callbacks->setup();
 
@@ -301,9 +318,7 @@ static void getSerialLine(char *cp ){      // получение строки
 
         cp[cnt]=c;
         if(cnt<SERIAL_BUFSIZE) cnt++;
-
     }
-
 }
 #endif
 
@@ -434,9 +449,7 @@ void HAL_REVOMINI::lateInit() {
                     uart->begin(115200);
     
                     uart->println("send pairs 'lat,lon'");
-                    uart->println("send G to get point");
-
-                    uart->println("send S to show track point");            
+                    uart->println("send H for help");
             
                     char buffer[SERIAL_BUFSIZE];
                     float x,y;
@@ -494,7 +507,8 @@ void HAL_REVOMINI::lateInit() {
                                 uart->println("send G to get point");
 
                                 uart->println("send S to show track point");            
-                                uart->println("send C to exit this mode");            
+                                uart->println("send R to reset track");            
+                                uart->println("send C to cancel this mode");            
                                 break;
                         
                             }

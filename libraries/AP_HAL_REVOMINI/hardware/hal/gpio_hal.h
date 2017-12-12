@@ -81,12 +81,6 @@ extern void gpio_init_all(void);
  */
 extern void gpio_set_mode(const gpio_dev* const dev, uint8_t pin, gpio_pin_mode mode);
 
-/**
- * Initialize the AFIO clock, and reset the AFIO registers. 
- */
-static inline void afio_init(void) 
-{ // nothing to ddo
-}
 
 /**
  * Set the alternate function mode of a GPIO pin.

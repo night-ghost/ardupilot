@@ -27,8 +27,6 @@ extern const AP_HAL::HAL& hal;
 
 
 AP_HAL::Proc  REVOMINIScheduler::_failsafe  IN_CCM= NULL;
-volatile bool REVOMINIScheduler::_timer_suspended IN_CCM= false;
-volatile bool REVOMINIScheduler::_in_timer_proc  IN_CCM= false;
 
 Revo_IO    REVOMINIScheduler::_io_proc[REVOMINI_SCHEDULER_MAX_IO_PROCS] IN_CCM;
 uint8_t    REVOMINIScheduler::_num_io_proc IN_CCM=0;
@@ -99,10 +97,8 @@ uint64_t REVOMINIScheduler::tick_fulltime IN_CCM;  // full consumed time to calc
 
 uint32_t REVOMINIScheduler::lowest_stack = (uint32_t)-1;
 uint32_t REVOMINIScheduler::main_stack   = (uint32_t)-1;
-uint32_t REVOMINIScheduler::max_stack_pc IN_CCM ;
 #endif
 
-bool REVOMINIScheduler::disable_stack_check=false;
 
 bool REVOMINIScheduler::_in_io_proc IN_CCM =0;
 #ifdef MPU_DEBUG
@@ -263,19 +259,6 @@ void REVOMINIScheduler::_delay(uint16_t ms)
     uint32_t t=start;
 #endif
 
-#if 0
-    while (ms > 0) {
-        if (_delay_cb && _min_delay_cb_ms <= ms) { // MAVlink callback uses 5ms
-            _delay_cb();
-        } 
-        while ((dt = _micros() - start) >= 1000) {
-            ms--;
-            if (ms == 0) break;
-            start += 1000;
-            yield(0);
-        }
-    }
-#else
     uint32_t dt = ms * 1000;
     uint32_t now;
 
@@ -288,15 +271,10 @@ void REVOMINIScheduler::_delay(uint16_t ms)
         }
     }
 
-#endif
-
 
 #ifdef SHED_PROF
     uint32_t us=_micros()-t;
-    if(_in_timer_proc)
-        delay_int_time +=us;
-    else
-        delay_time     +=us;
+    delay_time     +=us;
 
 #endif
 }
@@ -335,13 +313,8 @@ void REVOMINIScheduler::_delay_microseconds(uint16_t us)
         yield(us);
 
  #ifdef SHED_PROF
-    uint32_t r_us=_micros()-t; // real time
-    
-    if(_in_timer_proc)
-        delay_int_time +=r_us;
-    else
+        uint32_t r_us=_micros()-t; // real time
         delay_time     +=r_us;
-    
  #endif
 
     }else{
@@ -361,10 +334,7 @@ void REVOMINIScheduler::_delay_us_ny(uint16_t us){ // precise no yield delay
     }    
 
 #ifdef SHED_PROF
-    if(_in_timer_proc)
-        delay_int_time +=us;
-    else
-        delay_time     +=us;
+    delay_time     +=us;
     
 #endif
 
@@ -442,12 +412,6 @@ void REVOMINIScheduler::_register_io_process(Handler h, Revo_IO_Flags flags)
 }
 
 
-
-void REVOMINIScheduler::resume_timer_procs()
-{
-    _timer_suspended = false;
-}
-
 #ifdef MTASK_PROF
 void REVOMINIScheduler::check_stack(uint32_t sp) { // check for stack usage
     
@@ -463,9 +427,7 @@ void REVOMINIScheduler::check_stack(uint32_t sp) { // check for stack usage
     // - Stacked LR  = stack[5]
     // - Stacked PC  = stack[6]
     // - Stacked xPSR= stack[7]
-    
-    if(disable_stack_check) return;
-    
+        
     if(ADDRESS_IN_CCM(sp)){
         if(_in_main_thread()){
             if(sp<main_stack) { main_stack=sp; }
@@ -479,11 +441,6 @@ void REVOMINIScheduler::check_stack(uint32_t sp) { // check for stack usage
 
 void REVOMINIScheduler::_run_timer_procs(bool called_from_isr) {
 
-    if (_in_timer_proc) {
-        return;
-    }
-    _in_timer_proc = true;
-
     // and the failsafe, if one is setted 
     if (_failsafe) {
         static uint32_t last_failsafe=0;
@@ -494,7 +451,6 @@ void REVOMINIScheduler::_run_timer_procs(bool called_from_isr) {
         }
     }
 
-    _in_timer_proc = false;
 }
 
 void REVOMINIScheduler::_timer_isr_event(uint32_t v  /* TIM_TypeDef *tim */) {
@@ -1070,9 +1026,7 @@ task_t *REVOMINIScheduler::get_next_task(){
             
         
             if(!ptr->active){ // non-active, is it periodic?
-                if(ptr->period){ 
-                    if(_timer_suspended) goto skip_task; //       timed tasks can't be started
-                
+                if(ptr->period){                 
                     timeFromLast = now - ptr->time_start; // time from last run
                     if( timeFromLast < ptr->period) {     //   is less than task's period?
                         remains = ptr->period - timeFromLast;
@@ -1129,7 +1083,7 @@ skip_task:
                 if(was_yield && task == _idle_task) { // task wants to yield() but there is no other tasks
                     was_yield=false;    // reset flag and loop again
                 } else {
-                    break;  
+                    break;  // task found
                 }
             }
         }
@@ -1183,10 +1137,6 @@ skip_task:
     return task;
 }
 
-
-void REVOMINIScheduler::context_switch_isr(){
-    timer_generate_update(TIMER14); 
-}
 
 
 /*
@@ -1345,11 +1295,13 @@ void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
     bool ret;
     switch(svc_number)    {        
     case 0:            // Handle SVC 00 - yield()
+        timer_generate_update(TIMER7); // tick is over
+        timer_pause(TIMER14);
+
         if(s_running->priority!=255){ // not for idle task
             if(s_running->ttw){ // the task voluntarily gave up its quant and wants delay, so that at the end of the delay it will have the high priority
                 s_running->curr_prio = s_running->priority - 6;
             } else {
-//                s_running->curr_prio = s_running->priority + 1; 
                 s_running->f_yield = true;      // to guarantee that quant will not return even if there is no high priority tasks
             }
         }

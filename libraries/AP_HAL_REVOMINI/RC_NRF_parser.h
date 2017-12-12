@@ -9,10 +9,12 @@
 
 #ifdef BOARD_NRF_CS_PIN
 
-#pragma GCC push_options
+/*#pragma GCC push_options
 #pragma GCC optimize ("O2")
-#include <AP_HAL/AP_HAL.h>
 #pragma GCC pop_options
+*/
+#include <AP_HAL/AP_HAL.h>
+
 
 #include "AP_HAL_REVOMINI.h"
 

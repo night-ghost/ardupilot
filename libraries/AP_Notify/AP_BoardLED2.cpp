@@ -17,7 +17,7 @@
 #include "AP_Notify.h"
 
 
-// do all on only 2 leds
+// show all status on only 2 leds
 
 #if defined(HAL_GPIO_A_LED_PIN) && defined(HAL_GPIO_B_LED_PIN) 
 

@@ -27,6 +27,14 @@
 
 #define BOARD_BUTTON_PIN     254
 
+#ifndef LOW
+# define LOW 0
+#endif
+#ifndef HIGH 
+# define HIGH 1
+#endif
+
+
 //#define BOARD_BUZZER_PIN        5 // PB15, PWM2 - used as PPM2
 
 #define BOARD_NR_USARTS         5

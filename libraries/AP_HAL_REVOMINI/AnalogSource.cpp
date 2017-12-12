@@ -57,14 +57,6 @@ REVOMINIAnalogSource::REVOMINIAnalogSource(uint8_t pin) :
     }
 }
 
-
-float REVOMINIAnalogSource::read_latest() {
-//    noInterrupts(); operation is atomary
-    uint16_t latest = _latest; 
-//    interrupts();
-    return latest;
-}
-
 /*
   return voltage from 0.0 to 3.3V, scaled to Vcc
  */
@@ -75,8 +67,7 @@ float REVOMINIAnalogSource::voltage_average(void)
 
 float REVOMINIAnalogSource::voltage_latest(void)
 {
-    float v = read_latest();
-    return v * (3.3f / 4096.0f);
+    return read_latest() * (3.3f / 4096.0f);
 }
 
 /*
@@ -128,11 +119,9 @@ float REVOMINIAnalogSource::_read_average()
     }
 
     /* Read and clear in a critical section */
-    noInterrupts(); // we do a small operation so noInterrupt is better than suspend_timer_procs()
+    EnterCriticalSection;
       _last_average = _sum / _sum_count;
-//      _sum = 0;
-//      _sum_count = 0; // lets work as free-running moving average
-    interrupts();    
+    LeaveCriticalSection;
     
     return _last_average;
 }
@@ -156,18 +145,17 @@ void REVOMINIAnalogSource::setup_read() {
 	adc_set_reg_seqlen(dev, 1);
 
 	  /* Enable Vrefint on Channel17 */
-	ADC_RegularChannelConfig(ADC1, ADC_Channel_17, 1, ADC_SampleTime_84Cycles);
+	ADC_RegularChannelConfig(dev->adcx, ADC_Channel_17, 1, ADC_SampleTime_84Cycles);
 	ADC_TempSensorVrefintCmd(ENABLE);
-	  /* Wait until ADC + Temp sensor start */
 
+	  /* Wait until ADC + Temp sensor start */
         REVOMINIScheduler::_delay_microseconds(10);
 
     } else if (_pin == ANALOG_INPUT_NONE) {
         // nothing to do
     } else if(dev != NULL && _pin < BOARD_NR_GPIO_PINS) {
 	adc_set_reg_seqlen(dev, 1);
-	uint8_t channel = 0;
-	channel = PIN_MAP[_pin].adc_channel;
+	uint8_t channel = PIN_MAP[_pin].adc_channel;
         ADC_RegularChannelConfig(dev->adcx, channel, 1, ADC_SampleTime_84Cycles);
 	adc_enable(dev);
     }
@@ -195,22 +183,23 @@ bool REVOMINIAnalogSource::reading_settled()
     return true;
 }
 
-/* new_sample is called from an interrupt. It always has access to
- *  _sum and _sum_count. Lock out the interrupts briefly with
- * noInterrupts()/interrupts() to read these variables from outside an interrupt. */
+/* new_sample is called from another process */
 void REVOMINIAnalogSource::new_sample(uint16_t sample) {
-    _sum += sample;
     _latest = sample;
+
+    EnterCriticalSection;
+    _sum += sample;
 
 //#define MAX_SUM_COUNT 16 // a legacy of the painfull 8-bit past
 #define MAX_SUM_COUNT 64
 
     if (_sum_count >= MAX_SUM_COUNT) { // REVOMINI has a 12 bit ADC, so can only sum 16 in a uint16_t - and a 16*65536 in uint32_t
-        _sum >>= 1;
-        _sum_count = (MAX_SUM_COUNT/2);
+        _sum /= 2;
+        _sum_count = MAX_SUM_COUNT/2;
     } else {
         _sum_count++;
     }
+    LeaveCriticalSection;
 }
 
 #endif 

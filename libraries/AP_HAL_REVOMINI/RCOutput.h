@@ -109,6 +109,9 @@ private:
     static uint8_t _pwm_type;
     static float _freq_scale;
 
+    static const timer_dev* out_timers[16]; // array of timers, used to rc_out
+    static uint8_t num_out_timers;
 
+    static void fill_timers(); 
 };
 

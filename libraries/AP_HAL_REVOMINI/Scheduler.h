@@ -2,10 +2,9 @@
 #define __AP_HAL_REVOMINI_SCHEDULER_H__
 
 
-#pragma GCC push_options
-#pragma GCC optimize ("O2")
+//#pragma GCC optimize ("O2")
+
 #include <AP_HAL/AP_HAL.h>
-#pragma GCC pop_options
 
 
 #include "AP_HAL_REVOMINI_Namespace.h"
@@ -19,7 +18,7 @@
 #include <systick.h>
 #include <boards.h>
 #include <timer.h>
-#include <setjmp.h>
+//#include <setjmp.h>
 
 #define REVOMINI_SCHEDULER_MAX_IO_PROCS 10
 
@@ -179,21 +178,20 @@ public:
 
     REVOMINIScheduler();
     void     init();
-    void     delay(uint16_t ms) { _delay(ms); } // uses internal static methods
-    void     delay_microseconds(uint16_t us) { _delay_microseconds(us); }
-    void     delay_microseconds_boost(uint16_t us) override { _delay_microseconds_boost(us); }
+    inline void     delay(uint16_t ms) { _delay(ms); } // uses internal static methods
+    inline void     delay_microseconds(uint16_t us) { _delay_microseconds(us); }
+    inline void     delay_microseconds_boost(uint16_t us) override { _delay_microseconds_boost(us); }
     
     inline   uint32_t millis() {    return AP_HAL::millis(); } // this allows to run io_proc without calls to delay()
     inline   uint32_t micros() {    return _micros(); }
     
-    void     register_timer_process(AP_HAL::MemberProc proc) { _register_timer_process(proc, 1000); }
-    inline void  suspend_timer_procs(){     _timer_suspended = true; }
+    inline void register_timer_process(AP_HAL::MemberProc proc) { _register_timer_process(proc, 1000); }
+    inline void suspend_timer_procs(){}
+    inline void resume_timer_procs() {}
 
     void     register_delay_callback(AP_HAL::Proc, uint16_t min_time_ms);
     static void  _register_io_process(Handler h, Revo_IO_Flags flags);
     void          register_io_process(AP_HAL::MemberProc proc) { Revo_handler h = { .mp=proc }; _register_io_process(h.h, IO_PERIODIC); }
-
-    void     resume_timer_procs();
 
 
     static inline void     _register_timer_process(AP_HAL::MemberProc proc, uint32_t period) {
@@ -202,22 +200,19 @@ public:
         _register_timer_task(period, r.h, NULL);
     }
 
-    
-    inline bool in_timerprocess() {   return _in_timer_proc; }
+    inline bool in_timerprocess() {   return false; }
 
-    static inline bool _in_timerprocess() {   return _in_timer_proc; }
-
-    void     register_timer_failsafe(AP_HAL::Proc failsafe, uint32_t period_us) {   /* XXX Assert period_us == 1000 */  _failsafe = failsafe; }
+    void inline register_timer_failsafe(AP_HAL::Proc failsafe, uint32_t period_us) { _failsafe = failsafe; }
 
     void     system_initialized();
 
     static void _reboot(bool hold_in_bootloader);
-    void     reboot(bool hold_in_bootloader);
+    void        reboot(bool hold_in_bootloader);
 
-    bool in_main_thread() const override { return _in_main_thread(); }
+    inline bool in_main_thread() const override { return _in_main_thread(); }
 
 // drivers are not the best place for its own sheduler so let do it here
-    static AP_HAL::Device::PeriodicHandle register_timer_task(uint32_t period_us, AP_HAL::Device::PeriodicCb proc, REVOMINI::Semaphore *sem) {
+    static inline AP_HAL::Device::PeriodicHandle register_timer_task(uint32_t period_us, AP_HAL::Device::PeriodicCb proc, REVOMINI::Semaphore *sem) {
         Revo_handler r = { .pcb=proc };
         return _register_timer_task(period_us, r.h, sem);
     }
@@ -310,38 +305,31 @@ public:
     task->active=true; 
 }
 
+    // do context switch after return from interrupt
+    static inline void context_switch_isr(){    timer_generate_update(TIMER14);    }
+
+
 #if defined(MTASK_PROF)
-  static void inline task_pause(uint16_t t) {   // called from task when it starts DMA transfer
-      s_running->ttw=t;
-      s_running->sem_start_wait=_micros();
-      s_running->count_paused++;
-  }                    
-  static void inline task_resume(void *h) {   // called from IO_Complete ISR to resume task
-      task_t * task = (task_t*)h; 
-      task->ttw=0;  
-      task->active=true;
-#if 0
-      task->curr_prio = 70;
-      context_switch_isr();
-#else
+    static void inline task_pause(uint16_t t) {   // called from task when it starts DMA transfer
+        s_running->ttw=t;
+        s_running->sem_start_wait=_micros();
+        s_running->count_paused++;
+    }                    
+    static void inline task_resume(void *h) {   // called from IO_Complete ISR to resume task
+        task_t * task = (task_t*)h; 
+        task->ttw=0;  
+        task->active=true;
         _forced_task = task; // force it. Tus we exclude loop to select task
         context_switch_isr();
-#endif 
-      uint32_t dt= _micros() - task->sem_start_wait;
-      task->t_paused += dt;
-  } 
+        uint32_t dt= _micros() - task->sem_start_wait;
+        task->t_paused += dt;
+    } 
 #else
-  static void inline task_pause(uint16_t t) {   s_running->ttw=t;  }  // called from task when it starts IO transfer
-  static void inline task_resume(void *h)   {    // called from IO_Complete ISR to resume task, and will get 1st quant 100%
-      task_t * task = (task_t*)h; 
-#if 0
-      task->curr_prio = 70;
-      context_switch_isr();
-#else
+    static void inline task_pause(uint16_t t) {   s_running->ttw=t;  }  // called from task when it starts IO transfer
+    static void inline task_resume(void *h)   {    // called from IO_Complete ISR to resume task, and will get 1st quant 100%
+        task_t * task = (task_t*)h; 
         _forced_task = task; // force it
         context_switch_isr();
-#endif 
-
   } 
 #endif
 //]  
@@ -371,14 +359,6 @@ public:
     }
 
     static void SVC_Handler(uint32_t * svc_args); // many functions called via SVC for hardware serialization
-
-    // execute callback at SVC level
-    static inline void do_in_critical_section(Handler h){ 
-        asm volatile("svc 4\r\n");
-    }
-    static inline void do_in_critical_section(Handler h, uint32_t arg){ 
-        asm volatile("svc 4\r\n");
-    }
 //}
 
 
@@ -406,9 +386,6 @@ public:
     }
 
     static void exec_io_completion();
-
-    // do context switch after return from interrupt
-    static void context_switch_isr();
 
     static volatile bool need_io_completion;
     static volatile bool need_switch_task;   // should be public
@@ -499,8 +476,6 @@ protected:
 private:
     static AP_HAL::Device::PeriodicHandle _register_timer_task(uint32_t period_us, Handler proc, REVOMINI::Semaphore *sem);
 
-    static volatile bool _in_timer_proc;
-
     static AP_HAL::Proc _delay_cb;
     static void * _delay_cb_handle;
     static uint16_t _min_delay_cb_ms;
@@ -521,7 +496,6 @@ private:
     
     static AP_HAL::Proc _failsafe;
 
-    static volatile bool _timer_suspended;
     static volatile bool _timer_event_missed;
     static uint32_t _scheduler_last_call;
 
@@ -573,9 +547,6 @@ private:
 
     static uint32_t lowest_stack;
     static uint32_t main_stack;
-    static bool disable_stack_check;
-    static uint32_t max_stack_pc;
-
     
     static struct IO_COMPLETION io_completion[MAX_IO_COMPLETION];
 

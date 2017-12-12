@@ -66,20 +66,8 @@ void SerialDriver::begin(uint32_t baud) {
 
 
 void SerialDriver::rxSetCapture(){
-#if 0
-    TIM_ICInitTypeDef TIM_ICInitStructure;
-
-    // input capture ************************************************************/
-    TIM_ICInitStructure.TIM_Channel     = (channel-1)*4;
-    TIM_ICInitStructure.TIM_ICPolarity  = _inverse?TIM_ICPolarity_Rising:TIM_ICPolarity_Falling; // wait for start bit
-    TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
-    TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
-    TIM_ICInitStructure.TIM_ICFilter    = 0x3;
-    TIM_ICInit(timer->regs, &TIM_ICInitStructure);
-#else
     timer_ic_set_mode(timer, channel, TIM_ICSelection_DirectTI | TIM_ICPSC_DIV1, 3);
     timer_cc_set_pol(timer,  channel, _inverse?TIMER_POLARITY_RISING:TIMER_POLARITY_FALLING);
-#endif
 }
 
 void SerialDriver::rxSetCompare(){

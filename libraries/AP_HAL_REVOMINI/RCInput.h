@@ -1,7 +1,7 @@
 #ifndef __AP_HAL_REVOMINI_RCINPUT_H__
 #define __AP_HAL_REVOMINI_RCINPUT_H__
 
-#pragma GCC optimize ("O2")
+//#pragma GCC optimize ("O2")
 #include <AP_HAL/AP_HAL.h>
 
 #include "AP_HAL_REVOMINI.h"

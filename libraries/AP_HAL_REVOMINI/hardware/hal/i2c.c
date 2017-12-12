@@ -1,14 +1,12 @@
 #pragma GCC optimize ("O2")
 
 #include "i2c.h"
-//#include "dma.h"
+#include "dma.h"
 #include "systick.h"
 #include "stm32f4xx_i2c.h"
 #include "stm32f4xx_dma.h"
 
 
-
-#define I2C_Yield(x) hal_yield(x)
 
 static i2c_state i2c1_state IN_CCM;
 static i2c_state i2c2_state IN_CCM;
@@ -226,7 +224,7 @@ again:
     /* Wait for any clock stretching to finish */
     while (!gpio_read_bit(dev->gpio_port, dev->scl_pin)) {// device can output 1 so check clock first
         if(systick_uptime()-t > MAX_I2C_TIME) return false;
-        I2C_Yield(10);
+        hal_yield(10);
     }
     delay_10us();	// 50kHz
 
@@ -234,7 +232,7 @@ again:
         /* Wait for any clock stretching to finish */
         while (!gpio_read_bit(dev->gpio_port, dev->scl_pin)){
             if(systick_uptime()-t > MAX_I2C_TIME) return false;
-            I2C_Yield(10);
+            hal_yield(10);
         }
         delay_10us();	// 50kHz
 
@@ -267,7 +265,7 @@ again:
 // datasheet: It indicates a communication in progress on the bus. This information is still updated when the interface is disabled (PE=0).
 
     dev->I2Cx->CR1 |= I2C_CR1_SWRST;           // set SoftReset for some time 
-    I2C_Yield(0);
+    hal_yield(0);
     dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_SWRST); // clear SoftReset flag 
     return true;
 }

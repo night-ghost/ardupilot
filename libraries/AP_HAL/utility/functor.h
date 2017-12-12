@@ -84,3 +84,4 @@ private:
         return (t->*method)(args...);
     }
 };
+

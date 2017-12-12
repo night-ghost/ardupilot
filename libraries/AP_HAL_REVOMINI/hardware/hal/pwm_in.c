@@ -46,7 +46,7 @@ also see https://github.com/mahowik/MahoRotorF4-Discovery/blob/master/src/drv/dr
 /**************** PWM INPUT **************************************/
 
 // Forward declaration
-static inline void pwmIRQHandler(uint32_t v/*TIM_TypeDef *tim */);
+static void pwmIRQHandler(uint32_t v/*TIM_TypeDef *tim */);
 
 static void pwmInitializeInput(uint8_t ppmsum);
 
@@ -153,7 +153,6 @@ static inline void pwmInitializeInput(uint8_t ppmsum){
 
         timer_cc_enable( timer, p->timer_channel); // enable capture
 
-        // timer_enable *****************************************************************
         timer_resume(timer);
 
         // enable the CC interrupt request **********************************************

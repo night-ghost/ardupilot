@@ -12,19 +12,6 @@
 
 using namespace REVOMINI;
 
-REVOMINIGPIO::REVOMINIGPIO()
-{
-}
-
-
-void REVOMINIGPIO::init() 
-{
-    gpio_init_all();
-
-    afio_init(); // empty
-}
-
-
 void REVOMINIGPIO::_pinMode(uint8_t pin, uint8_t mode)
 {
     gpio_pin_mode outputMode;

@@ -88,7 +88,7 @@ void exti_attach_interrupt(afio_exti_num num,
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
 	EXTI_Init(&EXTI_InitStructure);
 
-	/* Enable and set EXTI Line Interrupt to the lowest priority */
+	/* Enable and set EXTI Line Interrupt priority */
         enable_nvic_irq(exti_channels[num].irq_type, GPIO_INT_PRIORITY);  // we init NVIC for 4 bit preemption,  0 bit subpriority 
 
 }

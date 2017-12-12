@@ -52,10 +52,11 @@ public:
 
     REVOMINIAnalogSource(uint8_t pin);
     float read_average() { return _read_average(); }
-    float read_latest();
+    inline float read_latest() {  return _latest;  }
+    
     void set_pin(uint8_t p);
-    void inline set_stop_pin(uint8_t pin) {     _stop_pin = pin; }
-    void set_settle_time(uint16_t settle_time_ms) {  _settle_time_ms = settle_time_ms; }
+    inline void set_stop_pin(uint8_t pin) {     _stop_pin = pin; }
+    inline void set_settle_time(uint16_t settle_time_ms) {  _settle_time_ms = settle_time_ms; }
     float voltage_average();
     float voltage_latest();
     float voltage_average_ratiometric();
@@ -78,7 +79,7 @@ public:
      * implements read_average(), unscaled. */
     float _read_average();
 
-    int16_t get_pin() { return _pin; };
+    inline int16_t get_pin() { return _pin; };
 protected:
     const inline adc_dev* _find_device() {    return _ADC1;  }
     inline bool initialized() { return _init_done;}
@@ -92,8 +93,7 @@ private:
     /* _pin designates the ADC input mux for the sample */
     uint8_t _pin;
 
-    /* _stop_pin designates a digital pin to use for
-       enabling/disabling the analog device */
+    /* _stop_pin designates a digital pin to use for enabling/disabling the analog device */
     uint8_t _stop_pin;
     uint16_t _settle_time_ms;
     uint32_t _read_start_time_ms;
@@ -101,11 +101,6 @@ private:
 
 };
 
-/*
-    voltage pin is PC2 - 12
-    current pin is PC1 - 11
-
-*/
 
 class REVOMINI::REVOMINIAnalogIn : public AP_HAL::AnalogIn {
 public:

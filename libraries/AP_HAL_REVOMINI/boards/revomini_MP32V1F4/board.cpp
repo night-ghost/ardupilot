@@ -64,7 +64,7 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     {&gpiof,   NULL, NULL, 11, 0, ADCx}, /* D44/PF11 4*/
     {&gpiob, &timer3,&_adc1,1, 4,    9}, /* D45/PB1  5  SERVO2 */
     {&gpiob, &timer3,&_adc1,0, 3,    8}, /* D46/PB0  6  SERVO1 */
-    {&gpioa, &timer2,&_adc1,0, 1,    0}, /* D47/PA0  7  SERVO6 / UART4_TX */
+    {&gpioa, &timer2,&_adc1,0, 1,    0}, /* D47/PA0  7  SERVO6 / UART4_TX Also can be mapped to Timer5 */ 
     {&gpioa, &timer2,&_adc1,1, 2,    1}, /* D48/PA1  8  SERVO5 / UART4_RX */
     {&gpioa, &timer2,&_adc1,2, 3,    2}, /* D49/PA2  9  SERVO4 */
     {&gpioa, &timer2,&_adc1,3, 4,    3}, /* D50/PA3  50 SERVO3 */

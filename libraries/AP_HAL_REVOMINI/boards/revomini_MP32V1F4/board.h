@@ -23,6 +23,12 @@
 #define STM32_PCLK1   (CYCLES_PER_MICROSECOND*1000000/4)
 #define STM32_PCLK2   (CYCLES_PER_MICROSECOND*1000000/2)
 
+#ifndef LOW
+# define LOW 0
+#endif
+#ifndef HIGH 
+# define HIGH 1
+#endif
 
 #define BOARD_BUTTON_PIN        254 // no button
 
@@ -293,7 +299,6 @@
     AP_GROUPINFO("CONNECT_ESC",  6, AP_Param_Helper, _connect_esc, 0), \
     AP_GROUPINFO("FLEXI_I2C",    7, AP_Param_Helper, _flexi_i2c, 0), \
     AP_GROUPINFO("PWM_TYPE",     8, AP_Param_Helper, _pwm_type, 0), \
-    AP_GROUPINFO("DBG_WAYBACK",  9, AP_Param_Helper, _dbg_wayback, 0), \
     AP_GROUPINFO("USB_STORAGE",  10, AP_Param_Helper, _usb_storage, 0), \
     AP_GROUPINFO("TIME_OFFSET",  11, AP_Param_Helper, _time_offset, 0), \
     AP_GROUPINFO("CONSOLE_UART", 12, AP_Param_Helper, _console_uart, HAL_CONSOLE_PORT), \
@@ -314,7 +319,6 @@
     AP_Int8 _uart_sbus; \
     AP_Int8 _flexi_i2c; \
     AP_Int8 _pwm_type; \
-    AP_Int8 _dbg_wayback; \
     AP_Int8 _usb_storage; \
     AP_Int8 _time_offset; \
     AP_Int8 _console_uart; \

@@ -379,10 +379,10 @@ void USB_OTG_BSP_DisableInterrupt()
 
 void USB_OTG_BSP_mDelay (const uint32_t msec)
 {
-    uint32_t start = systick_micros(), ms = msec;
+    uint32_t start = hal_micros(), ms = msec;
 
     while (ms > 0) {
-        while ((systick_micros() - start) >= 1000) {
+        while ((hal_micros() - start) >= 1000) {
             ms--;
             if (ms == 0) break;
             start += 1000;

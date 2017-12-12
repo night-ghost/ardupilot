@@ -12,6 +12,9 @@ the shortest way to home via visited points.
 
 #pragma GCC optimize ("O2")
 
+
+#define WAYBACK_PRIORITY 116 // speed 1/16 of main task
+
 #include "AP_WayBack.h"
 #include <GCS_MAVLink/GCS.h>
 
@@ -97,7 +100,7 @@ void AP_WayBack::init()
 #if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
     _task = REVOMINIScheduler::start_task(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void), 2048);
     if(_task){
-        REVOMINIScheduler::set_task_priority(_task, 116); // max speed 1/16 of main task
+        REVOMINIScheduler::set_task_priority(_task, WAYBACK_PRIORITY); // max speed 1/16 of main task
         REVOMINIScheduler::set_task_period(_task, 100000); // setting of period allows task to run
         initialized=true;
     }
@@ -135,7 +138,7 @@ DBG_PRINTF("\nAP_WayBack: allocating memory for %d poins\n", max_num_points);
                 break;
             }
             max_num_points = (max_num_points*3) / 4; // no memory - try to reduce number of points
-            if(sz==0) {
+            if(max_num_points<200) {
                 gcs().send_text(MAV_SEVERITY_CRITICAL, "AP_WayBack: failed to allocated memory!");
                 return false; // no memory at all
             }
@@ -157,8 +160,8 @@ DBG_PRINTF("\nAP_WayBack: allocating memory for %d poins\n", max_num_points);
 #if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
         _task = REVOMINIScheduler::start_task(FUNCTOR_BIND_MEMBER(&AP_WayBack::tick, void), 2048);
         if(_task){
-            REVOMINIScheduler::set_task_priority(_task, 116); // max speed 1/16 of main task
-            REVOMINIScheduler::set_task_period(_task, 100000); // setting of period allows task to run
+            REVOMINIScheduler::set_task_priority(_task, WAYBACK_PRIORITY); // max speed 1/16 of main task
+            REVOMINIScheduler::set_task_period(_task, 100000); // setting of period allows task to run, 10Hz
             initialized=true;
         } else return false; // no stack space to start a task
 #else
@@ -227,7 +230,6 @@ void AP_WayBack::push_point(Vector3f p){
 #if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
     REVOMINIScheduler::task_resume(_task); // resume task because there is new point
 #endif
-    
 
 }
 
@@ -391,9 +393,7 @@ again:
             uint16_t left = (p1-last_raw_point);
             if(left > removed) left-=removed;
             else               left=0;
-            
-//            if(was_reduce) last_point=p1; 
-                            
+                                        
             if(p1 > removed) p1-=removed; // we will remove points before next step! so convert to absolute index
             hi_loop_border = p1;          // check for loops up to here
             last_raw_point = p1;
@@ -433,7 +433,7 @@ again:
             uint16_t sb=0;
             
             if(p1>p0){
-    DBG_PRINT("check loop ");     DBG_PRINTVAR(p0);    DBG_PRINTVARLN(p1);
+//    DBG_PRINT("check loop ");     DBG_PRINTVAR(p0);    DBG_PRINTVARLN(p1);
 
                 sb = try_remove_loop(p0, p1);
             }
@@ -611,7 +611,7 @@ uint16_t AP_WayBack::try_remove_loop(uint16_t sb, uint16_t se) { // begin and en
             points[i]=p;        // replace 2nd point of 1st segment by point of intersection        
             removePoints(i+1,se); // remove all points up to 2nd point of 2nd segment
 
-            DBG_PRINT("loop found at ");       DBG_PRINTVARLN(i);
+//            DBG_PRINT("loop found at ");       DBG_PRINTVARLN(i);
             return i;  // point of intersection
         
         } else if(_params.blind_shortcut) { // try to treat close points as intersecting
@@ -638,7 +638,7 @@ uint16_t AP_WayBack::try_remove_loop(uint16_t sb, uint16_t se) { // begin and en
                     points[i]=p;
                     removePoints(i+1,ep); // remove all points up to 2nd point of 2nd segment
 
-                    DBG_PRINT("close to 1seg at ");       DBG_PRINTVARLN(i);
+//                    DBG_PRINT("close to 1seg at ");       DBG_PRINTVARLN(i);
                     return i;  // point of intersection
 
                 }else {  // point on 2nd segment
@@ -649,7 +649,7 @@ uint16_t AP_WayBack::try_remove_loop(uint16_t sb, uint16_t se) { // begin and en
                     points[sb]=p;       // replace 1st point of 2nd segment with intersection
                     removePoints(sp+1, sb); // remove all points up to 2nd point of 2nd segment
 
-                    DBG_PRINT("close to 2seg at ");       DBG_PRINTVARLN(sp);
+//                    DBG_PRINT("close to 2seg at ");       DBG_PRINTVARLN(sp);
                     return sp;  // point of intersection
                 }
             }
@@ -833,7 +833,7 @@ bool AP_WayBack::reumannWitkam_simplify(uint16_t key, uint16_t end){
         while (test < end) {
             float dist= find_perpendicular_distance(points[test], points[key], points[key+1]);
 
-    DBG_PRINTVAR(dist); DBG_PRINTVARLN(test);
+//    DBG_PRINTVAR(dist); DBG_PRINTVARLN(test);
             
             if( dist > _epsilon) break;
             test++;
@@ -851,7 +851,7 @@ bool AP_WayBack::removePoints(uint16_t start, uint16_t end){
 
     if(start>=end) return ret; // to remove empty messages
 
-DBG_PRINT("remove poins "); DBG_PRINTVARLN(start); DBG_PRINTVARLN(end);
+//DBG_PRINT("remove poins "); DBG_PRINTVARLN(start); DBG_PRINTVARLN(end);
 
     while(start<end){
         ret=true;
@@ -887,7 +887,7 @@ void AP_WayBack::squizze(){
     if(!gap_found) return; // в массиве нет дыр
     
 
-DBG_PRINT("squizze"); DBG_PRINTVAR(wp); DBG_PRINTVAR(rp); DBG_PRINTVARLN(num_points);
+//DBG_PRINT("squizze"); DBG_PRINTVAR(wp); DBG_PRINTVAR(rp); DBG_PRINTVARLN(num_points);
 
 
     for(;rp<num_points; rp++){          // scan for points
@@ -899,7 +899,7 @@ DBG_PRINT("squizze"); DBG_PRINTVAR(wp); DBG_PRINTVAR(rp); DBG_PRINTVARLN(num_poi
     num_points = wp;
     points_count = num_points;  // all points are good
 
-DBG_PRINT("new");  DBG_PRINTVARLN(num_points);
+//DBG_PRINT("new");  DBG_PRINTVARLN(num_points);
 
 }
 

@@ -1038,43 +1038,6 @@ static inline void timer_oc_set_mode(const timer_dev *dev,
 
 
 
-/*
-    TI1_Config(TIMx, TIM_ICInitStruct->TIM_ICPolarity, TIM_ICInitStruct->TIM_ICSelection,   TIM_ICInitStruct->TIM_ICFilter);
-   
-    // Set the Input Capture Prescaler value 
-    TIM_SetIC1Prescaler(TIMx, TIM_ICInitStruct->TIM_ICPrescaler);
-
-static void TI1_Config(TIM_TypeDef* TIMx, uint16_t TIM_ICPolarity, uint16_t TIM_ICSelection, uint16_t TIM_ICFilter)
-{
-  
-  // Disable the Channel 1: Reset the CC1E Bit 
-  TIMx->CCER &= (uint16_t)~TIM_CCER_CC1E;
-  uint16_t tmpccmr1 = TIMx->CCMR1;
-  uint16_t tmpccer = TIMx->CCER;
-
-  // Select the Input and set the filter 
-  tmpccmr1 &= ((uint16_t)~TIM_CCMR1_CC1S) & ((uint16_t)~TIM_CCMR1_IC1F);
-  tmpccmr1 |= (uint16_t)(TIM_ICSelection | (uint16_t)(TIM_ICFilter << (uint16_t)4));
-
-  // Select the Polarity and set the CC1E Bit 
-  tmpccer &= (uint16_t)~(TIM_CCER_CC1P | TIM_CCER_CC1NP);  
-  tmpccer |= (uint16_t)(TIM_ICPolarity | (uint16_t)TIM_CCER_CC1E);
-
-  // Write to TIMx CCMR1 and CCER registers 
-  TIMx->CCMR1 = tmpccmr1;
-  TIMx->CCER = tmpccer;
-}
-
-void TIM_SetIC1Prescaler(TIM_TypeDef* TIMx, uint16_t TIM_ICPSC)
-{
-  // Reset the IC1PSC Bits 
-  TIMx->CCMR1 &= (uint16_t)~TIM_CCMR1_IC1PSC;
-
-  // Set the IC1PSC value 
-  TIMx->CCMR1 |= TIM_ICPSC;
-}
-*/
-
 /**
  * @brief Configure a channel's input capture mode.
  *
