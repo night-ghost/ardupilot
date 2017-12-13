@@ -81,4 +81,6 @@ this project got donations from:
 * Sebastian Thoem
 * Alexander Malishev
 * Alexandr Kuzmitski
+* Gediminas Ustinavicius
+* Thomas Jorgensen
 

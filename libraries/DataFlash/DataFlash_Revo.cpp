@@ -432,9 +432,6 @@ bool DataFlash_Revo::_sem_take(uint8_t timeout)
 
     if(!_spi_sem || flash_died) return false;
 
-    if (REVOMINIScheduler::_in_timerprocess()) {
-        return _spi_sem->take_nonblocking();
-    }
     return _spi_sem->take(timeout);
 }
 
