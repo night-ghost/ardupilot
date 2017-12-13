@@ -10,7 +10,7 @@
 #ifdef USB_MASSSTORAGE
 
 /*
-    also see https://habrahabr.ru/post/335018/ and 
+    also see https://habrahabr.ru/post/335018/ and https://habrahabr.ru/post/336968/
 
 */
 
@@ -19,7 +19,7 @@ uint32_t MAL_massBlockCount[STORAGE_LUN_NBR];
 uint32_t MAL_massBlockSize[STORAGE_LUN_NBR];
 
 
-extern USB_OTG_CORE_HANDLE           USB_OTG_dev;
+extern USB_OTG_CORE_HANDLE       USB_OTG_dev;
 
 
 void MassStorage::setup() const {
@@ -35,7 +35,6 @@ void MassStorage::setup() const {
     usb_attr.present_pin =  PIN_MAP[BOARD_USB_SENSE].gpio_bit;
 
     usb_setParams(&usb_attr);
-
 
 
     SdFatFs *fs = SD.getVolume();

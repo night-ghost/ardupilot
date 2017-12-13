@@ -13,7 +13,7 @@ extern "C" {
 
 #include "msc/usbd_msc_core.h"
 
-#define USB_MASS_MAL_FAIL    -1
+#define USB_MASS_MAL_FAIL   -1
 #define USB_MASS_MAL_SUCCESS 0
 
 
