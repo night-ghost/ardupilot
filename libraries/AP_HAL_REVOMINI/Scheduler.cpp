@@ -650,8 +650,8 @@ void REVOMINIScheduler::_print_stats(){
             uint32_t bottom   = (uint32_t)&_sdata;
             
             // 48K after boot 72K while logging on
-            printf("\nMemory used: static %ldk full %ldk:\n",((uint32_t)&_edata-bottom+1023)/1024, (heap_ptr-bottom+1023)/1024);
-            printf("Free stack: %ldk:\n",(lowest_stack - (uint32_t)&_eccm)/1024);
+            printf("\nMemory used: static %ldk full %ldk\n",((uint32_t)&_edata-bottom+1023)/1024, (heap_ptr-bottom+1023)/1024);
+            printf("Free stack: %ldk\n",(lowest_stack - (uint32_t)&_eccm)/1024);
             printf("Main stack use: %ldk\n",((uint32_t)&_sccm + 0x10000 /* 64K CCM */ - main_stack)/1024);
             printf("CCM use: %ldk\n",((uint32_t)__brkval_ccm - (uint32_t)&_sccm)/1024);
 

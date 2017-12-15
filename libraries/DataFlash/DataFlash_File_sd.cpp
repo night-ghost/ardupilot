@@ -228,10 +228,6 @@ uint16_t DataFlash_File::find_oldest_log()
         }
 
         uint16_t thisnum = strtoul(nm, nullptr, 10);
-//        if (thisnum > MAX_LOG_FILES) {
-//            // ignore files above our official maximum...
-//            continue;
-//        }
         if (current_oldest_log == 0) {
             current_oldest_log = thisnum;
         } else {
@@ -1033,8 +1029,24 @@ void DataFlash_File::_io_timer(void)
                     return; 
                 }
             }
-        }
+        } else 
 #endif
+        {
+            _initialised = false; // Prep_MinSpace requires a long time and 1s task will kill process
+            Prep_MinSpace();
+            _initialised = true;
+            start_new_log();             // re-open logging
+            if(_write_fd) {             // success?
+                nwritten = _write_fd.write(head, nbytes); // ok, try to write again
+                if(nwritten>0) {                        // if ok 
+                    _write_offset += nwritten;          //   then mark data as written
+                    _writebuf.advance(nwritten);
+                    _write_fd.sync();                   //   and fix it on SD
+                    return; 
+                }
+            }
+        }
+        
 
         _initialised = false;
     } else {
@@ -1047,6 +1059,9 @@ void DataFlash_File::_io_timer(void)
           write.
          */
         _write_fd.sync();
+        
+    // TODO limit file size in some MBytes and reopen new log file
+        
     }
 }
 

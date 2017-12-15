@@ -32,7 +32,7 @@
 #include <gpio_hal.h>
 #include "GPIO.h"
 #include "Scheduler.h"
-
+#include "c++.h"
 
 extern const AP_HAL::HAL& hal;
 
