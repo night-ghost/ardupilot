@@ -114,7 +114,7 @@
 * working PPM on AirbotV2/V3
 * buzzer support
 * added ability to connect buzzer to arbitrary pin (parameter BUZZ_PIN)
-* added priority to SPI DMA transfers
+* added priority to SPI DMA transfers, to prevent such issues - https://github.com/betaflight/betaflight/issues/2631
 * overclocking support
 * OSD is working
 * 'boards' folder moved from 'wirish' to HAL directory, to help to find them

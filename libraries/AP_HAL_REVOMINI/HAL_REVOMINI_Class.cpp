@@ -48,7 +48,7 @@ using namespace REVOMINI;
 static REVOMINI::I2CDeviceManager i2c_mgr_instance;
 
 // XXX make sure these are assigned correctly
-static USBDriver USB_Driver(1);                 // ACM
+static USBDriver          USB_Driver(1);        // ACM
 static REVOMINIUARTDriver uart1Driver(_USART1); // main port
 static REVOMINIUARTDriver uart6Driver(_USART6); // pin 7&8(REVO)/5&6(RevoMini) of input port
 
@@ -56,9 +56,8 @@ static REVOMINIUARTDriver uart6Driver(_USART6); // pin 7&8(REVO)/5&6(RevoMini) o
 
 #ifdef BOARD_HAS_UART3
  static REVOMINIUARTDriver uart3Driver(_USART3); // flexi port
-#elif defined(BOARD_SOFT_UART3)
- static SerialDriver IN_CCM uart3Driver(BOARD_SOFTSERIAL_TX, BOARD_SOFTSERIAL_RX, false); // soft UART on pins 7&8 of input port
-#elif defined(USE_SOFTSERIAL)
+// static SerialDriver IN_CCM softDriver(BOARD_SOFTSERIAL_TX, BOARD_SOFTSERIAL_RX, false);  // pin 7&8 of input port
+#elif defined(BOARD_SOFT_UART3) || defined(USE_SOFTSERIAL)
  static SerialDriver IN_CCM softDriver(BOARD_SOFTSERIAL_TX, BOARD_SOFTSERIAL_RX, false);  // pin 7&8 of input port
 #endif
 
@@ -67,7 +66,7 @@ static REVOMINIUARTDriver uart6Driver(_USART6); // pin 7&8(REVO)/5&6(RevoMini) o
  static UART_OSD uartOSDdriver;
 #endif
 
-#if FRAME_CONFIG == QUAD_FRAME && defined(BOARD_USART4_RX_PIN) && defined( BOARD_USART4_TX_PIN)
+#if /* FRAME_CONFIG == QUAD_FRAME && */ defined(BOARD_USART4_RX_PIN) && defined( BOARD_USART4_TX_PIN)
  static REVOMINIUARTDriver uart4Driver(_UART4);  // pin 5&6 of servo port
 #endif
 
@@ -137,10 +136,47 @@ HAL_REVOMINI::HAL_REVOMINI() :
         &USB_Driver,            // uartA - USB console                                         - Serial0
         &uart6Driver,           // uartB - pin 7&8(REVO)/5&6(RevoMini) of input port - for GPS - Serial3
         &uart1Driver,           // uartC - main port  - for telemetry                          - Serial1
+
+#if   BOARD_UARTS_LAYOUT == 1 // Revolution
+
+        &uart3Driver,           // uartD - flexi port                                          - Serial2 
+        &uart4Driver,           // uartE - PWM pins 5&6                                        - Serial4
+        &uartPPM2,              // uartE - input data from PPM2 pin                            - Serial4
+//        &softDriver,            // uartF - soft UART on pins 7&8                               - Serial5 
+
+#elif BOARD_UARTS_LAYOUT == 2 // Airbot
+
+        &uart4Driver,           // uartD - PWM pins 5&6                                        - Serial2 
+        &uartPPM2,              // uartE - input data from PPM2 pin                            - Serial4
+        &uartPPM1,              // uartF - input data from PPM1 pin                            - Serial5 
+        
+#elif BOARD_UARTS_LAYOUT == 3 // AirbotV2
+
+        &uartOSDdriver,         // uartD - OSD emulated UART                                   - Serial2
+        &uart4Driver,           // uartE - PWM pins 5&6                                        - Serial4 
+        &uartPPM2,              // uartF - input data from PPM2 pin                            - Serial5
+
+#elif BOARD_UARTS_LAYOUT == 4 // MiniOSD
+
+        NULL,
+        NULL,
+        NULL,
+        
+#elif BOARD_UARTS_LAYOUT == 5 // MicroOSD
+
+        NULL,
+        NULL,
+        NULL,
+        
+#else
+ #error no BOARD_UARTS_LAYOUT!
+#endif
+
+/*
 #ifdef BOARD_HAS_UART3
         &uart3Driver,           // uartD - flexi port                                          - Serial2 
 #elif defined(BOARD_SOFT_UART3)
-        &uart3Driver,           // uartD - soft UART on pins 7&8 */
+        &softDriver,            // uartD - soft UART on pins 7&8 
 #else
         NULL,                   // no uartD 
 #endif
@@ -148,7 +184,7 @@ HAL_REVOMINI::HAL_REVOMINI() :
 #if defined(BOARD_OSD_NAME)
         &uartOSDdriver,         // uartE  - OSD emulated UART                                  - Serial4
 #elif defined(USE_SOFTSERIAL) && defined(BOARD_SOFTSERIAL_TX) && defined(BOARD_SOFTSERIAL_RX)
-        &softDriver,   /* uartE softSerial */
+        &softDriver,            // uartE softSerial 
 #else
         &uartPPM2,              // uartE - input data from PPM2 pin 
 #endif
@@ -161,8 +197,9 @@ HAL_REVOMINI::HAL_REVOMINI() :
 #else
         &uartPPM1,              // uartF - input data from PPM1 pin
 #endif
+*/
 
-        &i2c_mgr_instance,
+        &i2c_mgr_instance,  // I2C
         &spiDeviceManager,  // spi 
         &analogIn,          // analogin 
         &storageDriver,     // storage 
@@ -176,9 +213,9 @@ HAL_REVOMINI::HAL_REVOMINI() :
         nullptr             // no CAN 
     )
     
-           //  0     1       2       3        4         5
-           // USB    UART6   Main    Flexi    Uart4/OSD Soft/Uart4
-    , uarts{ &uartA, &uartB, &uartC, &uartD,  &uartE,   &uartF }
+           //  0     1        2        3        4         5
+           // USB    Main   Flexi/OSD  Uart4   UART6    Soft/Uart4
+    , uarts{ &uartA, &uartC, &uartD,   &uartE, &uartB,   &uartF }
 
 {
 
@@ -545,7 +582,9 @@ done:
 
 #ifdef BOARD_I2C_FLEXI
     if(hal_param_helper->_flexi_i2c) {
+        uart3Driver.end();
         uart3Driver.disable(); // uses Flexi port occupied by I2C 
+        printf("\nUART3 disabled by I2C2\n");            
     }
 #endif
     REVOI2CDevice::lateInit();

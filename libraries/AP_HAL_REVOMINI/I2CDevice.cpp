@@ -136,7 +136,6 @@ void REVOI2CDevice::init(){
             return; // not initialized so always returns false
 #endif
 
-#if defined(BOARD_SOFT_SCL) && defined(BOARD_SOFT_SDA)
     case 2:         // this bus can use only soft I2C driver
 #if defined(BOARD_I2C_BUS_SLOW) && BOARD_I2C_BUS_SLOW==2
             _slow=true;
@@ -144,22 +143,27 @@ void REVOI2CDevice::init(){
 
 #ifdef BOARD_I2C_FLEXI
             if(hal_param_helper->_flexi_i2c){ // move external I2C to flexi port
+ #if defined(BOARD_SOFT_I2C) || defined(BOARD_SOFT_I2C3)
                 s_i2c.init_hw( 
                     _I2C2->gpio_port, _I2C2->scl_pin,
                     _I2C2->gpio_port, _I2C2->sda_pin,
                     _timers[_bus]
                 );
+ #else
+                dev = _I2C2;
+ #endif
             } else 
 #endif
             { //                         external I2C on Input port
+#if defined(BOARD_SOFT_SCL) && defined(BOARD_SOFT_SDA)
                 s_i2c.init_hw( 
                     PIN_MAP[BOARD_SOFT_SCL].gpio_device,     PIN_MAP[BOARD_SOFT_SCL].gpio_bit,
                     PIN_MAP[BOARD_SOFT_SDA].gpio_device,     PIN_MAP[BOARD_SOFT_SDA].gpio_bit,
                     _timers[_bus]
                 );
+#endif
             }        
             break;
-#endif
 
     default:
             return;

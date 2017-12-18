@@ -45,8 +45,8 @@
 #define BOARD_USART6_TX_PIN     12
 #define BOARD_USART6_RX_PIN     13
 
-//#define BOARD_USART4_RX_PIN     48
-//#define BOARD_USART4_TX_PIN     47
+#define BOARD_USART4_RX_PIN     48
+#define BOARD_USART4_TX_PIN     47
 
 //#define BOARD_USART5_RX_PIN     26  // PD2  EXTI_RFM22B / UART5_RX
 //#define BOARD_BUTTON_PIN        103 // PA15 CS_RFM22B
@@ -145,6 +145,7 @@
 // old dataflash logs
 #endif
 
+#define BOARD_UARTS_LAYOUT 2
 
 #define BOARD_OWN_NAME "Airbot"
 

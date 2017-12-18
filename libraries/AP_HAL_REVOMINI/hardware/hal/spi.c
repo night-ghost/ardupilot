@@ -16,7 +16,7 @@ static const spi_dev spi1 = {
     .afio     = GPIO_AF_SPI1,
     .irq      = SPI1_IRQn,
     .clock    = RCC_APB2Periph_SPI1,
-    .dma      = { DMA_CR_CH3, DMA2_STREAM2, DMA2_STREAM3 }, // SPI1
+    .dma      = { DMA_CR_CH3, DMA2_STREAM2, DMA2_STREAM3 }, // SPI1, see Errata:  DMA2 transfers can spoils data
     .state    = &spi1_state,
 };
 /** SPI device 1 */

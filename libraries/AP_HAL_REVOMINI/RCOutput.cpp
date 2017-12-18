@@ -215,8 +215,8 @@ void REVOMINIRCOutput::InitPWM()
     _set_output_mode(MODE_PWM_NORMAL); // init timers
 }
 
-uint32_t inline REVOMINIRCOutput::_timer_period(uint16_t speed_hz) {
-    return (uint32_t)((PWM_TIMER_KHZ*1000UL) / speed_hz);
+uint32_t inline REVOMINIRCOutput::_timer_period(uint16_t speed_hz, const timer_dev *dev) {
+    return (uint32_t)((dev->state->freq*1000UL) / speed_hz);
 }
 
 
@@ -227,7 +227,7 @@ uint16_t REVOMINIRCOutput::get_freq(uint8_t ch) {
     const timer_dev *dev = PIN_MAP[output_channels[ch]].timer_device;
 
     /* transform to period by inverse of _time_period(icr) */
-    return (uint16_t)((PWM_TIMER_KHZ*1000UL) / timer_get_reload(dev));
+    return (uint16_t)(dev->state->freq / timer_get_reload(dev));
 }
 
 // fill array of used timers
@@ -421,9 +421,10 @@ bool REVOMINIRCOutput::is_servo_enabled(uint8_t ch){
 // so frequency of timers should be 8 times more - 16MHz, but timers on 84MHz can give only 16.8MHz
 
 // channels 1&2, 3&4&5&6 can has a different rates
-void REVOMINIRCOutput::set_freq(uint32_t chmask, uint16_t freq_hz) {          
+void REVOMINIRCOutput::set_freq(uint32_t chmask, uint16_t freq_hz) {
     uint32_t mask=1;
     
+    uint16_t freq = freq_hz;
     
     for(uint8_t i=0; i< REVOMINI_MAX_OUTPUT_CHANNELS; i++) { // кто последний тот и папа
         if(chmask & mask) {
@@ -432,10 +433,10 @@ void REVOMINIRCOutput::set_freq(uint32_t chmask, uint16_t freq_hz) {
 // for true one-shot        if(_once_mode && freq_hz>50) continue; // no frequency in OneShoot modes
             _freq[i] = freq_hz;
 
-            if(_once_mode && freq_hz>50) freq_hz /= 2; // divide frequency by 2 in OneShoot modes
+            if(_once_mode && freq_hz>50) freq = freq_hz / 2; // divide frequency by 2 in OneShoot modes
             const uint8_t pin = output_channels[i];
             const timer_dev *dev = PIN_MAP[pin].timer_device;
-            timer_set_reload(dev,  _timer_period(freq_hz)); 
+            timer_set_reload(dev,  _timer_period(freq, dev)); 
         }
         mask <<= 1;
     }
@@ -454,7 +455,7 @@ void REVOMINIRCOutput::init_channel(uint8_t ch){
 
     uint16_t freq = _freq[ch];
     if(_once_mode && freq>50) freq/=2;
-    timer_set_reload(dev,  _timer_period(freq));
+    timer_set_reload(dev,  _timer_period(freq, dev));
     timer_set_compare(dev, p.timer_channel, 0); // to prevent outputs in case of timer overflow
 }
 
@@ -628,6 +629,11 @@ void REVOMINIRCOutput::push()
 #if 1
         for(uint8_t i =0; i<num_out_timers;i++){
             timer_generate_update(out_timers[i]);
+        }
+
+        for (uint16_t ch = 0; ch < REVOMINI_OUT_CHANNELS; ch++) {
+            const stm32_pin_info &p = PIN_MAP[output_channels[ch]];
+            timer_set_compare(p.timer_device, p.timer_channel, 0); // to prevent outputs  in case of timer overflows
         }
 
 #else

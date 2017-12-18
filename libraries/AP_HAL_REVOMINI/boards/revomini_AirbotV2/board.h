@@ -83,8 +83,8 @@
 # define BOARD_BLUE_LED_PIN        36  // BLUE
 # define BOARD_GREEN_LED_PIN        6   // NC - PC0 pin 8
 
-# define BOARD_GPIO_A_LED_PIN      36  // BLUE
-# define BOARD_GPIO_B_LED_PIN       6   // NC - PC0 pin 8
+# define BOARD_GPIO_A_LED_PIN      BOARD_BLUE_LED_PIN
+# define BOARD_GPIO_B_LED_PIN      BOARD_GREEN_LED_PIN
 
 # define BOARD_LED_ON           LOW
 # define BOARD_LED_OFF          HIGH
@@ -92,12 +92,13 @@
 
 #define BOARD_NR_GPIO_PINS      109
 
+//TODO add #define BOARD_HAS_UART3 ?
 
 #define BOARD_I2C_BUS_INT 1    // hardware internal I2C
 //#define BOARD_I2C_BUS_EXT 1  // external I2C
 #define BOARD_I2C_BUS_SLOW 1   // slow down bus with this number
 
-#define BOARD_I2C1_DISABLE
+#define BOARD_I2C1_DISABLE // lots of drivers tries to scan all buses, spoiling device setup
 
 #define BOARD_BARO_DEFAULT HAL_BARO_BMP280_SPI
 #define HAL_BARO_BMP280_NAME "bmp280"
@@ -129,8 +130,8 @@
 //#define HAL_PARAM_DEFAULTS_PATH "0:/APM/defaults.parm"
 #define USB_MASSSTORAGE 
 
-#define BOARD_OSD_NAME "osd"
-#define BOARD_OSD_CS_PIN   103
+#define BOARD_OSD_NAME       "osd"
+#define BOARD_OSD_CS_PIN     103
 #define BOARD_OSD_VSYNC_PIN   9 // PC3, Frequency input
 #define BOARD_OSD_RESET_PIN   6 // PC0, NC
 
@@ -149,9 +150,10 @@
 
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
+#define BOARD_UARTS_LAYOUT 3
+
 // use soft I2C driver instead hardware
 //#define BOARD_SOFT_I2C
-
 
 #define SERVO_PIN_1 46 // PB0 
 #define SERVO_PIN_2 45 // PB1

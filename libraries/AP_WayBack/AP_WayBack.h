@@ -50,17 +50,17 @@
 
 #define SHORTCUT_FACTOR 2 // на сколько чувствительность "близости" точек больше чем Эпсилон
 
-#if FRAME_CONFIG == MULTICOPTER_FRAME
+//#if FRAME_CONFIG == MULTICOPTER_FRAME
 
 // copter's coordinates in meters
 #define TRACK_EPS (_params.eps) // meters 
 
-#else
+//#else
 
 // all another coordinates are from GPS so 1 gradus is ~110KM 
-#define TRACK_EPS (_params.eps * 110000) //  meters in gradus of coords 
+//#define TRACK_EPS (_params.eps * 110000) //  meters in gradus of coords 
 
-#endif
+//#endif
 
 template<typename T> void zeroIt(T& value)
 {

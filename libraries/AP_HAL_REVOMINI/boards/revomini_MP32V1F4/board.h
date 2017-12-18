@@ -104,18 +104,11 @@
 
 #define BOARD_I2C_BUS_INT       0  // hardware I2C
 
-#ifdef I2C_ON_FLEXI
- #define BOARD_I2C_BUS_EXT      1  // external HARD I2C
- #define BOARD_I2C_BUS_SLOW     1  // slow down this bus
-
- #define BOARD_SOFT_UART3
-#else
- #define BOARD_I2C_BUS_EXT      2  // external soft I2C
- #define BOARD_I2C_BUS_SLOW     2  // slow down this bus
+#define BOARD_I2C_BUS_EXT      2  // external soft I2C or flexiPort (by parameter)
+#define BOARD_I2C_BUS_SLOW     2  // slow down this bus
  
- #define BOARD_HAS_UART3
- #define BOARD_I2C_FLEXI 1     // I2C can be on Flexi port
-#endif
+#define BOARD_HAS_UART3
+#define BOARD_I2C_FLEXI 1     // I2C can be on Flexi port
 
 
 
@@ -126,10 +119,9 @@
 #define HAL_BARO_MS5611_I2C_BUS         BOARD_I2C_BUS_INT
 #define HAL_BARO_MS5611_I2C_ADDR        BOARD_BARO_MS5611_I2C_ADDR
 
-#define HAL_BARO_MS5611_I2C_BUS_EXT     BOARD_I2C_BUS_EXT  // external baro on soft I2C
-#define HAL_BARO_BMP280_BUS             BOARD_I2C_BUS_EXT  // external baro on soft I2C
-
-#define HAL_BARO_BMP280_I2C_ADDR        (0x76)
+//#define HAL_BARO_MS5611_I2C_BUS_EXT     BOARD_I2C_BUS_EXT  // external baro on soft I2C
+//#define HAL_BARO_BMP280_BUS             BOARD_I2C_BUS_EXT  // external baro on soft I2C
+//#define HAL_BARO_BMP280_I2C_ADDR        (0x76)
 
 #define BOARD_COMPASS_DEFAULT           HAL_COMPASS_HMC5843
 #define BOARD_COMPASS_HMC5843_I2C_ADDR  0x1E
@@ -162,6 +154,7 @@
 #endif
 
 
+#define BOARD_UARTS_LAYOUT 1
 
 # define BOARD_PUSHBUTTON_PIN           254 // no pushbutton
 # define BOARD_USB_MUX_PIN              -1  // no USB mux

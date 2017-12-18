@@ -79,7 +79,7 @@ public:
 private:
     static void InitPWM(void);
     static void set_pwm(uint8_t ch, uint16_t pwm);
-    static uint32_t _timer_period(uint16_t speed_hz);
+    static uint32_t _timer_period(uint16_t speed_hz, const timer_dev *dev);
     static uint16_t _period[REVOMINI_MAX_OUTPUT_CHANNELS];
     static uint16_t _freq[REVOMINI_MAX_OUTPUT_CHANNELS];
     

@@ -384,6 +384,8 @@ uint32_t configTimeBase(const timer_dev *dev, uint16_t period, uint16_t khz)
     
     TIM_TimeBaseStructure.TIM_Prescaler = prescaler;
     freq = tf / prescaler; // real timer's frequency
+    
+    dev->state->freq = freq; // store
 
     TIM_TimeBaseStructure.TIM_ClockDivision = 0;
     TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;

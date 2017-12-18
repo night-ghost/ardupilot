@@ -26,8 +26,10 @@
 
  
 /**
- * @file dmaF2.c
- * @brief Direct Memory Access peripheral support
+ *  Direct Memory Access peripheral support
+ 
+ !!! read this first!!! https://blog.frankvh.com/2012/01/13/stm32f2xx-stm32f4xx-dma-maximum-transactions/
+ 
  */
 #pragma GCC optimize ("O2")
 
