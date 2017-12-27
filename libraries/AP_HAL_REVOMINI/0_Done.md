@@ -136,6 +136,7 @@
 * added SD size to bootlog
 * SPI via interrupts now works
 * added pin names to simplify porting of boards
+* added DSM rssi as last channel
 * ...
 * a lot of minor enhancements
 

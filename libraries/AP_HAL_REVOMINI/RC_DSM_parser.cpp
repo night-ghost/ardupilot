@@ -135,9 +135,22 @@ void DSM_parser::_io_completion(){
                   as they are spread across multiple frames. We just
                   use the max num_values we get
                  */
-                    if (num_values > _channels) {
-                        _channels = num_values;
+                    uint8_t nc = num_values+1;
+                    if (nc > _channels) {
+                        _channels = nc;
                     }
+/*
+    DSM frame from datasheet:
+typedef stuct {
+ UINT8 fades; 
+ UINT8 system;
+ UINT16 servo[7];
+} INT_REMOTE_STR;
+
+so we get RSSI from 1st byte and store it to last channel
+*/
+                    _val[_channels-1] = dsm.frame[0];
+            
                     _last_signal = systick_uptime();
                 }
             }
@@ -150,7 +163,24 @@ void DSM_parser::_io_completion(){
 
 #ifdef BOARD_SPEKTRUM_RX_PIN
 void DSM_parser::_rc_bind(uint16_t dsmMode){
-    
+/*
+To put a receiver into bind mode, within 200ms of power application the host device needs to issue a
+series of falling pulses. The number of pulses issued selects which bind types will be accepted from
+the transmitter. Selecting the 11ms mode automatically allows either 11ms or 22ms protocols to be
+used. Selecting DSMX will automatically allow DSM2 to be used if the transmitter is unable to
+support DSMX. For this reason, we recommend that 11ms DSMX be used (9 (“internal”) or 10
+(“external”) pulses).
+DSMX Bind Modes:
+Pulses Mode Protocol Type
+7     Internal  DSMx 22ms    
+8     External  DSMx 22ms
+9     Internal  DSMx 11ms
+10    External  DSMx 11ms
+
+see https://github.com/SpektrumFPV/SpektrumDocumentation/blob/master/Telemetry/Remote%20Receiver%20Interfacing.pdf
+
+*/    
+
 
     REVOMINIScheduler::_delay(72);
 
@@ -162,7 +192,6 @@ void DSM_parser::_rc_bind(uint16_t dsmMode){
     }
 
     REVOMINIScheduler::_delay(50);
-
 }
 
 
@@ -171,13 +200,14 @@ bool DSM_parser::bind(int dsmMode) const {
 #ifdef BOARD_SPEKTRUM_PWR_PIN
     uartSDriver.end();
 
-    REVOMINIGPIO::_write(BOARD_SPEKTRUM_PWR_PIN, BOARD_SPEKTRUM_PWR_OFF); /*power down DSM satellite*/
+    REVOMINIGPIO::_write(BOARD_SPEKTRUM_PWR_PIN, BOARD_SPEKTRUM_PWR_OFF); /* power down DSM satellite */
 
     REVOMINIScheduler::_delay(500);
 
-    REVOMINIGPIO::_pinMode(BOARD_SPEKTRUM_RX_PIN, OUTPUT);           /*Set UART RX pin to active output mode*/
 
     REVOMINIGPIO::_write(BOARD_SPEKTRUM_PWR_PIN, BOARD_SPEKTRUM_PWR_ON);     /* power up DSM satellite*/
+
+    REVOMINIGPIO::_pinMode(BOARD_SPEKTRUM_RX_PIN, OUTPUT);           /*Set UART RX pin to active output mode*/
 
     _rc_bind(dsmMode);
 

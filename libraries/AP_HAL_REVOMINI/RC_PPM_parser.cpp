@@ -317,9 +317,9 @@ void PPM_parser::_process_dsm_pulse(uint16_t width_s0, uint16_t width_s1)
                 }
             }
             if(_rc_mode != BOARD_RC_SUMD) { // try to decode buffer as DSM on full frame
-                uint16_t values[8];
+                uint16_t values[REVOMINI_RC_INPUT_NUM_CHANNELS];
                 uint16_t num_values=0;
-                if (dsm_decode(AP_HAL::micros64(), bytes, values, &num_values, 8) &&
+                if (dsm_decode(AP_HAL::micros64(), bytes, values, &num_values, REVOMINI_RC_INPUT_NUM_CHANNELS) &&
                     num_values >= REVOMINI_RC_INPUT_MIN_CHANNELS) {
 
                     _rc_mode = BOARD_RC_DSM; // lock input mode, DSM has a checksum so false positive is unreal
@@ -328,7 +328,11 @@ void PPM_parser::_process_dsm_pulse(uint16_t width_s0, uint16_t width_s1)
                         if(_val[i] != values[i]) _last_change = systick_uptime();
                         _val[i] = values[i];
                     }
-                    _channels = num_values;
+                    
+                    uint32_t nc=num_values+1;
+                    if(nc>_channels) 
+                        _channels = c;
+                    _val[_channels-1]=bytes[0]; // rssi
                     _got_dsm = true;
                     _last_signal = systick_uptime();
                 }
