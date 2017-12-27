@@ -134,6 +134,8 @@
 * class SD is slightly redesigned, reducing the memory consumption by half (!)
 * optimized dma_init_transfer() function: now it twice faster and requires 3 times less memory
 * added SD size to bootlog
+* SPI via interrupts now works
+* added pin names to simplify porting of boards
 * ...
 * a lot of minor enhancements
 

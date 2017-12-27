@@ -48,9 +48,6 @@
 #define BOARD_USART4_RX_PIN     48
 #define BOARD_USART4_TX_PIN     47
 
-//#define BOARD_USART5_RX_PIN     26  // PD2  EXTI_RFM22B / UART5_RX
-//#define BOARD_BUTTON_PIN        103 // PA15 CS_RFM22B
-
 #define BOARD_DSM_USART (_USART1)
    
 #define BOARD_NR_SPI            3
@@ -74,7 +71,6 @@
 //#define BOARD_SBUS_INVERTER     6
 
 #define BOARD_USB_SENSE 11      // PC5
-
 
 // bus 2 (soft) pins
 #define BOARD_SOFT_SCL 14

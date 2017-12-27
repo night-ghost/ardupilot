@@ -208,7 +208,6 @@ void SerialDriver::txNextBit(void /* TIM_TypeDef *tim */) { // ISR
 
         txBitCount = 0;                    
     }
-  
 }
 
 
@@ -265,22 +264,22 @@ void SerialDriver::rxNextBit(void /* TIM_TypeDef *tim */) { // ISR
         } else if (rxBitCount == 8) {
             if ( d == _inverse?LOW:HIGH) { // stop OK - save byte
                 // Finish out stop bit while we...  
-                //  Calculate location in buffer for next incoming byte
-                //  Test if buffer full
-                //  If the buffer isn't full update the tail pointer to point to next location
-                //  Else if it is now full set the buffer overflow flag 
-                // FYI - With this logic we effectively only have an (SS_MAX_RX_BUFF - 1) buffer size
             
                 if (gpio_read_bit( rx_pp.gpio_device, rx_pp.gpio_bit) == _inverse?LOW:HIGH) // valid STOP
                     receiveBuffer[receiveBufferWrite] = receiveByte;
-            
-                 uint8_t next = (receiveBufferWrite + 1) % SS_MAX_RX_BUFF;
+
+                //  Calculate location in buffer for next incoming byte        
+                 uint8_t next = (receiveBufferWrite + 1) % SS_MAX_RX_BUFF; // FYI - With this logic we effectively only have an (SS_MAX_RX_BUFF - 1) buffer size
+
+                //  Test if buffer full
+                //  If the buffer isn't full update the tail pointer to point to next location
                  if (next != receiveBufferRead) {
                     receiveBufferWrite = next;
                  } 
 #ifdef SS_DEBUG
                  else {
-                    bufferOverflow = true;
+                    bufferOverflow = true;  //  Else if it is now full set the buffer overflow flag 
+
       
 #if DEBUG_DELAY && defined(DEBUG_PIN1)
                   overFlowTail = receiveBufferWrite;
@@ -296,10 +295,8 @@ void SerialDriver::rxNextBit(void /* TIM_TypeDef *tim */) { // ISR
             rxBitCount = 9;
             activeRX=false;
             rxSetCapture(); // turn back to capture mode
- 
         }
     }
-
 }
 
 #endif 

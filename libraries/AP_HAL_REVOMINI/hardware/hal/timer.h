@@ -534,7 +534,8 @@ typedef enum timer_oc_mode_flags {
 typedef struct TimerState {
     volatile uint8_t busy;
     bool update;
-    float freq;
+    uint32_t freq; //      real frequency that programmed to timer
+    float freq_scale; // needed/real frequencies ratio
 } timerState;
 
 

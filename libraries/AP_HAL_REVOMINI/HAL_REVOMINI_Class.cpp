@@ -168,6 +168,12 @@ HAL_REVOMINI::HAL_REVOMINI() :
         NULL,
         NULL,
         
+#elif BOARD_UARTS_LAYOUT == 6 // MatekF405_OSD
+
+        NULL,
+        NULL,
+        NULL,
+        
 #else
  #error no BOARD_UARTS_LAYOUT!
 #endif
@@ -477,7 +483,7 @@ void HAL_REVOMINI::lateInit() {
                     uart = *up;
             
                     AP_WayBack track;
-                    REVOMINIScheduler::_delay(5000);
+                    REVOMINIScheduler::_delay(5000); // time to connect
             
                     track.set_debug_mode(true);
                     track.init();

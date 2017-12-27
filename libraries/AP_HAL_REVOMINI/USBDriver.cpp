@@ -21,7 +21,7 @@ using namespace REVOMINI;
 
 extern const AP_HAL::HAL& hal;
 
-extern void delay(uint32_t ms);
+//extern void delay(uint32_t ms);
 
 
 USBDriver::USBDriver(bool usb):

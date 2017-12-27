@@ -29,7 +29,7 @@ class REVOMINI::REVOMINIUARTDriver : public AP_HAL::UARTDriver  {
 public:
     REVOMINIUARTDriver(const struct usart_dev *usart);
 
-    void begin(uint32_t b){
+    inline void begin(uint32_t b){
         begin(b, (UART_Parity_No <<16) | UART_Stop_Bits_1);
     }
 
@@ -41,7 +41,7 @@ public:
   
     inline void set_blocking_writes(bool blocking) {  _blocking = blocking; }
 
-    inline bool tx_pending() {   return ( usart_txfifo_nbytes(_usart_device) > 0); }
+    inline bool tx_pending() {   return  usart_txfifo_nbytes(_usart_device) > 0; }
 
     inline void setCallback(Handler cb) { usart_set_callback(_usart_device, cb); }
 

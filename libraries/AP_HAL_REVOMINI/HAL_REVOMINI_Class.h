@@ -23,9 +23,9 @@
 #endif
 
 /*
-Backup SRAM 4KByte - 0x4002 4000 - 0x4002 4FFF can be used as EEPROM buffer?
+Backup SRAM 4KByte - 0x4002 4000 - 0x4002 3FFF can be used as EEPROM buffer?
 
-ideally it should be used for state storage for recovery from in-flight reboots but we never comes this from upstream...
+ideally it should be used for state storage for recovery from in-flight reboots but we never get this from upstream...
 
 */
 

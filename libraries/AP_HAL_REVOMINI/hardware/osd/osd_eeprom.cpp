@@ -64,6 +64,7 @@ void OSD_EEPROM::_write(uint16_t addr, uint8_t val){
 
     
     if( /* we can write - there is no '0' where we need '1' */ (~cv & val)==0 ){
+        FLASH_Unlock_dis();
         write_8(ee_ptr, val);    // just overwrite last value
         goto done;
     }

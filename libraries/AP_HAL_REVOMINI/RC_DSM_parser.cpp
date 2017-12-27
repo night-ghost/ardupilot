@@ -107,9 +107,9 @@ void DSM_parser::_io_completion(){
                         _val[i] = values[i];
                     }
                 }
-                _channels = channel_count;
+                _channels = channel_count + 1;
                 _last_signal = systick_uptime();
-//                _rssi = rssi;
+                _val[channel_count] = rssi;        // say about RSSI in last channel
             }
         }
 

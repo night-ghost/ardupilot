@@ -1174,10 +1174,6 @@ void REVOMINIScheduler::yield(uint16_t ttw) // time to wait
     }
 
 // if yield() called with a time, then task don't want to run all this time so exclude it from time sliceing
-/*
-    asm volatile( "mov r0,%0 \n"  // time to sleep in R0
-                  "svc 0     \n"::"r"(ttw)); // do scheduler in interrupt
-*/
     if(ttw) { // ttw cleared on sleep exit so always 0 if not set specially 
         s_running->ttw=ttw;   // если переключение задачи происходит между записью и вызовом svc, мы всего лишь добавляем лишний тик
     }
@@ -1197,9 +1193,6 @@ size_t REVOMINIScheduler::task_stack(){
 
 
 
-/* how to configure and schedule a PendSV exception
-from http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0395b/CIHJHFJD.html
-*/
 
 // register IO completion routine
 uint8_t REVOMINIScheduler::register_io_completion(Handler handler){
@@ -1259,6 +1252,9 @@ void REVOMINIScheduler::_ioc_timer_event(uint32_t v){ // isr at low priority to 
 
 #pragma GCC optimize ("O2") // should ALWAYS be -O2 for tail recursion optimization in PendSV_Handler
 
+/* how to configure and schedule a PendSV exception
+from http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0395b/CIHJHFJD.html
+*/
 
 void PendSV_Handler(){
     REVOMINIScheduler::need_switch_task=false;
@@ -1350,16 +1346,8 @@ void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
             }
         }
         break;
-    
-    case 4: {
-            Revo_handler h = { .h = 0 };
-            h.w[0] = svc_args[0];
-            h.w[1] = svc_args[1];
-            revo_call_handler(h.h, svc_args[2]);
-        }
-        break;
-    
-    //case 5: // whats more we can do via SVC?
+        
+    case 4: // whats more we can do via SVC?
 
     default:                // Unknown SVC - just ignore
         break;    

@@ -101,7 +101,8 @@ void REVOI2CDevice::init(){
  #endif
 
  #if defined(BOARD_SOFT_I2C) || defined(BOARD_SOFT_I2C1)
-            s_i2c.init_hw( 
+            if(s_i2c==NULL) s_i2c = new Soft_I2C;
+            s_i2c->init_hw( 
                 _I2C1->gpio_port, _I2C1->scl_pin,
                 _I2C1->gpio_port, _I2C1->sda_pin,
                 _timers[_bus]
@@ -123,7 +124,8 @@ void REVOI2CDevice::init(){
  #endif
 
  #if defined(BOARD_SOFT_I2C) || defined(BOARD_SOFT_I2C2)
-            s_i2c.init_hw( 
+            if(s_i2c==NULL) s_i2c = new Soft_I2C;
+            s_i2c->init_hw( 
                 _I2C2->gpio_port, _I2C2->scl_pin,
                 _I2C2->gpio_port, _I2C2->sda_pin,
                 _timers[_bus]
@@ -144,7 +146,8 @@ void REVOI2CDevice::init(){
 #ifdef BOARD_I2C_FLEXI
             if(hal_param_helper->_flexi_i2c){ // move external I2C to flexi port
  #if defined(BOARD_SOFT_I2C) || defined(BOARD_SOFT_I2C3)
-                s_i2c.init_hw( 
+                if(s_i2c==NULL) s_i2c = new Soft_I2C;
+                s_i2c->init_hw( 
                     _I2C2->gpio_port, _I2C2->scl_pin,
                     _I2C2->gpio_port, _I2C2->sda_pin,
                     _timers[_bus]
@@ -156,7 +159,8 @@ void REVOI2CDevice::init(){
 #endif
             { //                         external I2C on Input port
 #if defined(BOARD_SOFT_SCL) && defined(BOARD_SOFT_SDA)
-                s_i2c.init_hw( 
+                if(s_i2c==NULL) s_i2c = new Soft_I2C;
+                s_i2c->init_hw( 
                     PIN_MAP[BOARD_SOFT_SCL].gpio_device,     PIN_MAP[BOARD_SOFT_SCL].gpio_bit,
                     PIN_MAP[BOARD_SOFT_SDA].gpio_device,     PIN_MAP[BOARD_SOFT_SDA].gpio_bit,
                     _timers[_bus]
@@ -175,10 +179,10 @@ void REVOI2CDevice::init(){
         i2c_init(_dev, _offs, _slow?I2C_250KHz_SPEED:I2C_400KHz_SPEED);
 
     }else {
-        s_i2c.init( );
+        s_i2c->init( );
 
         if(_slow) {
-            s_i2c.set_low_speed(true);
+            s_i2c->set_low_speed(true);
         }
 
     }
@@ -221,11 +225,11 @@ again:
         if(recv_len) memset(recv, 0, recv_len); // for DEBUG
             
         if(recv_len==0){ // only write
-            ret=s_i2c.writeBuffer( _address, send_len, send );            
+            ret=s_i2c->writeBuffer( _address, send_len, send );            
         }else if(send_len==1){ // only read - send byte is address
-            ret=s_i2c.read(_address, *send, recv_len, recv);                
+            ret=s_i2c->read(_address, *send, recv_len, recv);                
         } else {
-            ret=s_i2c.transfer(_address, send_len, send, recv_len, recv);
+            ret=s_i2c->transfer(_address, send_len, send, recv_len, recv);
         }
             
         if(ret == I2C_NO_DEVICE) 
@@ -238,7 +242,7 @@ again:
             _lockup_count ++;          
             last_error = ret;  
               
-            if(!s_i2c.bus_reset()) return false;    
+            if(!s_i2c->bus_reset()) return false;    
         }
 
         if(retries--) goto again;

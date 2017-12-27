@@ -458,7 +458,7 @@ void SetSysClock(uint8_t oc)
     /* Wait till the main PLL is used as system clock source */
     while ((RCC->CFGR & (uint32_t)RCC_CFGR_SWS ) != RCC_CFGR_SWS_PLL) {}
 
-//    FLASH->ACR |= FLASH_ACR_PRFTEN; // enable prefetch. this greatly increases both noice and speed
+    FLASH->ACR |= FLASH_ACR_PRFTEN; // enable prefetch. this greatly increases both noice and speed
     
     // also see http://radiokot.ru/forum/viewtopic.php?f=59&t=117260
     

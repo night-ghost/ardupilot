@@ -73,8 +73,10 @@ enum SPI_ISR_MODE {
     SPI_ISR_NONE,
     SPI_ISR_SEND,
     SPI_ISR_SEND_DMA,  // want DMA but can't
+    SPI_ISR_SKIP_RX,   // wait for 1 dummy byte
+    SPI_ISR_SKIP_RX_DMA,
     SPI_ISR_WAIT_RX,   // wait for receiving of last fake byte from TX
-    SPI_ISR_WAIT_RX_DMA, // wait for receiving of last fake byte from TX
+    SPI_ISR_WAIT_RX_DMA, // wait for receiving of last fake byte from TX    
     SPI_ISR_RECEIVE,
     SPI_ISR_RXTX,     // full duplex
     SPI_ISR_STROBE,
@@ -86,15 +88,17 @@ enum SPI_ISR_MODE {
 
 #ifdef  DEBUG_SPI    
 // for debug
-struct spi_trans {
+typedef struct SPI_TRANS {
     const spi_dev * dev;
-    uint32_t send_len;
-    uint8_t  sent;
-    uint8_t  sent1;
-    uint32_t recv_len;
-    uint8_t  recv0;
-    uint8_t  recv1;
-};
+    uint32_t time;
+    enum SPI_ISR_MODE mode;
+    uint8_t act;
+    uint32_t cr2;
+    uint32_t sr1;
+    uint16_t send_len;
+    uint16_t recv_len;
+    uint16_t dummy_len;
+} spi_trans;
 
 #define SPI_LOG_SIZE 200
 #endif
@@ -200,6 +204,7 @@ protected:
     // vars for send_strobe() and wait_for()
     const uint8_t *_send_address;
     uint16_t       _send_len;
+    uint16_t       _dummy_len;
     uint8_t       *_recv_address;
     uint16_t       _recv_len;
 
@@ -227,7 +232,7 @@ protected:
 #endif
 
 #ifdef DEBUG_SPI    
-    static struct spi_trans spi_trans_array[SPI_LOG_SIZE];
+    static spi_trans spi_trans_array[SPI_LOG_SIZE];
     static uint8_t spi_trans_ptr;
 #endif
 

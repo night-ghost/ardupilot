@@ -26,7 +26,7 @@ static const usart_dev usart1 = {
 /** USART1 device */
 const usart_dev * const _USART1 = &usart1;
 
-#if defined(USART2_USED)  /// can't be used
+#if defined(BOARD_USART2_RX_PIN) && defined(BOARD_USART2_RX_PIN)
 
 static ring_buffer usart2_txrb IN_CCM;
 static ring_buffer usart2_rxrb IN_CCM;
@@ -40,8 +40,8 @@ static const usart_dev usart2 = {
     .state = &u2state,
 //    .max_baud = 2250000UL,
     .irq = USART2_IRQn,
-    .rx_pin = 255,
-    .tx_pin = 255,
+    .rx_pin = BOARD_USART2_RX_PIN,
+    .tx_pin = BOARD_USART2_TX_PIN,
     .gpio_af = GPIO_AF_USART2
 };
 /** USART2 device */
@@ -90,7 +90,7 @@ static const usart_dev uart4 = {
 const usart_dev * const _UART4 = &uart4;
 #endif
 
-#if defined(BOARD_USART5_RX_PIN)
+#if defined(BOARD_USART5_RX_PIN) && defined(BOARD_USART5_TX_PIN)
 //static ring_buffer uart5_txrb IN_CCM; - RX-only UART
 static ring_buffer uart5_rxrb IN_CCM;
 static usart_state u5state IN_CCM;
@@ -104,7 +104,7 @@ static const usart_dev uart5 = {
     //.max_baud = 2250000UL,
     .irq = UART5_IRQn,
     .rx_pin = BOARD_USART5_RX_PIN,
-    .tx_pin = 255,              // RX-only
+    .tx_pin = BOARD_USART5_TX_PIN,
     .gpio_af = GPIO_AF_UART5
 };
 /* UART5 device */

@@ -129,6 +129,8 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     
 };
 
+
+
 extern const struct TIM_Channel PWM_Channels[] __FLASH__ =   {
     //CH1 and CH2 also for PPMSUM / SBUS / DSM
     { // 0 RC_IN1
@@ -152,14 +154,6 @@ extern const struct TIM_Channel PWM_Channels[] __FLASH__ =   {
 };
 
 
-/*
-     DMA modes:
-     
-0 - disable
-1 - enable on large transfers
-2 - enable alaways
-
-*/    
 extern const SPIDesc spi_device_table[] = {    // different SPI tables per board subtype
 //              name            device   bus  mode         cs_pin                       speed_low       speed_high  dma                  priority         assert_dly  release_dly
      { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,         SPI_1_125MHZ,   SPI_9MHZ,  SPI_TRANSFER_DMA,  DMA_Priority_VeryHigh, 1,          5 }, 

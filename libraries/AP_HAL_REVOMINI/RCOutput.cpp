@@ -130,7 +130,6 @@ uint32_t REVOMINIRCOutput::_timer2_preload;
 uint16_t REVOMINIRCOutput::_timer3_preload;
 
 uint8_t  REVOMINIRCOutput::_pwm_type=0;
-float    REVOMINIRCOutput::_freq_scale=1;
 
 const timer_dev* REVOMINIRCOutput::out_timers[16];
 uint8_t          REVOMINIRCOutput::num_out_timers;
@@ -190,7 +189,6 @@ void REVOMINIRCOutput::lateInit(){ // 2nd stage with loaded parameters
     if(map >= ARRAY_SIZE(revo_motor_map)) return; // don't initialize if parameter is wrong
     output_channels = revo_motor_map[map];
     
-    
     InitPWM();
     
 #ifdef DEBUG_INT
@@ -237,9 +235,8 @@ void REVOMINIRCOutput::fill_timers(){
 
     for (uint16_t ch = 0; ch < REVOMINI_OUT_CHANNELS; ch++) {
         if (!(_enabled_channels & _BV(ch))) continue;      // not enabled
-        uint8_t pin = output_channels[ch];
-        const stm32_pin_info &p = PIN_MAP[pin];
-        const timer_dev *tim = p.timer_device;
+
+        const timer_dev *tim = PIN_MAP[output_channels[ch]].timer_device;
 
         bool add=true;
         for(uint8_t i =0; i<num_out_timers;i++){
@@ -248,15 +245,12 @@ void REVOMINIRCOutput::fill_timers(){
                 break;
             }
         }
-        if(add){
-            out_timers[num_out_timers++] = tim;
-        }
+        if(add) out_timers[num_out_timers++] = tim;
     }
 }
 
 
 void REVOMINIRCOutput::_set_output_mode(enum REVOMINIRCOutput::output_mode mode) {
-
     
     uint32_t period=0;
     uint32_t freq;
@@ -342,31 +336,25 @@ void REVOMINIRCOutput::_set_output_mode(enum REVOMINIRCOutput::output_mode mode)
 
     case BOARD_PWM_BRUSHED: 
                      // dev    period   freq, kHz
-        configTimeBase(TIMER2, 1000,    PWM_BRUSHED_TIMER_KHZ);       // 16MHz  - 0..1 in 1000 steps
-        configTimeBase(TIMER3, 1000,    PWM_BRUSHED_TIMER_KHZ);       // 16MHz 
-        _freq_scale=1; //used ratio, not time
-        goto do_init;
+        period = 1000;
+        freq   = PWM_BRUSHED_TIMER_KHZ;       // 16MHz  - 0..1 in 1000 steps
+        break;
     }
 
 
-#if 0
+#if 1
 // correct code should init all timers used for outputs
-        _freq_scale=0;
         
         for (uint16_t ch = 0; ch < REVOMINI_OUT_CHANNELS; ch++) {
-            uint8_t pin = output_channels[ch];
-    
-            const timer_dev *tim = PIN_MAP[pin].timer_device;
+            const timer_dev *tim = PIN_MAP[output_channels[ch]].timer_device;
             tim->state->update=false;  // reset flag first
         }
 
         for (uint16_t ch = 0; ch < REVOMINI_OUT_CHANNELS; ch++) {
             if (!(_enabled_channels & _BV(ch))) continue;      // not enabled
-            uint8_t pin = output_channels[ch];
-            const stm32_pin_info &p = PIN_MAP[pin];
-            const timer_dev *tim = p.timer_device;
-    
+
             if(_freq[ch]>50){
+                const timer_dev *tim = PIN_MAP[output_channels[ch]].timer_device;    
                 tim->state->update=true; // set flag for update for needed timer
             }
         }
@@ -376,32 +364,35 @@ void REVOMINIRCOutput::_set_output_mode(enum REVOMINIRCOutput::output_mode mode)
     
             const timer_dev *tim = PIN_MAP[pin].timer_device;
             if(tim->state->update) {
-                real_freq = configTimeBase(tim, period,  freq)
-                if(_freq_scale==0) {
-                    _freq_scale = (float)real_freq / (freq * 1000);
-                }
+                configTimeBase(tim, period,  freq);
                 tim->state->update = false;    // only once
+                if(_mode == BOARD_PWM_BRUSHED) tim->state->freq_scale=1;
             }
         }
 
 #else // raw and dirty way
 
                              // dev    period   freq, kHz                             
-    real_freq = configTimeBase(TIMER2, period,  freq);       // 16MHz 62.5ns ticks - for 125uS..490Hz OneShot125
-                configTimeBase(TIMER3, period,  freq);       // 16MHz 62.5ns ticks 
+    configTimeBase(TIMER2, period,  freq);       // 16MHz 62.5ns ticks - for 125uS..490Hz OneShot125
+    configTimeBase(TIMER3, period,  freq);       // 16MHz 62.5ns ticks 
 
-    _freq_scale = (float)real_freq / (freq * 1000);
+    if(_mode == BOARD_PWM_BRUSHED) {
+        TIMER2->state->freq_scale=1;
+        TIMER3->state->freq_scale=1;
+    }
+
 #endif
 
 do_init:
     init_channels();
-    timer_resume(TIMER2);
-    timer_resume(TIMER3);
 
-#if 0 
+#if 1 
     for(uint8_t i =0; i<num_out_timers;i++){
         timer_resume(out_timers[i]);
     }
+#else
+    timer_resume(TIMER2);
+    timer_resume(TIMER3);
 #endif
 }
 
@@ -483,7 +474,6 @@ void REVOMINIRCOutput::set_pwm(uint8_t ch, uint16_t pwm){
     uint8_t pin = output_channels[ch];
     if (pin >= BOARD_NR_GPIO_PINS) return;
 
-
     switch(_mode){
     case BOARD_PWM_BRUSHED:
         pwm -= 1000; // move from 1000..2000 to 0..1000
@@ -498,17 +488,16 @@ void REVOMINIRCOutput::set_pwm(uint8_t ch, uint16_t pwm){
         break;
     }
 
-    pwm *= _freq_scale; // учесть неточность установки частоты таймера для малых прескалеров
-
     const stm32_pin_info &p = PIN_MAP[pin];
     const timer_dev *dev = p.timer_device;
+
+    pwm *= dev->state->freq_scale; // учесть неточность установки частоты таймера для малых прескалеров
     timer_set_compare(dev, p.timer_channel, pwm); 
 }
 
 void REVOMINIRCOutput::write(uint8_t ch, uint16_t period_us)
 {
     if(ch>=REVOMINI_MAX_OUTPUT_CHANNELS) return;
-
 
     if(_used_channels<ch) _used_channels=ch+1;
     
@@ -542,8 +531,7 @@ uint16_t REVOMINIRCOutput::read(uint8_t ch)
 }
 
 void REVOMINIRCOutput::read(uint16_t* period_us, uint8_t len)
-{
-// here we don't need to limit channel count - all unsupported will be read as RC_INPUT_MIN_PULSEWIDTH
+{// here we don't need to limit channel count - all unsupported will be read as RC_INPUT_MIN_PULSEWIDT
     for (int i = 0; i < len; i++) {
         period_us[i] = read(i);
     }
@@ -563,23 +551,22 @@ void REVOMINIRCOutput::enable_ch(uint8_t ch)
         _period[ch] = 0;
     }
     
-    uint8_t pin = output_channels[ch];
     
     if(!_initialized[ch]) {
     
+        uint8_t pin = output_channels[ch];
         const timer_dev *dev = PIN_MAP[pin].timer_device;
     
         uint32_t period    = ((PWM_TIMER_KHZ*1000UL) / 50); // 50Hz by default
         configTimeBase(dev, period,  PWM_TIMER_KHZ);        // 2MHz 0.5us ticks - for 50..490Hz PWM
-        timer_resume(dev);
 
         REVOMINIGPIO::_pinMode(pin, PWM);
+        timer_resume(dev);
     
         _initialized[ch]=true;
     }
 
     fill_timers(); // re-calculate list of used timers
-
 
 #ifdef DEBUG_INT
     uint8_t spin = output_channels[DEBUG_INT]; // motor 6
@@ -624,7 +611,6 @@ void REVOMINIRCOutput::push()
     }
 
     if(_once_mode){   // generate timer's update on ALL used pins, but only once per timer
-
 
 #if 1
         for(uint8_t i =0; i<num_out_timers;i++){

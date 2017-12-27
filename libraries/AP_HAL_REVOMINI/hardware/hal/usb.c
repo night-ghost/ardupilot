@@ -11,6 +11,12 @@
 // register description - http://mcu.goodboard.ru/viewtopic.php?id=40
 
 
+/*
+    на поржать - https://kincajou.livejournal.com/4206484.html
+    товарисч копает USB :)
+
+*/
+
 
 //#define USB_DEBUG
 
@@ -677,19 +683,19 @@ int usb_open(void)
 
 int usb_close(void)
 {	
-	usb_periphcfg(DISABLE);	
+    usb_periphcfg(DISABLE);	
 	
-	if (usb_ready == 1) {
-		DCD_DevDisconnect(&USB_OTG_dev);
-		USBD_DeInit(&USB_OTG_dev);
-		USB_OTG_StopDevice(&USB_OTG_dev);
-		usb_ready = 0;
-	}
+    if (usb_ready == 1) {
+        DCD_DevDisconnect(&USB_OTG_dev);
+	USBD_DeInit(&USB_OTG_dev);
+	USB_OTG_StopDevice(&USB_OTG_dev);
+	usb_ready = 0;
+    }
 	
-	if (usb_attr->use_present_pin){
-		gpio_set_mode(usb_attr->present_port, usb_attr->present_pin, GPIO_INPUT_FLOATING);
-	}
-	return 1;
+    if (usb_attr->use_present_pin){
+	gpio_set_mode(usb_attr->present_port, usb_attr->present_pin, GPIO_INPUT_FLOATING);
+    }
+    return 1;
 }
 
 uint8_t is_usb_connected(usb_attr_t *attr)

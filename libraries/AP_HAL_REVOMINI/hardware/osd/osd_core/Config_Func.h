@@ -48,7 +48,7 @@ static inline void osd_print_S(PGM_P f){
 }
 
 
-void NOINLINE delay_telem(){
+void delay_telem(){
         delayMicroseconds((1000000/TELEMETRY_SPEED*10)); //время приема 1 байта
 }
 
@@ -57,36 +57,6 @@ static inline void delay_byte(){
         delay_telem();
 }
 
-
-#if 0 
-
-#define X25_INIT_CRC 0xffff
-#define X25_VALIDATE_CRC 0xf0b8
-static /* inline*/ void crc_accumulate(uint8_t data, uint16_t *crcAccum)
-{
-        /*Accumulate one byte of data into the CRC*/
-        uint8_t tmp;
-
-        tmp = data ^ (uint8_t)(*crcAccum &0xff);
-        tmp ^= (tmp<<4);
-        *crcAccum = (*crcAccum>>8) ^ (tmp<<8) ^ (tmp <<3) ^ (tmp>>4);
-}
-
-static inline void crc_init(uint16_t* crcAccum)
-{
-        *crcAccum = X25_INIT_CRC;
-}
-
-static inline uint16_t crc_calculate(const uint8_t* pBuffer, uint16_t length)
-{
-        uint16_t crcTmp;
-        crc_init(&crcTmp);
-        while (length--) {
-                crc_accumulate(*pBuffer++, &crcTmp);
-        }
-        return crcTmp;
-}
-#endif
 
 #ifdef DEBUG
 /* prints hex numbers with leading zeroes */
@@ -170,7 +140,7 @@ void serial_hex_dump(byte *p, uint16_t len) {}
 
 
 
-void NOINLINE millis_plus(uint32_t *dst, uint16_t inc) {
+void millis_plus(uint32_t *dst, uint16_t inc) {
     *dst = millis() + inc;
 }
 

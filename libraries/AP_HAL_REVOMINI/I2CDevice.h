@@ -148,7 +148,7 @@ private:
     void     *_task;
     
     const i2c_dev *_dev;
-    Soft_I2C s_i2c; // per-bus instances
+    Soft_I2C *s_i2c; // per-bus instances
 
     static REVOMINI::Semaphore _semaphores[3]; // individual for each bus + softI2C
     static const timer_dev *   _timers[3];   // one timer per bus

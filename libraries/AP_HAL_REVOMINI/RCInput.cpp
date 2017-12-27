@@ -174,16 +174,12 @@ uint16_t REVOMINIRCInput::last_4=0;
 
 //#define LOST_TIME 50 // this is wrong! Any packet lost and viola... 
 #define LOST_TIME 500
+#define FRAME_TIME 50 // time between packets
 
 uint16_t REVOMINIRCInput::_read_ppm(uint8_t ch,uint8_t n){
-    uint16_t data=0;
-    
     const _parser *p = parsers[n];
-    noInterrupts();
-        data =            p->get_val(ch);
-        _valid_channels = p->get_valid_channels();
-    interrupts();
-    return data;
+    _valid_channels = p->get_valid_channels();
+    return            p->get_val(ch);
 }
 
 
@@ -205,47 +201,53 @@ uint16_t REVOMINIRCInput::read(uint8_t ch)
         inp-=1;
 
         const _parser *p = parsers[inp];
-        pulse = p->get_last_signal();
-        last  = p->get_last_change();
-        data = _read_ppm(ch,inp);
+        pulse           = p->get_last_signal();
+        last            = p->get_last_change();
+        data            = p->get_val(ch);
+        _valid_channels = p->get_valid_channels();
         got = inp+1;
 
-    } else {
+    } else if(now - _last_read > FRAME_TIME) { // seems that we loose 1 frame on current RC receiver so should select new one
         uint32_t best_t=(uint32_t) -1;
         
         for(uint8_t i=0; i<num_parsers;i++) {
+            
             const _parser *p = parsers[i];
             pulse = p->get_last_signal();
             last  = p->get_last_change();
+            
             uint32_t dt = now-pulse; // time from signal
+            
             if( pulse >_last_read &&  // data is newer than last
                 dt<best_t &&          // and most recent
                 ((now - last ) < RC_DEAD_TIME || !rc_failsafe_enabled)) // and time from last change less than RC_DEAD_TIME
             {
                 best_t = dt;
-                data = _read_ppm(ch,i);
+                data            = p->get_val(ch);
+                _valid_channels = p->get_valid_channels();                
                 got = i+1;
             }
         }
+        // now we have a most recent data
     }
     
     if(got)  {
         _last_read_from = got;
-        _last_read = pulse;
+        _last_read      = pulse;
     } else {
-        if(_last_read_from) {
+        if(_last_read_from) {   //      read from the last channel
             uint8_t n = _last_read_from-1;
             const _parser *p = parsers[n];
-            pulse = p->get_last_signal();
-            last  = p->get_last_change();
-            data = _read_ppm(ch,n);
+            pulse           = p->get_last_signal();
+            last            = p->get_last_change();
+            data            = p->get_val(ch);
+            _valid_channels = p->get_valid_channels();
             _last_read = pulse;
-        } else {
+        } else { // no data at all
 
             if( ch == 2) data = 900;
             else         data = 1000;
         }
-    
     }
 
     /* Check for override */
@@ -287,7 +289,6 @@ uint8_t REVOMINIRCInput::read(uint16_t* periods, uint8_t len)
 }
 
 
-
 bool REVOMINIRCInput::set_overrides(int16_t *overrides, uint8_t len)
 {
     bool res = false;
@@ -300,7 +301,7 @@ bool REVOMINIRCInput::set_overrides(int16_t *overrides, uint8_t len)
 bool REVOMINIRCInput::set_override(uint8_t channel, int16_t override)
 {
     if (override < 0) return false; /* -1: no change. */
-    if (channel < 8) {
+    if (channel < REVOMINI_RC_INPUT_NUM_CHANNELS) {
         _override[channel] = override;
         if (override != 0) {
     	    _override_valid = true;

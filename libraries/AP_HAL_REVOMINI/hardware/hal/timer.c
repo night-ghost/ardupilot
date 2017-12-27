@@ -401,6 +401,9 @@ uint32_t configTimeBase(const timer_dev *dev, uint16_t period, uint16_t khz)
     }
 
     timer_set_count(dev,0);    
+
+    dev->state->freq_scale = (float)freq / (khz * 1000); // remember ratio for correction
+
     return freq;
 }
 

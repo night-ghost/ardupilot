@@ -7,7 +7,9 @@
 
 using namespace REVOMINI;
 
-extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] = {
+extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
+
+    /* Top header */
 /*
     const gpio_dev  * const gpio_device;      < Maple pin's GPIO device 
     const timer_dev * const timer_device;     < Pin's timer device, if any. 
@@ -19,30 +21,30 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] = {
 
     {&gpiob,   NULL, NULL, 10, 0, ADCx}, /* D0/PB10  0 USART3_TX/I2C2-SCL */
     {&gpiob,   NULL, NULL,  2, 0, ADCx}, /* D1/PB2   1*/
-    {&gpiob,   NULL, NULL, 12, 0, ADCx}, /* D2/PB12  2 in0 on REVO */
-    {&gpiob,   NULL, NULL, 13, 0, ADCx}, /* D3/PB13  3 in1 on REVO */
-    {&gpiob,&timer12,NULL, 14, 1, ADCx}, /* D4/PB14  4 CH1_IN - PPMSUM */
-    {&gpiob,&timer12,NULL, 15, 2, ADCx}, /* D5/PB15  5 CH2_IN - PPMSUM2 */
-    {&gpioc,   NULL,&_adc1, 0, 0,   10}, /* D6/PC0   6 SBUS invertor output */
-    {&gpioc,   NULL,&_adc1, 1, 0,   11}, /* D7/PC1   7 VOLT */
-    {&gpioc,   NULL,&_adc1, 2, 0,   12}, /* D8/PC2   8 AMP/SONAR */
-    {&gpioc,   NULL,&_adc1, 3, 0,   13}, /* D9/PC3   9 freq sense - resistor to VCC */
+    {&gpiob,   NULL, NULL, 12, 0, ADCx}, /* D2/PB12  2 SDCARD CS pin */
+    {&gpiob,   NULL, NULL, 13, 0, ADCx}, /* D3/PB13  3 SPI2_SCK */
+    {&gpiob,&timer12,NULL, 14, 1, ADCx}, /* D4/PB14  4 SPI2_MOSI */
+    {&gpiob,&timer12,NULL, 15, 2, ADCx}, /* D5/PB15  5 SPI2_MISO */
+    {&gpioc,   NULL,&_adc1, 0, 0,   10}, /* D6/PC0   6 NC */
+    {&gpioc,   NULL,&_adc1, 1, 0,   11}, /* D7/PC1   7 AMP */
+    {&gpioc,   NULL,&_adc1, 2, 0,   12}, /* D8/PC2   8 VOLT */
+    {&gpioc,   NULL,&_adc1, 3, 0,   13}, /* D9/PC3   9 freq sense - resistor to VCC, used asd MAX7456 VSYNC */
     {&gpioc,   NULL,&_adc1, 4, 0,   14}, /* D10/PC4  10 EXTI_MPU6000 */
-    {&gpioc,   NULL,&_adc1, 5, 0,   15}, /* D11/PC5  1 USB_SENSE */
+    {&gpioc,   NULL,&_adc1, 5, 0,   15}, /* D11/PC5  1 Vbat */
     {&gpioc, &timer8,NULL,  6, 1, ADCx}, /* D12/PC6  2 CH3_IN / UART6_TX */
     {&gpioc, &timer8,NULL,  7, 2, ADCx}, /* D13/PC7  3 CH4_IN / UART6_RX */
     {&gpioc, &timer8,NULL,  8, 3, ADCx}, /* D14/PC8  4 CH5_IN / S_scl */
     {&gpioc, &timer8,NULL,  9, 4, ADCx}, /* D15/PC9  5 CH6_IN / S_sda  */
-    {&gpioc,   NULL, NULL, 10, 0, ADCx}, /* D16/PC10 6 SPI3_SCLK */
-    {&gpioc,   NULL, NULL, 11, 0, ADCx}, /* D17/PC11 7 SPI3_MISO */
-    {&gpioc,   NULL, NULL, 12, 0, ADCx}, /* D18/PC12 8 SPI3_MOSI */
-    {&gpioc,   NULL, NULL, 13, 0, ADCx}, /* D19/PC13 9  NOT CONNECTED Tamper */
-    {&gpioc,   NULL, NULL, 14, 0, ADCx}, /* D20/PC14 20 NOT CONNECTED LSE in */
-    {&gpioc,   NULL, NULL, 15, 0, ADCx}, /* D21/PC15 1  NOT CONNECTED LSE out */
+    {&gpioc,   NULL, NULL, 10, 0, ADCx}, /* D16/PC10 6  */
+    {&gpioc,   NULL, NULL, 11, 0, ADCx}, /* D17/PC11 7  */
+    {&gpioc,   NULL, NULL, 12, 0, ADCx}, /* D18/PC12 8  */
+    {&gpioc,   NULL, NULL, 13, 0, ADCx}, /* D19/PC13 9  */
+    {&gpioc,   NULL, NULL, 14, 0, ADCx}, /* D20/PC14 20  */
+    {&gpioc,   NULL, NULL, 15, 0, ADCx}, /* D21/PC15 1   */
     {&gpioa, &timer1,NULL,  8, 1, ADCx}, /* D22/PA8  2 SERVO6 */
     {&gpioa, &timer1,NULL,  9, 2, ADCx}, /* D23/PA9  3 USART1_TX */
     {&gpioa, &timer1,NULL, 10, 3, ADCx}, /* D24/PA10 4 USART1_RX */
-    {&gpiob, &timer4,NULL,  9, 4, ADCx}, /* D25/PB9  5 I2C1_SDA */
+    {&gpiob, &timer4,NULL,  9, 4, ADCx}, /* D25/PB9  5 LED */
     {&gpiod,   NULL, NULL,  2, 0, ADCx}, /* D26/PD2  6 EXTI_RFM22B / UART5_RX */
     {&gpiod,   NULL, NULL,  3, 0, ADCx}, /* D27/PD3  7*/
     {&gpiod,   NULL, NULL,  6, 0, ADCx}, /* D28/PD6  8*/
@@ -53,9 +55,9 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] = {
     {&gpiog,   NULL, NULL,  8, 0, ADCx}, /* D33/PG8  3*/
     {&gpiog,   NULL, NULL,  7, 0, ADCx}, /* D34/PG7  4*/
     {&gpiog,   NULL, NULL,  6, 0, ADCx}, /* D35/PG6  5*/
-    {&gpiob, &timer3,NULL,  5, 2, ADCx}, /* D36/PB5  6 LED_BLUE */
-    {&gpiob, &timer4,NULL,  6, 1, ADCx}, /* D37/PB6  7 LED_YELLOW - OPTIONAL*/
-    {&gpiob, &timer4,NULL,  7, 2, ADCx}, /* D38/PB7  8 DRDY_HMC5883 */
+    {&gpiob, &timer3,NULL,  5, 2, ADCx}, /* D36/PB5  6 */
+    {&gpiob, &timer4,NULL,  6, 1, ADCx}, /* D37/PB6  7 RCD_CS on SPI_3*/
+    {&gpiob, &timer4,NULL,  7, 2, ADCx}, /* D38/PB7  8 SD_DET */
     {&gpiof,   NULL,&_adc3, 6, 0,    4}, /* D39/PF6  9*/
     {&gpiof,   NULL,&_adc3, 7, 0,    5}, /* D40/PF7  40*/
     {&gpiof,   NULL,&_adc3, 8, 0,    6}, /* D41/PF8  1*/
@@ -118,25 +120,38 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] = {
     {&gpiog,   NULL, NULL,  5, 0, ADCx}, /* D98/PG5  8*/
     {&gpiod,   NULL, NULL, 10, 0, ADCx}, /* D99/PD10 9*/
     {&gpiob,   NULL, NULL, 11, 0, ADCx}, /* D100/PB11 100 USART3_RX/I2C2-SDA */
-    {&gpiob, &timer4,NULL,  8, 3, ADCx}, /* D101/PB8  I2C1_SCL  */
+    {&gpiob, &timer4,NULL,  8, 3, ADCx}, /* D101/PB8  I2C1_SCL  PPM_IN */
     {&gpioe,   NULL, NULL,  2, 0, ADCx}, /* D102/PE2 */
-    {&gpioa,   NULL, NULL, 15, 0, ADCx}, /* D103/PA15 CS_RFM22B */
-    {&gpiob,   NULL, NULL,  3, 0, ADCx}, /* D104/PB3  CS_FLASH */
-    {&gpiob,   NULL, NULL,  4, 0, ADCx}, /* D105/PB4  LED_RED / Buzzer */
-    {&gpioa,   NULL, NULL, 13, 0, ADCx}, /* D106/PA13 LED_MOTOR - SWDIO */
-    {&gpioa,   NULL, NULL, 14, 0, ADCx}, /* D107/PA14 */
+    {&gpioa,   NULL, NULL, 15, 0, ADCx}, /* D103/PA15  */
+    {&gpiob,   NULL, NULL,  3, 0, ADCx}, /* D104/PB3   */
+    {&gpiob,   NULL, NULL,  4, 0, ADCx}, /* D105/PB4   */
+    {&gpioa,   NULL, NULL, 13, 0, ADCx}, /* D106/PA13 SWDIO */
+    {&gpioa,   NULL, NULL, 14, 0, ADCx}, /* D107/PA14 SWCLK */
     {&gpioa,   NULL, NULL, 11, 0, ADCx}, /* D108/PA11  - USB D- */
     
 };
 
-extern const struct TIM_Channel PWM_Channels[] =   {
-    //CH1 and CH2 also for PPMSUM / SBUS / DSM
-    { 	.pin =  4,  },// 0 RC_IN1
-    {	.pin =  5,  },// 1 RC_IN2
-    { 	.pin = 12,  },// 2 RC_IN3
-    { 	.pin = 13,  },// 3 RC_IN4
-    { 	.pin = 14,  },// 4 RC_IN5
-    { 	.pin = 15,  },// 5 RC_IN6
+
+extern const struct TIM_Channel PWM_Channels[] __FLASH__ =   {
+//CH1 and CH2 also for PPMSUM / SBUS / DSM
+    { // 0 RC_IN1
+	.pin         = 50,
+    },
+    { // 1 RC_IN2
+	.pin         = 37,
+    },
+    { // 2 RC_IN3
+	.pin         = -1,
+    },
+    { // 3 RC_IN4
+	.pin         = -1,
+    },
+    { // 4 RC_IN5
+	.pin         = -1,
+    },
+    { // 5 RC_IN6
+	.pin         = -1,
+    },
 };
 
 
@@ -148,16 +163,18 @@ extern const struct TIM_Channel PWM_Channels[] =   {
 2 - enable alaways
 
 */
-// different SPI tables per board subtype
-extern const SPIDesc spi_device_table[] = {
-//              name            device   bus  mode         cs_pin                       speed_low       speed_high     mode               priority           assert_dly release_dly
-     { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,          SPI_1_125MHZ,   SPI_9MHZ,  SPI_TRANSFER_DMA,  DMA_Priority_VeryHigh,   1,          5 }, 
-     { BOARD_DATAFLASH_NAME,     _SPI3,   3,  SPI_MODE_3, 254 /* device controls CS */ , SPI_1_125MHZ,   SPI_18MHZ, SPI_TRANSFER_DMA,  DMA_Priority_Medium,     1,          1 },
+extern const SPIDesc spi_device_table[] = {    // different SPI tables per board subtype
+//               name            device   bus  mode         cs_pin                 speed_low       speed_high   dma               priority
+     { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,    SPI_1_125MHZ,   SPI_9MHZ,   SPI_TRANSFER_DMA, DMA_Priority_VeryHigh,   1,          5 }, 
+     { BOARD_SDCARD_NAME,        _SPI3,   2,  SPI_MODE_0, 255,                     SPI_1_125MHZ,   SPI_18MHZ,  SPI_TRANSFER_DMA, DMA_Priority_Medium,     0,          0 }, 
+     { HAL_BARO_BMP280_NAME,     _SPI3,   3,  SPI_MODE_3, BOARD_BMP280_CS_PIN,     SPI_1_125MHZ,   SPI_9MHZ,   SPI_TRANSFER_DMA, DMA_Priority_High,       1,          1 }, 
+     { BOARD_OSD_NAME,           _SPI2,   3,  SPI_MODE_0, BOARD_OSD_CS_PIN,        SPI_1_125MHZ,   SPI_4_5MHZ, SPI_TRANSFER_DMA, DMA_Priority_Low,        2,          2 },
 };
 
 extern const uint8_t REVOMINI_SPI_DEVICE_NUM_DEVICES = ARRAY_SIZE(spi_device_table);
 
 void boardInit(void) {
+
 
 #ifdef BOARD_HMC5883_DRDY_PIN
     // Init HMC5883 DRDY EXT_INT pin - but it not used by driver
@@ -175,9 +192,7 @@ void boardInit(void) {
     gpio_write_bit(PIN_MAP[BOARD_SBUS_INVERTER].gpio_device, PIN_MAP[BOARD_SBUS_INVERTER].gpio_bit, 0); // not inverted
 #endif
 
-
 }
 
 
 #endif
-

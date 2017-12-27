@@ -54,8 +54,8 @@ void *              SPIDevice::owner[MAX_BUS_NUM] IN_CCM;
 uint8_t *           SPIDevice::buffer[MAX_BUS_NUM] IN_CCM;      // DMA buffers in RAM
 
 #ifdef DEBUG_SPI 
-struct spi_trans SPIDevice::spi_trans_array[SPI_LOG_SIZE]  IN_CCM;
-uint8_t          SPIDevice::spi_trans_ptr=0;
+spi_trans SPIDevice::spi_trans_array[SPI_LOG_SIZE]  IN_CCM;
+uint8_t   SPIDevice::spi_trans_ptr=0;
 #endif
 
 
@@ -227,6 +227,7 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
     } else 
 #endif
     {
+    
         uint32_t t = hal_micros();
         while(_desc.dev->state->busy){ //       wait for previous transfer finished
             if(hal_micros() - t > 5000){
@@ -235,6 +236,7 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
             }
             hal_yield(0);
         }
+
         
         spi_set_speed(_desc.dev, determine_baud_rate(_speed));
         
@@ -243,11 +245,13 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
 
         _send_address = out;    //      remember transfer params for ISR
         _send_len     = send_len;
+        _dummy_len    = send_len;
         _recv_address = recv;
         _recv_len     = recv_len;
 
 
-#define MIN_DMA_BYTES 1 // write to 2-byte register not uses DMA, 4-byte command to DataFlash will
+#define MIN_DMA_BYTES 1 // 4 // write to 2-byte register not uses DMA, 4-byte command to DataFlash will
+//#define MIN_DMA_BYTES 32 // for debug
 
         switch(_desc.mode){
             
@@ -346,28 +350,6 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
         }
     }
 
-#ifdef DEBUG_SPI 
-    struct spi_trans &p = spi_trans_array[spi_trans_ptr];
-
-    p.dev      = _desc.dev;
-    p.send_len = send_len;
-    if(send_len)
-      p.sent = out[0];
-    else p.sent = 0;
-    if(send_len>1)
-      p.sent1 = out[1];
-    else p.sent1 = 0;
-    p.recv_len = recv_len;
-    if(recv_len)
-      p.recv0 = recv[0];
-    else p.recv0 = 0;
-    if(recv_len>1)
-      p.recv1 = recv[1];
-    else p.recv1 = 0;
-    
-    spi_trans_ptr++;
-    if(spi_trans_ptr>=SPI_LOG_SIZE) spi_trans_ptr=0;
-#endif
 
 
     return err==0;
@@ -787,6 +769,10 @@ bool SPIDevice::set_speed(AP_HAL::Device::Speed speed)
 uint8_t  SPIDevice::do_transfer(bool is_DMA)
 {
 
+#ifdef DEBUG_SPI 
+    spi_trans_ptr=0; // each transfer from start
+#endif
+
     if(_completion_cb) {// we should call it after completion via interrupt    
         if(is_DMA) {
             start_dma_transfer();
@@ -826,12 +812,10 @@ uint8_t  SPIDevice::do_transfer(bool is_DMA)
     } 
 
     return (_send_len == 0 && _recv_len == 0)? 0 : 1;
-
 }
 
 
 void SPIDevice::setup_isr_transfer() {
-
     spi_attach_interrupt(_desc.dev, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SPIDevice::spi_isr, void)) );    
 
    (void)_desc.dev->SPIx->DR; // read fake data out
@@ -930,16 +914,35 @@ void SPIDevice::isr_transfer_finish(){
 }
 
 void SPIDevice::spi_isr(){
+#ifdef DEBUG_SPI 
+    spi_trans &p = spi_trans_array[spi_trans_ptr];
+
+    p.time = hal_micros();
+    p.dev      = _desc.dev;
+    p.send_len = _send_len;
+    p.recv_len = _recv_len;
+    p.dummy_len=_dummy_len;
+    p.cr2 = _desc.dev->SPIx->CR2;
+    p.sr1 = _desc.dev->SPIx->SR;
+    p.mode = _isr_mode;
+    p.act = 0;
+        
+    spi_trans_ptr++;
+    if(spi_trans_ptr>=SPI_LOG_SIZE) spi_trans_ptr=0;
+#endif
+
+
     if(spi_is_tx_empty(_desc.dev)  && spi_is_irq_enabled(_desc.dev, SPI_TXE_INTERRUPT)) {
+#ifdef DEBUG_SPI 
+        p.act |= 1;
+#endif
         switch(_isr_mode) {
         case SPI_ISR_NONE:
             (void)_desc.dev->SPIx->DR;          // reset RXNE  
             spi_disable_irq(_desc.dev, SPI_TXE_INTERRUPT);  // disable TXE interrupt
-            spi_enable_irq(_desc.dev,  SPI_RXNE_INTERRUPT); // enable - will be interrupt after byte finished
             _isr_mode=SPI_ISR_FINISH; // should  releases SPI bus after last RXNE is set
             break;
         
-        case SPI_ISR_RXTX:
         case SPI_ISR_SEND:
         case SPI_ISR_SEND_DMA:
             if(_send_len) {
@@ -949,7 +952,6 @@ void SPIDevice::spi_isr(){
                 // now we in 1 byte till bus release, so wait for RXNE
             
                 spi_disable_irq(_desc.dev, SPI_TXE_INTERRUPT);  // disable TXE interrupt
-                spi_enable_irq(_desc.dev,  SPI_RXNE_INTERRUPT); // enable - will be interrupt after byte finished
             
                 if(_recv_len) {
                     if(_isr_mode==SPI_ISR_SEND) {
@@ -963,6 +965,10 @@ void SPIDevice::spi_isr(){
                     _isr_mode=SPI_ISR_FINISH; // should release SPI bus after last RXNE is set            
                 }            
             }
+            break;
+
+        case SPI_ISR_RXTX:
+            _desc.dev->SPIx->DR = *_send_address++;
             break;
 
         case SPI_ISR_RECEIVE:
@@ -982,6 +988,10 @@ void SPIDevice::spi_isr(){
     }
 
     if(spi_is_rx_nonempty(_desc.dev) /* && spi_is_irq_enabled(_desc.dev, SPI_RXNE_INTERRUPT) */) {
+#ifdef DEBUG_SPI 
+        p.act |= 2;
+#endif
+
         switch(_isr_mode) {
 
         case SPI_ISR_STROBE: {
@@ -1005,6 +1015,7 @@ void SPIDevice::spi_isr(){
         case SPI_ISR_SEND:
         case SPI_ISR_SEND_DMA:
             (void)_desc.dev->SPIx->DR; // read fake data out
+            _dummy_len--;               // and count them
             break;
 
         case SPI_ISR_RECEIVE:
@@ -1019,6 +1030,10 @@ void SPIDevice::spi_isr(){
         
         case SPI_ISR_RXTX:
             *_recv_address++ = _desc.dev->SPIx->DR;
+            _send_len--;
+            if(!_send_len) { // readed the last byte
+                isr_transfer_finish();                // releases SPI bus            
+            }
             break;
 
         case SPI_ISR_COMPARE:
@@ -1036,8 +1051,11 @@ void SPIDevice::spi_isr(){
             break;
 
         case SPI_ISR_WAIT_RX_DMA:  // we just got last RXNE of transfer
-            {                 //   now we should program DMA for receive or turn on ISR mode receiving if can't DMA
-                (void)_desc.dev->SPIx->DR; // read fake data out
+            (void)_desc.dev->SPIx->DR; // read fake data out
+            if(_dummy_len){
+                _dummy_len--; 
+            }
+            if(_dummy_len==0) {  // this was a last dummy byte,  now we should program DMA for receive or turn on ISR mode receiving if can't DMA
                 // now we should set up DMA transfer
 
                 bool can_dma = false;
@@ -1057,6 +1075,9 @@ void SPIDevice::spi_isr(){
                     can_dma=true;
                 } 
                 if(can_dma){
+#ifdef DEBUG_SPI 
+                    p.act |= 10;
+#endif
                     spi_disable_irq(_desc.dev, SPI_RXNE_INTERRUPT); // disable RXNE interrupt, TXE already disabled
                     setup_dma_transfer(NULL, recv, len);
                     start_dma_transfer();
@@ -1070,13 +1091,27 @@ void SPIDevice::spi_isr(){
 
         case SPI_ISR_WAIT_RX:           //  turn on ISR mode receiving 
             (void)_desc.dev->SPIx->DR;          // read fake data out
-            _isr_mode = SPI_ISR_RECEIVE;                // we should receive 
-            _desc.dev->SPIx->DR = 0xFF; // write dummy byte for 1st transfer
+            if(_dummy_len){
+                _dummy_len--;
+            }
+            if(_dummy_len==0) {  // this was a last dummy byte,  now we should receive            
+                _isr_mode = SPI_ISR_RECEIVE;                // we should receive 
+                _desc.dev->SPIx->DR = 0xFF; // write dummy byte for 1st transfer
 
-            spi_enable_irq(_desc.dev, SPI_TXE_INTERRUPT);  // enable TXE interrupt
+                _dummy_len = _recv_len-1; // set number of bytes to be sent
+                if(_dummy_len) {        // if we should send additional bytes
+                    spi_enable_irq(_desc.dev, SPI_TXE_INTERRUPT);  // enable TXE interrupt
+                }
+            }
             break;
 
         case SPI_ISR_FINISH:
+            (void)_desc.dev->SPIx->DR;          // read fake data out
+            if(_dummy_len){
+                _dummy_len--;   
+            }
+            if(_dummy_len) break; // not last byte
+        
         case SPI_ISR_NONE:
         default:
             isr_transfer_finish();                // releases SPI bus

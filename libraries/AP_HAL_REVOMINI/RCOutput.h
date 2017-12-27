@@ -107,7 +107,7 @@ private:
     static uint16_t _timer3_preload;
 
     static uint8_t _pwm_type;
-    static float _freq_scale;
+//    static float _freq_scale;
 
     static const timer_dev* out_timers[16]; // array of timers, used to rc_out
     static uint8_t num_out_timers;

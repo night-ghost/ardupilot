@@ -181,6 +181,116 @@ extern void systemInit(uint8_t oc);
  #error "Board type has not been selected correctly."
 #endif
 
+// pin names, see PIN_MAP array
+#define PB10 0
+#define PB2  1
+#define PB12 2
+#define PB13 3
+#define PB14 4
+#define PB15 5
+#define PC0  6
+#define PC1  7
+#define PC2  8
+#define PC3  9
+#define PC4  10
+#define PC5  11
+#define PC6  12
+#define PC7  13
+#define PC8  14
+#define PC9  15
+#define PC10 16
+#define PC11 17
+#define PC12 18
+#define PC13 19
+#define PC14 20
+#define PC15 21
+#define PA8  22
+#define PA9  23
+#define PA10 24
+#define PB9  25
+#define PD2  26
+#define PD3  27
+#define PD6  28
+#define PG11 29
+#define PG12 30
+#define PG13 31
+#define PG14 32
+#define PG8  33
+#define PG7  34
+#define PG6  35
+#define PB5  36
+#define PB6  37
+#define PB7  38
+#define PF6  39
+#define PF7  40
+#define PF8  41
+#define PF9  42
+#define PF10 43
+#define PF11 44
+#define PB1  45
+#define PB0  46
+#define PA0  47
+#define PA1  48
+#define PA2  49
+#define PA3  50
+#define PA4  51
+#define PA5  52
+#define PA6  53
+#define PA7  54
+#define PF0  55
+#define PD11 56
+#define PD14 57
+#define PF1  58
+#define PD12 59
+#define PD15 60
+#define PF2  61
+#define PD13 62
+#define PD0  63
+#define PF3  64
+#define PE3  65
+#define PD1  66
+#define PF4  67
+#define PE4  68
+#define PE7  69
+#define PF5  70
+#define PE5  71
+#define PE8  72
+#define PF12 73
+#define PE6  74
+#define PE9  75
+#define PF13 76
+#define PE10 77
+#define PF14 78
+#define PG9  79
+#define PE11 80
+#define PF15 81
+#define PG10 82
+#define PE12 83
+#define PG0  84
+#define PD5  85
+#define PE13 86
+#define PG1  87
+#define PD4  88
+#define PE14 89
+#define PG2  90
+#define PE1  91
+#define PE15 92
+#define PG3  93
+#define PE0  94
+#define PD8  95
+#define PG4  96
+#define PD9  97
+#define PG5  98
+#define PD10 99
+#define PB11 100
+#define PB8  101
+#define PE2  102
+#define PA15 103
+#define PB3  104
+#define PB4  105
+#define PA13 106
+#define PA14 107
+#define PA11 108
 
 /* Set derived definitions */
 
@@ -195,7 +305,7 @@ extern void systemInit(uint8_t oc);
 #define DSM_BIND_SIGNATURE      0xD82B14D0 // "DSMBIND" last nibble for DSM code
 #define DSM_BIND_SIGN_MASK      0xF // mask for last nibble - DSM code
 
-#define CONSOLE_PORT_SIGNATURE  0xC07501e0 // last nibble for port number
+#define CONSOLE_PORT_SIGNATURE  0xC07501e0 // "console" last nibble for port number
 #define CONSOLE_PORT_MASK       0xF // mask for last nibble - port number
 
 
@@ -204,7 +314,7 @@ extern void systemInit(uint8_t oc);
 
 #define OVERCLOCK_SIGNATURE     0xFACED1A0 // "FaceDia" last nibble for mode
 #define OVERCLOCK_SIG_MASK      0xF        // mode mask
-#define OV_GUARD_SIGNATURE      0xBABEFACE
+#define OV_GUARD_SIGNATURE      0xBABEFACE //
 #define OV_GUARD_FAIL_SIGNATURE 0xBABEFA17 
 
 // Backup SRAM registers usage
