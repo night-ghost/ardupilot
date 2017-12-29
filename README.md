@@ -112,6 +112,23 @@
 * fixed bug in OSD_Uart that cause hang if port not listened
 * SoftSerial driver rewritten to not use PWM dependency. Now it can use any pin with timer for RX and any pin for TX, and there
    can be any number of SoftSerial UARTs
+* added per-task stack usage
+* SPI driver rewritten: added ISR mode instead of polling, all transfers are monolitic (not divded to send and receive parts), setup for receive now in ISR
+* all DataFlash reads and writes now in single SPI transfer
+* removed usage of one-byte SPI functions from SD driver
+* added support of criticalSections to Scheduler, which protect code from task switch without disabling interrupts
+* added CS assert/release delays to SPI device descriptrion table
+* added partial MPU support (only to protect from process stack overflow)
+* removed -fpermissive from GCC options
+* class SD is slightly redesigned, reducing the memory consumption by half (!)
+* optimized dma_init_transfer() function: now it twice faster and requires 3 times less memory
+* added SD size to bootlog
+* SPI via interrupts now works
+* added pin names to simplify porting of boards
+* added DSM rssi as last channel
+* IO tasks excluded from priority boost on yield()
+* added awakening of main thread after receiving of data from MPU
+* ArduCopter loop at 1KHz! fixed all issues
 * ...
 * a lot of minor enhancements
 

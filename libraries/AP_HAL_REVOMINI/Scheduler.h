@@ -25,13 +25,13 @@
 
 #define MAIN_PRIORITY  100  // priority for main task
 #define DRIVER_PRIORITY 98  // priority for drivers, speed of main will be 1/4 of this
-#define IO_PRIORITY    107  // main task has 100 so IO tasks will use 1/8 of CPU
+#define IO_PRIORITY    115  // main task has 100 so IO tasks will use 1/16 of CPU
 
 #define SHED_FREQ 10000   // timer's freq in Hz
 #define TIMER_PERIOD 100  // task timeslice period in uS
 
 
-#define MAIN_STACK_SIZE     7168U   // measured use of stack is only 1.5K - but it grows up to 5K when using FatFs, also this includes 1K stack for ISR
+#define MAIN_STACK_SIZE     6144U   // measured use of stack is only 1.5K - but it grows up to 5K when using FatFs, also this includes 1K stack for ISR
 #define IO_STACK_SIZE       4096U   // IO_tasks stack size - io_thread can do work with filesystem
 #define DEFAULT_STACK_SIZE  1024U   // Default tasks stack size 
 #define SMALL_TASK_STACK    1024U   // small stack for sensors
@@ -59,7 +59,7 @@ struct task_t {
         uint8_t priority;       // priority of task
         uint8_t curr_prio;      // current priority of task, usually higher than priority
         bool active;            // task not ended
-        bool f_yield;           // task gives its quant
+        bool f_yield;           // task gives its quant voluntary
         uint32_t ttw;           // time to wait
         uint32_t t_yield;       // time of yield
         uint32_t period;        // if set then task starts on time basis only
