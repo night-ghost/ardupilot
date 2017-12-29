@@ -331,7 +331,7 @@ void PPM_parser::_process_dsm_pulse(uint16_t width_s0, uint16_t width_s1)
                     
                     uint32_t nc=num_values+1;
                     if(nc>_channels) 
-                        _channels = c;
+                        _channels = nc;
                     _val[_channels-1]=bytes[0]; // rssi
                     _got_dsm = true;
                     _last_signal = systick_uptime();

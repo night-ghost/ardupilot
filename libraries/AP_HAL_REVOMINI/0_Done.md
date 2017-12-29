@@ -137,6 +137,9 @@
 * SPI via interrupts now works
 * added pin names to simplify porting of boards
 * added DSM rssi as last channel
+* IO tasks excluded from priority boost on yield()
+* added awakening of main thread after receiving of data from MPU
+* ArduCopter loop at 1KHz! fixed all issues
 * ...
 * a lot of minor enhancements
 

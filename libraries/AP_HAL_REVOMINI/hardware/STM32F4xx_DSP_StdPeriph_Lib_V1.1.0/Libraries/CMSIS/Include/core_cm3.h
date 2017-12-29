@@ -1251,7 +1251,7 @@ typedef struct
 
 #if (__MPU_PRESENT == 1)
   #define MPU_BASE          (SCS_BASE +  0x0D90UL)                    /*!< Memory Protection Unit             */
-  #define MPU               ((MPU_Type       *)     MPU_BASE      )   /*!< Memory Protection Unit             */
+  #define MPU               ((volatile MPU_Type *)  MPU_BASE      )   /*!< Memory Protection Unit             */
 #endif
 
 /*@} */

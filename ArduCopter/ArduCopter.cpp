@@ -101,7 +101,7 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     SCHED_TASK(update_altitude,       10,    100),
     SCHED_TASK(run_nav_updates,       50,    100),
     SCHED_TASK(update_throttle_hover,100,     90),
-    SCHED_TASK(smart_rtl_save_position, 3,    100),
+    SCHED_TASK(smart_rtl_save_position, 3,   100),
     SCHED_TASK(three_hz_loop,          3,     75),
     SCHED_TASK(compass_accumulate,   100,    100),
     SCHED_TASK(barometer_accumulate,  50,     90),
@@ -111,9 +111,9 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
 #if FRAME_CONFIG == HELI_FRAME
     SCHED_TASK(check_dynamic_flight,  50,     75),
 #endif
-    SCHED_TASK(fourhundred_hz_logging,400,    50),
+    SCHED_TASK(fourhundred_hz_logging,400,    90),
     SCHED_TASK(update_notify,         50,     90),
-    SCHED_TASK(one_hz_loop,            1,    100),
+    SCHED_TASK(one_hz_loop,            1,    100), // can take 3000uS
     SCHED_TASK(ekf_check,             10,     75),
     SCHED_TASK(gpsglitch_check,       10,     50),
     SCHED_TASK(landinggear_update,    10,     75),
@@ -121,14 +121,14 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     SCHED_TASK(gcs_check_input,      400,    180),
     SCHED_TASK(gcs_send_heartbeat,     1,    110),
     SCHED_TASK(gcs_send_deferred,     50,    550),
-    SCHED_TASK(gcs_data_stream_send,  50,    550),
-    SCHED_TASK(update_mount,          50,     75),
+    SCHED_TASK(gcs_data_stream_send,  50,    650),
+    SCHED_TASK(update_mount,          50,    100),
     SCHED_TASK(update_trigger,        50,     75),
     SCHED_TASK(ten_hz_logging_loop,   10,    350),
     SCHED_TASK(twentyfive_hz_logging, 25,    110),
-    SCHED_TASK(dataflash_periodic,    400,    300),
-    SCHED_TASK(ins_periodic,         400,     50),
-    SCHED_TASK(perf_update,           0.1,    75),
+    SCHED_TASK(dataflash_periodic,   400,    300),
+    SCHED_TASK(ins_periodic,         400,    100),
+    SCHED_TASK(perf_update,           0.1,   175),
     SCHED_TASK(read_receiver_rssi,    10,     75),
     SCHED_TASK(rpm_update,            10,    200),
     SCHED_TASK(compass_cal_update,   100,    100),
@@ -160,7 +160,7 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     SCHED_TASK(userhook_SuperSlowLoop, 1,     75),
 #endif
     SCHED_TASK(button_update,          5,    100),
-    SCHED_TASK(stats_update,           1,    100),
+    SCHED_TASK(stats_update,           1,    100), // cat take 7700uS
 };
 
 
@@ -202,23 +202,52 @@ void Copter::perf_update(void)
 /*
   update AP_Stats
  */
-void Copter::stats_update(void)
+void Copter::stats_update(void) // can took ~7700uS for parameter save
 {
     g2.stats.update();
 }
 
 void Copter::loop()
 {
+
+#define DEBUG_LOOP_TIME
+
+#if defined(DEBUG_LOOP_TIME)
+    uint32_t t0 = micros(); 
+    static volatile uint32_t dt0;
+    static volatile uint32_t dt1; 
+    static volatile uint32_t dt2;
+    static volatile uint32_t last_loopTimer;
+    static uint32_t period = 0;
+#endif
+
+
     // wait for an INS sample
     ins.wait_for_sample();
 
     uint32_t timer = micros();
 
+    uint32_t loop_time = timer - fast_loopTimer;
+
+#if defined(DEBUG_LOOP_TIME)
+
+    if(period==0) period = scheduler.get_loop_period_us();
+    if(loop_time > period*3/2) {
+        uint16_t id;
+        uint32_t max = scheduler.get_longest_task(id);
+        printf("\nHuge loop time=%ld ins.wfs() took %ld last %ld loop %ld sched %ld max task id=%d took %ld\n", loop_time, timer - t0, dt0, dt1, dt2, id, max);
+    }
+
+    last_loopTimer = fast_loopTimer;
+#endif
+
+
+
     // check loop time
-    perf_info.check_loop_time(timer - fast_loopTimer);
+    perf_info.check_loop_time(loop_time);
 
     // used by PI Loops
-    G_Dt                    = (float)(timer - fast_loopTimer) / 1000000.0f;
+    G_Dt                    = (float)(loop_time) / 1000000.0f;
     fast_loopTimer          = timer;
 
     // for mainloop failure monitoring
@@ -227,6 +256,13 @@ void Copter::loop()
     // Execute the fast loop
     // ---------------------
     fast_loop();
+
+#if defined(DEBUG_LOOP_TIME)
+// time of ins.wait_for_sample()
+    dt0 = timer - t0;
+   // time of fast_loop();
+    dt1 = micros() - timer; 
+#endif
 
     // tell the scheduler one tick has passed
     scheduler.tick();
@@ -239,6 +275,12 @@ void Copter::loop()
     const uint32_t loop_us = scheduler.get_loop_period_us();
     const uint32_t time_available = (timer + loop_us) - micros();
     scheduler.run(time_available > loop_us ? 0u : time_available);
+    
+
+#if defined(DEBUG_LOOP_TIME)
+// time of scheduler.run();
+     dt2=micros() - timer - dt1; 
+#endif
 }
 
 
@@ -465,6 +507,8 @@ void Copter::three_hz_loop()
 // one_hz_loop - runs at 1Hz
 void Copter::one_hz_loop()
 {
+
+
     if (should_log(MASK_LOG_ANY)) {
         Log_Write_Data(DATA_AP_STATE, ap.value);
     }

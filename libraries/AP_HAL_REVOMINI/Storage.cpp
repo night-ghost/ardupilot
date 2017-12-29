@@ -42,6 +42,17 @@ extern const AP_HAL::HAL& hal;
 
 // The EEPROM class uses 2x16k FLASH ROM pages to emulate up to 8k of EEPROM.
 
+#if defined(WRITE_IN_THREAD)
+volatile uint16_t     REVOMINIStorage::rd_ptr = 0;
+volatile uint16_t     REVOMINIStorage::wr_ptr = 0;
+REVOMINIStorage::Item REVOMINIStorage::queue[EEPROM_QUEUE_LEN] IN_CCM;
+void *REVOMINIStorage::_task;
+#endif
+
+
+#if defined(EEPROM_CACHED)
+uint8_t REVOMINIStorage::eeprom_buffer[BOARD_STORAGE_SIZE] IN_CCM;
+#endif
 
 
 // This is the size of each FLASH ROM page
@@ -63,13 +74,6 @@ bool REVOMINIStorage::write_deferred IN_CCM;
 REVOMINIStorage::REVOMINIStorage()
 {}
 
-
-//we have a lot of unused CCM memory so cache data in RAM
-#define EEPROM_CACHED
-
-#if defined(EEPROM_CACHED)
-static uint8_t eeprom_buffer[BOARD_STORAGE_SIZE] IN_CCM;
-#endif
 
 void REVOMINIStorage::late_init(bool defer) { 
     write_deferred = defer; 
@@ -105,6 +109,7 @@ void REVOMINIStorage::error_parse(uint16_t status){
 void REVOMINIStorage::init()
 {
     eeprom.init(pageBase1, pageBase0, pageSize);
+
 #if defined(EEPROM_CACHED)
     uint16_t i;
     for(i=0; i<BOARD_STORAGE_SIZE;i+=2){ // read out all data to RAM buffer
@@ -116,6 +121,12 @@ void REVOMINIStorage::init()
 #pragma GCC diagnostic pop
     }
 #endif
+
+
+    _task = REVOMINIScheduler::start_task(write_thread, 256); // small stack
+    if(_task){
+        REVOMINIScheduler::set_task_priority(_task, MAIN_PRIORITY+2); // slightly less
+    }
 }
 
 uint8_t REVOMINIStorage::read_byte(uint16_t loc){
@@ -190,13 +201,18 @@ void REVOMINIStorage::_write_byte(uint16_t loc, uint8_t value)
     // 'bytes' are packed 2 per word
     // Read existing data word and change upper or lower byte
     uint16_t data;
-    error_parse(eeprom.read(loc >> 1, &data));
+
+#if defined(EEPROM_CACHED)
+    memmove(&data,&eeprom_buffer[loc & ~1], 2); // read current value from cache
+#else
+    error_parse(eeprom.read(loc >> 1, &data)); // read current value
+#endif
 
     if (loc & 1)
 	data = (data & 0x00ff) | (value << 8); // Odd, upper byte
     else
 	data = (data & 0xff00) | value;        // Even, lower byte
-    error_parse(eeprom.write(loc >> 1, data));
+    write_word(loc >> 1, data);
 }
 
 
@@ -220,7 +236,7 @@ void REVOMINIStorage::write_block(uint16_t loc, const void* src, size_t n)
     uint16_t *ptr_w = (uint16_t *)ptr_b;     // Treat as a block of words
 #pragma GCC diagnostic pop
     while(n>=2){
-        error_parse(eeprom.write(loc >> 1, *ptr_w++));
+        write_word(loc >> 1, *ptr_w++);
         loc+=2;
         n-=2;
     }
@@ -242,9 +258,47 @@ void REVOMINIStorage::do_on_disarm(){ // save changes to EEPROM
 #pragma GCC diagnostic pop
         
         if(b_data!=data){
-            error_parse(eeprom.write(i >> 1, b_data));
+            write_word(i >> 1, b_data);
         }
     }
 }
 
+void REVOMINIStorage::write_word(uint16_t loc, uint16_t data){
+#if defined(WRITE_IN_THREAD)
+
+    Item &d = queue[wr_ptr];
+    d.loc=loc;
+    d.val=data;
+
+    uint16_t new_wp = wr_ptr+1;
+
+    if(new_wp >= EEPROM_QUEUE_LEN) { // move write pointer
+        new_wp=0;                    // ring
+    }
+
+    while(new_wp == rd_ptr) { // buffer overflow
+        hal_yield(300);      // wait for place
+    }
+
+    wr_ptr=new_wp; // move forward
+    
+    REVOMINIScheduler::set_task_active(_task); // activate write thread
+#else
+    error_parse(eeprom.write(loc, data));
 #endif
+}
+
+#if defined(WRITE_IN_THREAD)
+void REVOMINIStorage::write_thread(){
+    while(rd_ptr != wr_ptr) { // there are items
+        Item d =  queue[rd_ptr++];  // get data and move to next item
+        if(rd_ptr >= EEPROM_QUEUE_LEN) { // move write pointer
+            rd_ptr=0;                       // ring            
+        }
+        error_parse(eeprom.write(d.loc, d.val));
+    }
+}
+#endif
+
+#endif
+

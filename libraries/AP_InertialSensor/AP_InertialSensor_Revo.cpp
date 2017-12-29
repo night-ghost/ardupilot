@@ -546,15 +546,17 @@ void AP_InertialSensor_Revo::_isr(){
 }
 
 void AP_InertialSensor_Revo::_ioc(){ // io completion ISR, data already in its place
-    uint16_t old_wp = write_ptr++;
-    if(write_ptr >= MPU_FIFO_BUFFER_LEN) { // move write pointer
-        write_ptr=0;                         // ring
+    uint16_t new_wp = write_ptr+1;
+    if(new_wp >= MPU_FIFO_BUFFER_LEN) { // move write pointer
+        new_wp=0;                         // ring
     }
-    if(write_ptr == read_ptr) { // buffer overflow
+    if(new_wp == read_ptr) { // buffer overflow
 #ifdef MPU_DEBUG
         REVOMINIScheduler::MPU_buffer_overflow(); // count them
+        // not overwrite, just skip last data
 #endif
-        write_ptr=old_wp; // not overwrite, just skip last data
+    } else {
+        write_ptr=new_wp; // move forward
     }
 
     //_dev->register_completion_callback(NULL); 
@@ -790,6 +792,10 @@ void AP_InertialSensor_Revo::_read_fifo()
     dt= now - t;// time from entry
     REVOMINIScheduler::MPU_stats(count,dt);
 #endif
+
+// only wait_for_sample() uses delay_microseconds_boost() so 
+// resume main thread then it waits for this sample - sample already got
+    REVOMINIScheduler::resume_boost(); 
 }
 
 /*

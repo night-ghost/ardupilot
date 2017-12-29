@@ -26,6 +26,12 @@
 
 #define AP_SCHEDULER_NAME_INITIALIZER(_name) .name = #_name,
 
+
+
+#define DEBUG_LOOP_TIME
+
+
+
 /*
   useful macro for creating scheduler task table
  */
@@ -105,6 +111,23 @@ public:
     // current running task, or -1 if none. Used to debug stuck tasks
     static int8_t current_task;
 
+#ifdef DEBUG_LOOP_TIME
+ #define MAX_TASKS 100// should be greater than _num_tasks
+    uint32_t get_longest_task(uint16_t &id) {
+        uint32_t max=0;
+        uint16_t ptr;
+        for(uint16_t i=0; i<_num_tasks; i++){
+            if(times[i]>max){
+                max=times[i];
+                ptr = i;
+            }
+        }
+        id = ptr;
+        return max;
+    }
+#endif
+
+
 private:
     AP_Scheduler();
 
@@ -141,4 +164,8 @@ private:
 
     // performance counters
     AP_HAL::Util::perf_counter_t *_perf_counters;
+
+#ifdef DEBUG_LOOP_TIME
+    volatile uint32_t times[MAX_TASKS];
+#endif
 };

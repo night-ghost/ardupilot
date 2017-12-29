@@ -12,10 +12,9 @@
 #define REVOMINI_RC_INPUT_MIN_CHANNELS 4
 #define REVOMINI_RC_INPUT_NUM_CHANNELS 20
 
+#define USE_MPU // guard page in process stack
 
 
-//#define I2C_DEBUG
-//#define DEBUG_SPI
 
 #ifdef DEBUG_BUILD
 // profiling
@@ -23,11 +22,12 @@
 //#define SEM_PROF - now semaphores are part of scheduler
 #define SHED_PROF 
 #define MTASK_PROF
-//#define SHED_DEBUG
+
+#define SHED_DEBUG
 //#define SEM_DEBUG
 //#define MPU_DEBUG
-
-#define USE_MPU // guard page in process stack
+//#define I2C_DEBUG
+//#define DEBUG_SPI
 
 #endif
 

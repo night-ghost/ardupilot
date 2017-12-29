@@ -39,12 +39,16 @@ bool Semaphore::take_nonblocking() {
 }
 
 bool Semaphore::take(uint32_t timeout_ms) {
-    // task switching can be asyncronous but we can't return to caller
+    // task switching can be asyncronous but we can't return to caller before take semaphore
     uint32_t now=REVOMINIScheduler::_micros();
     uint32_t dt = timeout_ms*1000;
     bool ret;
     do {
-        ret = _take_from_mainloop(timeout_ms);
+        if(REVOMINIScheduler::in_interrupt()) { // SVC from interrupt will cause HardFault
+            ret = svc_take_nonblocking(); // this can be called from failsafe_check which executed in ISR context
+        } else {
+            ret = _take_from_mainloop(timeout_ms);
+        }
         if(ret) break;
     }while(REVOMINIScheduler::_micros()-now <dt || timeout_ms==HAL_SEMAPHORE_BLOCK_FOREVER);
     

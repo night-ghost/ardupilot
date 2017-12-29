@@ -317,7 +317,7 @@ void NMI_Handler() {
         RCC->CR |= RCC_CR_PLLON;
 
         /* Wait till the main PLL is ready */
-        while((RCC->CR & RCC_CR_PLLRDY) == 0)   {   }
+        while((RCC->CR & RCC_CR_PLLRDY) == 0)   {   } // TODO: do something on failure?
    
         /* Select the main PLL as system clock source */
         RCC->CFGR &= (uint32_t)((uint32_t)~(RCC_CFGR_SW));

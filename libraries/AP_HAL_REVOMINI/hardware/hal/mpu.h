@@ -110,8 +110,9 @@ static inline void mpu_enable(uint32_t ctrl) {
 }
 
 static inline void mpu_disable() {
-  SCB->SHCSR &= ~SCB_SHCSR_MEMFAULTENA_Msk;  // disable MemManage fault
+//  SCB->SHCSR &= ~SCB_SHCSR_MEMFAULTENA_Msk;  // disable MemManage fault
   MPU->CTRL = 0;                     // disable
+  asm volatile("DSB"); // see PM0214 (en.DM00046982.pdf) page 196
 }
 
 static inline void mpu_configure_region(uint8_t region, uint32_t addr, uint32_t attribs) {

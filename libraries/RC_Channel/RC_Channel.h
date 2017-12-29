@@ -99,7 +99,10 @@ public:
     
     bool min_max_configured() const
     {
-        return radio_min.configured() && radio_max.configured();
+
+// TODO move out to IO_thread
+//        return radio_min.configured() && radio_max.configured();
+        return true;
     }
     
 private:

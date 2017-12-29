@@ -26,7 +26,6 @@ extern void revo_call_handler(Handler h, uint32_t arg);
 extern void hal_yield(uint16_t ttw);
 extern void hal_delay(uint16_t t);
 extern void hal_delay_microseconds(uint16_t t);
-extern void hal_delay_us_ny(uint16_t t);
 extern void hal_isr_time(uint32_t t);
 extern uint32_t hal_micros();
 extern int printf(const char *msg, ...);

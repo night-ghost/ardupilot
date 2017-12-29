@@ -43,6 +43,7 @@ bool REVOMINIScheduler::_initialized IN_CCM=false;
 Handler REVOMINIScheduler::on_disarm_handler IN_CCM;
 task_t * REVOMINIScheduler::_idle_task IN_CCM;
 
+void *REVOMINIScheduler::boost_task;
 
 static void loc_ret(){}
 
@@ -243,7 +244,7 @@ void REVOMINIScheduler::start_stats_task(){
 // show stats output each 10 seconds
     Revo_handler h = { .vp = _set_10s_flag };
     void *task = _register_timer_task(10000000, h.h, NULL);
-    set_task_priority(task, MAIN_PRIORITY); // like main task has
+    set_task_priority(task, IO_PRIORITY+1); // lower than IO_thread
 #endif
 
 // task list is filled. so now we can do a trick -
@@ -279,11 +280,25 @@ void REVOMINIScheduler::_delay(uint16_t ms)
 #endif
 }
 
+// also see resume_boost()
+// this used from InertialSensor only
 void REVOMINIScheduler::_delay_microseconds_boost(uint16_t us){
-    _delay_microseconds(us);
+    boost_task=get_current_task();
+
+#ifdef SHED_PROF
+    uint32_t t = _micros(); 
+#endif
+
+    yield(us); // yield raises priority by 6 so task will be high-priority for 1st time
+
+#ifdef SHED_PROF
+    uint32_t r_us=_micros()-t; // real time
+    delay_time     +=r_us;
+#endif
+    boost_task=NULL;
 }
 
-#define NO_YIELD_TIME 10 // uS
+#define NO_YIELD_TIME 8 // uS
 
 void REVOMINIScheduler::_delay_microseconds(uint16_t us)
 {
@@ -295,20 +310,6 @@ void REVOMINIScheduler::_delay_microseconds(uint16_t us)
     uint16_t no_yield_t;    // guard time for main process
     no_yield_t=NO_YIELD_TIME;
 
-#if 0
-    uint32_t rtime = stopwatch_getticks(); // get start ticks first
-
-    uint32_t dt = us_ticks * us;  // delay time in ticks
-    uint32_t ny = us_ticks * no_yield_t; // no-yield time in ticks
-    
-    uint32_t tw;
-
-    while ((tw = stopwatch_getticks() - rtime) < dt) { // tw - time waiting, in ticks
-        if((dt - tw) > ny ) { // No Yeld time - some uS to end of wait 
-            yield((dt - tw) / us_ticks); // in micros
-        }
-    }    
-#else
     if(us > no_yield_t){
         yield(us);
 
@@ -321,7 +322,6 @@ void REVOMINIScheduler::_delay_microseconds(uint16_t us)
         _delay_us_ny(us);
     }
 
-#endif
 }
 
 void REVOMINIScheduler::_delay_us_ny(uint16_t us){ // precise no yield delay
@@ -445,8 +445,8 @@ void REVOMINIScheduler::_run_timer_procs(bool called_from_isr) {
     if (_failsafe) {
         static uint32_t last_failsafe=0;
         uint32_t t=_millis();
-        if(t>last_failsafe){
-            last_failsafe = t+10; // 10ms = 100Hz
+        if(t-last_failsafe>10){
+            last_failsafe = t+50; // 50ms = 20Hz
             _failsafe();
         }
     }
@@ -844,7 +844,8 @@ void * REVOMINIScheduler::init_task(Handler handler, const uint8_t* stack){
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align" // yes I know
 
-    task_t *task = (task_t *)((uint32_t)(stack-sizeof(task_t)) & 0xFFFFFFFCUL); // control block below memory top, 4-byte alignment
+//  task_t *task = (task_t *)((uint32_t)(stack-sizeof(task_t)) & 0xFFFFFFFCUL); // control block below memory top, 4-byte alignment
+    task_t *task = (task_t *)((uint32_t)(stack-sizeof(task_t)) & 0xFFFFFFE0UL); // control block below memory top, 32-byte alignment for MMU page
 #pragma GCC diagnostic pop
 
     fill_task(*task);  // fill task descriptor
@@ -866,8 +867,14 @@ void * REVOMINIScheduler::init_task(Handler handler, const uint8_t* stack){
     *(--sp)  = (uint32_t)task;        // emulate "push r0"
 // SW frame, context saved as  "STMDB     R0!, {R4-R11, LR}"
     *(--sp)  = 0xFFFFFFFDUL;          // emulate "push lr" =exc_return: Return to Thread mode, floating-point context inactive, execution uses PSP after return.
-    asm volatile ("STMDB     %0!, {R4-R11}\n\t"  : "+rm" (sp) ); // push real registers - they can be global register variables
-//    sp -= 8;                        // emulate "push R4-R11"
+#if 0    
+    asm volatile (
+        "MOV       R0, %0       \n\t"
+        "STMDB     R0!, {R4-R11}\n\t"  : "+rm" (sp) ); // push real registers - they can be global register variables
+        "MOV       %0,R0        \n\t"
+#else
+    sp -= 8;                        // emulate "push R4-R11"
+#endif
     task->sp=(uint8_t *)sp;           // set stack pointer of task
 
     // task is not active so we need not to disable interrupts
@@ -1294,8 +1301,8 @@ void REVOMINIScheduler::SVC_Handler(uint32_t * svc_args){
         timer_generate_update(TIMER7); // tick is over
         timer_pause(TIMER14);
 
-        if(s_running->priority!=255){ // not for idle task
-            if(s_running->ttw){ // the task voluntarily gave up its quant and wants delay, so that at the end of the delay it will have the high priority
+        if(s_running->priority!=255){ // not for idle task or low-priority tasks
+            if(s_running->priority<IO_PRIORITY && s_running->ttw){ // the task voluntarily gave up its quant and wants delay, so that at the end of the delay it will have the high priority
                 s_running->curr_prio = s_running->priority - 6;
             } else {
                 s_running->f_yield = true;      // to guarantee that quant will not return even if there is no high priority tasks
@@ -1408,7 +1415,6 @@ void revo_call_handler(uint64_t hh, uint32_t arg){
 void hal_yield(uint16_t ttw){ REVOMINIScheduler::yield(ttw); }
 void hal_delay(uint16_t t){   REVOMINIScheduler::_delay(t); }
 void hal_delay_microseconds(uint16_t t){ REVOMINIScheduler::_delay_microseconds(t);}
-void hal_delay_us_ny(uint16_t t){ REVOMINIScheduler::_delay_us_ny(t);}
 
 uint32_t hal_micros() { return REVOMINIScheduler::_micros(); }
 void hal_isr_time(uint32_t t) { s_running->in_isr += t; }

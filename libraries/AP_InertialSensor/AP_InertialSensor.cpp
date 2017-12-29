@@ -1402,7 +1402,7 @@ check_sample:
                 break;
             }
 
-            hal.scheduler->delay_microseconds(100);
+            hal.scheduler->delay_microseconds_boost(100);
         }
     }
 

@@ -116,7 +116,6 @@ extern "C" {
     void hal_yield(uint16_t ttw);
     void hal_delay(uint16_t t);
     void hal_delay_microseconds(uint16_t t);
-    void hal_delay_us_ny(uint16_t t);
     uint32_t hal_micros();
     void hal_isr_time(uint32_t t);
     
@@ -316,10 +315,13 @@ public:
         s_running->count_paused++;
     }                    
     static void inline task_resume(void *h) {   // called from IO_Complete ISR to resume task
+#if defined(USE_MPU)
+        mpu_disable();      // we need access to write
+#endif
         task_t * task = (task_t*)h; 
         task->ttw=0;  
         task->active=true;
-        _forced_task = task; // force it. Tus we exclude loop to select task
+        _forced_task = task; // force it. Thus we exclude loop to select task
         context_switch_isr();
         uint32_t dt= _micros() - task->sem_start_wait;
         task->t_paused += dt;
@@ -327,7 +329,12 @@ public:
 #else
     static void inline task_pause(uint16_t t) {   s_running->ttw=t;  }  // called from task when it starts IO transfer
     static void inline task_resume(void *h)   {    // called from IO_Complete ISR to resume task, and will get 1st quant 100%
+#if defined(USE_MPU)
+        mpu_disable();      // we need access to write
+#endif
         task_t * task = (task_t*)h; 
+        task->ttw=0;  
+        task->active=true;
         _forced_task = task; // force it
         context_switch_isr();
   } 
@@ -352,6 +359,30 @@ public:
   
     // check from what task it called
     static inline bool _in_main_thread() { return s_running == &s_main; }
+
+    // resume task that called delay_boost()
+    static void resume_boost(){
+        if(boost_task) {
+            task_t *task = (task_t *) boost_task;
+            boost_task=NULL;
+            
+            
+            if(task->ttw){// task wants to wait 
+#if defined(USE_MPU)
+                mpu_disable();      // we need access to write
+#endif
+                uint32_t now =  _micros();
+                uint32_t timeFromLast = now - task->t_yield;     // time since that moment
+                if(task->ttw<=100 || timeFromLast > task->ttw*3/2){       // gone 2/3 of time?
+                    task->ttw=0;        // stop waiting  
+                    task->active=true;
+                    _forced_task = task; // force it
+                }
+            } else {
+                _forced_task = task; // just force it
+            }
+        }
+    }
 
     static inline void plan_context_switch(){
         need_switch_task = true; // require context switch
@@ -562,6 +593,8 @@ private:
 #endif
     
     static Handler on_disarm_handler;
+    
+    static void *boost_task;
 };
 
 void revo_call_handler(Handler h, uint32_t arg);
