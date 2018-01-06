@@ -83,11 +83,11 @@
 # define BOARD_BLUE_LED_PIN        36  // BLUE
 # define BOARD_GREEN_LED_PIN        6   // NC - PC0 pin 8
 
-# define BOARD_GPIO_A_LED_PIN      BOARD_BLUE_LED_PIN
-# define BOARD_GPIO_B_LED_PIN      BOARD_GREEN_LED_PIN
+# define HAL_GPIO_A_LED_PIN      BOARD_BLUE_LED_PIN
+# define HAL_GPIO_B_LED_PIN      BOARD_GREEN_LED_PIN
 
-# define BOARD_LED_ON           LOW
-# define BOARD_LED_OFF          HIGH
+# define HAL_GPIO_LED_ON           LOW
+# define HAL_GPIO_LED_OFF          HIGH
 
 
 #define BOARD_NR_GPIO_PINS      109

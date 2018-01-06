@@ -178,33 +178,6 @@ HAL_REVOMINI::HAL_REVOMINI() :
  #error no BOARD_UARTS_LAYOUT!
 #endif
 
-/*
-#ifdef BOARD_HAS_UART3
-        &uart3Driver,           // uartD - flexi port                                          - Serial2 
-#elif defined(BOARD_SOFT_UART3)
-        &softDriver,            // uartD - soft UART on pins 7&8 
-#else
-        NULL,                   // no uartD 
-#endif
-
-#if defined(BOARD_OSD_NAME)
-        &uartOSDdriver,         // uartE  - OSD emulated UART                                  - Serial4
-#elif defined(USE_SOFTSERIAL) && defined(BOARD_SOFTSERIAL_TX) && defined(BOARD_SOFTSERIAL_RX)
-        &softDriver,            // uartE softSerial 
-#else
-        &uartPPM2,              // uartE - input data from PPM2 pin 
-#endif
-
-
-#if FRAME_CONFIG == QUAD_FRAME && defined(BOARD_USART4_RX_PIN)
-        &uart4Driver,           // uartF  - PWM pins 5&6                                       - Serial5 
-#elif defined(BOARD_OSD_NAME) && defined(USE_SOFTSERIAL) && defined(BOARD_SOFTSERIAL_TX) && defined(BOARD_SOFTSERIAL_RX)
-        &softDriver,            // uartF softSerial on boards with OSD
-#else
-        &uartPPM1,              // uartF - input data from PPM1 pin
-#endif
-*/
-
         &i2c_mgr_instance,  // I2C
         &spiDeviceManager,  // spi 
         &analogIn,          // analogin 
@@ -266,7 +239,6 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
 #elif defined(BOARD_DATAFLASH_FATFS)
             SD.begin(REVOMINI::SPIDeviceManager::_get_device(HAL_DATAFLASH_NAME));
 #endif
-
             state.sd_busy=true;
             massstorage.setup();        //      init USB as mass-storage
         } 
@@ -295,11 +267,12 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
 
     if(!state.sd_busy) {
 
-        printf("\nEnabling SD at %ldms\n", millis());            
 
 #if defined(BOARD_SDCARD_NAME) && defined(BOARD_SDCARD_CS_PIN)
+        printf("\nEnabling SD at %ldms\n", millis());            
         SD.begin(REVOMINI::SPIDeviceManager::_get_device(BOARD_SDCARD_NAME));
 #elif defined(BOARD_DATAFLASH_FATFS)
+        printf("\nEnabling DataFlash as SD at %ldms\n", millis());            
         SD.begin(REVOMINI::SPIDeviceManager::_get_device(HAL_DATAFLASH_NAME));
 #endif
 
@@ -612,7 +585,7 @@ void HAL_REVOMINI::connect_uart(AP_HAL::UARTDriver* uartL,AP_HAL::UARTDriver* ua
         if(uartR->available()) { uartL->write(uartR->read()); got=true; }
         if(proc) proc();
         if(!got) REVOMINIScheduler::yield(300); // give a chance to other threads
-        if(state.disconnect) break;
+        if(state.disconnect) break; // if USB disconnected
     }
 }
 
@@ -627,7 +600,7 @@ extern "C" void usb_mass_mal_USBdisconnect();
 
 void usb_mass_mal_USBdisconnect(){ 
     HAL_REVOMINI::state.sd_busy=false;
-
+    HAL_REVOMINI::state.disconnect=true;
 }
 
 #endif

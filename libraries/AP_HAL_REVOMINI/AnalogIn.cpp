@@ -55,7 +55,7 @@ REVOMINIAnalogIn::REVOMINIAnalogIn(){}
 void REVOMINIAnalogIn::init() {
 
     // Register _timer_event in the scheduler. 
-    void *_task = REVOMINIScheduler::start_task(FUNCTOR_BIND_MEMBER(&REVOMINIAnalogIn::_timer_event, void), 512); // small stack
+    void *_task = REVOMINIScheduler::start_task(FUNCTOR_BIND_MEMBER(&REVOMINIAnalogIn::_timer_event, void), 256); // small stack
     if(_task){
         REVOMINIScheduler::set_task_priority(_task, DRIVER_PRIORITY+1);  // slightly less
         REVOMINIScheduler::set_task_period(_task, 2000); // setting of period allows task to run
@@ -109,7 +109,6 @@ void REVOMINIAnalogIn::_timer_event(void)
 	    // ADC Conversion is still running - this should not happens, as we are called at 1khz.
 	    // SO - more likely we forget to start conversion or some went wrong...
 	    // let's fix it
-//	    ADC_SoftwareStartConv(dev->adcx);
 	    adc_start_conv(dev);
 	    return;
     }
@@ -118,7 +117,6 @@ void REVOMINIAnalogIn::_timer_event(void)
     if (_channel_repeat_count < CHANNEL_READ_REPEAT ||
         !_channels[_active_channel]->reading_settled())  {
         // Start a new conversion on the same channel, throw away the current conversion 
-        //ADC_SoftwareStartConv(dev->adcx);
         adc_start_conv(dev);
 
         cnv_started=true;
@@ -144,7 +142,6 @@ next_channel:
 
     if(dev != NULL) {
         /* Start conversion */
-        //ADC_SoftwareStartConv(dev->adcx);
         adc_start_conv(dev);
         cnv_started=true;
     }

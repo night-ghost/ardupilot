@@ -82,6 +82,7 @@ private:
     static uint32_t _timer_period(uint16_t speed_hz, const timer_dev *dev);
     static uint16_t _period[REVOMINI_MAX_OUTPUT_CHANNELS];
     static uint16_t _freq[REVOMINI_MAX_OUTPUT_CHANNELS];
+    static void _set_pin_output_mode(uint8_t ch);
     
     static bool is_servo_enabled(uint8_t ch);
 

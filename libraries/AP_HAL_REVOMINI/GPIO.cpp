@@ -86,9 +86,7 @@ void REVOMINIGPIO::toggle(uint8_t pin)
 {
     if ((pin >= BOARD_NR_GPIO_PINS))  return;
     
-    const stm32_pin_info &p = PIN_MAP[pin];
-    
-    gpio_toggle_bit(p.gpio_device, p.gpio_bit);
+    _toggle(pin);
 }
 
 
@@ -150,3 +148,7 @@ void REVOMINIDigitalSource::mode(uint8_t md)
     gpio_set_speed(_device, _bit, GPIO_Speed_100MHz); // to use as CS
 }
 
+void digitalWrite(uint8_t pin, uint8_t value) { REVOMINI::REVOMINIGPIO::_write(pin, value); }
+uint8_t digitalRead(uint8_t pin) { return REVOMINI::REVOMINIGPIO::_read(pin); }
+
+void digitalToggle(uint8_t pin) { return REVOMINI::REVOMINIGPIO::_toggle(pin); }

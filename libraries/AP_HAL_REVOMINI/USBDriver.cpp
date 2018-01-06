@@ -69,15 +69,22 @@ size_t USBDriver::write(const uint8_t *buffer, size_t size)
     uint32_t t = REVOMINIScheduler::_millis();
 
     if(is_usb_opened()){
-        while (size) {
+        while(true) {
             uint8_t k=usb_write((uint8_t *)buffer, size);
             size-=k;
             n+=k;
             buffer+=k;
+            if(size == 0) break; //done
             
-            if(!_blocking && REVOMINIScheduler::_millis() - t > 30 ){        // время ожидания превысило 30мс - что-то пошло не так...
-                reset_usb_opened();
-                return n;
+            uint32_t now = REVOMINIScheduler::_millis();
+            if(k==0) {
+                if(!_blocking && now - t > 5 ){        // время ожидания превысило 5мс - что-то пошло не так...
+                    reset_usb_opened();
+                    return n;
+                }
+                if(!is_usb_opened()) break;
+            } else {
+                t = now;
             }
         }
         return n;

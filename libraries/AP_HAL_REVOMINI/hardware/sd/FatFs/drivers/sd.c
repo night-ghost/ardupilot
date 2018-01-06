@@ -1506,6 +1506,9 @@ DRESULT sd_ioctl (
                     last_block=block;
                     if(!erase_page(df_sect)) return RES_ERROR;                    
                     putch('.');
+                    extern void digitalToggle(uint8_t pin);
+                    
+                    digitalToggle(HAL_GPIO_A_LED_PIN);
                 }
             }
 	    res = RES_OK;

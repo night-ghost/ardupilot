@@ -123,7 +123,7 @@ void REVOMINIStorage::init()
 #endif
 
 
-    _task = REVOMINIScheduler::start_task(write_thread, 256); // small stack
+    _task = REVOMINIScheduler::start_task(write_thread, 512); // small stack
     if(_task){
         REVOMINIScheduler::set_task_priority(_task, MAIN_PRIORITY+2); // slightly less
     }

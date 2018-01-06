@@ -282,10 +282,8 @@ void USBD_USR_DeviceDisconnected (void)
     usb_connected = 0;
     usb_opened = 0;
 
-#ifdef USB_MASSSTORAGE    
     extern void usb_mass_mal_USBdisconnect();
     usb_mass_mal_USBdisconnect(); //reset connection state for mass-storage
-#endif
 }
 
 /*------------------------- usb_default_attr -------------------------------*/

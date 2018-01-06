@@ -245,6 +245,8 @@ again:
             if(!s_i2c->bus_reset()) return false;    
         }
 
+        _dev->state->busy = false;
+
         if(retries--) goto again;
 
         return false;
@@ -350,10 +352,10 @@ again:
             }
         }
     }
+    _dev->state->busy=false;
 
     if(retries--) goto again;
 
-    _dev->state->busy=false;
     return false;
 }
 

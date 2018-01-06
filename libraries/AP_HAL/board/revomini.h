@@ -31,16 +31,6 @@
 #define HAL_DATAFLASH_NAME              BOARD_DATAFLASH_NAME
 #endif
 
-# define HAL_GPIO_A_LED_PIN             BOARD_GPIO_A_LED_PIN
-#ifdef BOARD_GPIO_B_LED_PIN
- # define HAL_GPIO_B_LED_PIN             BOARD_GPIO_B_LED_PIN
-#endif
-#ifdef BOARD_GPIO_C_LED_PIN
- # define HAL_GPIO_C_LED_PIN             BOARD_GPIO_C_LED_PIN
-#endif
-
-# define HAL_GPIO_LED_ON                BOARD_LED_ON
-# define HAL_GPIO_LED_OFF               BOARD_LED_OFF
 
 #ifdef BOARD_BUZZER_PIN
 #define BUZZER_PIN                      BOARD_BUZZER_PIN

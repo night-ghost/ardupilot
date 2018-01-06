@@ -34,6 +34,10 @@ private:
 
     void _timer(void);
 
+    uint16_t _read_prom_word(uint8_t word);
+    bool     _read_prom(uint16_t *prom);
+
+
     AP_HAL::OwnPtr<AP_HAL::Device> _dev;
     AP_HAL::DigitalSource *_eoc;
 
@@ -51,9 +55,11 @@ private:
     int16_t ac1, ac2, ac3, b1, b2, mb, mc, md;
     uint16_t ac4, ac5, ac6;
 
-    uint32_t _retry_time;
     int32_t _raw_pressure;
     int32_t _raw_temp;
     int32_t _temp;
     AverageIntegralFilter<int32_t, int32_t, 10> _pressure_filter;
+    
+    uint8_t _vers;
+    uint8_t _type;    
 };

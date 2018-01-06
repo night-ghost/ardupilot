@@ -17,16 +17,6 @@
 #endif
 
 
-#ifndef HAL_GPIO_A_LED_PIN
-# define HAL_GPIO_A_LED_PIN        36  // BLUE
-#endif
-#ifndef HAL_GPIO_B_LED_PIN
-# define HAL_GPIO_B_LED_PIN        106 //  LED PA13
-#endif
-#ifndef HAL_GPIO_C_LED_PIN
- # define HAL_GPIO_C_LED_PIN        105 // RED
-#endif
-
 #ifndef HAL_GPIO_LED_ON
  # define HAL_GPIO_LED_ON           LOW
  # define HAL_GPIO_LED_OFF          HIGH
@@ -174,6 +164,8 @@ public:
     static void           _pinMode(uint8_t pin, uint8_t output);
     static inline uint8_t _read(uint8_t pin) { const stm32_pin_info &pp = PIN_MAP[pin];   return gpio_read_bit( pp.gpio_device, pp.gpio_bit) ? HIGH : LOW; }
     static inline void    _write(uint8_t pin, uint8_t value) { const stm32_pin_info &pp = PIN_MAP[pin]; gpio_write_bit(pp.gpio_device, pp.gpio_bit, value); }
+    static inline void    _toggle(uint8_t pin) {               const stm32_pin_info &p = PIN_MAP[pin];  gpio_toggle_bit(p.gpio_device, p.gpio_bit);  }
+    
     static inline void    _setSpeed(uint8_t pin, GPIOSpeed_TypeDef gpio_speed) { const stm32_pin_info &pp = PIN_MAP[pin]; gpio_set_speed(pp.gpio_device, pp.gpio_bit, gpio_speed);}
 
     static inline REVOMINIDigitalSource* get_channel(uint16_t pin) { const stm32_pin_info &pp = PIN_MAP[pin]; return new REVOMINIDigitalSource(pp.gpio_device, pp.gpio_bit); }
@@ -184,7 +176,10 @@ static inline exti_trigger_mode exti_out_mode(ExtIntTriggerMode mode) {
     return (exti_trigger_mode)mode;
 }
 
-static inline void digitalWrite(uint8_t pin, uint8_t value) { REVOMINI::REVOMINIGPIO::_write(pin, value); }
-static inline uint8_t digitalRead(uint8_t pin) { return REVOMINI::REVOMINIGPIO::_read(pin); }
+extern "C" {
+    void digitalWrite(uint8_t pin, uint8_t value);
+    uint8_t digitalRead(uint8_t pin);
+    void digitalToggle(uint8_t pin);
+}
 
 #endif // __AP_HAL_REVOMINI_GPIO_H__

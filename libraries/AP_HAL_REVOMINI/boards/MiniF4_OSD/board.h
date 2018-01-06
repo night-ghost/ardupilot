@@ -64,12 +64,14 @@
 #define BOARD_USB_SENSE 11      // PC5
 
 
-# define BOARD_GPIO_A_LED_PIN        36  // BLUE
-# define BOARD_GPIO_B_LED_PIN        9      //  frequency select - resistor to VCC or ground
-# define BOARD_GPIO_C_LED_PIN        15 // RED
+# define BOARD_BLUE_LED_PIN        36  // BLUE
+# define BOARD_GREEN_LED_PIN        9      //  frequency select - resistor to VCC or ground
 
-# define BOARD_LED_ON           LOW
-# define BOARD_LED_OFF          HIGH
+# define HAL_GPIO_A_LED_PIN      BOARD_BLUE_LED_PIN
+# define HAL_GPIO_B_LED_PIN      BOARD_GREEN_LED_PIN
+
+# define HAL_LED_ON           LOW
+# define HAL_LED_OFF          HIGH
 
 
 #define BOARD_NR_GPIO_PINS      109

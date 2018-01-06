@@ -77,9 +77,9 @@ void __attribute__((noreturn)) error_throb(uint32_t num){
     uint8_t n;
 
 #ifdef BOARD_GPIO_B_LED_PIN
-    const uint8_t pin= BOARD_GPIO_B_LED_PIN;
+    const uint8_t pin= HAL_GPIO_B_LED_PIN;
 #else
-    const uint8_t pin= BOARD_GPIO_A_LED_PIN;
+    const uint8_t pin= HAL_GPIO_A_LED_PIN;
 #endif
 
     const stm32_pin_info *pp = &PIN_MAP[pin];
