@@ -82,7 +82,7 @@ typedef struct stm32_pin_info {
     const timer_dev * const timer_device;    /**< Pin's timer device, if any. */
     const adc_dev   * const adc_device;       /**< ADC device, if any. */
     uint8_t gpio_bit;             /**< Pin's GPIO port bit. */
-    uint8_t timer_channel;        /**< Timer channel, or 0 if none. */
+    timer_Channel timer_channel;        /**< Timer channel, or 0 if none. */
     uint8_t adc_channel;          /**< Pin ADC channel, or ADCx if none. */
 } stm32_pin_info;
 

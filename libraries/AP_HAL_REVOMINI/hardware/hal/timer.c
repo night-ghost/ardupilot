@@ -393,7 +393,7 @@ uint32_t configTimeBase(const timer_dev *dev, uint16_t period, uint16_t khz)
 
     switch (dev->type) {
     case TIMER_ADVANCED:
-        dev->regs->BDTR = TIMER_BDTR_MOE | TIMER_BDTR_LOCK_OFF; //  break and dead-time register
+        dev->regs->BDTR = TIMER_BDTR_MOE | TIMER_BDTR_LOCK_OFF; //  break and dead-time register, enable output
         // fall-through
     case TIMER_GENERAL:
     case TIMER_BASIC:
@@ -408,18 +408,18 @@ uint32_t configTimeBase(const timer_dev *dev, uint16_t period, uint16_t khz)
 }
 
 
-static void disable_channel(const timer_dev *dev, uint8_t channel) {
+static void disable_channel(const timer_dev *dev, timer_Channel channel) {
     timer_detach_interrupt(dev, channel);
     timer_cc_disable(dev, channel);
 }
 
-static void pwm_mode(const timer_dev *dev, uint8_t channel) {
+static void pwm_mode(const timer_dev *dev, timer_Channel channel) {
     timer_disable_irq(dev, channel);
     timer_oc_set_mode(dev, channel, BOARD_PWM_MODE, TIMER_OC_PE);
     timer_cc_enable(dev, channel);
 }
 
-static void output_compare_mode(const timer_dev *dev, uint8_t channel) {
+static void output_compare_mode(const timer_dev *dev, timer_Channel channel) {
     timer_oc_set_mode(dev, channel, TIMER_OC_MODE_ACTIVE_ON_MATCH, 0);
     timer_cc_enable(dev, channel);
 }
@@ -437,7 +437,7 @@ static void output_compare_mode(const timer_dev *dev, uint8_t channel) {
  * @param channel Relevant channel
  * @param mode New timer mode for channel
  */
-void timer_set_mode(const timer_dev *dev, uint8_t channel, timer_mode mode) {
+void timer_set_mode(const timer_dev *dev, timer_Channel channel, timer_mode mode) {
     assert_param(channel > 0 && channel <= 4);
 
     /* TODO decide about the basic timers */

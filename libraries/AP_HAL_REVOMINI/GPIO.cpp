@@ -7,6 +7,7 @@
 
 #include "GPIO.h"
 #include "Scheduler.h"
+#include "RCOutput.h"
 
 
 
@@ -77,6 +78,20 @@ uint8_t REVOMINIGPIO::read(uint8_t pin) {
 
 void REVOMINIGPIO::write(uint8_t pin, uint8_t value) {
     if ((pin >= BOARD_NR_GPIO_PINS))   return;
+#ifdef BUZZER_PWM_HZ
+
+// AP_Notify Buzzer.cpp don't supports passive buzzer so we need a small hack
+    if(pin == BOARD_BUZZER_PIN){
+        if(value == HAL_BUZZER_ON){
+            _pinMode(pin, PWM);
+            const stm32_pin_info &p = PIN_MAP[pin];
+            const timer_dev *dev = p.timer_device;
+            uint32_t n = REVOMINIRCOutput::_timer_period(BUZZER_PWM_HZ, dev);
+            timer_set_reload(dev, n);
+            timer_set_compare(dev, p.timer_channel, n/2);
+        }    
+    }
+#endif
 
     _write(pin, value);
 }

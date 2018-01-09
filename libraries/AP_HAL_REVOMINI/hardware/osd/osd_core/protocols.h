@@ -9,8 +9,6 @@ extern union UU msgbuf;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
 
-#include "GCS_MAVLink.h"
-
 
 
 union UU {

@@ -2,8 +2,6 @@
 /*
  * I2CDriver.cpp --- AP_HAL_REVOMINI I2C driver.
  *
- * Copyright (C) 2013, Virtualrobotix.com Roberto Navoni , Emile 
- * All Rights Reserved.R Written by Roberto Navoni  <info@virtualrobotix.com>, 11 January 2013
  */
 #pragma GCC optimize ("O2")
 
@@ -184,7 +182,6 @@ void REVOI2CDevice::init(){
         if(_slow) {
             s_i2c->set_low_speed(true);
         }
-
     }
     _initialized=true;
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-typedef void (*cb_putc)(char c);
+typedef void (*cb_putc)(uint8_t c);
 
 bool read_mavlink();
 
@@ -26,7 +26,7 @@ void NOINLINE mav_message_start(byte len, byte time);
 int NOINLINE normalize_angle(int a);
 byte get_switch_time(byte n);
 void doScreenSwitch();
-int NOINLINE grad_to_sect(int grad);
+uint8_t grad_to_sect(int grad);
 void NOINLINE filter( float &dst, float val, const byte k);
 void filter( float &dst, float val);
 void setFdataVars();
@@ -38,7 +38,7 @@ byte NOINLINE radar_char();
 void renew();
 void setup_horiz();
 uint16_t uidiff(uint16_t, uint16_t);
-void writePanels(unsigned long pt);
+//void writePanels(unsigned long pt);
 
 void unplugSlaves();
 void delay_15();

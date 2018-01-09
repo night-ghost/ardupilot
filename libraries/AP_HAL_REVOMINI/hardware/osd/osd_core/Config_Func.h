@@ -163,6 +163,15 @@ float inline get_converts(){
     return pgm_read_float(&measure->converts);
 }
 
+float inline mul_converth(float f){
+    return get_converth() * f;
+}
+
+
+float inline mul_converts(float &f){
+    return f * get_converts();
+}
+
 float inline f_div1000(float f){
     return f/1000;
 }

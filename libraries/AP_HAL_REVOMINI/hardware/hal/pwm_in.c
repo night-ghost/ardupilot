@@ -79,7 +79,7 @@ struct PPM_State  {
     Pulse pulse_mem[PULSES_QUEUE_SIZE]; // memory
 };
 */
-	    if (timer->regs == tim && (TIM_GetITStatus(tim, 1<<p->timer_channel) == SET)) {
+	    if (timer->regs == tim && (TIM_GetITStatus(tim, 1<<(p->timer_channel & TIMER_CH_MASK)) == SET)) {
 
                 val = timer_get_capture(timer, p->timer_channel);
 

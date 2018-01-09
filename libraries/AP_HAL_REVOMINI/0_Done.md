@@ -139,7 +139,11 @@
 * added DSM rssi as last channel
 * IO tasks excluded from priority boost on yield()
 * added awakening of main thread after receiving of data from MPU
-* ArduCopter loop at 1KHz! fixed all issues
+* ArduCopter loop at 1KHz! fixed all issues, mean scheduling error is only 10uS - 10 times less than OS tick!
+* narowed type for timer_channel
+* added support for PWM outputs on N-channels of advanced timers
+* added support for inverted buzzer
+* added support for passive buzzer
 * ...
 * a lot of minor enhancements
 
@@ -152,7 +156,7 @@ like MOT_THST_HOVER - MOT_HOVER_LEARN to be 2 you should defer parameter writing
 
 Timer usage:
 
-1 
+1 RC-Output on some boards
 2 RC-Output
 3 RC-Output
 4 soft_i2c0, PPM_IN on AirbotV2
@@ -166,5 +170,6 @@ Timer usage:
 12 PPM_IN
 13 driver's io_completion
 14 schedule tail timer
+
 
 

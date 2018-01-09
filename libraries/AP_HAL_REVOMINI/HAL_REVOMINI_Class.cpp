@@ -174,6 +174,12 @@ HAL_REVOMINI::HAL_REVOMINI() :
         NULL,
         NULL,
         
+#elif BOARD_UARTS_LAYOUT == 7 // Cl_Racing
+
+        NULL,
+        NULL,
+        NULL,
+        
 #else
  #error no BOARD_UARTS_LAYOUT!
 #endif

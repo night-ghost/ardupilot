@@ -482,7 +482,6 @@ bool DataFlash_Revo::getSectorCount(uint32_t *ptr){
     uint8_t memtype =  (df_device>>8) & 0xFF;
     uint32_t size=0;
     
-    printf("SPI Flash codes: mfg=%x type=%x cap=%x\n ",df_manufacturer, memtype, capacity);
 
     const char * mfg=NULL;
     
@@ -538,9 +537,10 @@ bool DataFlash_Revo::getSectorCount(uint32_t *ptr){
         break;
     }
 
-    if(mfg && size) printf("%s SPI Flash found sectors=%ld\n", mfg, size);
-    else  {
-        printf("unknown Flash!\n");
+    if(mfg && size) {
+        printf("%s SPI Flash found sectors=%ld\n", mfg, size);
+    }else  {
+        printf("\nUnknown Flash! SPI Flash codes: mfg=%x type=%x cap=%x\n ",df_manufacturer, memtype, capacity);
         size = BOARD_DATAFLASH_PAGES; // as defined 
     } 
 

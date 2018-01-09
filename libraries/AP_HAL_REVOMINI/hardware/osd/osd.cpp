@@ -36,6 +36,7 @@ using namespace REVOMINI;
 
 #include "osd.h"
 
+
 #include "osd_eeprom.h"
 #include "osd_core/eeprom.h"
 #include "osd_core/version.h"
@@ -44,17 +45,23 @@ using namespace REVOMINI;
 
 namespace OSDns {
 
+#include "osd_core/GCS_MAVLink.h"
+
 #include "osd_core/OSD_Max7456.h"
 OSD osd; //OSD object
 
 #include "osd_core/prototypes.h"
 #include "osd_core/Vars.h"
+
+#include "osd_core/Params.h"
+
 #include "osd_core/Config_Func.h"
 #include "osd_core/Config.h"
 #include "osd_core/Func.h"
 #include "osd_core/protocols.h"
 #include "osd_core/misc.h"
 #include "osd_core/Panels.h"
+
 
 
 // TODO: чтение конфига и еепром с карты памяти, чтобы закинуть .mcm и .osd и все       
@@ -306,7 +313,7 @@ static uint8_t osd_tx_buf[OSD_TX_BUF_SIZE] IN_CCM;
 AP_HAL::OwnPtr<REVOMINI::SPIDevice> osd_spi;
 AP_HAL::Semaphore                *osd_spi_sem;
 
-static volatile byte vas_vsync=false;
+//static volatile byte vas_vsync=false;
 
 mavlink_system_t mavlink_system = {12,1};  // sysid, compid
 
@@ -324,7 +331,7 @@ static bool diff_done;
 
 
 extern void heartBeat();
-extern void writePanels(unsigned long pt);
+extern void writePanels();
 
 void On100ms() {}
 void On20ms() {}
@@ -890,7 +897,7 @@ void osd_loop() {
 
         setFdataVars();  // накопление статистики и рекордов
 
-        writePanels(pt);   // writing enabled panels (check OSD_Panels Tab)
+        writePanels();   // writing enabled panels (check OSD_Panels Tab)
 
 #ifdef OSD_DMA_TRANSFER
         prepare_dma_buffer(); // prepare diff with addresses

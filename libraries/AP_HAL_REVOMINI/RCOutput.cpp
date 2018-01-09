@@ -26,8 +26,12 @@ static const uint8_t output_channels_arducopter[]= {  // pin assignment
     SERVO_PIN_2, //Timer3/4  - 2
     SERVO_PIN_3, //Timer2/3  - 3
     SERVO_PIN_4, //Timer2/2  - 4
+#ifdef SERVO_PIN_5
     SERVO_PIN_5, //Timer2/1
+#endif
+#ifdef SERVO_PIN_6
     SERVO_PIN_6, //Timer2/0
+#endif
 
     // servo channels on input port
     4, // PB14  CH1_IN - PPM1 Use this channels asd servo only if you use DSM via UART as RC
@@ -47,8 +51,12 @@ static const uint8_t output_channels_openpilot[]= {  // pin assignment
     SERVO_PIN_4, //Timer2/2  - 4
     SERVO_PIN_1, //Timer3/3  - 1
     SERVO_PIN_3, //Timer2/3  - 3
+#ifdef SERVO_PIN_5
     SERVO_PIN_5, //Timer2/1
+#endif
+#ifdef SERVO_PIN_6
     SERVO_PIN_6, //Timer2/0
+#endif
 
     // servo channels on input port
 //    4, // PB14  CH1_IN - PPM1 Use this channels asd servo only if you use DSM via UART as RC
@@ -66,8 +74,12 @@ static const uint8_t output_channels_cleanflight[]= {  // pin assignment
     SERVO_PIN_3, //Timer2/3  - 3
     SERVO_PIN_4, //Timer2/2  - 4
     SERVO_PIN_1, //Timer3/3  - 1
+#ifdef SERVO_PIN_5
     SERVO_PIN_5, //Timer2/1
+#endif
+#ifdef SERVO_PIN_6
     SERVO_PIN_6, //Timer2/0
+#endif
 
     // servo channels on input port
 //    4, // PB14  CH1_IN - PPM1 Use this channels asd servo only if you use DSM via UART as RC
@@ -83,13 +95,17 @@ static const uint8_t output_channels_cleanflight[]= {  // pin assignment
 static const uint8_t output_channels_servo[]= {  // pin assignment
     SERVO_PIN_3, //Timer2/3  - 1
     SERVO_PIN_4, //Timer2/2  - 2
+#ifdef SERVO_PIN_5
     SERVO_PIN_5, //Timer2/1  - 3
+#endif
+#ifdef SERVO_PIN_6
     SERVO_PIN_6, //Timer2/0  - 4
+#endif
     SERVO_PIN_1, //Timer3/3    servo1
     SERVO_PIN_2, //Timer3/4    servo2
 
     // servo channels on input port
-//    4, // PB14  CH1_IN - PPM1 Use this channels asd servo only if you use DSM via UART as RC
+//    4, // PB14  CH1_IN - PPM1 Use this channels as servo only if you use DSM via UART as RC
     5, // PB15  CH2_IN - PPM2 
     12, // PC6  CH3_IN UART6
     13, // PC7  CH4_IN UART6
@@ -209,9 +225,6 @@ void REVOMINIRCOutput::InitPWM()
     _set_output_mode(MODE_PWM_NORMAL); // init timers
 }
 
-uint32_t inline REVOMINIRCOutput::_timer_period(uint16_t speed_hz, const timer_dev *dev) {
-    return (uint32_t)((float)(dev->state->freq + speed_hz/2) / speed_hz);
-}
 
 
 // not from _freq to take channel dependency

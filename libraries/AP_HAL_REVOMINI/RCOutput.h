@@ -76,10 +76,13 @@ public:
     bool enable_sbus_out(uint16_t rate_hz) override;
 */
 
+    static uint32_t inline _timer_period(uint16_t speed_hz, const timer_dev *dev) {
+        return (uint32_t)((float)(dev->state->freq + speed_hz/2) / speed_hz);
+    }
+
 private:
     static void InitPWM(void);
     static void set_pwm(uint8_t ch, uint16_t pwm);
-    static uint32_t _timer_period(uint16_t speed_hz, const timer_dev *dev);
     static uint16_t _period[REVOMINI_MAX_OUTPUT_CHANNELS];
     static uint16_t _freq[REVOMINI_MAX_OUTPUT_CHANNELS];
     static void _set_pin_output_mode(uint8_t ch);

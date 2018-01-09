@@ -28,6 +28,8 @@ extern BetterStream	*mavlink_comm_1_port;
 /// MAVLink system definition
 extern mavlink_system_t mavlink_system;
 
+extern void osd_queue(uint8_t c);
+
 /// Send a byte to the nominated MAVLink channel
 ///
 /// @param chan		Channel to send to
@@ -67,8 +69,14 @@ static inline int comm_get_txspace(mavlink_channel_t chan)
     return 255;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align" // yes I know
+
+
 #define MAVLINK_USE_CONVENIENCE_FUNCTIONS
 #include "include/mavlink/v2.0/ardupilotmega/mavlink.h"
+
+#pragma GCC diagnostic pop
 
 uint8_t mavlink_check_target(uint8_t sysid, uint8_t compid);
 
