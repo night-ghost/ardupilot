@@ -323,7 +323,7 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
                     }
                 }
             
-                err = do_transfer(can_dma);
+                err = do_transfer(can_dma, send_len + recv_len);
                 break;
             }
             // no break!
@@ -331,7 +331,7 @@ bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, u
         case SPI_TRANSFER_INTR: // interrupts
             _isr_mode = _send_len ? SPI_ISR_SEND : SPI_ISR_RECEIVE;
             setup_isr_transfer();
-            err=do_transfer(false);
+            err=do_transfer(false, send_len + recv_len);
             break;
 
         case SPI_TRANSFER_POLL: // polling
@@ -397,14 +397,14 @@ bool SPIDevice::transfer_fullduplex(const uint8_t *out, uint8_t *recv, uint32_t 
         case SPI_TRANSFER_DMA:
             if((out==NULL || ADDRESS_IN_RAM(out)) && (recv==NULL || ADDRESS_IN_RAM(recv)) ) {
                 setup_dma_transfer(out, recv, len);
-                return do_transfer(true)==0;
+                return do_transfer(true, len)==0;
             }    
     
         // no break;
         case SPI_TRANSFER_INTR: // interrupts
             _isr_mode = SPI_ISR_RXTX;
             setup_isr_transfer();
-            return do_transfer(false)==0;
+            return do_transfer(false, len)==0;
 
         case SPI_TRANSFER_POLL: // polling
         default:
@@ -766,7 +766,7 @@ bool SPIDevice::set_speed(AP_HAL::Device::Speed speed)
 
 
 // start transfer and wait until it finished
-uint8_t  SPIDevice::do_transfer(bool is_DMA)
+uint8_t  SPIDevice::do_transfer(bool is_DMA, uint32_t nbytes)
 {
 
 #ifdef DEBUG_SPI 
@@ -783,7 +783,7 @@ uint8_t  SPIDevice::do_transfer(bool is_DMA)
     }
 
     // no callback - need to wait 
-    uint32_t timeout = (_send_len + _recv_len) * 15; // time to transfer all data - 15uS per byte
+    uint32_t timeout = nbytes * 16; // time to transfer all data - 16uS per byte
     
     uint32_t t=hal_micros();
     
@@ -844,7 +844,7 @@ uint16_t  SPIDevice::send_strobe(const uint8_t *buffer, uint16_t len){ // send i
     _desc.dev->SPIx->DR = b;
 //]
 
-    (void) do_transfer(false);
+    (void) do_transfer(false, len);
     
     return _send_len;
 }

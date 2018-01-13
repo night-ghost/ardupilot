@@ -53,6 +53,11 @@ void Copter::init_ardupilot()
 
     gcs().set_dataflash(&DataFlash);
 
+#if DEVO_TELEM_ENABLED == ENABLED
+    // setup frsky
+    devo_telemetry.init(serial_manager);
+#endif
+
     // identify ourselves correctly with the ground station
     mavlink_system.sysid = g.sysid_this_mav;
     

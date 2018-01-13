@@ -36,6 +36,8 @@
 
 
 //#define BOARD_BUZZER_PIN        5 // PB15, PWM2 - used as PPM2
+#define HAL_BUZZER_ON           1
+#define HAL_BUZZER_OFF          0
 
 #define BOARD_NR_USARTS         5
 #define BOARD_USART1_TX_PIN     23 

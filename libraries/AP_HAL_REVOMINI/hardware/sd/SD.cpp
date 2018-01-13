@@ -75,8 +75,12 @@ FRESULT SDClass::lastError = FR_OK;
 uint8_t SDClass::begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi)
 {
     if (_card.init(std::move(spi))) {        
-	return (lastError=_fatFs.init(&_card)) == FR_OK;
+        lastError=_fatFs.init(&_card);
+	if(lastError == FR_OK) return true;
+        printf("\nSD card error: %s\n", strError(lastError));	
+	return false;
     } 
+    printf("\nSD card init error!\n");
     return FALSE;
 }
 

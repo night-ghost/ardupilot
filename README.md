@@ -1,4 +1,4 @@
-#ArduPilot Project port for Revolution/RevoMini boards#
+#ArduPilot Project port for almost arbitrary F4 board, starting Revolution/RevoMini boards, and including Omnibus, Cl-Racing F4 and so on#
 
 * almost all code is fully rewritten
 * external I2C bus moved out from FlexiPort by Soft_I2C driver so we always has at least 3 UARTs

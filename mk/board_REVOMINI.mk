@@ -80,8 +80,7 @@ DISAS    := arm-none-eabi-objdump
 
 EXTRAFLAGS += -DHAVE_STD_NULLPTR_T=0  -DHAVE_BYTESWAP_H=0
 EXTRAFLAGS += $(SKETCHLIBINCLUDES) -DARDUPILOT_BUILD -DTESTS_MATHLIB_DISABLE  -DSKETCH_MAIN=ArduPilot_main
-
-GITFLAGS   += -DGIT_VERSION="\"$(GIT_VERSION) $(shell date --rfc-3339=seconds)\""
+GITFLAGS   := -DGIT_VERSION="\"$(GIT_VERSION) $(shell date --rfc-3339=seconds)\""
 
 
 # -Wformat=1 
@@ -148,7 +147,7 @@ GLOBAL_CXXFLAGS += -fconserve-space -fno-enforce-eh-specs  -fno-use-cxa-atexit
 GLOBAL_CXXFLAGS += -std=gnu++11
 
 # Downgrade some diagnostics about nonconformant code from errors to warnings. Thus, using "-fpermissive" will allow some nonconforming code to compile.
-GLOBAL_CXXFLAGS += $(GLOBAL_CFLAGS)
+GLOBAL_CXXFLAGS += $(GLOBAL_CFLAGS)  -fpermissive
 #-fpermissive 
 # missing definitions
 GLOBAL_CXXFLAGS += -c -include $(WIRISH_PATH)/defs.h
@@ -179,6 +178,8 @@ LDFLAGS         += -Wl,--relax
 #--plugin=/usr/local/arm-none-eabi/lib/gcc/arm-none-eabi/5.2.1/liblto_plugin.so
 # -flto -fuse-linker-plugin
 
+# used to collect files from HAL folders tree
+TGT_BIN := 
 
 COREINCLUDES = -I$(HAL_PATH) -I$(STM32_PATH) -I$(WIRISH_PATH) -I$(BOARDS_PATH)/$(BOARD) -I$(STM32USB_PATH) \
  -I$(HARDWARE_PATH) \
@@ -211,7 +212,7 @@ include $(MK_DIR)/build_rules.mk
 LIBGCC := $(shell $(CC) $(GLOBAL_FLAGS) -print-libgcc-file-name)
 
 
-CFLAGS   = $(GLOBAL_CFLAGS) $(TGT_CFLAGS) $(COREINCLUDES) -I$(LIBRARIES_PATH) $(LIBRARY_INCLUDES) 
+CFLAGS   = $(GLOBAL_CFLAGS) $(TGT_CFLAGS) $(COREINCLUDES) -I$(LIBRARIES_PATH) $(LIBRARY_INCLUDES)
 CXXFLAGS = $(GLOBAL_CXXFLAGS) $(TGT_CFLAGS) $(COREINCLUDES) -I$(LIBRARIES_PATH) $(LIBRARY_INCLUDES) $(GITFLAGS)
 ASFLAGS  = $(GLOBAL_ASFLAGS) $(TGT_ASFLAGS) 
 
@@ -250,7 +251,7 @@ SKETCHEEP		=	$(BUILDROOT)/$(SKETCH).eep
 SKETCHMAP		=	$(BUILDROOT)/$(SKETCH).map
 
 # All of the objects that may be built
-ALLOBJS			=	$(LIBOBJS) $(SKETCHOBJS)
+ALLOBJS			=	$(SKETCHOBJS) $(LIBOBJS)
 
 # All of the dependency files that may be generated
 ALLDEPS			=	$(ALLOBJS:%.o=%.d)
@@ -318,12 +319,13 @@ revomini-clean: clean
 	$(v) $(FIND) $(REVO_PATH) -type f -name "*.d"  -delete
 
 
-# Link the final object
-$(SKETCHELF):	$(LIBOBJS) $(SKETCHOBJS) $(BUILD_PATH)/main.o
+# Link the final object. this line sets compilation order
+$(SKETCHELF): $(LIBOBJS) $(TGT_BIN) $(BUILD_PATH)/main.o $(SKETCHOBJS)
+
 	
 	$(RULEHDR)
 #	$(v)$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
-	$(SILENT_LD) $(CXX) $(LDFLAGS) -o $@ $(BUILD_PATH)/main.o $(SKETCHOBJS) $(LIBOBJS) $(LIBS) $(LIBGCC)  -Wl,-Map,$(BUILD_PATH)/$(BOARD).map
+	$(SILENT_LD) $(CXX) $(LDFLAGS) -o $@ $(TGT_BIN) $(BUILD_PATH)/main.o $(SKETCHOBJS) $(LIBOBJS) $(LIBS) $(LIBGCC)  -Wl,-Map,$(BUILD_PATH)/$(BOARD).map
 #	$(v) $(LD) $(LDFLAGS) -Map $(BUILD_PATH)/$(BOARD).map -o $(TGT_BIN) --start-group $(BUILD_PATH)/main.o $(SKETCHOBJS) $(LIBOBJS) $(LIBS) $(EXTRA_LIBS) $(LIBGCC) --end-group
 #  
 	$(v)cp $(SKETCHELF) .

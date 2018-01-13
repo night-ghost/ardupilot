@@ -81,7 +81,7 @@ public:
 
     inline int16_t get_pin() { return _pin; };
 protected:
-    const inline adc_dev* _find_device() {    return _ADC1;  }
+    const inline adc_dev* _find_device() const {    return _ADC1;  }
     inline bool initialized() { return _init_done;}
 private:
     /* following three are used from both an interrupt and normal thread */

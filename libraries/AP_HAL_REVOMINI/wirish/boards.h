@@ -78,12 +78,12 @@ enum {
  */
 
 typedef struct stm32_pin_info {
-    const gpio_dev  * const gpio_device;      /**< Maple pin's GPIO device */
-    const timer_dev * const timer_device;    /**< Pin's timer device, if any. */
-    const adc_dev   * const adc_device;       /**< ADC device, if any. */
-    uint8_t gpio_bit;             /**< Pin's GPIO port bit. */
-    timer_Channel timer_channel;        /**< Timer channel, or 0 if none. */
-    uint8_t adc_channel;          /**< Pin ADC channel, or ADCx if none. */
+    const gpio_dev  * const gpio_device;  /**< Maple pin's GPIO device */
+    const timer_dev * const timer_device; /**< Pin's timer device, if any. */
+    const adc_dev   * const adc_device;   /**< ADC device, if any. */
+    uint8_t gpio_bit;                     /**< Pin's GPIO port bit. */
+    timer_Channel timer_channel;          /**< Timer channel, or 0 if none. */
+    uint8_t adc_channel;                  /**< Pin ADC channel, or ADCx if none. */
 } stm32_pin_info;
 
 /**
@@ -92,27 +92,6 @@ typedef struct stm32_pin_info {
  */
 extern const stm32_pin_info PIN_MAP[];
 
-/**
- * @brief Pins capable of PWM output.
- *
- * Its length is BOARD_NR_PWM_PINS.
- */
-extern const uint8_t boardPWMPins[];
-
-/**
- * @brief Array of pins capable of analog input.
- *
- * Its length is BOARD_NR_ADC_PINS.
- */
-extern const uint8_t boardADCPins[];
-
-/**
- * @brief Pins which are connected to external hardware.
- *
- * For example, on Maple boards, it always at least includes
- * BOARD_LED_PIN.  Its length is BOARD_NR_USED_PINS.
- */
-extern const uint8_t boardUsedPins[];
 
 /**
  * @brief Generic board initialization function.

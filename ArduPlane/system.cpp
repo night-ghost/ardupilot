@@ -118,6 +118,9 @@ void Plane::init_ardupilot()
                          MAV_TYPE_FIXED_WING,
                          &g.fs_batt_voltage, &g.fs_batt_mah);
 #endif
+#if DEVO_TELEM_ENABLED == ENABLED
+    devo_telemetry.init(serial_manager);
+#endif
 
 #if LOGGING_ENABLED == ENABLED
     log_init();
@@ -294,6 +297,9 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
 
 #if FRSKY_TELEM_ENABLED == ENABLED
     frsky_telemetry.update_control_mode(control_mode);
+#endif
+#if DEVO_TELEM_ENABLED == ENABLED
+    devo_telemetry.update_control_mode(control_mode);
 #endif
 #if CAMERA == ENABLED
     camera.set_is_auto_mode(control_mode == AUTO);
@@ -552,6 +558,12 @@ void Plane::startup_INS_ground(void)
             hal.scheduler->delay(1000);
         }
     }
+#endif
+#if DEVO_TELEM_ENABLED == ENABLED
+void Plane::devo_telemetry_send(void)
+{
+    devo_telemetry.send_frames((uint8_t)control_mode);
+}
 #endif
 
     if (ins.gyro_calibration_timing() != AP_InertialSensor::GYRO_CAL_NEVER) {

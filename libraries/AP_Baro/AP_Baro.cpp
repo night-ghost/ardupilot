@@ -20,6 +20,7 @@
 #include "AP_Baro.h"
 
 #include <utility>
+#include <stdio.h>
 
 #include <AP_Common/AP_Common.h>
 #include <AP_HAL/AP_HAL.h>
@@ -167,8 +168,9 @@ void AP_Baro::calibrate(bool save)
         do {
             update();
             if (AP_HAL::millis() - tstart > 500) {
-                AP_HAL::panic("PANIC: AP_Baro::read unsuccessful "
+                printf( /* AP_HAL::panic(*/ "PANIC: AP_Baro::read unsuccessful "
                         "for more than 500ms in AP_Baro::calibrate [2]\r\n");
+                return;
             }
             hal.scheduler->delay(10);
         } while (!healthy());
@@ -517,9 +519,12 @@ void AP_Baro::init(void)
 #endif
     }
 
+#if 0 // to debug without baro
+
     if (_num_drivers == 0 || _num_sensors == 0 || drivers[0] == nullptr) {
         AP_BoardConfig::sensor_config_error("Baro: unable to initialise driver");
     }
+#endif
 }
 
 

@@ -148,7 +148,7 @@ private:
     
 //    const struct TIM_Channel *channel;
     const timer_dev          *timer;
-    const uint8_t             channel;
+    const timer_Channel       channel;
 
     // Clear pending interrupt and enable receive interrupt
     // Note: Clears pending interrupt

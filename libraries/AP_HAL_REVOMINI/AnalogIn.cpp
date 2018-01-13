@@ -131,13 +131,10 @@ void REVOMINIAnalogIn::_timer_event(void)
     }
     
 next_channel:
-    /* stop the previous channel, if a stop pin is defined */
-    _channels[_active_channel]->stop_read();
-    /* Move to the next channel */
-    _active_channel = (_active_channel + 1) % _num_channels;
-    /* Setup the next channel's conversion */
-    _channels[_active_channel]->setup_read();
-
+    
+    _channels[_active_channel]->stop_read();            /* stop the previous channel, if a stop pin is defined */
+    _active_channel = (_active_channel + 1) % _num_channels; /* Move to the next channel */
+    _channels[_active_channel]->setup_read();                /* Setup the next channel's conversion */
     dev = _channels[_active_channel]->_find_device();
 
     if(dev != NULL) {

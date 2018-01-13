@@ -57,8 +57,10 @@ static REVOMINIUARTDriver uart6Driver(_USART6); // pin 7&8(REVO)/5&6(RevoMini) o
 #ifdef BOARD_HAS_UART3
  static REVOMINIUARTDriver uart3Driver(_USART3); // flexi port
 // static SerialDriver IN_CCM softDriver(BOARD_SOFTSERIAL_TX, BOARD_SOFTSERIAL_RX, false);  // pin 7&8 of input port
-#elif defined(BOARD_SOFT_UART3) || defined(USE_SOFTSERIAL)
- static SerialDriver IN_CCM softDriver(BOARD_SOFTSERIAL_TX, BOARD_SOFTSERIAL_RX, false);  // pin 7&8 of input port
+#endif
+
+#if defined(BOARD_SOFT_UART3) || defined(USE_SOFTSERIAL)
+ static SerialDriver IN_CCM softDriver(BOARD_SOFTSERIAL_TX, BOARD_SOFTSERIAL_RX, false);
 #endif
 
 
@@ -66,7 +68,7 @@ static REVOMINIUARTDriver uart6Driver(_USART6); // pin 7&8(REVO)/5&6(RevoMini) o
  static UART_OSD uartOSDdriver;
 #endif
 
-#if /* FRAME_CONFIG == QUAD_FRAME && */ defined(BOARD_USART4_RX_PIN) && defined( BOARD_USART4_TX_PIN)
+#if defined(BOARD_USART4_RX_PIN) && defined( BOARD_USART4_TX_PIN)
  static REVOMINIUARTDriver uart4Driver(_UART4);  // pin 5&6 of servo port
 #endif
 
@@ -113,7 +115,7 @@ HAL_state HAL_REVOMINI::state;
         AP_HAL::UARTDriver* _uartB, // 1st GPS
         AP_HAL::UARTDriver* _uartC, // telem1
         AP_HAL::UARTDriver* _uartD, // telem2
-        AP_HAL::UARTDriver* _uartE, // 2nd GPS - 
+        AP_HAL::UARTDriver* _uartE, // 2nd GPS
         AP_HAL::UARTDriver* _uartF, // extra1
 
 
@@ -141,8 +143,8 @@ HAL_REVOMINI::HAL_REVOMINI() :
 
         &uart3Driver,           // uartD - flexi port                                          - Serial2 
         &uart4Driver,           // uartE - PWM pins 5&6                                        - Serial4
-        &uartPPM2,              // uartE - input data from PPM2 pin                            - Serial4
-//        &softDriver,            // uartF - soft UART on pins 7&8                               - Serial5 
+//        &uartPPM2,              // uartE - input data from PPM2 pin                            - Serial4
+        &softDriver,            // uartF - soft UART on pins 7&8                               - Serial5 
 
 #elif BOARD_UARTS_LAYOUT == 2 // Airbot
 
@@ -176,9 +178,9 @@ HAL_REVOMINI::HAL_REVOMINI() :
         
 #elif BOARD_UARTS_LAYOUT == 7 // Cl_Racing
 
-        NULL,
-        NULL,
-        NULL,
+        &uartOSDdriver,         // uartD - OSD emulated UART                                   - Serial2
+        &uartPPM1,              // uartE - input data from PPM1 pin                            - Serial4
+        NULL,                   // no uartF
         
 #else
  #error no BOARD_UARTS_LAYOUT!

@@ -8,7 +8,7 @@
 #define USE_WFE
 
 
-#define  RC_DEAD_TIME 60000 // 60 seconds no data changes
+#define RC_DEAD_TIME 60000 // 60 seconds no RC data changes
 #define REVOMINI_RC_INPUT_MIN_CHANNELS 4
 #define REVOMINI_RC_INPUT_NUM_CHANNELS 20
 
@@ -54,3 +54,4 @@
 
 
 #define SPI_INT_PRIORITY I2C_INT_PRIORITY
+

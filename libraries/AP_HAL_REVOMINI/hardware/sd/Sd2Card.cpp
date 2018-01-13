@@ -192,7 +192,12 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
 
     _spi_sem->give();
 
-    DSTATUS ret = disk_initialize(0);    
+    uint8_t n_try=6;
+    
+    DSTATUS ret;
+    do {
+        ret = disk_initialize(0);    
+    } while(ret!=RES_OK && n_try-- != 0);
 
     printf("\nSD initialize: status %d size %ldMb\n", ret, sectorCount()/2048UL);
 

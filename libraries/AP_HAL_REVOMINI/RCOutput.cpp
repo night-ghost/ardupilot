@@ -140,8 +140,6 @@ uint8_t  REVOMINIRCOutput::_used_channels=0;
 
 uint8_t REVOMINIRCOutput::_servo_mask=0;
 
-//uint32_t REVOMINIRCOutput::_timer_frequency[REVOMINI_MAX_OUTPUT_CHANNELS] IN_CCM;
-
 uint32_t REVOMINIRCOutput::_timer2_preload;
 uint16_t REVOMINIRCOutput::_timer3_preload;
 

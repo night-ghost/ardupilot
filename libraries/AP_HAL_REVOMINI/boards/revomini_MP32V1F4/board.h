@@ -35,6 +35,8 @@
 //#define BOARD_RFM22B_CS_PIN     103 // PA15 CS_RFM22B
 //#define BOARD_RFM22B_INT_PIN    26  // PD2  INT_RFM22
 //#define BOARD_BUZZER_PIN        5 // PB15, PWM2 - used as PPM2
+#define HAL_BUZZER_ON           1
+#define HAL_BUZZER_OFF          0
                                 
 #define BOARD_NR_USARTS         5
 #define BOARD_USART1_TX_PIN     23 
@@ -159,6 +161,7 @@
 
 
 #define BOARD_UARTS_LAYOUT 1
+#define USE_SOFTSERIAL 1
 
 # define BOARD_PUSHBUTTON_PIN           254 // no pushbutton
 # define BOARD_USB_MUX_PIN              -1  // no USB mux

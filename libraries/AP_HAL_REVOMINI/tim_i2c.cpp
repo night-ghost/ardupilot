@@ -116,17 +116,21 @@ void Soft_I2C::init_hw( const gpio_dev *scl_dev, uint8_t scl_bit, const gpio_dev
     _sda_bit=sda_bit;
     
 
+    sda_port = sda_dev->GPIOx;
+    sda_pin  = 1<<sda_bit;
+
+    scl_port = scl_dev->GPIOx;
+    scl_pin  = 1<<scl_bit;
+
+    SCL_H; // passive in high state
+    SDA_H;
+
     gpio_set_mode(_scl_dev, _scl_bit, GPIO_OUTPUT_OD_PU);
     gpio_set_mode(_sda_dev, _sda_bit, GPIO_OUTPUT_OD_PU);
         
     gpio_set_speed(_scl_dev, _scl_bit, GPIO_Speed_2MHz); // low speed to prevent glitches
     gpio_set_speed(_sda_dev, _sda_bit, GPIO_Speed_2MHz);
 
-    sda_port = sda_dev->GPIOx;
-    sda_pin  = 1<<sda_bit;
-
-    scl_port = scl_dev->GPIOx;
-    scl_pin  = 1<<scl_bit;
     
     _timer = tim;
 }

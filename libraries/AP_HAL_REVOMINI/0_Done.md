@@ -144,6 +144,7 @@
 * added support for PWM outputs on N-channels of advanced timers
 * added support for inverted buzzer
 * added support for passive buzzer
+* added support for Devo telemetry protocol
 * ...
 * a lot of minor enhancements
 

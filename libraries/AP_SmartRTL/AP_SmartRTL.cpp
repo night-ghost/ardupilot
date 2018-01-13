@@ -85,8 +85,8 @@ const AP_Param::GroupInfo AP_SmartRTL::var_info[] = {
      As the result, maximal point count is limited to 500 points.
      
      Ap_WayBack library uses only 8 bytes per point, and checks only new point and the last leg which it creates so its complexity is O(n) in worst case,
-     As the result its work checked with 4000 points and time never exceeds 100ms (in low-priority thread)
-     also, no error can cause abort of RTL - even an unsuccessful attempt is much better than to immediately surrender
+     As the result its work checked with 4000 points and time never exceeds 100ms (in low-priority thread).
+     Also, no error can cause abort of RTL - even an unsuccessful attempt is much better than to immediately surrender.
      
 
 */

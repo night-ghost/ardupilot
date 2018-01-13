@@ -31,6 +31,8 @@
 #endif
 
 #define BOARD_BUZZER_PIN        105 
+#define HAL_BUZZER_ON           1
+#define HAL_BUZZER_OFF          0
 
 #define BOARD_NR_USARTS         5
 #define BOARD_USART1_TX_PIN     23 
@@ -40,8 +42,8 @@
 #define BOARD_USART6_TX_PIN     12
 #define BOARD_USART6_RX_PIN     13
 
-//#define BOARD_USART4_RX_PIN     48
-//#define BOARD_USART4_TX_PIN     47
+#define BOARD_USART4_RX_PIN     48
+#define BOARD_USART4_TX_PIN     47
 
 //#define BOARD_USART5_RX_PIN     26  // PD2  EXTI_RFM22B / UART5_RX
 //#define BOARD_BUTTON_PIN        103 // PA15 CS_RFM22B

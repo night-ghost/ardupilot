@@ -23,10 +23,7 @@ void init() // early init on creation of HAL class
 
 void panic(const char *errormsg, ...)
 {
-    /* Suspend timer processes. We still want the timer event to go off to run the _failsafe code, however. */
     va_list ap;
-
-    hal.scheduler->suspend_timer_procs();
 
     if(boardEmergencyHandler) boardEmergencyHandler(); // call emergency handler before
 
@@ -44,11 +41,13 @@ void panic(const char *errormsg, ...)
 
 void cond_yield(){
     static uint32_t last_yield=0;
-    uint32_t t=REVOMINIScheduler::_millis();
-    if(t-last_yield>50) {
+
+    uint32_t t=REVOMINIScheduler::_micros();
+    if(t-last_yield>300 || last_yield==t) { // if yield was long ago or mills() called too often
         REVOMINIScheduler::yield(0);
-        last_yield=t;
     }
+    
+    last_yield=REVOMINIScheduler::_micros();
 }
 
 
@@ -60,7 +59,7 @@ uint32_t millis()
 
 
 uint64_t millis64(){
-    cond_yield();
+    cond_yield();       // to prevent CPU eating by wait loops
     return REVOMINIScheduler::_millis64();
 }
 

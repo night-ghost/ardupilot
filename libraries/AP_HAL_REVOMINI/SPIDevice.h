@@ -195,7 +195,7 @@ protected:
     void setup_isr_transfer();
 
     void    start_dma_transfer();
-    uint8_t do_transfer(bool is_DMA);
+    uint8_t do_transfer(bool is_DMA, uint32_t nbytes);
 
     Handler _completion_cb;
     void   *_task;

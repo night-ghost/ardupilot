@@ -88,6 +88,7 @@ extern int printf(const char *msg, ...);
 
 static uint8_t CardType;			/* Card type flags */
 static uint8_t was_write=0;
+static uint8_t no_CMD13 = 0;
 static uint8_t csd[16]; // for DMA reads
 
 static int8_t xmit_datablock (const uint8_t *buff,	uint8_t token);
@@ -277,12 +278,12 @@ static int8_t xmit_datablock (	/* 1:OK, 0:Failed */
 
 	if (!wait_ready(500)) return 0;		/* Wait for card ready */
 
-	xchg_spi(token);				/* Send token */
-	if (token != 0xFD) {				/* Send data if token is other than StopTran */
+	xchg_spi(token);			/* Send token */
+	if (token != 0xFD) {			/* Send data if token is other than StopTran */
 	    xmit_spi_multi(buff, 512);		/* Data */
 	    xchg_spi(0xFF); xchg_spi(0xFF);	/* Dummy CRC */
 
-	    resp = xchg_spi(0xFF);			/* Receive data resp */
+	    resp = xchg_spi(0xFF);		/* Receive data resp */
 	    if ((resp & 0x1F) != 0x05) {
 	        return 0;	/* Function fails if the data packet was not accepted */
 	    }
@@ -314,9 +315,6 @@ uint8_t send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 		cmd &= 0x7F;
 		res = send_cmd(CMD55, 0);
 		if (res > 1) {
- #ifdef DEBUG_BUILD
-		    printf("cmd55 failed\n");
- #endif
 		    return res;
 		}
 	}
@@ -390,11 +388,13 @@ DSTATUS sd_initialize() {
 	if (n == 1 || n==0) {			                                /* Put the card SPI/Idle state */
 		Timer1 = 1000;			                        	/* Initialization timeout = 1 sec */
 		if (send_cmd(CMD8, 0x1AA) == 1) {	                        /* SDv2? */
-			for (n = 0; n < 4; n++) ocr[n] = xchg_spi(0xFF);	/* Get 32 bit return value of R7 resp */
+//			for (n = 0; n < 4; n++) ocr[n] = xchg_spi(0xFF);	/* Get 32 bit return value of R7 resp */
+			rcvr_spi_multi(ocr, 4);
 			if (ocr[2] == 0x01 && ocr[3] == 0xAA) {			/* Is the card supports vcc of 2.7-3.6V? */
 				while (Timer1 && send_cmd(ACMD41, 1UL << 30)) ;	/* Wait for end of initialization with ACMD41(HCS) */
 				if (Timer1 && send_cmd(CMD58, 0) == 0) {	/* Check CCS bit in the OCR */
-					for (n = 0; n < 4; n++) ocr[n] = xchg_spi(0xFF);
+					//for (n = 0; n < 4; n++) ocr[n] = xchg_spi(0xFF);
+					rcvr_spi_multi(ocr, 4);
 					ty = (ocr[0] & 0x40) ? CT_SD2 | CT_BLOCK : CT_SD2;	/* Card id SDv2 */
 				}
 			}
@@ -467,10 +467,13 @@ DSTATUS sd_status (){
 }
 
 uint8_t sd_get_state(){
-
-    if(send_cmd(CMD13, 0)<=1){
-        uint8_t ret = xchg_spi(0xFF);
-        return ret;
+    if(!no_CMD13) {
+        if(send_cmd(CMD13, 0)<=1){
+            uint8_t ret = xchg_spi(0xFF);
+            return ret;
+        }
+        
+        no_CMD13=1;
     }
     
     return 0; // CMD13 not supported so all OK
@@ -501,7 +504,7 @@ static bool single_sector_card=false;
 
 DRESULT sd_read (
 	uint8_t *buff,		/* Pointer to the data buffer to store read data */
-	uint32_t sector,	        /* Start sector number (LBA) */
+	uint32_t sector,        /* Start sector number (LBA) */
 	uint16_t count		/* Number of sectors to read (1..128) */
 )
 {
@@ -567,8 +570,9 @@ DRESULT sd_read (
 	    }
 	}
 	deselect();
-
-	return count ? RES_ERROR : RES_OK;	/* Return result */
+        if(count==0) return  RES_OK;	/* Return result */
+        Stat = STA_NOINIT;        
+	return RES_ERROR;
 }
 
 
@@ -635,6 +639,7 @@ DRESULT sd_write (
 
 	if(count) {
             deselect();
+            Stat = STA_NOINIT;        
 	    return RES_ERROR;
 	}
 
@@ -745,15 +750,30 @@ DRESULT sd_ioctl (
              break;
 
          case MMC_GET_CID: /* Receive CID as a data block (16 bytes) */
-             if (send_cmd(CMD10, 0) == 0 /* READ_CID */
-             && rcvr_datablock(ptr, 16))
+            if (send_cmd(CMD10, 0) == 0 /* READ_CID */
+            && rcvr_datablock(ptr, 16)){
+/*
+    sdcard.manufacturerID = cid[0];
+    sdcard.oemID = (cid[1] << 8) | cid[2];
+    sdcard.productName[0] = cid[3];
+    sdcard.productName[1] = cid[4];
+    sdcard.productName[2] = cid[5];
+    sdcard.productName[3] = cid[6];
+    sdcard.productName[4] = cid[7];
+    sdcard.productRevisionMajor = cid[8] >> 4;
+    sdcard.productRevisionMinor = cid[8] & 0x0F;
+    sdcard.productSerial = (cid[9] << 24) | (cid[10] << 16) | (cid[11] << 8) | cid[12];
+    sdcard.productionYear = (((cid[13] & 0x0F) << 4) | (cid[14] >> 4)) + 2000;
+    sdcard.productionMonth = cid[14] & 0x0F;
+*/
                  res = RES_OK;
-             break;
-
+            }
+            break;
+            
          case MMC_GET_OCR: /* Receive OCR as an R3 resp (4 bytes) */
              if (send_cmd(CMD58, 0) == 0) { /* READ_OCR */
-                 for (n = 4; n; n--)
-                     *ptr++ = rcvr_spi();
+                 // for (n = 4; n; n--) *ptr++ = rcvr_spi();
+                 rcvr_spi_multi(ptr, 4);
                  res = RES_OK;
              }
              break;

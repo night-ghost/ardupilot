@@ -28,8 +28,17 @@ FRESULT SdFatFs::init(Sd2Card *card) {
     }
     
 #if defined(BOARD_DATAFLASH_FATFS) // in DataFlash
+    // always reformat internal flash
 
     printf("Formatting DataFlash to FAT..."); 
+
+#else
+    // reformat SD card in case of filesystem error
+    if(res!=FR_NO_FILESYSTEM) return res;
+
+
+    printf("Formatting SD to FAT..."); 
+#endif
 
     res = format((TCHAR const*)_SDPath, card);
 
@@ -38,7 +47,8 @@ FRESULT SdFatFs::init(Sd2Card *card) {
     } else {
         printf(" Error: %s!\n", strError(res));
     }
-#endif
+
+
     return res;
 }
 

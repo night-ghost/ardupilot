@@ -57,6 +57,8 @@ void REVOMINIGPIO::_pinMode(uint8_t pin, uint8_t mode)
         gpio_set_speed(dev, bit, GPIO_Speed_25MHz);  // cleanflight sets 2MHz
 	gpio_set_af_mode(dev, bit, timer->af);
 	timer_set_mode(timer, p.timer_channel, TIMER_PWM); // init in setupTimers()
+    } else {
+        gpio_set_af_mode(dev, bit, 0); // reset
     }
 }
 
@@ -78,18 +80,25 @@ uint8_t REVOMINIGPIO::read(uint8_t pin) {
 
 void REVOMINIGPIO::write(uint8_t pin, uint8_t value) {
     if ((pin >= BOARD_NR_GPIO_PINS))   return;
-#ifdef BUZZER_PWM_HZ
+
+#ifdef BUZZER_PWM_HZ // passive buzzer
 
 // AP_Notify Buzzer.cpp don't supports passive buzzer so we need a small hack
     if(pin == BOARD_BUZZER_PIN){
         if(value == HAL_BUZZER_ON){
-            _pinMode(pin, PWM);
             const stm32_pin_info &p = PIN_MAP[pin];
             const timer_dev *dev = p.timer_device;
+            if(dev->state->freq==0) {
+                configTimeBase(dev, 0,  BUZZER_PWM_HZ * 10); // it should be personal timer
+            }
+            _pinMode(pin, PWM);
             uint32_t n = REVOMINIRCOutput::_timer_period(BUZZER_PWM_HZ, dev);
             timer_set_reload(dev, n);
             timer_set_compare(dev, p.timer_channel, n/2);
-        }    
+            return;
+        } else {
+            _pinMode(pin, OUTPUT); // to disable, just change mode
+        }
     }
 #endif
 
