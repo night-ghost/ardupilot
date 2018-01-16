@@ -116,6 +116,7 @@ void reset_usb_opened();
 int usb_write(const uint8_t *buf, unsigned int nbytes);
 int usb_read(void  * buf, unsigned int nbytes);
 uint32_t usb_data_available(void);
+uint16_t usb_tx_space(void);
 
 void usb_reset_rx();
 void usb_reset_tx();

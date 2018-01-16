@@ -29,19 +29,18 @@ public:
     inline void end()   {  usb_close(); } 
     inline bool is_initialized(){ return _initialized; }
     inline void set_blocking_writes(bool blocking) { _blocking=blocking; }
-    inline bool tx_pending() {   return false; }
+    inline bool tx_pending() {   return false; } // not used
 
     void flush() { return; };
 
     uint32_t available() override;
-    inline uint32_t txspace() override  {   return 255; }
+    uint32_t txspace() override;
     int16_t read() override;
 
     size_t write(uint8_t c);
     size_t write(const uint8_t *buffer, size_t size);
 
 private:
-    uint8_t _usb_present;
     bool _initialized;
     bool _blocking;
 };

@@ -30,6 +30,9 @@
 
 #include "float.h"
 
+// for PACKED define
+#include "AP_Common/AP_Common.h"
+
 #define AP_MAX_NAME_SIZE 16
 
 /*
@@ -455,13 +458,14 @@ private:
     /*
       structure for built-in defaults file that can be modified using apj_tool.py
      */
-    struct PACKED param_defaults_struct {
+    struct /* PACKED */ param_defaults_struct {
         char magic_str[8];
         uint8_t param_magic[8];
         uint16_t max_length;
         volatile uint16_t length;
         volatile char data[AP_PARAM_MAX_EMBEDDED_PARAM];
     };
+    
     static const param_defaults_struct param_defaults_data;
     
     

@@ -10,7 +10,7 @@ echo $ROOT
 
 ( # RevoMini board
  cd $ROOT/ArduCopter
- make revomini-clean
+# make revomini-clean
  make revomini VERBOSE=1 BOARD=revomini_MP32V1F4 && (
 
  cp $ROOT/ArduCopter/revomini_MP32V1F4.bin $ROOT/Release/Copter

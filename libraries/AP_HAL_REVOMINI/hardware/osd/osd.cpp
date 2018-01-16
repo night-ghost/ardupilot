@@ -53,15 +53,16 @@ OSD osd; //OSD object
 #include "osd_core/prototypes.h"
 #include "osd_core/Vars.h"
 
-#include "osd_core/Params.h"
+
 
 #include "osd_core/Config_Func.h"
 #include "osd_core/Config.h"
 #include "osd_core/Func.h"
 #include "osd_core/protocols.h"
 #include "osd_core/misc.h"
-#include "osd_core/Panels.h"
 
+#include "osd_core/Params.h"
+#include "osd_core/Panels.h"
 
 
 // TODO: чтение конфига и еепром с карты памяти, чтобы закинуть .mcm и .osd и все       

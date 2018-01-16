@@ -182,7 +182,11 @@ public:
     I2CDeviceManager() { }
 
     /* AP_HAL::I2CDeviceManager implementation */
-    AP_HAL::OwnPtr<AP_HAL::I2CDevice> get_device(uint8_t bus, uint8_t address) {
+    AP_HAL::OwnPtr<AP_HAL::I2CDevice> get_device(uint8_t bus, 
+                                                uint8_t address,
+                                                uint32_t bus_clock=400000,
+                                                bool use_smbus = false,
+                                                uint32_t timeout_ms=4) {
 
         // let's first check for existence of such device on same bus
         uint8_t n = REVOI2CDevice::get_dev_count();

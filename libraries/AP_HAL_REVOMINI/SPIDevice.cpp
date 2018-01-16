@@ -849,11 +849,12 @@ uint16_t  SPIDevice::send_strobe(const uint8_t *buffer, uint16_t len){ // send i
     return _send_len;
 }
 
-//  TODO works bad and requires debug
+// gives received bytes to callback and returns when callback returns true but not linger than timeout
+// so it works like wait for needed byte in ISR - but without wait
 uint8_t SPIDevice::wait_for(uint8_t out, spi_WaitFunc cb, uint16_t dly){ // wait for needed byte in ISR
     _send_len = out;
     _isr_mode = SPI_ISR_COMPARE;
-    _recv_len = 0;  // we sholdn't receive after wait
+    _recv_len = 0;  // we shouldn't receive after wait
     _compare_cb = cb;    
 
     spi_attach_interrupt(_desc.dev, REVOMINIScheduler::get_handler(FUNCTOR_BIND_MEMBER(&SPIDevice::spi_isr, void)) );    

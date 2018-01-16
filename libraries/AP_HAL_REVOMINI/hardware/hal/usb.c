@@ -775,6 +775,11 @@ uint16_t usb_tx_pending(void){
     return USB_TX_BUFF_SIZE-VCP_SpaceAvail(); 
 }
 
+uint16_t usb_tx_space(void){     
+    return VCP_SpaceAvail(); 
+}
+
+
 void VCP_SetUSBTxBlocking(uint8_t Mode) {    
     UsbTXBlock = Mode; 
 }

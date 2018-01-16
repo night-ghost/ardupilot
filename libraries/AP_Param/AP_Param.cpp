@@ -37,7 +37,7 @@
 
 extern const AP_HAL::HAL &hal;
 
-#define ENABLE_DEBUG 1
+//#define ENABLE_DEBUG 1
 
 #if ENABLE_DEBUG
  # define Debug(fmt, args ...)  do {::printf("%s:%d: " fmt "\n", __FUNCTION__, __LINE__, ## args); } while(0)
@@ -1308,13 +1308,13 @@ bool AP_Param::load_all(bool check_defaults_file)
  */
 void AP_Param::reload_defaults_file(bool panic_on_error)
 {
+#if HAL_OS_POSIX_IO == 1 || defined(BOARD_HAS_SDIO)
 
     if (param_defaults_data.length != 0) {
         load_embedded_param_defaults(false);
         return;
     }
 
-#if HAL_OS_POSIX_IO == 1 || defined(BOARD_HAS_SDIO)
     /*
       if the HAL specifies a defaults parameter file then override
       defaults using that file
@@ -1759,6 +1759,11 @@ void AP_Param::set_float(float value, enum ap_var_type var_type)
 }
 
 
+
+#if HAL_OS_POSIX_IO == 1
+#include <stdio.h>
+
+
 /*
   parse a parameter file line
  */
@@ -1784,9 +1789,6 @@ bool AP_Param::parse_param_line(char *line, char **vname, float &value)
     return true;
 }
 
-
-#if HAL_OS_POSIX_IO == 1
-#include <stdio.h>
 
 // increments num_defaults for each default found in filename
 bool AP_Param::count_defaults_in_file(const char *filename, uint16_t &num_defaults, bool panic_on_error)
@@ -1917,6 +1919,7 @@ bool AP_Param::load_defaults_file(const char *filename, bool panic_on_error)
     #include "sd_io.h"
 #endif // HAL_OS_POSIX_IO
 
+#if HAL_OS_POSIX_IO == 1 || defined(BOARD_HAS_SDIO)
 /*
   count the number of embedded parameter defaults
  */
@@ -2039,6 +2042,8 @@ void AP_Param::load_embedded_param_defaults(bool panic_on_error)
     }
     num_param_overrides = num_defaults;
 }
+
+#endif
 
 /* 
    find a default value given a pointer to a default value in flash

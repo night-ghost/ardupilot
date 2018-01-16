@@ -25,7 +25,6 @@ extern const AP_HAL::HAL& hal;
 
 
 USBDriver::USBDriver(bool usb):
-    _usb_present(usb),
     _initialized(false),
     _blocking(false)
 {
@@ -46,6 +45,7 @@ uint32_t USBDriver::available() {
     return v; 
 }
 
+uint32_t USBDriver::txspace() {   return usb_tx_space(); }
 
 // usb *can* be used  in air, eg. to connect companion computer
 
@@ -66,7 +66,7 @@ size_t USBDriver::write(uint8_t c) {
 size_t USBDriver::write(const uint8_t *buffer, size_t size)
 {
     size_t n = 0;
-    uint32_t t = REVOMINIScheduler::_millis();
+    uint32_t t = REVOMINIScheduler::_micros();
 
     if(is_usb_opened()){
         while(true) {
@@ -76,13 +76,14 @@ size_t USBDriver::write(const uint8_t *buffer, size_t size)
             buffer+=k;
             if(size == 0) break; //done
             
-            uint32_t now = REVOMINIScheduler::_millis();
+            uint32_t now = REVOMINIScheduler::_micros();
             if(k==0) {
-                if(!_blocking && now - t > 5 ){        // время ожидания превысило 5мс - что-то пошло не так...
+                if(!_blocking && now - t > 5000 ){        // время ожидания превысило 5мс - что-то пошло не так...
                     reset_usb_opened();
                     return n;
                 }
                 if(!is_usb_opened()) break;
+                hal_yield(0);
             } else {
                 t = now;
             }

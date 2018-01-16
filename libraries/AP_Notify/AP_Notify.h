@@ -141,10 +141,9 @@ public:
     const char* get_text() const { return _send_text; }
 
     static const struct AP_Param::GroupInfo var_info[];
+    uint8_t get_buzz_pin() const  { return _buzzer_pin; }
 
 private:
-    uint8_t get_buzz_pin() const  { return _buzzer_pin; }
-    AP_Notify();
 
     static AP_Notify *_instance;
 

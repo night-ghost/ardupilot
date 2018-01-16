@@ -80,7 +80,7 @@ void AP_DEVO_Telem::send_frames(uint8_t control_mode)
         return;
     }
 
-    const AP_GPS &gps = _ahrs.get_gps();
+    const AP_GPS &gps = AP::gps();
 
     if (gps.status() >= 3) {
         struct Location loc = gps.location();//get gps instance 0

@@ -60,6 +60,9 @@ public:
     
     // create a new semaphore
     Semaphore *new_semaphore(void)  override { return new REVOMINI::Semaphore; } 
+
+    void *malloc_type(size_t size, Memory_Type mem_type) override;
+    void free_type(void *ptr, size_t size, Memory_Type mem_type) override;
     
 private:
     uint64_t gps_shift; // shift from board time to real time

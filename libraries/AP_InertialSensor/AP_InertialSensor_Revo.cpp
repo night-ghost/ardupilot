@@ -28,6 +28,7 @@
 #include <stdio.h>
 
 #include <AP_HAL/AP_HAL.h>
+#include <AP_HAL/Util.h>
 
 #include <AP_HAL_REVOMINI/GPIO.h>
 #include <AP_HAL_REVOMINI/Scheduler.h>
@@ -292,7 +293,7 @@ AP_InertialSensor_Revo::AP_InertialSensor_Revo(AP_InertialSensor &imu,
 AP_InertialSensor_Revo::~AP_InertialSensor_Revo()
 {
     if (_fifo_buffer != nullptr) {
-        hal.util->dma_free(_fifo_buffer, MPU_FIFO_BUFFER_LEN * MPU_SAMPLE_SIZE);
+        hal.util->free_type(_fifo_buffer, MPU_FIFO_BUFFER_LEN * MPU_SAMPLE_SIZE, AP_HAL::Util::MEM_DMA_SAFE);
     }
 }
 
@@ -483,7 +484,7 @@ void AP_InertialSensor_Revo::start()
     set_accel_orientation(_accel_instance, _rotation);
 
     // allocate fifo buffer
-    _fifo_buffer = (uint8_t *)(hal.util->dma_allocate((MPU_FIFO_BUFFER_LEN+1) * MPU_SAMPLE_SIZE));
+    _fifo_buffer = (uint8_t *)(hal.util->malloc_type((MPU_FIFO_BUFFER_LEN+1) * MPU_SAMPLE_SIZE, AP_HAL::Util::MEM_DMA_SAFE));
     if (_fifo_buffer == nullptr) {
         AP_HAL::panic("Invensense: Unable to allocate FIFO buffer");
     }
