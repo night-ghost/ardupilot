@@ -145,6 +145,10 @@
 * added support for inverted buzzer
 * added support for passive buzzer
 * added support for Devo telemetry protocol
+* fixed Soft_I2C timeout 
+* all waits for SD answers moved to ISR as finite state machine
+* a try to support Ardupilot parameters on builtin OSD (untested)
+* removed unnecessary diagnostics which cause MAVlink corruption
 * ...
 * a lot of minor enhancements
 

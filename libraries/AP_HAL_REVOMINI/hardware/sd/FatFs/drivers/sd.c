@@ -84,14 +84,13 @@ extern int printf(const char *msg, ...);
 
 #if defined(BOARD_SDCARD_CS_PIN)
 
-//#define WAIT_IN_ISR
+#define WAIT_IN_ISR
 
 static uint8_t CardType;			/* Card type flags */
-static uint8_t was_write=0;
 static uint8_t no_CMD13 = 0;
 static uint8_t csd[16]; // for DMA reads
 
-static int8_t xmit_datablock (const uint8_t *buff,	uint8_t token);
+static int8_t xmit_datablock(const uint8_t *buff,	uint8_t token);
 
 
 uint8_t sd_get_type() {

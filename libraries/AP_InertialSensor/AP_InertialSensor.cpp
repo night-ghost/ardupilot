@@ -1401,6 +1401,11 @@ check_sample:
             if (gyro_available && accel_available) {
                 break;
             }
+            uint32_t t = AP_HAL::micros();
+            if(t - now > 100000) {
+                printf("\no INS sample for 100ms!\n");
+                now=t;
+            }
 
             hal.scheduler->delay_microseconds_boost(100);
         }

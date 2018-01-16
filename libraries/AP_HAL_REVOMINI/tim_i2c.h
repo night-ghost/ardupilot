@@ -138,6 +138,8 @@ private:
     uint8_t        recv_len;
     uint8_t        _addr;
 
+    uint16_t bit_time;
+
 #ifdef SI2C_DEBUG
     #define SI2C_LOG_SIZE 199
     static SI2C_State log[SI2C_LOG_SIZE];

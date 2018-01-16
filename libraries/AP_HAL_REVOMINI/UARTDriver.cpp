@@ -107,9 +107,8 @@ size_t REVOMINIUARTDriver::write(uint8_t c) {
     if (!_initialized) { 
         return 0;
     }
-
     uint16_t n;
-    uint16_t tr=3; // попытки
+    uint16_t tr=2; // попытки
     while(tr) {
         n = usart_putc(_usart_device, c);
         if(n==0) { // no place for character
@@ -122,7 +121,7 @@ size_t REVOMINIUARTDriver::write(uint8_t c) {
 
 size_t REVOMINIUARTDriver::write(const uint8_t *buffer, size_t size)
 {
-    uint16_t tr=3; // попыток
+    uint16_t tr=2; // попыток
     uint16_t n;
     uint16_t sent=0;
     while(tr && size) {

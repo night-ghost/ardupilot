@@ -22,9 +22,6 @@ union UU {
 
 #pragma GCC diagnostic pop
 
-#define MAX_OVERLOAD_COUNT 10
-#define MAX_FROZEN_COUNT 10
-
 
 
 

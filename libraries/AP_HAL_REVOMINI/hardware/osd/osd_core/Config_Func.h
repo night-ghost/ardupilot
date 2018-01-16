@@ -140,7 +140,7 @@ void serial_hex_dump(byte *p, uint16_t len) {}
 
 
 
-void millis_plus(uint32_t *dst, uint16_t inc) {
+void inline millis_plus(uint32_t *dst, uint16_t inc) {
     *dst = millis() + inc;
 }
 
@@ -194,3 +194,4 @@ void inline gps_norm(float &dst, long f){
 bool inline timeToScreen(){ // we should renew screen 
     return lflags.need_redraw && !vsync_wait;
 }
+

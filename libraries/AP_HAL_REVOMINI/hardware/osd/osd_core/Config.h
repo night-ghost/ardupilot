@@ -25,7 +25,7 @@
 #define MAVLINK_CONFIG 1
 #define MAVLINK_READ_EEPROM 1
 #define MAVLINK_FONT_UPLOAD 1
-//#define MAVLINK_PARAMS 1
+#define MAVLINK_PARAMS 1
 
 #define USE_MAVLINK 1
 #define MAV_REQUEST 1
@@ -38,6 +38,7 @@
 #define BOOTTIME         3700   // Time in milliseconds that we show boot loading bar and wait user input
 
 
+// no LED
  #define LED_BLINK {}
  #define LED_ON {}
  #define LED_OFF {}
@@ -77,3 +78,4 @@ static const uint8_t chan=0;
 
 #include "../osd_namespace.h"
 using namespace OSDns;
+

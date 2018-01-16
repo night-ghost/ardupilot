@@ -47,7 +47,8 @@ DataFlash_File::DataFlash_File(DataFlash_Class &front,
     _cached_oldest_log(0),
     _writebuf(0),
     _writebuf_chunk(4096),
-    _last_write_time(0)
+    _last_write_time(0),
+    has_data(false)
 {}
 
 
@@ -488,6 +489,8 @@ bool DataFlash_File::_WritePrioritisedBlock(const void *pBuffer, uint16_t size, 
     }
 
     _writebuf.write((uint8_t*)pBuffer, size);
+    has_data=true;
+    
     semaphore->give();
     return true;
 }
@@ -807,6 +810,7 @@ uint16_t DataFlash_File::start_new_log(void)
     }
     _write_offset = 0;
     _writebuf.clear();
+    has_data = false;
 
     // now update lastlog.txt with the new log number
     fname = _lastlog_file_name();
@@ -971,7 +975,7 @@ void DataFlash_File::_io_timer(void)
     uint32_t tnow = AP_HAL::millis();
     _io_timer_heartbeat = tnow;
 
-    if (!(_write_fd) || !_initialised || _open_error) {
+    if (!(_write_fd) || !_initialised || _open_error || !has_data) {
         return;
     }
 
@@ -983,6 +987,7 @@ void DataFlash_File::_io_timer(void)
         tnow - _last_write_time < 2000UL) {
         // write in _writebuf_chunk-sized chunks, but always write at
         // least once per 2 seconds if data is available
+        has_data=false;
         return;
     }
 
@@ -1045,8 +1050,7 @@ void DataFlash_File::_io_timer(void)
                     return; 
                 }
             }
-        }
-        
+        }    
 
         _initialised = false;
     } else {
@@ -1060,8 +1064,12 @@ void DataFlash_File::_io_timer(void)
          */
         _write_fd.sync();
         
-    // TODO limit file size in some MBytes and reopen new log file
-        
+#if defined(BOARD_DATAFLASH_FATFS)    // limit file size in some MBytes and reopen new log file
+
+        if(_write_fd.size() > 4096 * 1024) { // size > 4M
+            start_new_log();             // re-start logging        
+        }
+#endif
     }
 }
 

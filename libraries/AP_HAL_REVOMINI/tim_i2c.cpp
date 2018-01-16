@@ -87,6 +87,9 @@ extern const AP_HAL::HAL& hal;
 
 #define I2C_yield(x)     hal_yield(x)
 
+#define SI2C_BIT_TIME 8
+
+
 #ifdef SI2C_DEBUG
  Soft_I2C::SI2C_State Soft_I2C::log[SI2C_LOG_SIZE];
  uint16_t             Soft_I2C::log_ptr;
@@ -437,6 +440,7 @@ bool Soft_I2C::_start(void)
     timer_attach_interrupt(_timer, TIMER_UPDATE_INTERRUPT, h.h, TIMER_I2C_INT_PRIORITY); // high priority
     timer_set_reload(_timer, SI2C_PERIOD * freq / 1000000);         // period to generate 2uS requests - 500kHz interrupts /4 = 125kHz I2C. 
                                                                     //  I hope that there will be a time between interrupts :)
+    bit_time = SI2C_PERIOD*4;
 
     state  = START;
     result = I2C_OK;
@@ -467,10 +471,12 @@ bool Soft_I2C::_start(void)
 uint8_t Soft_I2C::wait_done(){
     uint32_t t = hal_micros();
 
+    uint32_t timeout = SI2C_BIT_TIME*9*(send_len+recv_len+1);
+
     while(!done) {
         uint32_t dt = hal_micros() - t;
         
-        if(dt > I2C_TIMEOUT) {
+        if(dt > timeout*16) {
             timer_pause(_timer);
             if(state==STOP2) break; // all fine
             
@@ -489,8 +495,7 @@ uint8_t Soft_I2C::wait_done(){
             result = I2C_ERR_TIMEOUT;
             break;
         }
-#define SI2C_BIT_TIME 8
-        hal_yield(SI2C_BIT_TIME * 8 * (send_len+recv_len)+1);
+        hal_yield(timeout);
         timer_resume(_timer); // just for case
     }
 

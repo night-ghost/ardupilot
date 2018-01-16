@@ -128,7 +128,16 @@
 * added DSM rssi as last channel
 * IO tasks excluded from priority boost on yield()
 * added awakening of main thread after receiving of data from MPU
-* ArduCopter loop at 1KHz! fixed all issues
+* ArduCopter loop at 1KHz! fixed all issues, mean scheduling error is only 10uS - 10 times less than OS tick!
+* narowed type for timer_channel
+* added support for PWM outputs on N-channels of advanced timers
+* added support for inverted buzzer
+* added support for passive buzzer
+* added support for Devo telemetry protocol
+* fixed Soft_I2C timeout
+* all waits for SD answers moved to ISR as finite state machine
+* a try to support Ardupilot parameters on builtin OSD (untested)
+
 * ...
 * a lot of minor enhancements
 

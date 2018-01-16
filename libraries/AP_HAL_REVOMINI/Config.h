@@ -15,6 +15,8 @@
 #define USE_MPU // guard page in process stack
 
 
+//#define DEBUG_LOOP_TIME for AP_Scheduler
+
 
 #ifdef DEBUG_BUILD
 // profiling

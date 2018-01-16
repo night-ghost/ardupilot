@@ -393,7 +393,7 @@ void REVOMINIScheduler::_register_io_process(Handler h, Revo_IO_Flags flags)
 
     if(_num_io_proc==0){
         void *task = start_task(_run_io, IO_STACK_SIZE);
-        set_task_period(task, 500); 
+        set_task_period(task, 1000); 
         set_task_priority(task, IO_PRIORITY); 
     }
 

@@ -38,7 +38,6 @@ byte NOINLINE radar_char();
 void renew();
 void setup_horiz();
 uint16_t uidiff(uint16_t, uint16_t);
-//void writePanels(unsigned long pt);
 
 void unplugSlaves();
 void delay_15();

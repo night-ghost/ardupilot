@@ -140,6 +140,8 @@ private:
 
     AP_HAL::Semaphore *semaphore;
 
+    bool has_data;
+
 #define Daysto32(year, mon)     (((year - 1) / 4) + MONTAB(year)[mon])
  
 /////////////////////////////////////////////////////////////////////

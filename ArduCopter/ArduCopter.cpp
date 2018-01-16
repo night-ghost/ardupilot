@@ -210,7 +210,6 @@ void Copter::stats_update(void) // can took ~7700uS for parameter save
 void Copter::loop()
 {
 
-#define DEBUG_LOOP_TIME
 
 #if defined(DEBUG_LOOP_TIME)
     uint32_t t0 = micros(); 
@@ -235,7 +234,7 @@ void Copter::loop()
     if(loop_time > period*3/2) {
         uint16_t id;
         uint32_t max = scheduler.get_longest_task(id);
-        printf("\nHuge loop time=%ld ins.wfs() took %ld last %ld loop %ld sched %ld max task id=%d took %ld\n", loop_time, timer - t0, dt0, dt1, dt2, id, max);
+        printf("\nHuge loop time=%ld ins.wfs() took %ld last %ld loop %ld sched %ld max task id=%d (%s) took %ld\n", loop_time, timer - t0, dt0, dt1, dt2, id,scheduler_tasks[id].name, max);
     }
 
     last_loopTimer = fast_loopTimer;
