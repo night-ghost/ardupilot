@@ -242,8 +242,6 @@ for reviewing patches on their specific area. See [CONTRIBUTING.md](.github/CONT
   - ***Board***: APM1, APM2, Pixhawk, Pixhawk2, PixRacer
 - [Randy Mackay](https://github.com/rmackay9)
   - ***Vehicle***: Copter, AntennaTracker
-- [Robert Lefebvre](https://github.com/R-Lefebvre)
-  - ***Vehicle***: TradHeli
 - [Grant Morphett](https://github.com/gmorph):
   - ***Vehicle***: Rover
 - [Tom Pittenger](https://github.com/magicrub)
@@ -269,7 +267,7 @@ for reviewing patches on their specific area. See [CONTRIBUTING.md](.github/CONT
 - [Víctor Mayoral Vilches](https://github.com/vmayoral)
   - ***Board***: PXF, Erle-Brain 2, PXFmini
 - [Mirko Denecke](https://github.com/mirkix)
-  - ***Board***: BBBmini, BeagleBone Blue
+  - ***Board***: BBBmini, BeagleBone Blue, PocketPilot
 - [Georgii Staroselskii](https://github.com/staroselskii)
   - ***Board***: NavIO
 - [Emile Castelnuovo](https://github.com/emilecastelnuovo)

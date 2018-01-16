@@ -333,6 +333,7 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
     switch(control_mode)
     {
     case INITIALISING:
+        throttle_allows_nudging = true;
         auto_throttle_mode = true;
         auto_navigation_mode = false;
         break;
@@ -341,17 +342,20 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
     case STABILIZE:
     case TRAINING:
     case FLY_BY_WIRE_A:
+        throttle_allows_nudging = false;
         auto_throttle_mode = false;
         auto_navigation_mode = false;
         break;
 
     case AUTOTUNE:
+        throttle_allows_nudging = false;
         auto_throttle_mode = false;
         auto_navigation_mode = false;
         autotune_start();
         break;
 
     case ACRO:
+        throttle_allows_nudging = false;
         auto_throttle_mode = false;
         auto_navigation_mode = false;
         acro_state.locked_roll = false;
@@ -359,6 +363,7 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
         break;
         
     case CRUISE:
+        throttle_allows_nudging = false;
         auto_throttle_mode = true;
         auto_navigation_mode = false;
         cruise_state.locked_heading = false;
@@ -371,6 +376,7 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
         break;
 
     case FLY_BY_WIRE_B:
+        throttle_allows_nudging = false;
         auto_throttle_mode = true;
         auto_navigation_mode = false;
         
@@ -382,12 +388,14 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
 
     case CIRCLE:
         // the altitude to circle at is taken from the current altitude
+        throttle_allows_nudging = false;
         auto_throttle_mode = true;
         auto_navigation_mode = true;
         next_WP_loc.alt = current_loc.alt;
         break;
 
     case AUTO:
+        throttle_allows_nudging = true;
         auto_throttle_mode = true;
         auto_navigation_mode = true;
         if (quadplane.available() && quadplane.enable == 2) {
@@ -403,6 +411,7 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
         break;
 
     case RTL:
+        throttle_allows_nudging = true;
         auto_throttle_mode = true;
         auto_navigation_mode = true;
         prev_WP_loc = current_loc;
@@ -410,6 +419,7 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
         break;
 
     case LOITER:
+        throttle_allows_nudging = true;
         auto_throttle_mode = true;
         auto_navigation_mode = true;
         do_loiter_at_location();
@@ -424,6 +434,7 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
 
     case AVOID_ADSB:
     case GUIDED:
+        throttle_allows_nudging = true;
         auto_throttle_mode = true;
         auto_navigation_mode = true;
         guided_throttle_passthru = false;
@@ -440,6 +451,7 @@ void Plane::set_mode(enum FlightMode mode, mode_reason_t reason)
     case QLOITER:
     case QLAND:
     case QRTL:
+        throttle_allows_nudging = true;
         auto_navigation_mode = false;
         if (!quadplane.init_mode()) {
             control_mode = previous_mode;

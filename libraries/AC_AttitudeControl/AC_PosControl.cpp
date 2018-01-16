@@ -378,7 +378,7 @@ void AC_PosControl::pos_to_rate_z()
     }
 
     // calculate _vel_target.z using from _pos_error.z using sqrt controller
-    _vel_target.z = AC_AttitudeControl::sqrt_controller(_pos_error.z, _p_pos_z.kP(), _accel_z_cms);
+    _vel_target.z = AC_AttitudeControl::sqrt_controller(_pos_error.z, _p_pos_z.kP(), _accel_z_cms, _dt);
 
     // check speed limits
     // To-Do: check these speed limits here or in the pos->rate controller
@@ -505,7 +505,6 @@ void AC_PosControl::accel_to_throttle(float accel_target_z)
 ///
 
 /// set_accel_xy - set horizontal acceleration in cm/s/s
-///     calc_leash_length_xy should be called afterwards
 void AC_PosControl::set_accel_xy(float accel_cmss)
 {
     if (fabsf(_accel_cms-accel_cmss) > 1.0f) {
@@ -516,7 +515,6 @@ void AC_PosControl::set_accel_xy(float accel_cmss)
 }
 
 /// set_speed_xy - set horizontal speed maximum in cm/s
-///     calc_leash_length_xy should be called afterwards
 void AC_PosControl::set_speed_xy(float speed_cms)
 {
     if (fabsf(_speed_cms-speed_cms) > 1.0f) {

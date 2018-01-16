@@ -4,16 +4,17 @@
 #include "AP_BoardConfig.h"
 #include <AP_Common/AP_Common.h>
 #include <AP_Param/AP_Param.h>
+#if CONFIG_HAL_BOARD != HAL_BOARD_CHIBIOS //we don't have ioctls in ChibiOS
 #include <sys/ioctl.h>
-
+#endif
 #if HAL_WITH_UAVCAN
 #define UAVCAN_PROTOCOL_ENABLE  1
 
 class AP_BoardConfig_CAN {
 public:
-    static AP_BoardConfig_CAN create() { return AP_BoardConfig_CAN{}; }
-
-    constexpr AP_BoardConfig_CAN(AP_BoardConfig_CAN &&other) = default;
+    AP_BoardConfig_CAN() {
+        AP_Param::setup_object_defaults(this, var_info);
+    };
 
     /* Do not allow copies */
     AP_BoardConfig_CAN(const AP_BoardConfig_CAN &other) = delete;
@@ -98,10 +99,5 @@ public:
 #if CONFIG_HAL_BOARD == HAL_BOARD_PX4 || CONFIG_HAL_BOARD == HAL_BOARD_VRBRAIN
     void px4_setup_canbus(void);
 #endif // HAL_BOARD_PX4 || HAL_BOARD_VRBRAIN
-
-private:
-    AP_BoardConfig_CAN() {
-        AP_Param::setup_object_defaults(this, var_info);
-    };
 };
 #endif

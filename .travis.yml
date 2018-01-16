@@ -13,8 +13,9 @@ addons:
     
   apt:
     sources:
+      - sourceline: 'ppa:george-edison55/cmake-3.x'
       - ubuntu-toolchain-r-test
-      - george-edison55-precise-backports
+#      - george-edison55-cmake-3.x
 #      - llvm-toolchain-precise-3.7
     packages:
       - build-essential
@@ -80,6 +81,6 @@ matrix:
     - compiler: "gcc"
       env: CI_BUILD_TARGET="px4-v2 px4-v4"
     - compiler: "gcc"
-      env: CI_BUILD_TARGET="px4-v3"
+      env: CI_BUILD_TARGET="fmuv3 px4-v3"
     - compiler: "gcc"
       env: CI_BUILD_TARGET="sitltest"

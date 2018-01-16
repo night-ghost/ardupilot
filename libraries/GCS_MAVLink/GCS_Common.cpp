@@ -1377,12 +1377,13 @@ void GCS_MAVLINK::send_autopilot_version() const
     uint32_t middleware_sw_version = 0;
     uint32_t os_sw_version = 0;
     uint32_t board_version = 0;
-    char flight_custom_version[8]{};
-    char middleware_custom_version[8]{};
-    char os_custom_version[8]{};
+    char flight_custom_version[MAVLINK_MSG_AUTOPILOT_VERSION_FIELD_FLIGHT_CUSTOM_VERSION_LEN]{};
+    char middleware_custom_version[MAVLINK_MSG_AUTOPILOT_VERSION_FIELD_MIDDLEWARE_CUSTOM_VERSION_LEN]{};
+    char os_custom_version[MAVLINK_MSG_AUTOPILOT_VERSION_FIELD_OS_CUSTOM_VERSION_LEN]{};
     uint16_t vendor_id = 0;
     uint16_t product_id = 0;
     uint64_t uid = 0;
+    uint8_t  uid2[MAVLINK_MSG_AUTOPILOT_VERSION_FIELD_UID2_LEN] = {0};
     const AP_FWVersion &version = get_fwver();
 
     flight_sw_version = version.major << (8 * 3) | \
@@ -1417,7 +1418,8 @@ void GCS_MAVLINK::send_autopilot_version() const
         (uint8_t *)os_custom_version,
         vendor_id,
         product_id,
-        uid
+        uid,
+        uid2
     );
 }
 
@@ -1474,7 +1476,8 @@ void GCS_MAVLINK::send_home(const Location &home) const
             home.alt * 10,
             0.0f, 0.0f, 0.0f,
             q,
-            0.0f, 0.0f, 0.0f);
+            0.0f, 0.0f, 0.0f,
+            AP_HAL::micros64());
     }
 }
 
@@ -1485,7 +1488,8 @@ void GCS_MAVLINK::send_ekf_origin(const Location &ekf_origin) const
             chan,
             ekf_origin.lat,
             ekf_origin.lng,
-            ekf_origin.alt * 10);
+            ekf_origin.alt * 10,
+            AP_HAL::micros64());
     }
 }
 
@@ -2322,6 +2326,9 @@ bool GCS_MAVLINK::try_send_message(const enum ap_message id)
         // This message will be sent out at the same rate as the
         // unknown message, so should be safe.
         gcs().send_text(MAV_SEVERITY_DEBUG, "Sending unknown message (%u)", id);
+#if CONFIG_HAL_BOARD == HAL_BOARD_SITL
+        AP_HAL::panic("Sending unknown ap_message %u", id);
+#endif
         ret = true;
         break;
     }

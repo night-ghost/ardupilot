@@ -36,16 +36,15 @@
 #include "AP_Baro_KellerLD.h"
 #include "AP_Baro_MS5611.h"
 #include "AP_Baro_LPS25H.h"
+#if CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_QFLIGHT
 #include "AP_Baro_qflight.h"
+#endif
+#if CONFIG_HAL_BOARD == HAL_BOARD_QURT
 #include "AP_Baro_QURT.h"
+#endif
 #if HAL_WITH_UAVCAN
 #include "AP_Baro_UAVCAN.h"
 #endif
-
-#define C_TO_KELVIN 273.15f
-// Gas Constant is from Aerodynamics for Engineering Students, Third Edition, E.L.Houghton and N.B.Carruthers
-#define ISA_GAS_CONSTANT 287.26f
-#define ISA_LAPSE_RATE 0.0065f
 
 #define INTERNAL_TEMPERATURE_CLAMP 35.0f
 
@@ -138,11 +137,16 @@ const AP_Param::GroupInfo AP_Baro::var_info[] = {
     AP_GROUPEND
 };
 
+// singleton instance
+AP_Baro *AP_Baro::_instance;
+
 /*
   AP_Baro constructor
  */
 AP_Baro::AP_Baro()
 {
+    _instance = this;
+    
     AP_Param::setup_object_defaults(this, var_info);
 }
 
@@ -282,7 +286,7 @@ float AP_Baro::get_EAS2TAS(void)
     // provides a more consistent reading then trying to estimate a complete
     // ISA model atmosphere
     float tempK = get_ground_temperature() + C_TO_KELVIN - ISA_LAPSE_RATE * altitude;
-    _EAS2TAS = safe_sqrt(1.225f / ((float)get_pressure() / (ISA_GAS_CONSTANT * tempK)));
+    _EAS2TAS = safe_sqrt(AIR_DENSITY_SEA_LEVEL / ((float)get_pressure() / (ISA_GAS_CONSTANT * tempK)));
     _last_altitude_EAS2TAS = altitude;
     return _EAS2TAS;
 }
@@ -409,7 +413,7 @@ void AP_Baro::init(void)
     } while (added);
 #endif
 
-#if HAL_BARO_DEFAULT == HAL_BARO_PX4 || HAL_BARO_DEFAULT == HAL_BARO_VRBRAIN
+#if AP_FEATURE_BOARD_DETECT
     switch (AP_BoardConfig::get_board_type()) {
     case AP_BoardConfig::PX4_BOARD_PX4V1:
         break;
@@ -435,6 +439,11 @@ void AP_Baro::init(void)
                                           std::move(hal.spi->get_device(HAL_BARO_MS5611_SPI_INT_NAME))));
         break;
 
+    case AP_BoardConfig::PX4_BOARD_MINDPXV2:
+        ADD_BACKEND(AP_Baro_MS56XX::probe(*this,
+                                          std::move(hal.spi->get_device(HAL_BARO_MS5611_NAME))));
+        break;
+        
     case AP_BoardConfig::PX4_BOARD_AEROFC:
 #ifdef HAL_BARO_MS5607_I2C_BUS
         ADD_BACKEND(AP_Baro_MS56XX::probe(*this,

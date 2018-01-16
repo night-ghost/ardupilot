@@ -22,8 +22,8 @@
 #if AP_MODULE_SUPPORTED
 
 #include <stdio.h>
-#include <dirent.h>
 #if defined(HAVE_LIBDL)
+#include <dirent.h>
 #include <dlfcn.h>
 #endif
 #endif

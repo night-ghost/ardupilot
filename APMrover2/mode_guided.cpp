@@ -7,7 +7,6 @@ bool ModeGuided::_enter()
     set_desired_speed_to_default();
 
     // when entering guided mode we set the target as the current location.
-    _desired_lat_accel = 0.0f;
     set_desired_location(rover.current_loc);
 
     // guided mode never travels in reverse
@@ -46,9 +45,7 @@ void ModeGuided::update()
             }
             if (have_attitude_target) {
                 // run steering and throttle controllers
-                const float yaw_error = wrap_PI(radians((_desired_yaw_cd - ahrs.yaw_sensor) * 0.01f));
-                const float steering_out = attitude_control.get_steering_out_angle_error(yaw_error, g2.motors.have_skid_steering(), g2.motors.limit.steer_left, g2.motors.limit.steer_right, _desired_speed < 0);
-                g2.motors.set_steering(steering_out * 4500.0f);
+                calc_steering_to_heading(_desired_yaw_cd, _desired_speed < 0);
                 calc_throttle(_desired_speed, true);
             } else {
                 stop_vehicle();

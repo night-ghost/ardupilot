@@ -24,7 +24,7 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Param: _STR_RAT_P
     // @DisplayName: Steering control rate P gain
     // @Description: Steering control rate P gain.  Converts the turn rate error (in radians/sec) to a steering control output (in the range -1 to +1)
-    // @Range: 0.100 2.000
+    // @Range: 0.000 2.000
     // @Increment: 0.01
     // @User: Standard
 
@@ -52,14 +52,14 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Param: _STR_RAT_FF
     // @DisplayName: Steering control feed forward
     // @Description: Steering control feed forward
-    // @Range: 0 0.5
+    // @Range: 0.000 3.000
     // @Increment: 0.001
     // @User: Standard
 
     // @Param: _STR_RAT_FILT
     // @DisplayName: Steering control filter frequency
     // @Description: Steering control input filter.  Lower values reduce noise but add delay.
-    // @Range: 1.000 100.000
+    // @Range: 0.000 100.000
     // @Increment: 0.1
     // @Units: Hz
     // @User: Standard
@@ -95,14 +95,14 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Param: _SPEED_FF
     // @DisplayName: Speed control feed forward
     // @Description: Speed control feed forward
-    // @Range: 0 0.5
+    // @Range: 0.000 0.500
     // @Increment: 0.001
     // @User: Standard
 
     // @Param: _SPEED_FILT
     // @DisplayName: Speed control filter frequency
     // @Description: Speed control input filter.  Lower values reduce noise but add delay.
-    // @Range: 1.000 100.000
+    // @Range: 0.000 100.000
     // @Increment: 0.1
     // @Units: Hz
     // @User: Standard
@@ -111,7 +111,7 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Param: _ACCEL_MAX
     // @DisplayName: Speed control acceleration (and deceleration) maximum in m/s/s
     // @Description: Speed control acceleration (and deceleration) maximum in m/s/s.  0 to disable acceleration limiting
-    // @Range: 0 10
+    // @Range: 0.0 10.0
     // @Increment: 0.1
     // @Units: m/s/s
     // @User: Standard
@@ -127,7 +127,7 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
     // @Param: _STOP_SPEED
     // @DisplayName: Speed control stop speed
     // @Description: Speed control stop speed.  Motor outputs to zero once vehicle speed falls below this value
-    // @Range: 0 0.5
+    // @Range: 0.00 0.50
     // @Increment: 0.01
     // @Units: m/s
     // @User: Standard
@@ -147,7 +147,7 @@ const AP_Param::GroupInfo AR_AttitudeControl::var_info[] = {
 AR_AttitudeControl::AR_AttitudeControl(AP_AHRS &ahrs) :
     _ahrs(ahrs),
     _steer_angle_p(AR_ATTCONTROL_STEER_ANG_P),
-    _steer_rate_pid(AR_ATTCONTROL_STEER_RATE_P, AR_ATTCONTROL_STEER_RATE_I, AR_ATTCONTROL_STEER_RATE_D, AR_ATTCONTROL_STEER_RATE_IMAX, AR_ATTCONTROL_STEER_RATE_FILT, AR_ATTCONTROL_DT),
+    _steer_rate_pid(AR_ATTCONTROL_STEER_RATE_P, AR_ATTCONTROL_STEER_RATE_I, AR_ATTCONTROL_STEER_RATE_D, AR_ATTCONTROL_STEER_RATE_IMAX, AR_ATTCONTROL_STEER_RATE_FILT, AR_ATTCONTROL_DT, AR_ATTCONTROL_STEER_RATE_FF),
     _throttle_speed_pid(AR_ATTCONTROL_THR_SPEED_P, AR_ATTCONTROL_THR_SPEED_I, AR_ATTCONTROL_THR_SPEED_D, AR_ATTCONTROL_THR_SPEED_IMAX, AR_ATTCONTROL_THR_SPEED_FILT, AR_ATTCONTROL_DT)
 {
     AP_Param::setup_object_defaults(this, var_info);
@@ -207,7 +207,7 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool skid_st
     // calculate dt
     const uint32_t now = AP_HAL::millis();
     float dt = (now - _steer_turn_last_ms) / 1000.0f;
-    if ((_steer_turn_last_ms == 0) || (dt > AR_ATTCONTROL_TIMEOUT_MS)) {
+    if ((_steer_turn_last_ms == 0) || (dt > (AR_ATTCONTROL_TIMEOUT_MS / 1000.0f))) {
         dt = 0.0f;
         _steer_rate_pid.reset_filter();
     } else {
@@ -254,6 +254,9 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool skid_st
     // pass error to PID controller
     _steer_rate_pid.set_input_filter_all(rate_error);
 
+    // get feed-forward
+    const float ff = _steer_rate_pid.get_ff(desired_rate * scaler);
+
     // get p
     const float p = _steer_rate_pid.get_p();
 
@@ -267,7 +270,7 @@ float AR_AttitudeControl::get_steering_out_rate(float desired_rate, bool skid_st
     const float d = _steer_rate_pid.get_d();
 
     // constrain and return final output
-    return constrain_float(p + i + d, -1.0f, 1.0f);
+    return constrain_float(ff + p + i + d, -1.0f, 1.0f);
 }
 
 // get latest desired turn rate in rad/sec (recorded during calls to get_steering_out_rate)
@@ -317,9 +320,11 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor
     // calculate dt
     const uint32_t now = AP_HAL::millis();
     float dt = (now - _speed_last_ms) / 1000.0f;
-    if (_speed_last_ms == 0 || dt > 0.1f) {
+    if ((_speed_last_ms == 0) || (dt > (AR_ATTCONTROL_TIMEOUT_MS / 1000.0f))) {
         dt = 0.0f;
         _throttle_speed_pid.reset_filter();
+    } else {
+        _throttle_speed_pid.set_dt(dt);
     }
     _speed_last_ms = now;
 
@@ -343,6 +348,9 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor
     // record desired speed for logging purposes only
     _throttle_speed_pid.set_desired_rate(desired_speed);
 
+    // get feed-forward
+    const float ff = _throttle_speed_pid.get_ff(desired_speed);
+
     // get p
     const float p = _throttle_speed_pid.get_p();
 
@@ -362,7 +370,7 @@ float AR_AttitudeControl::get_throttle_out_speed(float desired_speed, bool motor
     }
 
     // calculate final output
-    float throttle_out = (p+i+d+throttle_base);
+    float throttle_out = (ff+p+i+d+throttle_base);
 
     // clear local limit flags used to stop i-term build-up as we stop reversed outputs going to motors
     _throttle_limit_low = false;
@@ -428,11 +436,11 @@ bool AR_AttitudeControl::get_forward_speed(float &speed) const
     Vector3f velocity;
     if (!_ahrs.get_velocity_NED(velocity)) {
         // use less accurate GPS, assuming entire length is along forward/back axis of vehicle
-        if (_ahrs.get_gps().status() >= AP_GPS::GPS_OK_FIX_3D) {
-            if (labs(wrap_180_cd(_ahrs.yaw_sensor - _ahrs.get_gps().ground_course_cd())) <= 9000) {
-                speed = _ahrs.get_gps().ground_speed();
+        if (AP::gps().status() >= AP_GPS::GPS_OK_FIX_3D) {
+            if (labs(wrap_180_cd(_ahrs.yaw_sensor - AP::gps().ground_course_cd())) <= 9000) {
+                speed = AP::gps().ground_speed();
             } else {
-                speed = -_ahrs.get_gps().ground_speed();
+                speed = -AP::gps().ground_speed();
             }
             return true;
         } else {

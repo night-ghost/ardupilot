@@ -890,6 +890,12 @@ void AP_GPS::send_mavlink_gps_raw(mavlink_channel_t chan)
         last_send_time_ms[chan] = now;
     }
     const Location &loc = location(0);
+    float hacc = 0.0f;
+    float vacc = 0.0f;
+    float sacc = 0.0f;
+    horizontal_accuracy(0, hacc);
+    vertical_accuracy(0, vacc);
+    speed_accuracy(0, sacc);
     mavlink_msg_gps_raw_int_send(
         chan,
         last_fix_time_ms(0)*(uint64_t)1000,
@@ -901,7 +907,12 @@ void AP_GPS::send_mavlink_gps_raw(mavlink_channel_t chan)
         get_vdop(0),
         ground_speed(0)*100,  // cm/s
         ground_course(0)*100, // 1/100 degrees,
-        num_sats(0));
+        num_sats(0),
+        0,                    // TODO: Elipsoid height in mm
+        hacc * 1000,          // one-sigma standard deviation in mm
+        vacc * 1000,          // one-sigma standard deviation in mm
+        sacc * 1000,          // one-sigma standard deviation in mm/s
+        0);                   // TODO one-sigma heading accuracy standard deviation
 }
 
 void AP_GPS::send_mavlink_gps2_raw(mavlink_channel_t chan)
@@ -1444,16 +1455,6 @@ void AP_GPS::calc_blended_state(void)
         corrected_location[i] = state[i].location;
         location_offset(corrected_location[i], _NE_pos_offset_m[i].x, _NE_pos_offset_m[i].y);
         corrected_location[i].alt += (int)(_hgt_offset_cm[i]);
-    }
-
-    // Calculate the weighted sum of horizontal and vertical position offsets relative to the blended location
-    blended_alt_offset_cm = 0.0f;
-    blended_NE_offset_m.zero();
-    for (uint8_t i=0; i<GPS_MAX_RECEIVERS; i++) {
-        if (_blend_weights[i] > 0.0f) {
-            blended_NE_offset_m += location_diff(state[GPS_BLENDED_INSTANCE].location, corrected_location[i]) * _blend_weights[i];
-            blended_alt_offset_cm += (float)(corrected_location[i].alt - state[GPS_BLENDED_INSTANCE].location.alt) * _blend_weights[i];
-        }
     }
 
     // If the GPS week is the same then use a blended time_week_ms

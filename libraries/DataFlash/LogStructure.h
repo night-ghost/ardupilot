@@ -828,6 +828,8 @@ struct PACKED log_AIRSPEED {
     float   rawpressure;
     float   offset;
     bool    use;
+    bool    healthy;
+    uint8_t primary;
 };
 
 struct PACKED log_ACCEL {
@@ -1116,6 +1118,11 @@ struct PACKED log_DSTL {
 #define CURR_CELL_UNITS  "svvvvvvvvvvv"
 #define CURR_CELL_MULTS  "F00000000000"
 
+#define ARSP_LABELS "TimeUS,Airspeed,DiffPress,Temp,RawPress,Offset,U,Health,Primary"
+#define ARSP_FMT "QffcffBBB"
+#define ARSP_UNITS "snPOPP---"
+#define ARSP_MULTS "F00B00---"
+
 /*
 Format characters in the format string for binary log messages
   a   : int16_t[32]
@@ -1186,8 +1193,8 @@ Format characters in the format string for binary log messages
       "CAM", "QIHLLeeeccC","TimeUS,GPSTime,GPSWeek,Lat,Lng,Alt,RelAlt,GPSAlt,Roll,Pitch,Yaw", "s--DUmmmddd", "F--GGBBBBBB" }, \
     { LOG_TRIGGER_MSG, sizeof(log_Camera), \
             "TRIG", "QIHLLeeeccC","TimeUS,GPSTime,GPSWeek,Lat,Lng,Alt,RelAlt,GPSAlt,Roll,Pitch,Yaw", "s--DUmmmddd", "F--GGBBBBBB" }, \
-    { LOG_ARSP_MSG, sizeof(log_AIRSPEED), \
-      "ARSP",  "QffcffB",  "TimeUS,Airspeed,DiffPress,Temp,RawPress,Offset,U", "snPOPP-", "F00B00-" }, \
+    { LOG_ARSP_MSG, sizeof(log_AIRSPEED), "ARSP",  ARSP_FMT, ARSP_LABELS, ARSP_UNITS, ARSP_MULTS }, \
+    { LOG_ASP2_MSG, sizeof(log_AIRSPEED), "ASP2",  ARSP_FMT, ARSP_LABELS, ARSP_UNITS, ARSP_MULTS }, \
     { LOG_CURRENT_MSG, sizeof(log_Current), \
       "BAT", CURR_FMT,CURR_LABELS,CURR_UNITS,CURR_MULTS },  \
     { LOG_CURRENT2_MSG, sizeof(log_Current), \
@@ -1517,6 +1524,7 @@ enum LogMessages {
     LOG_SRTL_MSG,
     LOG_ISBH_MSG,
     LOG_ISBD_MSG,
+    LOG_ASP2_MSG,
 
 };
 

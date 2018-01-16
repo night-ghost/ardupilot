@@ -219,7 +219,10 @@ void Buzzer::play_pattern(BuzzerPattern pattern_id)
     _pattern = pattern_id;
     _pattern_counter = 0;
 }
+
 #else
+
+// buzzer pin as parameter
 
 bool Buzzer::init()
 {

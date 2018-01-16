@@ -17,6 +17,11 @@
  # define AP_BATT_CURR_PIN                  3
  # define AP_BATT_VOLTDIVIDER_DEFAULT       10.1f
  # define AP_BATT_CURR_AMP_PERVOLT_DEFAULT  17.0f
+#elif CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+ # define AP_BATT_VOLT_PIN                  4
+ # define AP_BATT_CURR_PIN                  3
+ # define AP_BATT_VOLTDIVIDER_DEFAULT       10.1f
+ # define AP_BATT_CURR_AMP_PERVOLT_DEFAULT  17.0f
 #elif CONFIG_HAL_BOARD == HAL_BOARD_SITL
  # define AP_BATT_VOLT_PIN                  13
  # define AP_BATT_CURR_PIN                  12
@@ -47,6 +52,12 @@
  # define AP_BATT_CURR_AMP_PERVOLT_DEFAULT  17.0f
 
 #elif CONFIG_HAL_BOARD == HAL_BOARD_LINUX && CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_BBBMINI
+ # define AP_BATT_VOLT_PIN                  0
+ # define AP_BATT_CURR_PIN                  1
+ # define AP_BATT_VOLTDIVIDER_DEFAULT       10.1f
+ # define AP_BATT_CURR_AMP_PERVOLT_DEFAULT  17.0f
+
+#elif CONFIG_HAL_BOARD == HAL_BOARD_LINUX && CONFIG_HAL_BOARD_SUBTYPE == HAL_BOARD_SUBTYPE_LINUX_POCKET
  # define AP_BATT_VOLT_PIN                  0
  # define AP_BATT_CURR_PIN                  1
  # define AP_BATT_VOLTDIVIDER_DEFAULT       10.1f

@@ -716,8 +716,7 @@ AP_InertialSensor::detect_backends(void)
 #elif HAL_INS_DEFAULT == HAL_INS_BH
     _add_backend(AP_InertialSensor_Invensense::probe(*this, hal.i2c_mgr->get_device(HAL_INS_MPU60x0_I2C_BUS, HAL_INS_MPU60x0_I2C_ADDR)));
     _add_backend(AP_InertialSensor_Invensense::probe(*this, hal.spi->get_device(HAL_INS_MPU9250_NAME)));
-#elif HAL_INS_DEFAULT == HAL_INS_PX4 || HAL_INS_DEFAULT == HAL_INS_VRBRAIN
-
+#elif AP_FEATURE_BOARD_DETECT
     switch (AP_BoardConfig::get_board_type()) {
     case AP_BoardConfig::PX4_BOARD_PX4V1:
         _add_backend(AP_InertialSensor_Invensense::probe(*this, hal.spi->get_device(HAL_INS_MPU60x0_NAME)));
@@ -747,7 +746,8 @@ AP_InertialSensor::detect_backends(void)
         break;
 
     case AP_BoardConfig::PX4_BOARD_PIXRACER:
-        _fast_sampling_mask.set_default(3);
+        // only do fast samplng on ICM-20608. The MPU9250 doesn't handle high rate well when it has a mag enabled
+        _fast_sampling_mask.set_default(1);
         _add_backend(AP_InertialSensor_Invensense::probe(*this, hal.spi->get_device(HAL_INS_ICM20608_NAME), ROTATION_ROLL_180_YAW_90));
         _add_backend(AP_InertialSensor_Invensense::probe(*this, hal.spi->get_device(HAL_INS_MPU9250_NAME), ROTATION_ROLL_180_YAW_90));
         break;
@@ -782,11 +782,23 @@ AP_InertialSensor::detect_backends(void)
         _add_backend(AP_InertialSensor_Invensense::probe(*this, hal.spi->get_device(HAL_INS_MPU6500_NAME), ROTATION_YAW_270));
         break;
 
+    case AP_BoardConfig::PX4_BOARD_MINDPXV2:
+        _add_backend(AP_InertialSensor_Invensense::probe(*this, hal.spi->get_device(HAL_INS_MPU6500_NAME), ROTATION_NONE));
+        _add_backend(AP_InertialSensor_LSM9DS0::probe(*this,
+                                                      hal.spi->get_device(HAL_INS_LSM9DS0_G_NAME),
+                                                      hal.spi->get_device(HAL_INS_LSM9DS0_A_NAME),
+                                                      ROTATION_YAW_90,
+                                                      ROTATION_YAW_90,
+                                                      ROTATION_YAW_90));
+        break;
+        
     default:
         break;
     }
+#if CONFIG_HAL_BOARD == HAL_BOARD_PX4
     // also add any PX4 backends (eg. canbus sensors)
     _add_backend(AP_InertialSensor_PX4::detect(*this));
+#endif
 #elif HAL_INS_DEFAULT == HAL_INS_MPU9250_SPI && defined(HAL_INS_DEFAULT_ROTATION)
     _add_backend(AP_InertialSensor_Invensense::probe(*this, hal.spi->get_device(HAL_INS_MPU9250_NAME), HAL_INS_DEFAULT_ROTATION));
 #elif HAL_INS_DEFAULT == HAL_INS_MPU9250_SPI

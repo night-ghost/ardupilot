@@ -52,8 +52,8 @@ void Rover::rudder_arm_disarm_check()
         return;
     }
 
-    // if not in a manual throttle mode then disallow rudder arming/disarming
-    if (control_mode->auto_throttle()) {
+    // check if arming/disarming allowed from this mode
+    if (!control_mode->allows_arming_from_transmitter()) {
         rudder_arm_timer = 0;
         return;
     }
@@ -141,7 +141,7 @@ void Rover::trim_control_surfaces()
     read_radio();
     // Store control surface trim values
     // ---------------------------------
-    if (channel_steer->get_radio_in() > 1400) {
+    if ((channel_steer->get_radio_in() > 1400) && (channel_steer->get_radio_in() < 1600)) {
         channel_steer->set_radio_trim(channel_steer->get_radio_in());
         // save to eeprom
         channel_steer->save_eeprom();

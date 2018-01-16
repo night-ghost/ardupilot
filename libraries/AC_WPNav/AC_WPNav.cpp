@@ -97,8 +97,8 @@ const AP_Param::GroupInfo AC_WPNav::var_info[] = {
     AP_GROUPINFO("LOIT_MINA",   9, AC_WPNav, _loiter_accel_min_cmss, WPNAV_LOITER_ACCEL_MIN),
 
     // @Param: RFND_USE
-    // @DisplayName: Use rangefinder for terrain following
-    // @Description: This controls the use of a rangefinder for terrain following
+    // @DisplayName: Waypoint missions use rangefinder for terrain following
+    // @Description: This controls if waypoint missions use rangefinder for terrain following
     // @Values: 0:Disable,1:Enable
     // @User: Advanced
     AP_GROUPINFO("RFND_USE",   10, AC_WPNav, _rangefinder_use, 1),
@@ -302,7 +302,7 @@ void AC_WPNav::calc_loiter_desired_velocity(float nav_dt, float ekfGndSpdLimit)
 
     // Limit the velocity to prevent fence violations
     if (_avoid != nullptr) {
-        _avoid->adjust_velocity(_pos_control.get_pos_xy_kP(), _loiter_accel_cmss, desired_vel);
+        _avoid->adjust_velocity(_pos_control.get_pos_xy_kP(), _loiter_accel_cmss, desired_vel, nav_dt);
     }
 
     // send adjusted feed forward velocity back to position controller
@@ -1237,9 +1237,9 @@ bool AC_WPNav::get_terrain_offset(float& offset_cm)
 //      returns false if conversion failed (likely because terrain data was not available)
 bool AC_WPNav::get_vector_NEU(const Location_Class &loc, Vector3f &vec, bool &terrain_alt)
 {
-    // convert location to NEU vector3f
-    Vector3f res_vec;
-    if (!loc.get_vector_xy_from_origin_NEU(res_vec)) {
+    // convert location to NE vector2f
+    Vector2f res_vec;
+    if (!loc.get_vector_xy_from_origin_NE(res_vec)) {
         return false;
     }
 

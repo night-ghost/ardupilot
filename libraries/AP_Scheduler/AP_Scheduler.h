@@ -55,9 +55,7 @@
 class AP_Scheduler
 {
 public:
-    static AP_Scheduler create() { return AP_Scheduler{}; }
-
-    constexpr AP_Scheduler(AP_Scheduler &&other) = default;
+    AP_Scheduler();
 
     /* Do not allow copies */
     AP_Scheduler(const AP_Scheduler &other) = delete;
@@ -126,8 +124,6 @@ public:
 
 
 private:
-    AP_Scheduler();
-
     // used to enable scheduler debugging
     AP_Int8 _debug;
 

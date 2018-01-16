@@ -39,14 +39,11 @@ public:
     // attributes of the mode
     //
 
-    // return if in non-manual mode : AUTO, GUIDED, RTL
+    // return if in non-manual mode : Auto, Guided, RTL, SmartRTL
     virtual bool is_autopilot_mode() const { return false; }
 
-    // returns true if steering is directly controlled by RC
-    virtual bool manual_steering() const { return false; }
-
-    // returns true if the throttle is controlled automatically
-    virtual bool auto_throttle() { return is_autopilot_mode(); }
+    // returns true if vehicle can be armed or disarmed from the transmitter in this mode
+    virtual bool allows_arming_from_transmitter() { return !is_autopilot_mode(); }
 
     //
     // attributes for mavlink system status reporting
@@ -107,11 +104,14 @@ protected:
     // steering_out is in the range -4500 ~ +4500, throttle_out is in the range -100 ~ +100
     void get_pilot_desired_steering_and_throttle(float &steering_out, float &throttle_out);
 
-    // calculate steering angle given a desired lateral acceleration
-    void calc_steering_from_lateral_acceleration(bool reversed = false);
-
     // calculate steering output to drive along line from origin to destination waypoint
     void calc_steering_to_waypoint(const struct Location &origin, const struct Location &destination, bool reversed = false);
+
+    // calculate steering angle given a desired lateral acceleration
+    void calc_steering_from_lateral_acceleration(float lat_accel, bool reversed = false);
+
+    // calculate steering output to drive towards desired heading
+    void calc_steering_to_heading(float desired_heading_cd, bool reversed = false);
 
     // calculates the amount of throttle that should be output based
     // on things like proximity to corners and current speed
@@ -121,7 +121,8 @@ protected:
     bool stop_vehicle();
 
     // estimate maximum vehicle speed (in m/s)
-    float calc_speed_max(float cruise_speed, float cruise_throttle);
+    // cruise_speed is in m/s, cruise_throttle should be in the range -1 to +1
+    float calc_speed_max(float cruise_speed, float cruise_throttle) const;
 
     // calculate pilot input to nudge speed up or down
     //  target_speed should be in meters/sec
@@ -149,7 +150,6 @@ protected:
     Location _destination;      // destination Location when in Guided_WP
     float _distance_to_destination; // distance from vehicle to final destination in meters
     bool _reached_destination;  // true once the vehicle has reached the destination
-    float _desired_lat_accel;   // desired lateral acceleration in m/s/s
     float _desired_yaw_cd;      // desired yaw in centi-degrees
     float _yaw_error_cd;        // error between desired yaw and actual yaw in centi-degrees
     float _desired_speed;       // desired speed in m/s
@@ -306,9 +306,6 @@ public:
 
     // methods that affect movement of the vehicle in this mode
     void update() override;
-
-    // attributes of the mode
-    bool manual_steering() const override { return true; }
 
     // attributes for mavlink system status reporting
     bool has_manual_input() const override { return true; }
