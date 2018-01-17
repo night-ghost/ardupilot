@@ -93,11 +93,13 @@ typedef struct SPI_TRANS {
     uint32_t time;
     enum SPI_ISR_MODE mode;
     uint8_t act;
+    uint8_t data;
     uint32_t cr2;
     uint32_t sr1;
     uint16_t send_len;
     uint16_t recv_len;
     uint16_t dummy_len;
+    spi_WaitFunc cb;
 } spi_trans;
 
 #define SPI_LOG_SIZE 200
@@ -130,7 +132,7 @@ public:
 
     uint16_t send_strobe(const uint8_t *buffer, uint16_t len); // send in ISR and strobe each byte by CS
     void wait_busy() { spi_wait_busy(_desc.dev);  }
-    uint8_t wait_for(uint8_t out, spi_WaitFunc cb, uint16_t dly); // wait for needed byte in ISR
+    uint8_t wait_for(uint8_t out, spi_WaitFunc cb, uint32_t dly); // wait for needed byte in ISR
 
     /* See AP_HAL::Device::get_semaphore() */
     inline REVOMINI::Semaphore *get_semaphore() { uint8_t n = _desc.bus - 1; if(n<MAX_BUS_NUM) { return &_semaphores[n];} else return NULL; } // numbers from 1

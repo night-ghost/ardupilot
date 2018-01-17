@@ -770,7 +770,23 @@ uint8_t  SPIDevice::do_transfer(bool is_DMA, uint32_t nbytes)
 {
 
 #ifdef DEBUG_SPI 
-    spi_trans_ptr=0; // each transfer from start
+//    spi_trans_ptr=0; // each transfer from start
+
+    spi_trans &p = spi_trans_array[spi_trans_ptr];
+
+    p.time = hal_micros();
+    p.dev      = _desc.dev;
+    p.send_len = _send_len;
+    p.recv_len = _recv_len;
+    p.dummy_len=_dummy_len;
+    p.data     = *_send_address;
+    p.cr2 = 0;
+    p.sr1 = 0;
+    p.mode = _isr_mode;
+    p.act = 0xff;
+        
+    spi_trans_ptr++;
+    if(spi_trans_ptr>=SPI_LOG_SIZE) spi_trans_ptr=0;
 #endif
 
     if(_completion_cb) {// we should call it after completion via interrupt    
@@ -779,7 +795,7 @@ uint8_t  SPIDevice::do_transfer(bool is_DMA, uint32_t nbytes)
         } else {
             spi_enable_irq(_desc.dev, SPI_RXNE_TXE_INTERRUPTS );// enable both interrupts - will be interrupt just immediate
         }
-        return 0;                                                             // all another in ISR
+        return 0;                                               // all another in ISR
     }
 
     // no callback - need to wait 
@@ -794,7 +810,7 @@ uint8_t  SPIDevice::do_transfer(bool is_DMA, uint32_t nbytes)
 
     if(_task) REVOMINIScheduler::task_pause(timeout);
 
-    if(is_DMA) {        /* Enable SPI TX/RX request */
+    if(is_DMA) {             // Enable SPI TX/RX request 
         start_dma_transfer();
     } else {
         spi_enable_irq(_desc.dev, SPI_RXNE_TXE_INTERRUPTS); // enable both interrupts - will be interrupt just immediate
@@ -807,6 +823,9 @@ uint8_t  SPIDevice::do_transfer(bool is_DMA, uint32_t nbytes)
 
     _task = NULL; // already resumed
     if(_desc.dev->state->busy) { // timeout, so there was no ISR, so
+#ifdef DEBUG_SPI 
+        p.sr1=0x80;
+#endif
         if(is_DMA) disable_dma(); 
         isr_transfer_finish();     //   disable interrupts
     } 
@@ -849,9 +868,9 @@ uint16_t  SPIDevice::send_strobe(const uint8_t *buffer, uint16_t len){ // send i
     return _send_len;
 }
 
-// gives received bytes to callback and returns when callback returns true but not linger than timeout
+// gives received bytes to callback and returns when callback returns true but not linger than timeout (uS)
 // so it works like wait for needed byte in ISR - but without wait
-uint8_t SPIDevice::wait_for(uint8_t out, spi_WaitFunc cb, uint16_t dly){ // wait for needed byte in ISR
+uint8_t SPIDevice::wait_for(uint8_t out, spi_WaitFunc cb, uint32_t dly){ // wait for needed byte in ISR
     _send_len = out;
     _isr_mode = SPI_ISR_COMPARE;
     _recv_len = 0;  // we shouldn't receive after wait
@@ -1039,6 +1058,12 @@ void SPIDevice::spi_isr(){
 
         case SPI_ISR_COMPARE:
             _recv_data = _desc.dev->SPIx->DR;
+
+#ifdef DEBUG_SPI 
+            p.data = _recv_data;
+            p.cb   = _compare_cb;
+#endif
+
             if(_compare_cb(_recv_data) ) {   // ok
                 if(_recv_len){
                     _isr_mode = SPI_ISR_RECEIVE; // we should receive after wait ?

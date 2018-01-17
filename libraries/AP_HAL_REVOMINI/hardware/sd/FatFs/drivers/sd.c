@@ -68,7 +68,7 @@ extern void spi_spiTransfer(const uint8_t *send, uint32_t send_len,  uint8_t *re
 extern void spi_chipSelectHigh(void);
 extern bool spi_chipSelectLow(bool take_sem);
 extern void spi_yield();
-extern uint8_t spi_waitFor(uint8_t out,spi_WaitFunc cb, uint16_t dly);
+extern uint8_t spi_waitFor(uint8_t out, spi_WaitFunc cb, uint32_t dly);
 extern uint8_t spi_detect();
 extern uint32_t get_fattime ();
 
@@ -167,7 +167,7 @@ int wait_ready (	/* 1:Ready, 0:Timeout */
 
 
 #if defined(WAIT_IN_ISR)
-    d=spi_waitFor(0xFF,wait_ff,wt);
+    d=spi_waitFor(0xFF,wait_ff,wt*1000);
 
     return d == 0xFF;
 #else
@@ -237,7 +237,7 @@ int8_t rcvr_datablock (	/* 1:OK, 0:Error */
         uint8_t ret=0;
 
 #if defined(WAIT_IN_ISR)
-        ret=spi_waitFor(0xff, wait_noFF, 200);
+        ret=spi_waitFor(0xff, wait_noFF, 200000);
 
         if(ret != 0xFE) goto done;		// Function fails if invalid DataStart token or timeout 
 #else
@@ -246,17 +246,17 @@ int8_t rcvr_datablock (	/* 1:OK, 0:Error */
 	Timer1 = 200;
 	do {					/* Wait for DataStart token in timeout of 200ms */
     	    token = xchg_spi(0xFF);
-	    spi_yield();	/* This loop will take a time. Insert rot_rdq() here for multitask environment. */
+	    spi_yield();	        /* This loop will take a time. Insert rot_rdq() here for multitask environment. */
 	} while ((token == 0xFF) && Timer1);
 
 	if(token != 0xFE) {
-	    goto done;		/* Function fails if invalid DataStart token or timeout */
+	    goto done;		        /* Function fails if invalid DataStart token or timeout */
 	}
 #endif
 	rcvr_spi_multi(buff, btr);		/* Store trailing data to the buffer */
 	xchg_spi(0xFF); xchg_spi(0xFF);		/* Discard CRC */
 
-        ret=1; 				/* Function succeeded */
+        ret=1; 				        /* Function succeeded */
 done:
 	return ret;
 }
@@ -267,8 +267,8 @@ done:
 /* Send a data packet to the MMC                                         */
 /*-----------------------------------------------------------------------*/
 
-static int8_t xmit_datablock (	/* 1:OK, 0:Failed */
-	const uint8_t *buff,	/* Ponter to 512 byte data to be sent */
+static int8_t xmit_datablock (	        /* 1:OK, 0:Failed */
+	const uint8_t *buff,	        /* Ponter to 512 byte data to be sent */
 	uint8_t token			/* Token */
 )
 {
@@ -346,7 +346,7 @@ uint8_t send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 	if (cmd == CMD12) xchg_spi(0xFF);	/* Discard following one byte when CMD12 */
 
 #if defined(WAIT_IN_ISR)
-        res=spi_waitFor(0xff, wait_0x80, 20);
+        res=spi_waitFor(0xff, wait_0x80, 20000);
 
         return res;
 
@@ -384,29 +384,49 @@ DSTATUS sd_initialize() {
 
 	ty = 0;
 	n = send_cmd(CMD0, 0);
-	if (n == 1 || n==0) {			                                /* Put the card SPI/Idle state */
-		Timer1 = 1000;			                        	/* Initialization timeout = 1 sec */
-		if (send_cmd(CMD8, 0x1AA) == 1) {	                        /* SDv2? */
-//			for (n = 0; n < 4; n++) ocr[n] = xchg_spi(0xFF);	/* Get 32 bit return value of R7 resp */
-			rcvr_spi_multi(ocr, 4);
-			if (ocr[2] == 0x01 && ocr[3] == 0xAA) {			/* Is the card supports vcc of 2.7-3.6V? */
-				while (Timer1 && send_cmd(ACMD41, 1UL << 30)) ;	/* Wait for end of initialization with ACMD41(HCS) */
-				if (Timer1 && send_cmd(CMD58, 0) == 0) {	/* Check CCS bit in the OCR */
-					//for (n = 0; n < 4; n++) ocr[n] = xchg_spi(0xFF);
-					rcvr_spi_multi(ocr, 4);
-					ty = (ocr[0] & 0x40) ? CT_SD2 | CT_BLOCK : CT_SD2;	/* Card id SDv2 */
-				}
+	if (n == 1 || n==0) {			                /* Put the card SPI/Idle state */
+	    Timer1 = 5000;	
+	    n=send_cmd(CMD8, 0x1AA);		                /* Initialization timeout = 5 sec */
+	    if((n&4) == 0) rcvr_spi_multi(ocr, 4);              /* Get 32 bit return value of R7 resp if not illegal command */
+	    if (n == 1) {	                /* SDv2? */
+		if (ocr[2] == 0x01 && ocr[3] == 0xAA) {		/* Is the card supports vcc of 2.7-3.6V? and did echoing */
+			while(Timer1){                 	        /* Wait for end of initialization with ACMD41(HCS) */
+			    n = send_cmd(ACMD41, 1UL << 30);
+			    if(n==0) break;
 			}
-		} else {	                              /* Not SDv2 card */
-			if (send_cmd(ACMD41, 0) <= 1) 	{	/* SDv1 or MMC? */
-				ty = CT_SD1; cmd = ACMD41;	/* SDv1 (ACMD41(0)) */
-			} else {
-				ty = CT_MMC; cmd = CMD1;	/* MMCv3 (CMD1(0)) */
+			if (Timer1){
+			    n = send_cmd(CMD58, 0);
+			    if((n&4) == 0) rcvr_spi_multi(ocr, 4); /* Get 32 bit return value of R7 resp if not illegal command */
+			    if( n <= 1) {	                /* Check CCS bit in the OCR */				
+				ty = (ocr[0] & 0x40) ? CT_SD2 | CT_BLOCK : CT_SD2;	/* Card id SDv2 */
+			    } else {
+			        printf("\nSD CMD58 failed!\n");
+			    }
+			}else{
+			    printf("\nSD timeout!\n");
 			}
-			while (Timer1 && send_cmd(cmd, 0)) ;		/* Wait for end of initialization */
-			if (!Timer1 || send_cmd(CMD16, 512) != 0)	/* Set block length: 512 */
-				ty = 0;
 		}
+	    } else {	                              /* Not SDv2 card */
+		if (send_cmd(ACMD41, 0) <= 1) 	{	/* SDv1 or MMC? */
+			ty = CT_SD1; cmd = ACMD41;	/* SDv1 (ACMD41(0)) */
+		} else {
+			ty = CT_MMC; cmd = CMD1;	/* MMCv3 (CMD1(0)) */
+		}
+		while(Timer1) {         		/* Wait for end of initialization */
+		    n=send_cmd(cmd, 0);
+		    if(n==0) break;
+		}
+			
+		if (Timer1){
+		    if(send_cmd(CMD16, 512) != 0) {	/* Set block length: 512 */
+        		ty = 0;
+        		printf("\nSD CMD16 failed!\n");
+        	    }
+		} else {
+		    ty = 0;
+		    printf("\nSD timeout!\n");
+		}
+	    }
 	} else {
 	    ty=0;
 	}

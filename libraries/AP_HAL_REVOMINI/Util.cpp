@@ -11,7 +11,10 @@ void *REVOMINIUtil::malloc_type(size_t size, Memory_Type mem_type) {
     switch(mem_type) {
     case AP_HAL::Util::MEM_FAST:
         ptr = sbrk_ccm(size);
-        if(ptr != ((caddr_t)-1)) return ptr;
+        if(ptr != ((caddr_t)-1)) {
+            memset(ptr,0,size); 
+            return ptr;
+        }
         // no break!
     case AP_HAL::Util::MEM_DMA_SAFE:
         return malloc(size);

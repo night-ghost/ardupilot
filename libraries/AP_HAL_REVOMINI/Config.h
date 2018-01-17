@@ -29,7 +29,7 @@
 //#define SEM_DEBUG
 //#define MPU_DEBUG
 //#define I2C_DEBUG
-//#define DEBUG_SPI
+#define DEBUG_SPI
 
 #endif
 

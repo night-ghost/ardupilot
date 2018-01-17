@@ -144,17 +144,6 @@ DBG_PRINTF("\nAP_WayBack: allocating memory for %d poins\n", max_num_points);
             }
         }
         
-        num_points=0;
-        points_count=0;
-        last_loop_check=2; // last leg checked for loop
-        last_reduce=0;     // last leg checked for reduce
-
-        last_point_time=0; // definitely less than current millis()
-        last_big_reduce=0;
-        last_raw_point=0;   
-        
-        max_alt=0;
-
 
 // moved starting task here to it be the last one
 #if CONFIG_HAL_BOARD == HAL_BOARD_REVOMINI
@@ -170,6 +159,20 @@ DBG_PRINTF("\nAP_WayBack: allocating memory for %d poins\n", max_num_points);
 #endif
 
     }
+
+// reset data
+    num_points=0;
+    points_count=0;
+    last_loop_check=2; // last leg checked for loop
+    last_reduce=0;     // last leg checked for reduce
+
+    last_point_time=0; // definitely less than current millis()
+    last_big_reduce=0;
+    last_raw_point=0;   
+        
+    max_alt=0;
+
+
     
 DBG_PRINT("start ");
     recording=true;    

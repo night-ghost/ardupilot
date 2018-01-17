@@ -29,6 +29,7 @@ extern const AP_HAL::HAL& hal;
 
 static AP_HAL::OwnPtr<REVOMINI::SPIDevice> _spi;
 AP_HAL::Semaphore                *_spi_sem;
+static AP_HAL::Device::Speed _speed;
 
 
 /** Send a byte to the card */
@@ -45,7 +46,7 @@ uint8_t spi_spiXchg(uint8_t b) {
   return _spi->transfer(b);
 }
 
-uint8_t spi_waitFor(uint8_t out, spi_WaitFunc cb, uint16_t dly) {
+uint8_t spi_waitFor(uint8_t out, spi_WaitFunc cb, uint32_t dly) {
     return _spi->wait_for(out, cb, dly);
 }
 
@@ -147,7 +148,7 @@ bool spi_chipSelectLow(bool take_sem) {
     if(take_sem){
         if(!_spi_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) return false;
 
-        _spi->set_speed(AP_HAL::Device::SPEED_HIGH);
+        _spi->set_speed(_speed);
 
     }
     const stm32_pin_info &pp = PIN_MAP[BOARD_SDCARD_CS_PIN];
@@ -185,14 +186,15 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
     Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&Sd2Card::_timer, void) };
     systick_attach_callback(h.h);
 
-    _spi->set_speed(AP_HAL::Device::SPEED_LOW);
+    _speed = AP_HAL::Device::SPEED_LOW; // all initialization at low speed
+    _spi->set_speed(_speed);
 
     // must supply min of 74 clock cycles with CS high.
     for (uint8_t i = 0; i < 10; i++) spi_spiSend(0XFF);
 
     _spi_sem->give();
 
-    uint8_t n_try=6;
+    uint8_t n_try=3;
     
     DSTATUS ret;
     do {
@@ -200,6 +202,8 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
     } while(ret!=RES_OK && n_try-- != 0);
 
     printf("\nSD initialize: status %d size %ldMb\n", ret, sectorCount()/2048UL);
+
+    _speed = AP_HAL::Device::SPEED_HIGH;
 
     return ret == RES_OK;
 }
@@ -219,7 +223,7 @@ bool spi_chipSelectLow(bool take_sem) {
     if(take_sem){
         if(!_spi_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) return false;
 
-        _spi->set_speed(AP_HAL::Device::SPEED_HIGH);
+        _spi->set_speed(_speed);
 
     }
     const stm32_pin_info &pp = PIN_MAP[BOARD_DATAFLASH_CS_PIN];
@@ -256,6 +260,8 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
     Revo_handler h = { .mp = FUNCTOR_BIND_MEMBER(&Sd2Card::_timer, void) };
     systick_attach_callback(h.h); // not at common interrupt level as tasks because it can be called at USB interrupt level. 
     //                                  Systick has own interrupt level above all IRQ
+
+    _speed = AP_HAL::Device::SPEED_HIGH;
 
     return disk_initialize(0) == RES_OK;    
 }

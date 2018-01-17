@@ -8,25 +8,7 @@ export PATH=/usr/local/bin:$PATH
 echo $ROOT
 
 
-( # RevoMini board
- cd $ROOT/ArduCopter
- make revomini-clean
- make revomini VERBOSE=1 BOARD=revomini_MP32V1F4 && (
-
- cp $ROOT/ArduCopter/revomini_MP32V1F4.bin $ROOT/Release/Copter
- cp $ROOT/ArduCopter/revomini_MP32V1F4.hex $ROOT/Release/Copter
- cp $ROOT/ArduCopter/revomini_MP32V1F4.dfu $ROOT/Release/Copter
- )
-) && (
- cd $ROOT/ArduPlane
- make revomini-clean
- make revomini VERBOSE=1 BOARD=revomini_MP32V1F4 && (
-
- cp $ROOT/ArduPlane/revomini_MP32V1F4.bin $ROOT/Release/Plane
- cp $ROOT/ArduPlane/revomini_MP32V1F4.hex $ROOT/Release/Plane
- cp $ROOT/ArduPlane/revomini_MP32V1F4.dfu $ROOT/Release/Plane
- )
-) && ( # AirBotF4 board
+ ( # AirBotF4 board
  cd $ROOT/ArduCopter
  make revomini-clean
  make revomini VERBOSE=1 BOARD=revomini_Airbot  && (

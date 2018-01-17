@@ -45,7 +45,7 @@ extern "C" {
     void spi_chipSelectHigh(void);
     bool spi_chipSelectLow(bool take_sem);
     void spi_yield();
-    uint8_t spi_waitFor(uint8_t out, spi_WaitFunc cb, uint16_t dly);
+    uint8_t spi_waitFor(uint8_t out, spi_WaitFunc cb, uint32_t dly);
     uint8_t spi_detect();
     uint32_t get_fattime();
 };

@@ -210,7 +210,7 @@ void AP_SmartRTL::reset_path(bool position_ok)
 {
 #ifdef USE_WAYBACK
 
-    bool ret = wb.start();
+    bool ret = wb.start(); // restart
 
     Vector3f current_pos;
     position_ok &= _ahrs.get_relative_position_NED_origin(current_pos);

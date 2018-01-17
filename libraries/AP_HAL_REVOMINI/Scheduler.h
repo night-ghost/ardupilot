@@ -309,7 +309,7 @@ public:
 
 
 #if defined(MTASK_PROF)
-    static void inline task_pause(uint16_t t) {   // called from task when it starts DMA transfer
+    static void inline task_pause(uint32_t t) {   // called from task when it starts transfer
         s_running->ttw=t;
         s_running->sem_start_wait=_micros();
         s_running->count_paused++;

@@ -285,7 +285,8 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
 #endif
 
 #if defined(BOARD_OSD_NAME)
-        uartE->begin(57600); // init OSD after SD but before call to lateInit(), but only if not in USB_STORAGE
+//        uartD->begin(57600); // init OSD after SD but before call to lateInit(), but only if not in USB_STORAGE
+        uartOSDdriver.begin(57600); // init OSD after SD but before call to lateInit(), but only if not in USB_STORAGE
 #endif
 
     }
