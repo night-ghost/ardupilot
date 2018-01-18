@@ -66,6 +66,8 @@ uint8_t REVOMINIRCInput::_last_read_from IN_CCM;
 
 uint16_t REVOMINIRCInput::max_num_pulses IN_CCM;
 
+bool REVOMINIRCInput::fs_flag IN_CCM;
+bool REVOMINIRCInput::aibao_fs_flag  IN_CCM;
 
 bool REVOMINIRCInput::rc_failsafe_enabled IN_CCM;
 
@@ -153,7 +155,7 @@ bool REVOMINIRCInput::new_input()
     if(inp &&  inp < num_parsers+1){
         inp-=1;
         
-        return parsers[inp]->get_last_signal() >_last_read;
+        return parsers[inp]->get_last_signal() > _last_read;
     }
 
     for(uint8_t i=0; i<num_parsers;i++) {
@@ -196,6 +198,8 @@ uint16_t REVOMINIRCInput::read(uint8_t ch)
     uint8_t got=0;
 
 
+    uint32_t dead_time = hal_param_helper->_rc_fs * 1000UL;  // time in seconds
+    
     uint8_t inp=hal_param_helper->_rc_input;
     if(inp &&  inp < num_parsers+1 ){
         inp-=1;
@@ -220,7 +224,7 @@ uint16_t REVOMINIRCInput::read(uint8_t ch)
             
             if( pulse >_last_read &&  // data is newer than last
                 dt<best_t &&          // and most recent
-                ((now - last ) < RC_DEAD_TIME || !rc_failsafe_enabled)) // and time from last change less than RC_DEAD_TIME
+                ((now - last ) < dead_time || !rc_failsafe_enabled)) // and time from last change less than DEAD_TIME
             {
                 best_t = dt;
                 data            = p->get_val(ch);
@@ -243,9 +247,10 @@ uint16_t REVOMINIRCInput::read(uint8_t ch)
             data            = p->get_val(ch);
             _valid_channels = p->get_valid_channels();
             _last_read = pulse;
+                        
         } else { // no data at all
 
-            if( ch == 2) data = 900;
+            if( ch == 2) data = 899; // to know the source
             else         data = 1000;
         }
     }
@@ -258,11 +263,18 @@ uint16_t REVOMINIRCInput::read(uint8_t ch)
         last_4 = data;
     }
 
-    if( ch == 2 && rc_failsafe_enabled) { // throttle
+    if(ch == 2) { // throttle
         if( (now-pulse) > LOST_TIME ||   // last pulse is very old
-            (now-last)  > RC_DEAD_TIME ) // last change is very old
+            ((now-last) > dead_time && rc_failsafe_enabled) ) // pulses OK but last change is very old
         {
             data = 900;
+            
+            if(!fs_flag) {
+                fs_flag=true;
+                printf("\n failsafe! now=%lld last pulse=%lld last change=%lld\n",now, pulse, last);
+            }
+        } else {
+            fs_flag=false;
         }
 
         if(hal_param_helper->_aibao_fs) {
@@ -270,8 +282,15 @@ uint16_t REVOMINIRCInput::read(uint8_t ch)
  Receiver-DEVO-RX719-for-Walkera-Aibao
  failsafe: mode below 1000 and throttle at 1500
 */            
-            if(last_4 < 1000 && data >1300)
-                data = 900;
+            if(last_4 < 990 && data >1300 && data < 1700){
+                if(!aibao_fs_flag){
+                    aibao_fs_flag=true;
+                    printf("\nAibao failsafe! ch4=%d ch2=%d\n",last_4, data);
+                }
+                data = 901; // to know the source
+            } else {
+                aibao_fs_flag=false;            
+            }
         }
 
     }

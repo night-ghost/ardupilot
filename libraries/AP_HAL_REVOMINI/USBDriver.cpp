@@ -21,7 +21,9 @@ using namespace REVOMINI;
 
 extern const AP_HAL::HAL& hal;
 
-//extern void delay(uint32_t ms);
+
+// usb *can* be used  in air, eg. to connect companion computer
+
 
 
 USBDriver::USBDriver(bool usb):
@@ -47,7 +49,6 @@ uint32_t USBDriver::available() {
 
 uint32_t USBDriver::txspace() {   return usb_tx_space(); }
 
-// usb *can* be used  in air, eg. to connect companion computer
 
 int16_t USBDriver::read() {
     if(is_usb_opened() ){

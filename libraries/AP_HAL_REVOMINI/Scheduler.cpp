@@ -97,7 +97,6 @@ uint64_t REVOMINIScheduler::tick_fulltime IN_CCM;  // full consumed time to calc
  #endif
 
 uint32_t REVOMINIScheduler::lowest_stack = (uint32_t)-1;
-uint32_t REVOMINIScheduler::main_stack   = (uint32_t)-1;
 #endif
 
 
@@ -429,11 +428,7 @@ void REVOMINIScheduler::check_stack(uint32_t sp) { // check for stack usage
     // - Stacked xPSR= stack[7]
         
     if(ADDRESS_IN_CCM(sp)){
-        if(_in_main_thread()){
-            if(sp<main_stack) { main_stack=sp; }
-        }else {
-            if(sp<lowest_stack){ lowest_stack=sp; }
-        }
+        if(sp<lowest_stack){ lowest_stack=sp; }
     }
 }
 #endif
@@ -455,7 +450,6 @@ void REVOMINIScheduler::_run_timer_procs(bool called_from_isr) {
 
 void REVOMINIScheduler::_timer_isr_event(uint32_t v  /* TIM_TypeDef *tim */) {
 #ifdef MTASK_PROF
-
     uint32_t sp; 
     // Get stack pointer
     asm volatile ("MRS     %0, PSP\n\t"  : "=rm" (sp));
@@ -476,7 +470,7 @@ void REVOMINIScheduler::_timer_isr_event(uint32_t v  /* TIM_TypeDef *tim */) {
     _switch_task();
 #else
     
-    if(task_n==0 || need_switch_task) return;        // if there no tasks
+    if(task_n==0 || need_switch_task) return;        // if there no tasks or already planned
     
     next_task = get_next_task();
     tsched_count++;
@@ -484,7 +478,7 @@ void REVOMINIScheduler::_timer_isr_event(uint32_t v  /* TIM_TypeDef *tim */) {
     if(next_task != s_running) { // if we should switch task
         s_running->sw_type=0;
         tsched_sw_count++;
-        plan_context_switch();     // plan context switch
+        plan_context_switch();     // plan context switch after return from ISR
     }
 #endif
 }
@@ -652,7 +646,6 @@ void REVOMINIScheduler::_print_stats(){
             // 48K after boot 72K while logging on
             printf("\nMemory used: static %ldk full %ldk\n",((uint32_t)&_edata-bottom+1023)/1024, (heap_ptr-bottom+1023)/1024);
             printf("Free stack: %ldk\n",(lowest_stack - (uint32_t)&_eccm)/1024);
-            printf("Main stack use: %ldk\n",((uint32_t)&_sccm + 0x10000 /* 64K CCM */ - main_stack)/1024);
             printf("CCM use: %ldk\n",((uint32_t)__brkval_ccm - (uint32_t)&_sccm)/1024);
 
             } break;
@@ -737,12 +730,6 @@ bool REVOMINIScheduler::unregister_timer_task(AP_HAL::Device::PeriodicHandle h)
 
 //[ -------- preemptive multitasking --------
 
-bool REVOMINIScheduler::adjust_stack(size_t stackSize)
-{  // Set main task stack size
-  s_top = stackSize;
-  return true;
-}
-
 
 #if 0 // однажды назначенные задачи никто не отменяет
 
@@ -807,7 +794,7 @@ void REVOMINIScheduler::do_task(task_t *task) {
 void REVOMINIScheduler::enqueue_task(task_t &tp) { // add new task to run queue, starting main task
     tp.next = &s_main;  // prepare for insert task into linked list
     tp.prev = s_main.prev;
-    tp.id = ++task_n; // counter - new task is created
+    tp.id = ++task_n;   // counter - new task is created
 
     noInterrupts();     // we will break linked list so do it in critical section
     s_main.prev->next = &tp;
@@ -823,7 +810,7 @@ void REVOMINIScheduler::dequeue_task(task_t &tp) { // remove task from run queue
 }
 
 
-// Create task descriptor and add it last to run queue
+// Create task descriptor
 uint32_t REVOMINIScheduler::fill_task(task_t &tp){
     memset(&tp,0,sizeof(tp));
 
@@ -924,7 +911,7 @@ void * NOINLINE REVOMINIScheduler::_start_task(Handler handle, size_t stackSize)
 void REVOMINIScheduler::set_task_period(void *h, uint32_t period){
     task_t *task = (task_t *)h;
 
-    task->active = false; // will bi first started after 'period'
+    task->active = false; // will be first started after 'period'
     task->time_start  = _micros();
     task->period = period;
 }
@@ -1001,6 +988,14 @@ task_t *REVOMINIScheduler::get_next_task(){
 
         while(true) { // lets try to find task to switch to
             ptr = ptr->next; // Next task in run queue will continue
+
+#if !defined(USE_MPU) || 1 
+            if(ptr->guard != STACK_GUARD){ // проверим сохранность дескриптора
+                printf("PANIC: stack guard spoiled in process %d (from %d)\n", task->id, me->id);
+                dequeue_task(*ptr); // исключить задачу из планирования
+                goto skip_task;    // skip this tasks
+            }
+#endif
 
             if(!ptr->handle) goto skip_task; // skip finished tasks
 
@@ -1096,7 +1091,7 @@ skip_task:
         }
     }
 
-
+    // task to run is selected
 
  #ifdef SHED_DEBUG
     revo_sched_log &lp = logbuf[sched_log_ptr];
@@ -1123,16 +1118,6 @@ skip_task:
 
 #endif
 
-    // выбрали задачу для переключения. 
-
-
-#if !defined(USE_MPU) || 1 
-    // проверим сохранность дескриптора
-    if(task->guard != STACK_GUARD){
-        // TODO исключить задачу из планирования
-        AP_HAL::panic("PANIC: stack guard spoiled in process %d (from %d)\n", task->id, me->id);
-    }
-#endif
     if(want_tail && want_tail->curr_prio < task->curr_prio) { // we have a high-prio task that want to be started next in the middle of tick
         if(partial_quant < TIMER_PERIOD-10) { // if time less than tick
             timer_set_count(TIMER14, 0);
@@ -1233,7 +1218,7 @@ void REVOMINIScheduler::_ioc_timer_event(uint32_t v){ // isr at low priority to 
 #ifdef SHED_PROF
                     uint32_t t = _micros();
 #endif
-                    revo_call_handler(io.handler,i); // unified way to call handlers
+                    revo_call_handler(io.handler,i); // call it
 #ifdef SHED_PROF
                     t = _micros() - t;
                     io.time += t;
@@ -1418,7 +1403,6 @@ void hal_delay_microseconds(uint16_t t){ REVOMINIScheduler::_delay_microseconds(
 
 uint32_t hal_micros() { return REVOMINIScheduler::_micros(); }
 void hal_isr_time(uint32_t t) { s_running->in_isr += t; }
-
 
 // task management for USB
 void hal_set_task_active(void * h) { REVOMINIScheduler::set_task_active(h); } 

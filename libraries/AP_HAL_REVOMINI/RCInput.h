@@ -74,6 +74,7 @@ private:
 
     static bool rc_failsafe_enabled;    
 
+    static bool fs_flag, aibao_fs_flag;
 };
 
 #endif // __AP_HAL_REVOMINI_RCINPUT_H__

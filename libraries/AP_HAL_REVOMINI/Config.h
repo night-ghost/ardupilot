@@ -8,7 +8,6 @@
 #define USE_WFE
 
 
-#define RC_DEAD_TIME 60000 // 60 seconds no RC data changes
 #define REVOMINI_RC_INPUT_MIN_CHANNELS 4
 #define REVOMINI_RC_INPUT_NUM_CHANNELS 20
 
@@ -29,7 +28,7 @@
 //#define SEM_DEBUG
 //#define MPU_DEBUG
 //#define I2C_DEBUG
-#define DEBUG_SPI
+//#define DEBUG_SPI
 
 #endif
 

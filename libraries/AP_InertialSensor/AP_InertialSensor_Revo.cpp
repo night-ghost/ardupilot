@@ -33,6 +33,7 @@
 #include <AP_HAL_REVOMINI/GPIO.h>
 #include <AP_HAL_REVOMINI/Scheduler.h>
 #include <AP_HAL_REVOMINI/SPIDevice.h>
+#include <AP_Param_Helper/AP_Param_Helper.h>
 
 #include "AP_InertialSensor_Revo.h"
 
@@ -606,7 +607,7 @@ bool AP_InertialSensor_Revo::_accumulate(uint8_t *samples, uint8_t n_samples)
         
         gyro = Vector3f(int16_val(data, 5),
                         int16_val(data, 4),
-                        -int16_val(data, 6)) * GYRO_SCALE;;
+                        -int16_val(data, 6)) * GYRO_SCALE;
 
         _rotate_and_correct_accel(_accel_instance, accel);
         _rotate_and_correct_gyro(_gyro_instance, gyro);
@@ -631,6 +632,14 @@ bool AP_InertialSensor_Revo::_accumulate(uint8_t *samples, uint8_t n_samples)
 #endif
 
         if(ret) {
+            uint8_t kG = hal_param_helper->_correct_gyro;
+            if(kG){                                  // compensate gyro drift by long-time mean
+                float gyro_koef = 1.0 / (kG * 1000); // integrator time constant in seconds
+                gyro_mean = gyro_mean * (1-gyro_koef) + gyro*gyro_koef;
+            
+                gyro -= gyro_mean;
+            }
+        
             _notify_new_accel_raw_sample(_accel_instance, accel, 0, fsync_set);
             _notify_new_gyro_raw_sample(_gyro_instance, gyro);
 

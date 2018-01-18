@@ -15,6 +15,7 @@
 #include <hal.h>
 
 #include <AP_HAL/AP_HAL.h>
+#include <GCS_MAVLink/GCS.h>
 
 #if defined(BOARD_SDCARD_CS_PIN) || defined(BOARD_DATAFLASH_FATFS)
 
@@ -202,6 +203,7 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
     } while(ret!=RES_OK && n_try-- != 0);
 
     printf("\nSD initialize: status %d size %ldMb\n", ret, sectorCount()/2048UL);
+    gcs().send_text(MAV_SEVERITY_INFO, "\nSD initialize: status %d size %ldMb\n", ret, sectorCount()/2048UL);
 
     _speed = AP_HAL::Device::SPEED_HIGH;
 
@@ -263,7 +265,12 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
 
     _speed = AP_HAL::Device::SPEED_HIGH;
 
-    return disk_initialize(0) == RES_OK;    
+    ret = disk_initialize(0);    
+
+    printf("\nDataFlash initialize: status %d size %ldMb\n", ret, sectorCount()/2048UL);
+    gcs().send_text(MAV_SEVERITY_INFO, "\nDataFlash initialize: status %d size %ldMb\n", ret, sectorCount()/2048UL);
+
+    return ret == RES_OK;
 }
 
 #endif

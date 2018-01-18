@@ -18,10 +18,9 @@ class REVOMINI::UART_OSD : public AP_HAL::UARTDriver  {
 public:
     UART_OSD();
 
-    /* REVOMINI implementations of UARTDriver virtual methods */
     void begin(uint32_t b);
     void inline begin(uint32_t b, uint16_t rxS, uint16_t txS) {   begin(b); }
-    void inline end() {  }
+    void inline end() { } // no way to unview
     void flush() {}
     bool inline is_initialized(){ return _initialized; }
 

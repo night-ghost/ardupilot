@@ -8,7 +8,7 @@ BUILDDIRS       += $(BUILD_PATH)/$(d)
 
 # Local flags
 # always include board #defines
-CFLAGS_$(d) := -Wall -Werror -I$(HARDWARE_PATH)/sd  -I$(HARDWARE_PATH)/sd/FatFs
+CFLAGS_$(d) := -Wall -Werror -I$(HARDWARE_PATH)/sd  -I$(HARDWARE_PATH)/sd/FatFs -Wno-trigraphs
 
 DIR := AP_HAL_REVOMINI/hardware/sd
 

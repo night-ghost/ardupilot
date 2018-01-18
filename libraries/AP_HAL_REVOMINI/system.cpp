@@ -51,8 +51,7 @@ void cond_yield(){
 }
 
 
-uint32_t millis()
-{
+uint32_t millis(){
     cond_yield();
     return REVOMINIScheduler::_millis();
 }

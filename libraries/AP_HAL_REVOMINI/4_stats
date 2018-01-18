@@ -5,6 +5,7 @@
 собственно на расчет с частотой 400 раз в секунду уходит около 10% всего времени
 
 Новый расклад времени:
+
 task 0 (0x0000000080ACE09) time:   12.18% mean     77.3uS max   131uS full       0uS wait sem.    122uS main task
 task 1 (0x0000000080AD735) time:   78.50% mean      4.2uS max    33uS full       0uS wait sem.      0uS idle
 task 2 (0x80AE3E920004CD0) time:    0.28% mean     13.9uS max    38uS full      38uS wait sem.      0uS analog IO

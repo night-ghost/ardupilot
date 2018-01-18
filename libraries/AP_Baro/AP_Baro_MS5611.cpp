@@ -338,6 +338,8 @@ void AP_Baro_MS56XX::_timer(void)
 void AP_Baro_MS56XX::_update_and_wrap_accumulator(uint32_t *accum, uint32_t val,
                                                   uint8_t *count, uint8_t max_count)
 {
+//    float mean = *accum / *count;
+
     *accum += val;
     *count += 1;
     if (*count == max_count) {

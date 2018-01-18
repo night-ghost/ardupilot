@@ -50,24 +50,24 @@
  * Task run-time structure (Task control block AKA TCB)
  */
 struct task_t {
-        const uint8_t* sp;      //!< Task stack pointer, should be first to access from context switcher
-        task_t* next;           //!< Next task (double linked list)
-        task_t* prev;           //!< Previous task
-        Handler handle;         //!< loop() in Revo_handler - to allow to change task, call via revo_call_handler
-        const uint8_t* stack;   //!< Task stack bottom
-        uint8_t id;             // id of task
-        uint8_t priority;       // priority of task
-        uint8_t curr_prio;      // current priority of task, usually higher than priority
-        bool active;            // task not ended
-        bool f_yield;           // task gives its quant voluntary
-        uint32_t ttw;           // time to wait
-        uint32_t t_yield;       // time of yield
-        uint32_t period;        // if set then task starts on time basis only
-        uint32_t time_start;    // start time of task
-        REVOMINI::Semaphore *sem; // task should start after owning this semaphore
-        REVOMINI::Semaphore *sem_wait; // task is waiting this semaphore
-        uint32_t sem_time;             // time to wait semaphore
-        uint32_t sem_start_wait;       // time when waiting starts
+        const uint8_t* sp;              // Task stack pointer, should be first to access from context switcher
+        task_t* next;                   // Next task (double linked list)
+        task_t* prev;                   // Previous task
+        Handler handle;                 // loop() in Revo_handler - to allow to change task, called via revo_call_handler
+        const uint8_t* stack;           // Task stack bottom
+        uint8_t id;                     // id of task
+        uint8_t priority;               // base priority of task
+        uint8_t curr_prio;              // current priority of task, usually higher than priority
+        bool active;                    // task still not ended
+        bool f_yield;                   // task gives its quant voluntary
+        uint32_t ttw;                   // time to wait - for delays and IO
+        uint32_t t_yield;               // time of starting of yield
+        uint32_t period;                // if set then task will start on time basis
+        uint32_t time_start;            // start time of task
+        REVOMINI::Semaphore *sem;       // task should start after owning this semaphore
+        REVOMINI::Semaphore *sem_wait;  // task is waiting this semaphore
+        uint32_t sem_time;              // max time to wait semaphore
+        uint32_t sem_start_wait;        // time when waiting starts (can use t_yield but stays for clarity)
 #if defined(MTASK_PROF)
         uint32_t start;         // microseconds of timeslice start
         uint32_t in_isr;        // time in ISR when task runs
@@ -86,7 +86,7 @@ struct task_t {
         uint32_t max_c_paused;  // count task was paused on IO
         uint32_t stack_free;    // free stack
 #endif
-        uint32_t guard; // stack guard
+        uint32_t guard; // stack guard to check TCB corruption
 };
 
 extern "C" {
@@ -119,12 +119,11 @@ extern "C" {
     uint32_t hal_micros();
     void hal_isr_time(uint32_t t);
     
-    // task management for USB
+// task management for USB MSC mode
     void hal_set_task_active(void * handle); 
     void hal_context_switch_isr();
     void * hal_register_task(voidFuncPtr task, uint32_t stack);
     void hal_set_task_priority(void * handle, uint8_t prio);
-//    void hal_panic(const char *errormsg, ...);
 }
 
 
@@ -151,8 +150,8 @@ typedef struct RevoSchedLog {
 #endif
 
 enum Revo_IO_Flags {
-    IO_PERIODIC,
-    IO_ONCE,
+    IO_PERIODIC= 0,
+    IO_ONCE    = 1,
 };
 
 typedef struct REVO_IO {
@@ -181,11 +180,11 @@ public:
     inline void     delay_microseconds(uint16_t us) { _delay_microseconds(us); }
     inline void     delay_microseconds_boost(uint16_t us) override { _delay_microseconds_boost(us); }
     
-    inline   uint32_t millis() {    return AP_HAL::millis(); } // this allows to run io_proc without calls to delay()
+    inline   uint32_t millis() {    return AP_HAL::millis(); } 
     inline   uint32_t micros() {    return _micros(); }
     
     inline void register_timer_process(AP_HAL::MemberProc proc) { _register_timer_process(proc, 1000); }
-    inline void suspend_timer_procs(){}
+    inline void suspend_timer_procs(){} // nothing to do in multitask 
     inline void resume_timer_procs() {}
 
     void     register_delay_callback(AP_HAL::Proc, uint16_t min_time_ms);
@@ -199,7 +198,7 @@ public:
         _register_timer_task(period, r.h, NULL);
     }
 
-    inline bool in_timerprocess() {   return false; }
+    inline bool in_timerprocess() {   return false; } // we don't calls anything in ISR
 
     void inline register_timer_failsafe(AP_HAL::Proc failsafe, uint32_t period_us) { _failsafe = failsafe; }
 
@@ -246,7 +245,7 @@ public:
    * @param[in] stackSize in bytes.
    * @return bool.
    */
-    static bool adjust_stack(size_t stackSize);
+    static inline bool adjust_stack(size_t stackSize) {  s_top = stackSize; return true; } 
     
   /**
    * Start a task with given function and stack size. Should be
@@ -273,7 +272,7 @@ public:
   
 // functions to alter task's properties
 //[ this functions called only at task start
-  static void set_task_period(void *h, uint32_t period);                // task will be auto-activated by this period
+  static void set_task_period(void *h, uint32_t period);       // task will be auto-activated by this period
 
   static inline void set_task_priority(void *h, uint8_t prio){ // priority is a relative speed of task
     task_t *task = (task_t *)h;
@@ -292,11 +291,11 @@ public:
 
 
 // this functions are atomic so don't need to disable interrupts
-  static inline void *get_current_task() { 
+  static inline void *get_current_task() { // get task handler or 0 if called from ISR
     if(in_interrupt()) return NULL;
     return s_running; 
   }
-  static inline void *get_current_task_isr() { 
+  static inline void *get_current_task_isr() { // get current task handler even if called from ISR
     return s_running; 
   }
   static inline void set_task_active(void *h) {   // tasks are created in stopped state
@@ -346,9 +345,9 @@ public:
 */
     static task_t *get_next_task(); 
 
-    /*
-     * finish current tick and schedule new task
-     */
+/*
+ * finish current tick and schedule new task excluding this
+ */
     static void yield(uint16_t ttw=0); // optional time to wait
   
   /**
@@ -367,7 +366,7 @@ public:
             boost_task=NULL;
             
             
-            if(task->ttw){// task wants to wait 
+            if(task->ttw){ // task now in wait 
 #if defined(USE_MPU)
                 mpu_disable();      // we need access to write
 #endif
@@ -390,10 +389,12 @@ public:
     }
 
     static void SVC_Handler(uint32_t * svc_args); // many functions called via SVC for hardware serialization
+
+    static volatile bool need_switch_task;   // should be public for access from C code
 //}
 
 
-//{ IO completion routines
+//{ IO completion routines, allows to move out time consuming parts from ISR
  #define MAX_IO_COMPLETION 8
     
     typedef voidFuncPtr ioc_proc;
@@ -419,7 +420,6 @@ public:
     static void exec_io_completion();
 
     static volatile bool need_io_completion;
-    static volatile bool need_switch_task;   // should be public
 //}
 
 
@@ -451,55 +451,58 @@ public:
     static inline void register_on_disarm(Handler h){ on_disarm_handler=h; }
 
     static void start_stats_task(); // it interferes with CONNECT_COM and CONNECT_ESC so should be started last
+
+#if 0 // not used
     
-    static inline void do_delayed_proc(Handler h, uint16_t dly){  // call a handler after some time
+    // call a handler after some time 
+    static inline void do_delayed_proc(Handler h, uint16_t dly){  
         while(_delay_timer_proc); // wait for prevoius task
         _delay_timer_proc = h;
         timer_set_reload(TIMER11, dly);
         timer_resume(TIMER11);
     }
+    // cancel setted delayed proc if any
     static inline void cancel_delayed_proc() {
         timer_pause(TIMER11);
         _delay_timer_proc=0;
     }
-
+#endif
     
 protected:
 
 //{ multitask
-    // executor for task's handler
+    // executor for task's handler, never called but used when task context formed
     static void do_task(task_t * task);
 
     // gves first deleted task or NULL - not used because tasks are never finished
     static task_t* get_empty_task();
-/**
+/*
    * Initiate a task with the given functions and stack. When control
    * is yield to the task then the loop function is repeatedly called.
-   * @param[in] h     task handler (may not be NULL).
+   * @param[in] h     task handler (may be NULL)
    * @param[in] stack top reference.
-   */
+*/
     static void *init_task(uint64_t h, const uint8_t* stack);
 
-    // prepares TCB
-    static uint32_t fill_task(task_t &tp);
-    static void enqueue_task(task_t &tp); // add new task to run queue
-    static void dequeue_task(task_t &tp); // remove task from run queue
+
+    static uint32_t fill_task(task_t &tp);      // prepares task's TCB
+    static void enqueue_task(task_t &tp);       // add new task to run queue
+    static void dequeue_task(task_t &tp);       // remove task from run queue
 
     // plan context switch
     static void switch_task();
     static void _switch_task();
 
     static task_t s_main; // main task TCB
-    
-    /** Task stack allocation top. */
-    static size_t s_top;
-  
+    static size_t s_top; // Task stack allocation top. 
     static uint16_t task_n; // counter of tasks
-  
-    static void check_stack(uint32_t sp);
+
     static task_t *_idle_task; // remember TCB of idle task
+    static task_t *_forced_task; // task activated from ISR so should be called without prioritization
+    static void *boost_task;    // task that called delay_boost()
+    
+    static void check_stack(uint32_t sp);
  
-    static task_t *_forced_task;
 #define await(cond) while(!(cond)) yield()
   
 //} end of multitask
@@ -512,8 +515,7 @@ private:
     static uint16_t _min_delay_cb_ms;
     static bool _initialized;
 
-    /* _timer_isr_event() and _run_timer_procs are static so they can be
-     * called from an interrupt. */
+    // ISR functions
     static void _timer_isr_event(uint32_t v /*TIM_TypeDef *tim */);
     static void _timer5_ovf(uint32_t v /*TIM_TypeDef *tim */ );
     static void _tail_timer_event(uint32_t v /*TIM_TypeDef *tim */);
@@ -522,21 +524,25 @@ private:
     
     static void _run_timer_procs(bool called_from_isr);
 
-
-    static uint32_t timer5_ovf_cnt;
+    static uint32_t timer5_ovf_cnt; // high part of 64-bit time
     
-    static AP_HAL::Proc _failsafe;
+    static AP_HAL::Proc _failsafe; // periodically called from ISR
 
-    static volatile bool _timer_event_missed;
-    static uint32_t _scheduler_last_call;
-
-    static Revo_IO _io_proc[REVOMINI_SCHEDULER_MAX_IO_PROCS];
-    static uint8_t _num_io_proc;
-
+    static Revo_IO _io_proc[REVOMINI_SCHEDULER_MAX_IO_PROCS]; // low priority tasks for IO thread
     static void _run_io(void);
+    static uint8_t _num_io_proc;
+    static bool _in_io_proc;
+
+    static Handler on_disarm_handler;
 
     static void _print_stats();
-    static volatile Handler _delay_timer_proc;
+//    static volatile Handler _delay_timer_proc; not used
+
+    static uint32_t lowest_stack;
+    
+    static struct IO_COMPLETION io_completion[MAX_IO_COMPLETION];
+    static uint8_t num_io_completion;
+
     
 #ifdef SHED_PROF
     static uint64_t shed_time;
@@ -576,13 +582,6 @@ private:
 #endif
 
 
-    static uint32_t lowest_stack;
-    static uint32_t main_stack;
-    
-    static struct IO_COMPLETION io_completion[MAX_IO_COMPLETION];
-
-    static uint8_t num_io_completion;
-    static bool _in_io_proc;
 
 
 #ifdef MPU_DEBUG
@@ -592,9 +591,7 @@ private:
     static uint32_t MPU_Time;
 #endif
     
-    static Handler on_disarm_handler;
     
-    static void *boost_task;
 };
 
 void revo_call_handler(Handler h, uint32_t arg);

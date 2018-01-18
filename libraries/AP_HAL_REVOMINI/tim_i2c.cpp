@@ -418,8 +418,8 @@ bool Soft_I2C::_start(void)
 {
     while(_timer->state->busy)  {
         hal_yield(0);
-
     }
+
 
     SDA_H;            // just in case
     SCL_H;
@@ -471,12 +471,12 @@ bool Soft_I2C::_start(void)
 uint8_t Soft_I2C::wait_done(){
     uint32_t t = hal_micros();
 
-    uint32_t timeout = SI2C_BIT_TIME*9*(send_len+recv_len+1);
+    uint32_t timeout = SI2C_BIT_TIME*9*(send_len+recv_len+1); // time to full transfer
 
     while(!done) {
         uint32_t dt = hal_micros() - t;
         
-        if(dt > timeout*16) {
+        if(dt > timeout*16) {           // 16 times of full transfer
             timer_pause(_timer);
             if(state==STOP2) break; // all fine
             
@@ -522,7 +522,7 @@ uint8_t  Soft_I2C::writeBuffer( uint8_t addr, uint8_t len, const uint8_t *buf)
     _addr    = addr;
     
     if (!_start()) {
-        return I2C_ERROR;
+        return I2C_ERROR; // bus busy
     }
 
     return wait_done();

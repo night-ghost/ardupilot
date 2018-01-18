@@ -165,6 +165,9 @@ private:
     void * task_handle;
     float accel_len;
     uint32_t last_sample;
+    
+    Vector3f gyro_mean;
+
 
 //#define MPU_DEBUG_LOG
 

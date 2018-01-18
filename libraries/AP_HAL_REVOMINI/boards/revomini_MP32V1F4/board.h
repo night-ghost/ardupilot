@@ -289,6 +289,14 @@
     // @Values: 0: standard 168MHz, 1:180MHz, 2:192MHz, 3:216MHz, 4:240MHz(*), 5:264MHz
     // @User: Advanced
     AP_GROUPINFO("OVERCLOCK",     7, AP_Param_Helper, _overclock, 0),
+
+    // @Param: RC_FS
+    // @DisplayName: Set time of RC failsafe
+    // @Description: if none of RC channel changes in that time, then failsafe triggers
+    // @Values: 0: turned off, >0 - time in seconds. Good values are starting 60s for digital protocols
+    // @User: Advanced
+    AP_GROUPINFO("RC_FS",        17, AP_Param_Helper, _rc_fs, 0)
+
 */
 #define BOARD_HAL_VARINFO \
     AP_GROUPINFO("MOTOR_LAYOUT", 1, AP_Param_Helper, _motor_layout, 0), \
@@ -306,7 +314,8 @@
     AP_GROUPINFO("RC_INPUT",     14, AP_Param_Helper, _rc_input, 0), \
     AP_GROUPINFO("AIBAO_FS",     15, AP_Param_Helper, _aibao_fs, 0), \
     AP_GROUPINFO("OVERCLOCK",    16, AP_Param_Helper, _overclock, 0), \
-    AP_GROUPINFO("RC_FS",        17, AP_Param_Helper, _rc_fs, 0)
+    AP_GROUPINFO("CORRECT_GYRO", 17, AP_Param_Helper, _correct_gyro, 0), \
+    AP_GROUPINFO("RC_FS",        18, AP_Param_Helper, _rc_fs, 0)
     
 
 // parameters
@@ -326,6 +335,7 @@
     AP_Int8 _rc_input; \
     AP_Int8 _aibao_fs; \
     AP_Int8 _overclock; \
+    AP_Int8 _correct_gyro; \
     AP_Int8 _rc_fs; 
     
 #define ERROR_USART _USART1 // main port - telemetry, all panic messages goes there

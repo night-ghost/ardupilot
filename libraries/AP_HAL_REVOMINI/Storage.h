@@ -24,8 +24,10 @@
 #include "AP_HAL_REVOMINI_Namespace.h"
 #include <hal.h>
 
-//we have a lot of unused CCM memory so cache data in RAM
+// read is quite expensive operation because requires scan of 16K RAM
+// we have a lot of unused CCM memory so lets cache data in RAM
 #define EEPROM_CACHED
+// write is very expensive operation so move out it to separate thread
 #define WRITE_IN_THREAD
 
 class REVOMINI::REVOMINIStorage : public AP_HAL::Storage

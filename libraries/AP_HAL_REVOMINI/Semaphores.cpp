@@ -10,8 +10,6 @@ using namespace REVOMINI;
 
 extern const AP_HAL::HAL& hal;
 
-bool Semaphore::_error = false;
-
 #ifdef SEM_PROF 
 uint64_t Semaphore::sem_time=0;    
 #endif
@@ -28,7 +26,7 @@ bool Semaphore::give() {
     if(REVOMINIScheduler::in_interrupt()) { // SVC from interrupt will cause HardFault, but we need to give 
         bool v=_is_waiting;
         bool ret=svc_give();                      // bus semaphores from IO_Complete ISR. This is atomic and don't break anything
-        if(v) REVOMINIScheduler::context_switch_isr(); // if anyone waits for this semaphore reschedule tasks after interrupt
+        if(v) REVOMINIScheduler::context_switch_isr(); // if anyone waits for this semaphore then reschedule tasks after interrupt
         return ret;
     }
     return _give(); 
@@ -39,18 +37,18 @@ bool Semaphore::take_nonblocking() {
 }
 
 bool Semaphore::take(uint32_t timeout_ms) {
-    // task switching can be asyncronous but we can't return to caller before take semaphore
     uint32_t now=REVOMINIScheduler::_micros();
     uint32_t dt = timeout_ms*1000;
     bool ret;
-    do {
+    do {     // task switching can be asyncronous but we can't return to caller before take semaphore
+
         if(REVOMINIScheduler::in_interrupt()) { // SVC from interrupt will cause HardFault
-            ret = svc_take_nonblocking(); // this can be called from failsafe_check which executed in ISR context
+            ret = svc_take_nonblocking();    // this can be called from failsafe_check which executed in ISR context
         } else {
             ret = _take_from_mainloop(timeout_ms);
         }
         if(ret) break;
-    }while(REVOMINIScheduler::_micros()-now <dt || timeout_ms==HAL_SEMAPHORE_BLOCK_FOREVER);
+    }while(REVOMINIScheduler::_micros()-now < dt || timeout_ms==HAL_SEMAPHORE_BLOCK_FOREVER);
     
     return ret;
 }

@@ -31,13 +31,13 @@ Sem_Log sem_log[SEM_LOG_SIZE];
 
 
 class REVOMINI::Semaphore : public AP_HAL::Semaphore {
-public:
+public: // interface
     Semaphore();
     bool give();
     bool take(uint32_t timeout_ms);
     bool take_nonblocking();
 
-//[ functions that called only in SVC level so need not to disable interrupts
+//[ functions that called by scheduler only in SVC level so need not to disable interrupts
     bool svc_give();
     bool svc_take(uint32_t timeout_ms);
     bool svc_take_nonblocking();
@@ -45,7 +45,6 @@ public:
     inline bool is_taken()   { return _taken; }
     inline bool is_waiting() { return _is_waiting; } // does anyone want this semaphore when it was busy?
 //]
-    static inline bool get_error(){ bool t=_error; _error=false; return t; }
 
 #ifdef SEM_DEBUG
     static Sem_Log  sem_log[SEM_LOG_SIZE];
@@ -60,9 +59,6 @@ protected:
     volatile bool _taken;
     void * _task; // owner
     bool _is_waiting;
-
-    static bool _error;
-
 };
 
 #endif // __AP_HAL_REVOMINI_SEMAPHORES_H__

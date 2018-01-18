@@ -17,7 +17,13 @@ void *REVOMINIUtil::malloc_type(size_t size, Memory_Type mem_type) {
         }
         // no break!
     case AP_HAL::Util::MEM_DMA_SAFE:
-        return malloc(size);
+        ptr = malloc(size);
+        if(ptr != NULL) {
+            memset(ptr,0,size); 
+            return ptr;
+        }
+        // no break!
+        
     default:
         return NULL;
     }        
