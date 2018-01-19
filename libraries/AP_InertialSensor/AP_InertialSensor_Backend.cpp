@@ -12,7 +12,6 @@ const extern AP_HAL::HAL& hal;
 AP_InertialSensor_Backend::AP_InertialSensor_Backend(AP_InertialSensor &imu) :
     _imu(imu)
 {
-	_fourier_analysis.Set_Fourier_Analysis(BUF_SIZE);
     _sem = hal.util->new_semaphore();
 }
 
