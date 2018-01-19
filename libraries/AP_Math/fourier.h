@@ -40,13 +40,13 @@ class Fourier_Analysis
 public:
 	Fourier_Analysis();
 	~Fourier_Analysis();
-	void Set_Fourier_Analysis(int buffer_size);
+	void Set_Fourier_Analysis(int32_t buffer_size);
 	void accumulate(Vector3f *new_sample, Timing_Struct *new_timing);
 	void accumulate_discrete(Vector3f new_sample, float dt, Vector3f omega);
 	float get_pitch_angle(void);
 	Vector2f get_yaw_angle(void);
 	float get_phase(void);
-	void set_buffer_size(int buffer_size);
+	void set_buffer_size(int32_t buffer_size);
 	void synchronize_fourier_phase(float instant_heading);
 	Vector2f get_result(void);
 protected:
@@ -55,9 +55,9 @@ protected:
 	float *_phase;
 private:
 	Vector3f *_signal;
-	int _buffer_size;
+	int32_t _buffer_size;
 	float _time_elapsed;
-	int _buffer_index;
+	int32_t _buffer_index;
 	Vector3f _signal_mean;
 	Vector2f _angle_tot;
 	LowPassFilterVector2f _result_filter;

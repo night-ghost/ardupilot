@@ -21,7 +21,7 @@ Fourier_Analysis::Fourier_Analysis(){
 	_result_filter.set_cutoff_frequency(RESULT_FILTER_FREQ);
 }
 
-void Fourier_Analysis::Set_Fourier_Analysis(int buffer_size){
+void Fourier_Analysis::Set_Fourier_Analysis(int32_t buffer_size){
 	_buffer_size=buffer_size;
 	
 	_signal=(Vector3f *)malloc(buffer_size*sizeof(Vector3f));
@@ -50,8 +50,8 @@ Fourier_Analysis::~Fourier_Analysis(){
 }
 
 void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timing){
-	int previous_index;
-	int i;
+	int32_t previous_index;
+	int32_t i;
 	float actual_heading;
 	float actual_yaw;
 	float signal_temp[2];
@@ -145,7 +145,7 @@ void Fourier_Analysis::accumulate_discrete(Vector3f new_sample, float dt, Vector
 
 float Fourier_Analysis::get_phase(void)
 {
-	int last_index=_buffer_index-1;
+	int32_t last_index=_buffer_index-1;
 	
 	if(last_index<0)
 		last_index=_buffer_size-1;
@@ -159,7 +159,7 @@ Vector2f Fourier_Analysis::get_result()
 }
 
 float Fourier_Analysis::get_pitch_angle(void){
-	int next_index=_buffer_index+1;
+	int32_t next_index=_buffer_index+1;
 	
 	Vector2f result;
 	
@@ -212,7 +212,7 @@ Vector2f Fourier_Analysis::get_yaw_angle(void){
 	return result;
 }
 
-void Fourier_Analysis::set_buffer_size(int buffer_size){
+void Fourier_Analysis::set_buffer_size(int32_t buffer_size){
 	_buffer_size=buffer_size;
 }
 

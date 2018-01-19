@@ -30,19 +30,12 @@
 #include "AP_InertialSensor.h"
 
 
-const int SAMPLE_RATE=1600;
-const int MIN_FREQ=1;
-const int BUF_SIZE=SAMPLE_RATE/MIN_FREQ;
+const int32_t SAMPLE_RATE=1600;
+const int32_t MIN_FREQ=1;
+const int32_t BUF_SIZE=SAMPLE_RATE/MIN_FREQ;
 
 class AuxiliaryBus;
 class DataFlash_Class;
-
-struct log_data{
-	float AccX;
-	float AccY;
-	float AccZ;
-	float GyrZ;
-};
 
 class AP_InertialSensor_Backend
 {
