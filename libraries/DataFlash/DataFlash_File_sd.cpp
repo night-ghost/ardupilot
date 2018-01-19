@@ -85,7 +85,7 @@ void DataFlash_File::Init()
         if (!SD.mkdir(_log_directory)) {
             
             printf("Failed to create log directory %s: %s\n", _log_directory, SD.strError(SD.lastError));
-            gcs().send_text(MAV_SEVERITY_CRITICAL,"Failed to create log directory %s: %s\n", _log_directory, SD.strError(SD.lastError));
+            gcs().send_text(MAV_SEVERITY_WARNING,"Failed to create log directory %s: %s\n", _log_directory, SD.strError(SD.lastError));
             _log_directory="0:";
         }
     }
@@ -136,7 +136,7 @@ void DataFlash_File::periodic_1Hz(const uint32_t now)
     if (!(_write_fd) || !_initialised || _open_error) return; // too early
 
     if (!io_thread_alive()) {
-        gcs().send_text(MAV_SEVERITY_CRITICAL, "No IO Thread Heartbeat");
+        gcs().send_text(MAV_SEVERITY_WARNING, "No IO Thread Heartbeat");
         // If you try to close the file here then it will almost
         // certainly block.  Since this is the main thread, this is
         // likely to cause a crash.
@@ -298,7 +298,7 @@ void DataFlash_File::Prep_MinSpace()
 #elif defined(BOARD_SDCARD_CS_PIN)
                 if(hal_param_helper->_sd_format){
                     printf("error getting free space, formatting!\n");
-                    gcs().send_text(MAV_SEVERITY_CRITICAL,"error getting free space, formatting!\n");
+                    gcs().send_text(MAV_SEVERITY_WARNING,"error getting free space, formatting!\n");
                     SD.format(_log_directory);
                     return;
                 }
@@ -1017,7 +1017,7 @@ void DataFlash_File::_io_timer(void)
     if (nwritten <= 0) {
         FRESULT err=SD.lastError;
         printf("Log write %ld bytes fails: %s\n",nbytes, SD.strError(err));
-        gcs().send_text(MAV_SEVERITY_CRITICAL,"Log write %ld bytes fails: %s\n",nbytes, SD.strError(err));
+        gcs().send_text(MAV_SEVERITY_WARNING,"Log write %ld bytes fails: %s\n",nbytes, SD.strError(err));
         _write_fd.close();
 #if defined(BOARD_DATAFLASH_FATFS)
         if(FR_INT_ERR == err) { // internal error - bad filesystem

@@ -319,7 +319,6 @@
     AP_Int8 _aibao_fs; \
     AP_Int8 _overclock; \
     AP_Int8 _correct_gyro; \
-    AP_Int8 _correct_gyro; \
     AP_Int8 _rc_fs;
     
 #endif

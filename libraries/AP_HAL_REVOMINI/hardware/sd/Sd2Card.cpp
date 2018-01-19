@@ -265,6 +265,7 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
 
     _speed = AP_HAL::Device::SPEED_HIGH;
 
+    DSTATUS ret;
     ret = disk_initialize(0);    
 
     printf("\nDataFlash initialize: status %d size %ldMb\n", ret, sectorCount()/2048UL);
