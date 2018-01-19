@@ -32,7 +32,7 @@
 
 const int SAMPLE_RATE=1600;
 const int MIN_FREQ=1;
-const int BUF_SIZE=1600;//SAMPLE_RATE/MIN_FREQ;
+const int BUF_SIZE=SAMPLE_RATE/MIN_FREQ;
 
 class AuxiliaryBus;
 class DataFlash_Class;
