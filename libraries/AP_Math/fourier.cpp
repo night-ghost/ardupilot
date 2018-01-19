@@ -54,6 +54,7 @@ void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timin
 	int i;
 	float actual_heading;
 	float actual_yaw;
+	float signal_temp[2];
 	
 	previous_index=_buffer_index-1;
 
@@ -68,10 +69,13 @@ void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timin
 	fourier_coef.x=cosf(_phase[_buffer_index]);
 	fourier_coef.y=-sinf(_phase[_buffer_index]);
 	
+	signal_temp[0]=signal_current.x;
+	signal_temp[1]=signal_current.y;
+	
 	for(i=0;i<2;i++)
 	{
-		_fourier_transform[i].x -= (fourier_coef.x*signal_current.x);
-		_fourier_transform[i].y -= (fourier_coef.y*signal_current.x);
+		_fourier_transform[i].x -= (fourier_coef.x*signal_temp[i]);
+		_fourier_transform[i].y -= (fourier_coef.y*signal_temp[i]);
 	}
 	
 	actual_yaw=get_yaw_angle().x;
@@ -96,7 +100,8 @@ void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timin
 	fourier_coef.x=cosf(_phase[_buffer_index]);
 	fourier_coef.y=-sinf(_phase[_buffer_index]);
 	
-	float signal_temp[2]={signal_current.x, signal_current.y};
+	signal_temp[0]=signal_current.x;
+	signal_temp[1]=signal_current.y;
 	
 	for(i=0;i<2;i++)
 	{

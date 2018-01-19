@@ -86,7 +86,7 @@ AP_AHRS_DCM::update(bool skip_ins_update)
 
     if(_ins.get_gyro().z>GYRO_MAX_SPIN_RATE*M_PI/180.0 || _ins.get_gyro().z<-GYRO_MAX_SPIN_RATE*M_PI/180.0)
     {
-    //	hal.console->printf("pitch, yaw:%f	%f\n\n", _ins.get_pitch_angle()*180.0/3.14, _ins.get_yaw_angle()*180.0/3.14);
+    	//hal.console->printf("pitch, yaw:%f	%f\n\n", _ins.get_pitch_angle_FT()*180.0/3.14, _ins.get_yaw_angle_FT()*180.0/3.14);
     	
     	_dcm_matrix.from_euler(0.0f, _ins.get_pitch_angle_FT(), _ins.get_yaw_angle_FT());
     }

@@ -326,7 +326,7 @@ float::AP_InertialSensor_Backend::get_pitch_angle_FT(void)
 
 float::AP_InertialSensor_Backend::get_yaw_angle_FT(void)
 {
-	return(_fourier_analysis.get_result().y);
+	return _fourier_analysis.get_result().y;
 }
 
 void::AP_InertialSensor_Backend::synchronize_fourier_phase(float actual_heading)
