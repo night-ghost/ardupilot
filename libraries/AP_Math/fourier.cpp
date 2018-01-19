@@ -24,9 +24,9 @@ Fourier_Analysis::Fourier_Analysis(){
 void Fourier_Analysis::Set_Fourier_Analysis(int32_t buffer_size){
 	_buffer_size=buffer_size;
 	
-	_signal=(Vector3f *)malloc(buffer_size*sizeof(Vector3f));
-	_timing=(Timing_Struct *)malloc(buffer_size*sizeof(Timing_Struct));
-	_phase=(float *)malloc(buffer_size*sizeof(float));
+	_signal=(Vector3f *)calloc(buffer_size,sizeof(Vector3f));
+	_timing=(Timing_Struct *)calloc(buffer_size,sizeof(Timing_Struct));
+	_phase=(float *)calloc(buffer_size,sizeof(float));
 }
 
 Fourier_Analysis::~Fourier_Analysis(){
