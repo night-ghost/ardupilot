@@ -37,6 +37,7 @@ extern const AP_HAL::HAL& hal;
 
 //the limit above which an other algorithm is used to calculate dcm matrix (in degrees per second)
 #define GYRO_MAX_SPIN_RATE 180
+#define GYRO_MAX_SPIN_RATE_RAD radians(GYRO_MAX_SPIN_RATE)
 
 // reset the current gyro drift estimate
 //  should be called if gyro offsets are recalculated
@@ -84,7 +85,7 @@ AP_AHRS_DCM::update(bool skip_ins_update)
     // Perform drift correction
     drift_correction(delta_t);
 
-    if(_ins.get_gyro().z>GYRO_MAX_SPIN_RATE*M_PI/180.0 || _ins.get_gyro().z<-GYRO_MAX_SPIN_RATE*M_PI/180.0)
+    if(_ins.get_gyro().z>GYRO_MAX_SPIN_RATE_RAD || _ins.get_gyro().z<-GYRO_MAX_SPIN_RATE_RAD)
     {
     	//hal.console->printf("pitch, yaw:%f	%f\n\n", _ins.get_pitch_angle_FT()*180.0/3.14, _ins.get_yaw_angle_FT()*180.0/3.14);
     	
