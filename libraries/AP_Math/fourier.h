@@ -35,6 +35,10 @@ struct Timing_Struct{
 	float T;
 };
 
+const int32_t SAMPLE_RATE=1600;
+const int32_t MIN_FREQ=1;
+const int32_t BUF_SIZE=SAMPLE_RATE/MIN_FREQ;
+
 class Fourier_Analysis
 {
 public:

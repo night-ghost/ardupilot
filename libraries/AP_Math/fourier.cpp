@@ -19,6 +19,7 @@
 
 Fourier_Analysis::Fourier_Analysis(){
 	_result_filter.set_cutoff_frequency(RESULT_FILTER_FREQ);
+	Set_Fourier_Analysis(BUF_SIZE);
 }
 
 void Fourier_Analysis::Set_Fourier_Analysis(int32_t buffer_size){
