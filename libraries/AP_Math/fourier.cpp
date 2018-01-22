@@ -167,11 +167,11 @@ float Fourier_Analysis::get_pitch_angle(void){
 	if(next_index==_buffer_size)
 		next_index=0;
 
-	float scale=(float)_buffer_size/2.0;
+	float scale=2.0/(float)(_buffer_size);
 
 
-	result.x = norm(_fourier_transform[0].x/scale, _fourier_transform[0].y/scale);
-	result.y = norm(_fourier_transform[1].x/scale, _fourier_transform[1].y/scale);
+	result.x = norm(_fourier_transform[0].x*scale, _fourier_transform[0].y*scale);
+	result.y = norm(_fourier_transform[1].x*scale, _fourier_transform[1].y*scale);
 	
 	return atanf(0.5*(result.x+result.y)/_signal_mean.z*_buffer_size);
 }
