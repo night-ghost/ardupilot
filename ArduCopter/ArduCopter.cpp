@@ -286,18 +286,40 @@ void Copter::loop()
 // Main loop - 400hz
 void Copter::fast_loop()
 {
+#if defined(DEBUG_FASTLOOP_TIME)
+    uint32_t t0 = micros();
+#endif
     // update INS immediately to get current gyro data populated
     ins.update();
+
+
+#if defined(DEBUG_FASTLOOP_TIME)
+    uint32_t now = micros(); static uint32_t t1 = now - t0; t0 = now;
+#endif
 
     // run low level rate controllers that only require IMU data
     attitude_control->rate_controller_run();
 
+#if defined(DEBUG_FASTLOOP_TIME)
+    uint32_t now = micros(); static uint32_t t2 = now - t0; t0 = now;
+#endif
+
     // send outputs to the motors library immediately
     motors_output();
+
+#if defined(DEBUG_FASTLOOP_TIME)
+    uint32_t now = micros(); static uint32_t t3 = now - t0; t0 = now;
+#endif
 
     // run EKF state estimator (expensive)
     // --------------------
     read_AHRS();
+
+
+#if defined(DEBUG_FASTLOOP_TIME)
+    uint32_t now = micros(); static uint32_t t4 = now - t0; t0 = now;
+#endif
+
 
 #if FRAME_CONFIG == HELI_FRAME
     update_heli_control_dynamics();
@@ -307,17 +329,43 @@ void Copter::fast_loop()
     // --------------------
     read_inertia();
 
+#if defined(DEBUG_FASTLOOP_TIME)
+    uint32_t now = micros(); static uint32_t t5 = now - t0; t0 = now;
+#endif
+
+
     // check if ekf has reset target heading or position
     check_ekf_reset();
+
+
+#if defined(DEBUG_FASTLOOP_TIME)
+    uint32_t now = micros(); static uint32_t t6 = now - t0; t0 = now;
+#endif
 
     // run the attitude controllers
     update_flight_mode();
 
+
+#if defined(DEBUG_FASTLOOP_TIME)
+    uint32_t now = micros(); static uint32_t t7 = now - t0; t0 = now;
+#endif
+
+
     // update home from EKF if necessary
     update_home_from_EKF();
 
+#if defined(DEBUG_FASTLOOP_TIME)
+    uint32_t now = micros(); static uint32_t t8 = now - t0; t0 = now;
+#endif
+
+
     // check if we've landed or crashed
     update_land_and_crash_detectors();
+
+#if defined(DEBUG_FASTLOOP_TIME)
+    uint32_t now = micros(); static uint32_t t9 = now - t0; t0 = now;
+#endif
+
 
 #if MOUNT == ENABLED
     // camera mount's fast update
