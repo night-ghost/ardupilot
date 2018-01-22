@@ -1,19 +1,19 @@
 /*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
- 
- //designed by Philippe Crochat / Anemos Technologies : pcrochat@anemos-technologies.com
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+//designed by Philippe Crochat / Anemos Technologies : pcrochat@anemos-technologies.com
 
 #include "fourier.h"
 
@@ -58,7 +58,7 @@ void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timin
 	float signal_temp[2];
 	
 	previous_index=_buffer_index-1;
-
+	
 	if(previous_index<0)
 		previous_index=_buffer_size-1;
 	
@@ -84,7 +84,7 @@ void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timin
 	
 	_angle_tot.x -= _timing[_buffer_index].dt*(_timing[_buffer_index].omega.x*cosf(actual_heading) - _timing[_buffer_index].omega.y*sinf(actual_heading));
 	_angle_tot.y -= _timing[_buffer_index].dt*(_timing[_buffer_index].omega.y*cosf(actual_heading) + _timing[_buffer_index].omega.x*sinf(actual_heading));
-
+	
 	
 	_signal_mean-=_signal[_buffer_index];
 	
@@ -94,7 +94,7 @@ void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timin
 		_phase[_buffer_index]-=M_2PI;
 	
 	new_timing->T=_timing[previous_index].T+new_timing->dt;
-
+	
 	_signal_mean+=*new_sample;
 	
 	signal_current=*new_sample;//-_signal_mean/_buffer_size;
@@ -109,18 +109,18 @@ void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timin
 		_fourier_transform[i].x += (fourier_coef.x*signal_temp[i]);
 		_fourier_transform[i].y += (fourier_coef.y*signal_temp[i]);
 	}
-
+	
 	actual_heading=_phase[_buffer_index]-actual_yaw;
 	
 	_angle_tot.x += _timing[_buffer_index].dt*(_timing[_buffer_index].omega.x*cosf(actual_heading) - _timing[_buffer_index].omega.y*sinf(actual_heading));
 	_angle_tot.y += _timing[_buffer_index].dt*(_timing[_buffer_index].omega.y*cosf(actual_heading) + _timing[_buffer_index].omega.x*sinf(actual_heading));
-
+	
 	
 	_signal[_buffer_index]=*new_sample;
 	_timing[_buffer_index]=*new_timing;
-
+	
 	_buffer_index++;
-
+	
 	if(_buffer_index>=_buffer_size)
 		_buffer_index=0;
 	
@@ -137,7 +137,7 @@ void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timin
 void Fourier_Analysis::accumulate_discrete(Vector3f new_sample, float dt, Vector3f omega)
 {
 	Timing_Struct new_timing;
-
+	
 	new_timing.dt=dt;
 	new_timing.omega=omega;
 	
@@ -166,10 +166,10 @@ float Fourier_Analysis::get_pitch_angle(void){
 	
 	if(next_index==_buffer_size)
 		next_index=0;
-
+	
 	float scale=2.0/(float)(_buffer_size);
-
-
+	
+	
 	result.x = norm(_fourier_transform[0].x*scale, _fourier_transform[0].y*scale);
 	result.y = norm(_fourier_transform[1].x*scale, _fourier_transform[1].y*scale);
 	
