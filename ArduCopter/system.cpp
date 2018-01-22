@@ -454,6 +454,7 @@ uint8_t Copter::get_frame_mav_type()
     switch ((AP_Motors::motor_frame_class)g2.frame_class.get()) {
         case AP_Motors::MOTOR_FRAME_QUAD:
         case AP_Motors::MOTOR_FRAME_UNDEFINED:
+        case AP_Motors::MOTOR_FRAME_ROTATIONAL_DUAL:
             return MAV_TYPE_QUADROTOR;
         case AP_Motors::MOTOR_FRAME_HEXA:
         case AP_Motors::MOTOR_FRAME_Y6:

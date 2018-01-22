@@ -57,6 +57,7 @@
 #include <AC_AttitudeControl/AC_PosControl.h>      // Position control library
 #include <RC_Channel/RC_Channel.h>         // RC Channel Library
 #include <AP_Motors/AP_Motors.h>          // AP Motors library
+#include <AP_Motors/AP_Motors_Class.h>   // motor type library
 #include <AP_RangeFinder/AP_RangeFinder.h>     // Range finder library
 #include <AP_Proximity/AP_Proximity.h>
 #include <AP_Stats/AP_Stats.h>     // statistics library

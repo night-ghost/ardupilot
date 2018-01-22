@@ -621,11 +621,10 @@ void Copter::read_AHRS(void)
 #endif
 
     // we tell AHRS to skip INS update as we have already done it in fast_loop()
-#if FRAME_CONFIG==ROT_FRAME
-	ahrs.update(true, false);
-#else
-    ahrs.update(true, true);
-#endif
+    if(g2.frame_class==AP_Motors::MOTOR_FRAME_ROTATIONAL_DUAL)
+    	ahrs.update(true, false);
+    else
+    	ahrs.update(true, true);
 }
 
 // read baro and rangefinder altitude at 10hz
