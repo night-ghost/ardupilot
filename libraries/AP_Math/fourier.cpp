@@ -91,7 +91,7 @@ void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timin
 	_phase[_buffer_index]=_phase[previous_index]+new_timing->omega.z*new_timing->dt;
 	
 	if(_phase[_buffer_index]>M_PI)
-		_phase[_buffer_index]-=2*M_PI;
+		_phase[_buffer_index]-=M_2PI;
 	
 	new_timing->T=_timing[previous_index].T+new_timing->dt;
 
@@ -181,7 +181,7 @@ void Fourier_Analysis::synchronize_fourier_phase(float instant_heading)
 {
 	if(instant_heading>M_PI)
 	{
-		instant_heading-=2*M_PI;
+		instant_heading-=M_2PI;
 	}
 	
 	_phase[_buffer_index]=instant_heading;
@@ -199,7 +199,7 @@ Vector2f Fourier_Analysis::get_yaw_angle(void){
 		result.x+=M_PI;
 		
 		if(result.x>M_PI)
-			result.x-=2*M_PI;
+			result.x-=M_2PI;
 	}
 	
 	if(_fourier_transform[1].x<0)
@@ -207,7 +207,7 @@ Vector2f Fourier_Analysis::get_yaw_angle(void){
 		result.y+=M_PI;
 		
 		if(result.y>M_PI)
-			result.y-=2*M_PI;
+			result.y-=M_2PI;
 	}
 	
 	return result;
