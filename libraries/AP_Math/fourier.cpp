@@ -31,20 +31,17 @@ void Fourier_Analysis::Set_Fourier_Analysis(int32_t buffer_size){
 }
 
 Fourier_Analysis::~Fourier_Analysis(){
-	if(_signal != nullptr)
-	{
+	if (_signal != nullptr){
 		free(_signal);
 		_signal=nullptr;
 	}
 	
-	if(_timing != nullptr)
-	{
+	if (_timing != nullptr){
 		free(_timing);
 		_timing=nullptr;
 	}
 	
-	if(_phase != nullptr)
-	{
+	if (_phase != nullptr){
 		free(_phase);
 		_phase=nullptr;
 	}
@@ -59,8 +56,9 @@ void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timin
 	
 	previous_index=_buffer_index-1;
 	
-	if(previous_index<0)
+	if (previous_index<0){
 		previous_index=_buffer_size-1;
+	}
 	
 	Vector3f signal_current=_signal[_buffer_index];//-_signal_mean/_buffer_size;
 	Vector2f fourier_coef;
@@ -73,8 +71,7 @@ void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timin
 	signal_temp[0]=signal_current.x;
 	signal_temp[1]=signal_current.y;
 	
-	for(i=0;i<2;i++)
-	{
+	for(i=0;i<2;i++){
 		_fourier_transform[i].x -= (fourier_coef.x*signal_temp[i]);
 		_fourier_transform[i].y -= (fourier_coef.y*signal_temp[i]);
 	}
@@ -90,8 +87,9 @@ void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timin
 	
 	_phase[_buffer_index]=_phase[previous_index]+new_timing->omega.z*new_timing->dt;
 	
-	if(_phase[_buffer_index]>M_PI)
+	if (_phase[_buffer_index]>M_PI){
 		_phase[_buffer_index]-=M_2PI;
+	}
 	
 	new_timing->T=_timing[previous_index].T+new_timing->dt;
 	
@@ -104,8 +102,7 @@ void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timin
 	signal_temp[0]=signal_current.x;
 	signal_temp[1]=signal_current.y;
 	
-	for(i=0;i<2;i++)
-	{
+	for(i=0;i<2;i++){
 		_fourier_transform[i].x += (fourier_coef.x*signal_temp[i]);
 		_fourier_transform[i].y += (fourier_coef.y*signal_temp[i]);
 	}
@@ -121,21 +118,21 @@ void Fourier_Analysis::accumulate(Vector3f *new_sample, Timing_Struct *new_timin
 	
 	_buffer_index++;
 	
-	if(_buffer_index>=_buffer_size)
+	if (_buffer_index>=_buffer_size){
 		_buffer_index=0;
+	}
 	
 	new_result.x=get_pitch_angle();
 	new_result.y=get_yaw_angle().x;
 	
 	_last_result = _result_filter.apply(new_result,  new_timing->dt);
 	
-	if (_last_result.is_nan() || _last_result.is_inf()) {
+	if (_last_result.is_nan() || _last_result.is_inf()){
 		_result_filter.reset();
 	}
 }
 
-void Fourier_Analysis::accumulate_discrete(Vector3f new_sample, float dt, Vector3f omega)
-{
+void Fourier_Analysis::accumulate_discrete(Vector3f new_sample, float dt, Vector3f omega){
 	Timing_Struct new_timing;
 	
 	new_timing.dt=dt;
@@ -144,18 +141,17 @@ void Fourier_Analysis::accumulate_discrete(Vector3f new_sample, float dt, Vector
 	this->accumulate(&new_sample, &new_timing);
 }
 
-float Fourier_Analysis::get_phase(void)
-{
+float Fourier_Analysis::get_phase(void){
 	int32_t last_index=_buffer_index-1;
 	
-	if(last_index<0)
+	if(last_index<0){
 		last_index=_buffer_size-1;
+	}
 	
 	return _phase[last_index];
 }
 
-Vector2f Fourier_Analysis::get_result()
-{
+Vector2f Fourier_Analysis::get_result(){
 	return _last_result;
 }
 
@@ -164,8 +160,9 @@ float Fourier_Analysis::get_pitch_angle(void){
 	
 	Vector2f result;
 	
-	if(next_index==_buffer_size)
+	if (next_index==_buffer_size){
 		next_index=0;
+	}
 	
 	float scale=2.0/(float)(_buffer_size);
 	
@@ -177,10 +174,8 @@ float Fourier_Analysis::get_pitch_angle(void){
 }
 
 //synchronize heading with compass value
-void Fourier_Analysis::synchronize_fourier_phase(float instant_heading)
-{
-	if(instant_heading>M_PI)
-	{
+void Fourier_Analysis::synchronize_fourier_phase(float instant_heading){
+	if (instant_heading>M_PI){
 		instant_heading-=M_2PI;
 	}
 	
@@ -194,20 +189,20 @@ Vector2f Fourier_Analysis::get_yaw_angle(void){
 	result.x = atanf(_fourier_transform[0].y/_fourier_transform[0].x);
 	result.y = atanf(_fourier_transform[1].y/_fourier_transform[1].x);
 	
-	if(_fourier_transform[0].x<0)
-	{
+	if (_fourier_transform[0].x<0){
 		result.x+=M_PI;
 		
-		if(result.x>M_PI)
+		if(result.x>M_PI){
 			result.x-=M_2PI;
+		}
 	}
 	
-	if(_fourier_transform[1].x<0)
-	{
+	if (_fourier_transform[1].x<0){
 		result.y+=M_PI;
 		
-		if(result.y>M_PI)
+		if(result.y>M_PI){
 			result.y-=M_2PI;
+		}
 	}
 	
 	return result;
