@@ -85,7 +85,7 @@ AP_AHRS_DCM::update(bool skip_ins_update)
     // Perform drift correction
     drift_correction(delta_t);
 
-    if(_ins.get_gyro().z>GYRO_MAX_SPIN_RATE_RAD || _ins.get_gyro().z<-GYRO_MAX_SPIN_RATE_RAD)
+    if(abs(_ins.get_gyro().z)>GYRO_MAX_SPIN_RATE_RAD)
     {
     	//hal.console->printf("pitch, yaw:%f	%f\n\n", _ins.get_pitch_angle_FT()*180.0/3.14, _ins.get_yaw_angle_FT()*180.0/3.14);
     	
