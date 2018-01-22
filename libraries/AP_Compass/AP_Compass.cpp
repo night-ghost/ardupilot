@@ -26,6 +26,7 @@
 #include "AP_Compass_UAVCAN.h"
 #endif
 #include "AP_Compass_MMC3416.h"
+#include "AP_Compass_MAG3110.h"
 #include "AP_Compass.h"
 
 extern AP_HAL::HAL& hal;
@@ -860,6 +861,9 @@ void Compass::_detect_backends(void)
 
     ADD_BACKEND(DRIVER_BMM150, AP_Compass_BMM150::probe(*this, hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_COMPASS_BMM150_I2C_ADDR)),
                 AP_Compass_BMM150::name, true);
+
+    ADD_BACKEND(DRIVER_MAG3110, AP_Compass_MAG3110::probe(*this, hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_MAG3110_I2C_ADDR), ROTATION_NONE),
+                AP_Compass_MAG3110::name, true);
 #endif
 
 #if HAL_WITH_UAVCAN

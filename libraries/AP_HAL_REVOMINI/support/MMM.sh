@@ -11,20 +11,20 @@ echo $ROOT
 ( # RevoMini board
  cd $ROOT/ArduCopter
  make revomini-clean
- make revomini VERBOSE=1 BOARD=revomini_MP32V1F4 && (
+ make revomini VERBOSE=1 BOARD=revomini_Revolution && (
 
- cp $ROOT/ArduCopter/revomini_MP32V1F4.bin $ROOT/Release/Copter
- cp $ROOT/ArduCopter/revomini_MP32V1F4.hex $ROOT/Release/Copter
- cp $ROOT/ArduCopter/revomini_MP32V1F4.dfu $ROOT/Release/Copter
+ cp $ROOT/ArduCopter/revomini_Revolution.bin $ROOT/Release/Copter
+ cp $ROOT/ArduCopter/revomini_Revolution.hex $ROOT/Release/Copter
+ cp $ROOT/ArduCopter/revomini_Revolution.dfu $ROOT/Release/Copter
  )
 ) && (
  cd $ROOT/ArduPlane
  make revomini-clean
- make revomini VERBOSE=1 BOARD=revomini_MP32V1F4 && (
+ make revomini VERBOSE=1 BOARD=revomini_Revolution && (
 
- cp $ROOT/ArduPlane/revomini_MP32V1F4.bin $ROOT/Release/Plane
- cp $ROOT/ArduPlane/revomini_MP32V1F4.hex $ROOT/Release/Plane
- cp $ROOT/ArduPlane/revomini_MP32V1F4.dfu $ROOT/Release/Plane
+ cp $ROOT/ArduPlane/revomini_Revolution.bin $ROOT/Release/Plane
+ cp $ROOT/ArduPlane/revomini_Revolution.hex $ROOT/Release/Plane
+ cp $ROOT/ArduPlane/revomini_Revolution.dfu $ROOT/Release/Plane
  )
 ) && ( # AirBotF4 board
  cd $ROOT/ArduCopter

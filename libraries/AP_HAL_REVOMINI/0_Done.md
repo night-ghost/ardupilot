@@ -149,10 +149,12 @@
 * all waits for SD answers moved to ISR as finite state machine
 * a try to support Ardupilot parameters on builtin OSD (untested)
 * removed unnecessary diagnostics which cause MAVlink corruption
-* added gyro drift compensation, parameter HAL_CORRECT_GYRO is a integrator time in seconds.
+* added gyro drift compensation, parameter HAL_CORRECT_GYRO is a integrator time in seconds (30 is a good starting point).
 * added diagnosis of the cause of failsafe triggering
-* Parameter HAL_RC_FS now sets a time of RC failsafe in seconds
+* Parameter HAL_RC_FS now sets a time of RC failsafe in seconds (60 is a good value for digital protocols)
 * added MAVlink messages about SD card errors
+* renamed board *_MP32V1F4 to *_Revolution to simplify things
+* fixed bug in RC_Input that cause permanent Failsafe
 * ...
 * a lot of minor enhancements
 

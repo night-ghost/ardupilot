@@ -25,7 +25,7 @@ include $(MK_DIR)/find_tools.mk
 PATH:=$(PATH):/usr/local/bin
 
 # these default to a Maple Flash build.
-BOARD            ?= revomini_MP32V1F4
+BOARD            ?= revomini_Revolution
 MEMORY_TARGET    ?= flash
 
 ##

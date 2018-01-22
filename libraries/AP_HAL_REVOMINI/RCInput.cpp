@@ -217,19 +217,21 @@ uint16_t REVOMINIRCInput::read(uint8_t ch)
         for(uint8_t i=0; i<num_parsers;i++) {
             
             const _parser *p = parsers[i];
-            pulse = p->get_last_signal();
-            last  = p->get_last_change();
+            uint64_t pt = p->get_last_signal();
+            uint64_t lt = p->get_last_change();
             
-            uint32_t dt = now-pulse; // time from signal
+            uint32_t dt = now-pt; // time from signal
             
-            if( pulse >_last_read &&  // data is newer than last
+            if( pt >_last_read &&  // data is newer than last
                 dt<best_t &&          // and most recent
-                ((now - last ) < dead_time || !rc_failsafe_enabled)) // and time from last change less than DEAD_TIME
+                ((now - lt ) < dead_time || !rc_failsafe_enabled)) // and time from last change less than DEAD_TIME
             {
                 best_t = dt;
                 data            = p->get_val(ch);
                 _valid_channels = p->get_valid_channels();                
-                got = i+1;
+                pulse = pt;
+                last  = lt;
+                got   = i+1;
             }
         }
         // now we have a most recent data
