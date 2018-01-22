@@ -11,6 +11,8 @@
 
 #include "ch.h"
 
+#define IOMCU_MAX_CHANNELS 16
+
 class AP_IOMCU {
 public:
     AP_IOMCU(AP_HAL::UARTDriver &uart);
@@ -69,7 +71,10 @@ public:
 
     // set default output rate
     void set_default_rate(uint16_t rate_hz);
-    
+
+    // set to oneshot mode
+    void set_oneshot_mode(void);
+
 private:
     AP_HAL::UARTDriver &uart;
 
@@ -109,8 +114,6 @@ private:
     void print_debug(void);
     void discard_input(void);
     void event_failed(uint8_t event);
-    
-    static const uint8_t max_channels = 16;
     
     // PAGE_STATUS values
     struct PACKED {
@@ -156,7 +159,7 @@ private:
         uint16_t data;
         uint16_t frame_count;
         uint16_t lost_frame_count;
-        uint16_t pwm[max_channels];
+        uint16_t pwm[IOMCU_MAX_CHANNELS];
         uint16_t last_frame_count;
         uint32_t last_input_us;
     } rc_input;
@@ -164,12 +167,12 @@ private:
     // output pwm values
     struct {
         uint8_t num_channels;
-        uint16_t pwm[max_channels];
+        uint16_t pwm[IOMCU_MAX_CHANNELS];
     } pwm_out;
 
     // read back pwm values
     struct {
-        uint16_t pwm[max_channels];
+        uint16_t pwm[IOMCU_MAX_CHANNELS];
     } pwm_in;
 
     // output rates
@@ -182,7 +185,9 @@ private:
 
     // IMU heater duty cycle
     uint8_t heater_duty_cycle;
-    
+
+    uint32_t last_servo_out_us;
+
     bool corked;
 };
 

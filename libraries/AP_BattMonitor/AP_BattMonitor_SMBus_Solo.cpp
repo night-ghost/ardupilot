@@ -29,8 +29,9 @@
 // Constructor
 AP_BattMonitor_SMBus_Solo::AP_BattMonitor_SMBus_Solo(AP_BattMonitor &mon,
                                                    AP_BattMonitor::BattMonitor_State &mon_state,
+                                                   AP_BattMonitor_Params &params,
                                                    AP_HAL::OwnPtr<AP_HAL::I2CDevice> dev)
-    : AP_BattMonitor_SMBus(mon, mon_state, std::move(dev))
+    : AP_BattMonitor_SMBus(mon, mon_state, params, std::move(dev))
 {
     _pec_supported = true;
 }
@@ -82,8 +83,7 @@ void AP_BattMonitor_SMBus_Solo::timer()
 
         if (_button_press_count >= BATTMONITOR_SMBUS_SOLO_BUTTON_DEBOUNCE) {
             // battery will power off
-            _state.is_powering_off = true;
-
+            AP_Notify::flags.powering_off = true;
         } else if (pressed) {
             // battery will power off if the button is held
             _button_press_count++;
@@ -91,9 +91,8 @@ void AP_BattMonitor_SMBus_Solo::timer()
         } else {
             // button released, reset counters
             _button_press_count = 0;
-            _state.is_powering_off = false;
+            AP_Notify::flags.powering_off = false;
         }
-        AP_Notify::flags.powering_off = _state.is_powering_off;
     }
 
     read_temp();

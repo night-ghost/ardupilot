@@ -33,6 +33,16 @@ extern const AP_HAL::HAL& hal;
 
 I2CBus I2CDeviceManager::businfo[ARRAY_SIZE_SIMPLE(I2CD)];
 
+#ifndef HAL_I2C_BUS_BASE
+#define HAL_I2C_BUS_BASE 0
+#endif
+
+// default to 100kHz clock for maximum reliability. This can be
+// changed in hwdef.dat
+#ifndef HAL_I2C_MAX_CLOCK
+#define HAL_I2C_MAX_CLOCK 100000
+#endif
+
 // get a handle for DMA sharing DMA channels with other subsystems
 void I2CBus::dma_init(void)
 {
@@ -52,8 +62,12 @@ I2CDeviceManager::I2CDeviceManager(void)
           drop the speed to be the minimum speed requested
          */
         businfo[i].i2ccfg.op_mode = OPMODE_I2C;
-        businfo[i].i2ccfg.clock_speed = 400000;
-        businfo[i].i2ccfg.duty_cycle = FAST_DUTY_CYCLE_2;
+        businfo[i].i2ccfg.clock_speed = HAL_I2C_MAX_CLOCK;
+        if (businfo[i].i2ccfg.clock_speed <= 100000) {
+            businfo[i].i2ccfg.duty_cycle = STD_DUTY_CYCLE;
+        } else {
+            businfo[i].i2ccfg.duty_cycle = FAST_DUTY_CYCLE_2;
+        }
     }
 }
 
@@ -64,7 +78,7 @@ I2CDevice::I2CDevice(uint8_t busnum, uint8_t address, uint32_t bus_clock, bool u
     _timeout_ms(timeout_ms),
     bus(I2CDeviceManager::businfo[busnum])
 {
-    set_device_bus(busnum);
+    set_device_bus(busnum+HAL_I2C_BUS_BASE);
     set_device_address(address);
     asprintf(&pname, "I2C:%u:%02x",
              (unsigned)busnum, (unsigned)address);
@@ -205,6 +219,7 @@ I2CDeviceManager::get_device(uint8_t bus, uint8_t address,
                              bool use_smbus,
                              uint32_t timeout_ms)
 {
+    bus -= HAL_I2C_BUS_BASE;
     if (bus >= ARRAY_SIZE_SIMPLE(I2CD)) {
         return AP_HAL::OwnPtr<AP_HAL::I2CDevice>(nullptr);
     }
