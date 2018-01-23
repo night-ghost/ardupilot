@@ -1,5 +1,8 @@
 /* -*- Mode: C++; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /*
+
+(c) 2017 night_ghost@ykoctpa.ru
+ 
  * I2CDriver.cpp --- AP_HAL_REVOMINI I2C driver.
  *
  */

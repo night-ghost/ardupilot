@@ -2,9 +2,10 @@
 
 
 /*
+(c) 2017 night_ghost@ykoctpa.ru
+ 
     SD card and Dataflash low-level driver
     
-    night_ghost@ykoctpa.ru 2017
 
 */
 

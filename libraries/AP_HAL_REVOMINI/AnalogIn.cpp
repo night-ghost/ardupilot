@@ -14,7 +14,10 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 /*
-  Copied from: Flymaple port by Mike McCauley
+
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+based on: Flymaple port by Mike McCauley
  */
 
 #pragma GCC optimize ("O2")

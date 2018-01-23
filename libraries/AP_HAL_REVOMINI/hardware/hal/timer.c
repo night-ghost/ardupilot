@@ -1,7 +1,9 @@
 /******************************************************************************
  * The MIT License
 
- based on:
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+based on:
 
  *
  * Copyright (c) 2011 LeafLabs, LLC.

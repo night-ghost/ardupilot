@@ -24,6 +24,8 @@
  *****************************************************************************/
 
 /**
+    (c) 2017 night_ghost@ykoctpa.ru
+ 
  
 also see https://github.com/mahowik/MahoRotorF4-Discovery/blob/master/src/drv/drv_pwm_fy90q.c
  

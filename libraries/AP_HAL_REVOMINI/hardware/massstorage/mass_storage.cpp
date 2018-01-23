@@ -1,3 +1,9 @@
+/*
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+
+*/
+
 #include <AP_HAL_REVOMINI/AP_HAL_REVOMINI_Namespace.h>
 
 #include "mass_storage.h"

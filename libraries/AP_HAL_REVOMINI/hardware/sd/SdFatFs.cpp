@@ -1,4 +1,6 @@
 /*
+(c) 2017 night_ghost@ykoctpa.ru
+ 
 
     intermediate layer for FatFs 
 

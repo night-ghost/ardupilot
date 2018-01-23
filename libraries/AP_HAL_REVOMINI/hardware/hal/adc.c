@@ -1,3 +1,12 @@
+/*
+
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+
+based on: LeafLabs
+
+*/
+
 #pragma GCC optimize ("O2")
 
 #include <hal.h>

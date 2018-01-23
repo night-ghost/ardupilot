@@ -1,3 +1,8 @@
+/*
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+*/
+
 #include <AP_HAL/HAL.h>
 #include <AP_Param_Helper/AP_Param_Helper.h>
 

@@ -1,7 +1,9 @@
 /*
  * UARTDriver.cpp --- AP_HAL_REVOMINI UART driver.
+
+ (c) 2017 night_ghost@ykoctpa.ru
  
- Based on:
+based on:
  
  * UART driver
  * Copyright (C) 2013, Virtualrobotix.com Roberto Navoni , Emile 

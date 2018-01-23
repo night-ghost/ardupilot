@@ -1,6 +1,14 @@
 /* *****************************************************************************
  * The MIT License
  *
+ exception handling and task switcher, (C) 2017 night_ghost@ykoctpa.ru
+
+  adedd some useful info to __error handler and debugger, dual stacks support and task switching code
+ 
+ 
+    based on:
+ 
+ 
  * Copyright (c) 2010 Perry Hung.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,8 +29,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  * ****************************************************************************/
-# modified by NG to give some useful info to __error handler
-# and added task switching code
 
 # On an exception, push a fake stack thread mode stack frame and redirect
 # thread execution to a thread mode error handler

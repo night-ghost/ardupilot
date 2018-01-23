@@ -1,6 +1,10 @@
 /******************************************************************************
  * The MIT License
  *
+ (c) 2017 night_ghost@ykoctpa.ru
+ 
+based on:
+ 
  * Copyright (c) 2010 Michael Hope.
  *
  * Permission is hereby granted, free of charge, to any person

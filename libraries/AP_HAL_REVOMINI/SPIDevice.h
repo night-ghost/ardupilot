@@ -1,5 +1,10 @@
 /// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 /*
+
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+based on:
+
  * Copyright (C) 2015  Intel Corporation. All rights reserved.
  *
  * This file is free software: you can redistribute it and/or modify it

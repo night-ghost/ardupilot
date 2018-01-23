@@ -13,6 +13,10 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 /*
+
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+
   This uses 2*16k pages of FLASH ROM to emulate an EEPROM
   This storage is retained after power down, and survives reloading of firmware via bootloader
   All multi-byte accesses are reduced to single byte access so that can span EEPROM block boundaries

@@ -1,5 +1,12 @@
 /// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 
+/*
+
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+
+*/
+
 #pragma GCC optimize ("O2")
 
 #include <AP_HAL_REVOMINI/AP_HAL_REVOMINI.h>

@@ -444,7 +444,7 @@ void SetSysClock(uint8_t oc)
     RCC->CR |= RCC_CR_PLLON | cr_flags;
 
 
-    /* Wait till the main PLL is ready */
+    // Wait till the main PLL is ready. Yes this is endless loop but this is a very early stage
     while((RCC->CR & RCC_CR_PLLRDY) == 0)  {  }
    
    

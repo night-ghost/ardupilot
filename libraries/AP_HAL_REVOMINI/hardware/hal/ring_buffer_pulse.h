@@ -1,5 +1,8 @@
 
 /**
+
+(c) 2017 night_ghost@ykoctpa.ru
+ 
     based on: ring_buffer.h
 
  * @file ring_buffer_pulse.h

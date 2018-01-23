@@ -1,7 +1,7 @@
 /*
   wrapper for OSD code (https://github.com/night-ghost/minimosd-extra) to run in the HAL as independent process
 
-    night_ghost@ykoctpa.ru 2017
+    (c) night_ghost@ykoctpa.ru 2017
 
 */
 

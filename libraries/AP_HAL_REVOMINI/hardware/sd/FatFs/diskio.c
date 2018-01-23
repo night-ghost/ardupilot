@@ -1,6 +1,13 @@
 #pragma GCC optimize ("O2")
 
+
 /*-----------------------------------------------------------------------*/
+/*
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+based on:
+*/
+
 /* Low level disk I/O module skeleton for FatFs     (C)ChaN, 2016        */
 /*-----------------------------------------------------------------------*/
 /* If a working storage control module is available, it should be        */

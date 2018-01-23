@@ -1,3 +1,8 @@
+/*
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+*/
+
 #pragma GCC optimize ("O2")
 
 #include "gpio_hal.h"

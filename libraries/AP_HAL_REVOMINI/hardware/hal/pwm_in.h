@@ -32,7 +32,6 @@
 #include <strings.h>
 #include "timer.h"
 
-//typedef void (*rcc_clockcmd)(uint32_t, FunctionalState);
 
 #ifdef __cplusplus
   extern "C" {

@@ -1,4 +1,9 @@
 /*
+
+    (c) 2017 night_ghost@ykoctpa.ru
+ 
+based on: ST appnote
+ 
  * SerialDriver.cpp --- AP_HAL_REVOMINI SoftSerial driver.
  *
  */

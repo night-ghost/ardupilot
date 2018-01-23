@@ -1,3 +1,9 @@
+/*
+    (c) 2017 night_ghost@ykoctpa.ru
+ 
+based on: BetaFlight NRF driver
+*/
+
 #include <exti.h>
 #include <timer.h>
 #include "RCInput.h"

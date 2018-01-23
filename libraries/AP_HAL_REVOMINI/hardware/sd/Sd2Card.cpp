@@ -1,9 +1,11 @@
-#pragma GCC optimize ("O2")
-
 /*
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+
     a low-level interface for SD card driver
 
 */
+#pragma GCC optimize ("O2")
 
 #include "Sd2Card.h"
 #include "SdFatFs.h"

@@ -3,6 +3,10 @@
 
     see ST AN4838
 
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+based on: datasheet
+
 */
 
 #pragma once

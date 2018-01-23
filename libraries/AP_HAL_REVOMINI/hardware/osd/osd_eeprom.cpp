@@ -1,11 +1,11 @@
 /*
-
+(c) 2017 night_ghost@ykoctpa.ru
+ 
     EEPROM emulation for OSD needs. Uses 1 16K  page of flash to provide 2K of eeprom so it does wear 
      leveling of 8, excluding the case when we should write 0xff value, but OSD never writes it
 
     in time of page erase all data buffered in RAM so will be lost in case of unexpected power off, but there is no in-flight writes
 
-    night_ghost@ykoctpa.ru 2017
 */
 
 #include "osd_eeprom.h"

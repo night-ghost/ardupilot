@@ -1,4 +1,7 @@
 /*
+    (c) 2017 night_ghost@ykoctpa.ru
+ 
+
  * UART_PPM.cpp --- fake UART to get serial data from PPM inputs
  *
  */

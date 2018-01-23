@@ -1,4 +1,6 @@
 /*
+  (c) 2017 night_ghost@ykoctpa.ru
+  
  * UART_OSD.cpp --- AP_HAL_REVOMINI OSD implementation via fake UART
  *
  */

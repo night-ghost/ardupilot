@@ -210,7 +210,6 @@ void Copter::stats_update(void) // can took ~7700uS for parameter save
 void Copter::loop()
 {
 
-
 #if defined(DEBUG_LOOP_TIME)
     uint32_t t0 = micros(); 
     static volatile uint32_t dt0;

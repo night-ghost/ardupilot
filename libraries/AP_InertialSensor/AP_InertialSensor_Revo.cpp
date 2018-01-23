@@ -343,25 +343,6 @@ bool AP_InertialSensor_Revo::_init()
     return success;
 }
 
-/*
-void AP_InertialSensor_Revo::_fifo_reset()
-{
-    uint8_t user_ctrl = _last_stat_user_ctrl;
-    user_ctrl &= ~(BIT_USER_CTRL_FIFO_RESET | BIT_USER_CTRL_FIFO_EN);
-    _dev->set_speed(AP_HAL::Device::SPEED_LOW);
-    _register_write(MPUREG_FIFO_EN, 0);
-    _register_write(MPUREG_USER_CTRL, user_ctrl);
-    _register_write(MPUREG_USER_CTRL, user_ctrl | BIT_USER_CTRL_FIFO_RESET);
-//    _register_write(MPUREG_USER_CTRL, user_ctrl | BIT_USER_CTRL_FIFO_EN);
-//    _register_write(MPUREG_FIFO_EN, BIT_XG_FIFO_EN | BIT_YG_FIFO_EN | BIT_ZG_FIFO_EN | BIT_ACCEL_FIFO_EN | BIT_TEMP_FIFO_EN, true);
-//    hal.scheduler->delay_microseconds(1);
-    _dev->set_speed(AP_HAL::Device::SPEED_HIGH);
-//    _last_stat_user_ctrl = user_ctrl | BIT_USER_CTRL_FIFO_EN;
-
-    notify_accel_fifo_reset(_accel_instance);
-    notify_gyro_fifo_reset(_gyro_instance);
-}
-*/
 
 void AP_InertialSensor_Revo::_start(){
     // initially run the bus at low speed

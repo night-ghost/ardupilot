@@ -1,3 +1,9 @@
+/*
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+based on: Leaflabs
+
+*/
 #pragma GCC optimize ("O2")
 
 

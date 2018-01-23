@@ -1,5 +1,10 @@
 /*
- * this file got from Cleanflight.
+
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+based on:
+
+ * from Cleanflight.
  *
  * for info about Hagens AVRootloader:
  * http://www.mikrocontroller.net/topic/avr-bootloader-mit-verschluesselung

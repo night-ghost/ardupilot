@@ -1,3 +1,10 @@
+/*
+    (c) 2017 night_ghost@ykoctpa.ru
+ 
+based on: datasheet
+
+*/
+
 #pragma GCC optimize ("O2")
 
 #include "i2c.h"

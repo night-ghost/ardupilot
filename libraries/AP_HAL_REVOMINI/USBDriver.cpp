@@ -1,4 +1,7 @@
 /*
+    (c) 2017 night_ghost@ykoctpa.ru
+ 
+
  * USBDriver.cpp --- AP_HAL_REVOMINI USB-UART driver.
  *
  */

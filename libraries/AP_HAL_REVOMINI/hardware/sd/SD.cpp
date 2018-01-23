@@ -9,6 +9,8 @@
 * provide last error code and its text description
 * added tracking of opened files for global sync()
 * some new functions added
+* reduced memory usage by half
+    
     
   original SparkFun readme below
 ----------------------------------------------

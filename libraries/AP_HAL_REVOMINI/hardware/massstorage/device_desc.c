@@ -1,4 +1,8 @@
 /**
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+based on:
+
   ******************************************************************************
   * @file    usbd_desc.c
   * @author  MCD Application Team

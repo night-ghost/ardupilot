@@ -1,4 +1,7 @@
 /*
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+based on: Cleanflight
 
  * have a look at https://github.com/sim-/tgy/blob/master/boot.inc
  * for info about the stk500v2 implementation

@@ -1,6 +1,10 @@
 /// -*- tab-width: 4; Mode: C++; c-basic-offset: 4; indent-tabs-mode: nil -*-
 
-#pragma GCC push_options
+/*
+(c) 2017 night_ghost@ykoctpa.ru
+ 
+*/
+
 
 #pragma GCC optimize ("O2")
 
