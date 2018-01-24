@@ -22,3 +22,9 @@
 [submodule "modules/ChibiOS"]
 	path = modules/ChibiOS
 	url = git://github.com/ArduPilot/ChibiOS.git
+[submodule "libraries/AP_HAL_REVOMINI/hardware/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/Libraries"]
+	path = libraries/AP_HAL_REVOMINI/hardware/STM32F4xx_DSP_StdPeriph_Lib_V1.1.0/Libraries
+	url = https://github.com/night-ghost/SPL
+[submodule "libraries/AP_HAL_REVOMINI/support/minimosd-extra"]
+	path = libraries/AP_HAL_REVOMINI/support/minimosd-extra
+	url = https://github.com/night-ghost/minimosd-extra
