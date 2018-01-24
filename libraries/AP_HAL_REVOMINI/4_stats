@@ -73,3 +73,27 @@ task 6 (0x80ADCA1200070F8) time:    0.01% mean      6.2uS max    22uS full      
 task 7 (0x80569BD2000C968) time:    3.30% mean     27.8uS max    64uS full     170uS wait sem.     24uS free stack 0x184
 task 8 (0x0000000080B441D) time:    0.01% mean     82.3uS max   105uS full    5557uS wait sem.      0uS free stack 0x1A4
 
+// 1kHz, EKF3
+sched time: by timer  9.65% sw  3.83% in yield 84.38% sw 80.24% in tails  5.96% sw 96.52%
+task 0 (0x0000000080B7495) time:   23.56% mean     74.7uS max   135uS full       0uS wait sem.     21uS free stack 0xAD4
+task 1 (0x0000000080B82DD) time:   69.17% mean      5.5uS max    57uS full       0uS wait sem.      0uS free stack 0x94
+task 2 (0x0000000080B4CF9) time:    0.01% mean     93.1uS max   109uS full    1999uS wait sem.      0uS free stack 0x11C
+task 3 (0x80B8A65100057A8) time:    0.61% mean      8.2uS max    51uS full     146uS wait sem.      0uS free stack 0x7C
+task 4 (0x804EAC520007DD8) time:    0.50% mean     11.1uS max    56uS full     610uS wait sem.      0uS free stack 0x2D4
+task 5 (0x0000000080B86F9) time:    1.40% mean      9.8uS max    57uS full    1274uS wait sem.      0uS free stack 0x57C
+task 6 (0x8051B912000CA60) time:    0.56% mean     11.3uS max    52uS full     785uS wait sem.    159uS free stack 0x204
+task 7 (0x805A3552000CAF8) time:    3.95% mean     24.2uS max    86uS full     195uS wait sem.     19uS free stack 0x184
+task 8 (0x0000000080B79E9) time:    0.01% mean     17.5uS max   115uS full   12108uS wait sem.      0uS free stack 0x1AC
+
+// 2kHz, EKF3
+sched time: by timer 10.97% sw  2.66% in yield 86.48% sw 92.35% in tails  2.55% sw 96.55%
+
+task 0 (0x0000000080B7495) time:   32.01% mean     37.5uS max   157uS full       0uS wait sem.      7uS free stack 0x9E4
+task 1 (0x0000000080B82DD) time:   60.99% mean      5.5uS max    53uS full       0uS wait sem.      0uS free stack 0x94
+task 2 (0x0000000080B4CF9) time:    0.02% mean     89.8uS max   117uS full    8635uS wait sem.      0uS free stack 0x11C
+task 3 (0x80B8A65100057A8) time:    0.59% mean      8.1uS max    48uS full     272uS wait sem.      0uS free stack 0x7C
+task 4 (0x804EAC520007DD8) time:    0.43% mean     11.4uS max    55uS full  702320uS wait sem. 701984uS free stack 0x2D4
+task 5 (0x0000000080B86F9) time:    1.78% mean      9.8uS max   104uS full   31833uS wait sem.      0uS free stack 0x57C
+task 6 (0x8051B912000CA60) time:    0.49% mean     11.6uS max    50uS full    1038uS wait sem.    386uS free stack 0x204
+task 7 (0x805A3552000CAF8) time:    3.45% mean     29.7uS max    79uS full     415uS wait sem.      0uS free stack 0x194
+task 8 (0x0000000080B79E9) time:    0.01% mean     16.6uS max   116uS full     633uS wait sem.      0uS free stack 0x1AC

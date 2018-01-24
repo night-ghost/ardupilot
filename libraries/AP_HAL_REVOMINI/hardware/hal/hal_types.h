@@ -67,7 +67,7 @@ extern uint32_t hal_micros();
  * Invalid stm32_pin_info adc_channel value.
  * @see stm32_pin_info
  */
-#define ADCx 0xFF
+#define nADC 0xFF
 
 
 /**

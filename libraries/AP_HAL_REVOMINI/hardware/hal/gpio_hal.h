@@ -36,7 +36,16 @@ typedef enum gpio_pin_mode {
     GPIO_PIN_MODE_LAST
 } gpio_pin_mode;
 
+#define  Bit_RESET 0
+#define  Bit_SET   1
 
+typedef enum
+{
+  GPIO_speed_2MHz   = 0x00, /*!< Low speed */
+  GPIO_speed_25MHz  = 0x01, /*!< Medium speed */
+  GPIO_speed_50MHz  = 0x02, /*!< Fast speed */
+  GPIO_speed_100MHz = 0x03  /*!< High speed on 30 pF (80 MHz Output max speed on 15 pF) */
+} GPIOSpeed_t;
 
 
 
@@ -149,19 +158,19 @@ static inline afio_exti_port gpio_exti_port(const gpio_dev* const dev)
 }
 
 
-static inline void gpio_set_speed(const gpio_dev* const dev, uint8_t pin, GPIOSpeed_TypeDef gpio_speed){
+static inline void gpio_set_speed(const gpio_dev* const dev, uint8_t pin, GPIOSpeed_t gpio_speed){
 /* Speed mode configuration */
     dev->GPIOx->OSPEEDR &= ~(GPIO_OSPEEDER_OSPEEDR0 << (pin * 2));
     dev->GPIOx->OSPEEDR |=  ((uint32_t)(gpio_speed) << (pin * 2));
 }
 
+
 static inline void afio_exti_select(afio_exti_num exti, afio_exti_port gpio_port)
 {
-    /* Check the parameters */
-    assert_param(IS_EXTI_PIN_SOURCE(exti));
-    assert_param(IS_EXTI_PORT_SOURCE(gpio_port));
-		
-    SYSCFG_EXTILineConfig(gpio_port, exti);
+  uint32_t tmp = ((uint32_t)0x0F) << (0x04 * (exti & (uint8_t)0x03));
+  SYSCFG->EXTICR[exti >> 0x02] &= ~tmp;
+  SYSCFG->EXTICR[exti >> 0x02] |= (((uint32_t)gpio_port) << (0x04 * (exti & (uint8_t)0x03)));
+
 }
 
 

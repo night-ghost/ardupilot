@@ -748,7 +748,7 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
     {
         const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_CS_PIN];
         gpio_set_mode(pp.gpio_device, pp.gpio_bit, GPIO_OUTPUT_PP);
-        gpio_set_speed(pp.gpio_device, pp.gpio_bit, GPIO_Speed_100MHz); 
+        gpio_set_speed(pp.gpio_device, pp.gpio_bit, GPIO_speed_100MHz); 
         gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);
     }
 
@@ -756,7 +756,7 @@ void osd_begin(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi){
     {
         const stm32_pin_info &pp = PIN_MAP[BOARD_OSD_RESET_PIN];
         gpio_set_mode(pp.gpio_device, pp.gpio_bit, GPIO_OUTPUT_PP);
-        gpio_set_speed(pp.gpio_device, pp.gpio_bit, GPIO_Speed_25MHz); 
+        gpio_set_speed(pp.gpio_device, pp.gpio_bit, GPIO_speed_25MHz); 
         gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
         delayMicroseconds(50);
         gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);

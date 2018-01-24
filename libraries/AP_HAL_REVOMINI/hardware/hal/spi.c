@@ -55,7 +55,26 @@ const spi_dev * const _SPI3 = &spi3;
 
 
 void spi_init(const spi_dev *dev) {
-    SPI_I2S_DeInit(dev->SPIx);
+    
+  if (dev->SPIx == SPI1) {
+    RCC_APB2PeriphResetCmd(RCC_APB2Periph_SPI1, ENABLE);
+    RCC_APB2PeriphResetCmd(RCC_APB2Periph_SPI1, DISABLE);
+  }  else if (dev->SPIx == SPI2)  {
+    RCC_APB1PeriphResetCmd(RCC_APB1Periph_SPI2, ENABLE);
+    RCC_APB1PeriphResetCmd(RCC_APB1Periph_SPI2, DISABLE);
+  } else if (dev->SPIx == SPI3) {
+    RCC_APB1PeriphResetCmd(RCC_APB1Periph_SPI3, ENABLE);
+    RCC_APB1PeriphResetCmd(RCC_APB1Periph_SPI3, DISABLE);
+  } else if (dev->SPIx == SPI4) {
+    RCC_APB2PeriphResetCmd(RCC_APB2Periph_SPI4, ENABLE);
+    RCC_APB2PeriphResetCmd(RCC_APB2Periph_SPI4, DISABLE);
+  } else if (dev->SPIx == SPI5) {
+    RCC_APB2PeriphResetCmd(RCC_APB2Periph_SPI5, ENABLE);
+    RCC_APB2PeriphResetCmd(RCC_APB2Periph_SPI5, DISABLE);
+  } else if (dev->SPIx == SPI6) {
+    RCC_APB2PeriphResetCmd(RCC_APB2Periph_SPI6, ENABLE);
+    RCC_APB2PeriphResetCmd(RCC_APB2Periph_SPI6, DISABLE);
+  }
 }
 
 /**
@@ -80,17 +99,17 @@ void spi_gpio_master_cfg(const spi_dev *dev,
 	/* Configure SCK pin */
         gpio_set_mode(comm_dev, sck_bit, GPIO_AF_OUTPUT_PP);
         gpio_set_af_mode(comm_dev, sck_bit, dev->afio);
-        gpio_set_speed(comm_dev, sck_bit, GPIO_Speed_100MHz);
+        gpio_set_speed(comm_dev, sck_bit, GPIO_speed_100MHz);
         
         /* Configure MISO pin */
         gpio_set_mode(comm_dev, miso_bit, GPIO_AF_OUTPUT_OD_PU);
         gpio_set_af_mode(comm_dev, miso_bit, dev->afio);
-        gpio_set_speed(comm_dev, miso_bit, GPIO_Speed_100MHz);
+        gpio_set_speed(comm_dev, miso_bit, GPIO_speed_100MHz);
         
         /* Configure MOSI pin */
         gpio_set_mode(comm_dev, mosi_bit, GPIO_AF_OUTPUT_PP);
 	gpio_set_af_mode(comm_dev, mosi_bit, dev->afio);        
-	gpio_set_speed(comm_dev, mosi_bit, GPIO_Speed_100MHz);
+	gpio_set_speed(comm_dev, mosi_bit, GPIO_speed_100MHz);
 }
 
 void spi_gpio_slave_cfg(const spi_dev *dev,
@@ -115,17 +134,15 @@ void spi_reconfigure(const spi_dev *dev, uint8_t ismaster, uint16_t baudPrescale
 
     memset(dev->state, 0, sizeof(spi_state));    
     
-    spi_irq_disable(dev, SPI_I2S_IT_TXE);
-    spi_irq_disable(dev, SPI_I2S_IT_RXNE);
-    spi_irq_disable(dev, SPI_I2S_IT_ERR);  
+    spi_disable_irq(dev, SPI_INTERRUPTS_ALL);  
     
-    SPI_I2S_DeInit(dev->SPIx);
+    spi_init(dev);
 
     spi_peripheral_disable(dev);
 
     /* Enable the SPI clock */
     if (dev->SPIx == SPI1)
-        RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
+        RCC_APB2PeriphClockCmd(dev->clock, ENABLE);
     else if (dev->SPIx == SPI2)
         RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
     else
@@ -176,7 +193,7 @@ void spi_reconfigure(const spi_dev *dev, uint8_t ismaster, uint16_t baudPrescale
     SPI_Cmd(dev->SPIx, ENABLE);
         
     uint32_t dly=1000;
-    while (SPI_I2S_GetFlagStatus(dev->SPIx, SPI_I2S_FLAG_TXE) == RESET) {
+    while (SPI_I2S_GetFlagStatus(dev->SPIx, SPI_BIT_TXE) == RESET) {
         dly--;
         if(dly==0) break;
     }
@@ -210,12 +227,12 @@ int spimaster_transfer(const spi_dev *dev,
     // Transfer command data out
 
     while (txcount--){
-        while (!(dev->SPIx->SR & SPI_I2S_FLAG_TXE)){ // just for case
+        while (!(dev->SPIx->SR & SPI_BIT_TXE)){ // just for case
             if(!spi_is_busy(dev) ) break;
         }	    
         dev->SPIx->DR = *txbuf++;
         uint16_t dly=1000; // ~20uS so byte already transferred
-        while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE)) {
+        while (!(dev->SPIx->SR & SPI_BIT_RXNE)) {
             if(--dly==0) break;
         }
         (void) dev->SPIx->DR; // read out unneeded data
@@ -225,10 +242,10 @@ int spimaster_transfer(const spi_dev *dev,
 
     // Transfer response data in
     while (rxcount--){
-        while (!(dev->SPIx->SR & SPI_I2S_FLAG_TXE));
+        while (!(dev->SPIx->SR & SPI_BIT_TXE));
         dev->SPIx->DR = 0xFF;
         uint16_t dly=1000;
-        while (!(dev->SPIx->SR & SPI_I2S_FLAG_RXNE)) {
+        while (!(dev->SPIx->SR & SPI_BIT_RXNE)) {
             if(--dly==0) break;
         }
         *rxbuf++ = dev->SPIx->DR;
@@ -236,7 +253,7 @@ int spimaster_transfer(const spi_dev *dev,
 
     // Wait until the transfer is complete - to not disable CS too early 
     uint32_t dly=3000;
-    while (dev->SPIx->SR & SPI_I2S_FLAG_BSY){ // but datasheet prohibits this usage
+    while (dev->SPIx->SR & SPI_BIT_BSY){ // but datasheet prohibits this usage
         dly--;
         if(dly==0) break;
     }

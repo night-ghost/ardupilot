@@ -169,7 +169,7 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
     {
         const stm32_pin_info &pp = PIN_MAP[BOARD_SDCARD_CS_PIN];
         gpio_set_mode(pp.gpio_device, pp.gpio_bit, GPIO_OUTPUT_PP);
-        gpio_set_speed(pp.gpio_device, pp.gpio_bit, GPIO_Speed_100MHz);
+        gpio_set_speed(pp.gpio_device, pp.gpio_bit, GPIO_speed_100MHz);
         gpio_write_bit(pp.gpio_device, pp.gpio_bit, HIGH);
     }
 
@@ -240,7 +240,7 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<REVOMINI::SPIDevice> spi) {
     _spi = std::move(spi);
 
     REVOMINIGPIO::_pinMode(DF_RESET,OUTPUT);
-    REVOMINIGPIO::_setSpeed(DF_RESET, GPIO_Speed_100MHz);
+    REVOMINIGPIO::_setSpeed(DF_RESET, GPIO_speed_100MHz);
     // Reset the chip. We don't need a semaphore because no SPI activity
     REVOMINIGPIO::_write(DF_RESET,0);
     REVOMINIScheduler::_delay(1);

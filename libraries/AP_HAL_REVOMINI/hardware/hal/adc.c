@@ -103,7 +103,7 @@ uint16_t adc_read(const adc_dev *dev, uint8_t channel)
   adc_disable(dev);
  
   /* ADC regular channel14 configuration */
-  ADC_RegularChannelConfig(dev->adcx, channel, 1, ADC_SampleTime_56Cycles);
+  adc_channel_config(dev, channel, 1, ADC_SampleTime_56Cycles);
   adc_enable(dev);
       
   /* Start ADC Software Conversion */
@@ -127,7 +127,7 @@ uint16_t temp_read(void)
   while (T_StartupTimeDelay--);
   
   /* Enable TempSensor and Vrefint channels: channel16 and Channel17 */
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_16, 1, ADC_SampleTime_84Cycles);
+  adc_channel_config(_adc1, ADC_Channel_16, 1, ADC_SampleTime_84Cycles);
                                
   /* initialize result */
   res = 0;
@@ -160,8 +160,8 @@ uint16_t vref_read(void)
   while (T_StartupTimeDelay--);
   
   /* Enable TempSensor and Vrefint channels: channel16 and Channel17 */
-//  ADC_RegularChannelConfig(ADC1, ADC_Channel_17, 2, ADC_SampleTime_56Cycles);
-  ADC_RegularChannelConfig(ADC1, ADC_Channel_17, 1, ADC_SampleTime_84Cycles);
+//  adc_channel_config(_adc1, ADC_Channel_17, 2, ADC_SampleTime_56Cycles);
+  adc_channel_config(_adc1, ADC_Channel_17, 1, ADC_SampleTime_84Cycles);
 
   /* initialize result */
   res = 0;

@@ -13,16 +13,16 @@
 #define DEFAULT_TX_TIMEOUT 10000 // in uS - 10ms
 
 enum UART_STOP_BITS {
-    UART_Stop_Bits_1  = USART_StopBits_1,
-    UART_Stop_Bits_0_5= USART_StopBits_0_5,
-    UART_Stop_Bits_2  = USART_StopBits_2,
-    UART_Stop_Bits_1_5= USART_StopBits_1_5,
+    UART_Stop_Bits_1  = ((uint16_t)0x0000),
+    UART_Stop_Bits_0_5= ((uint16_t)0x1000),
+    UART_Stop_Bits_2  = ((uint16_t)0x2000),
+    UART_Stop_Bits_1_5= ((uint16_t)0x3000),
 };
 
 enum UART_PARITY {
-    UART_Parity_No   = USART_Parity_No,
-    UART_Parity_Even = USART_Parity_Even,
-    UART_Parity_Odd  = USART_Parity_Odd,
+    UART_Parity_No   = ((uint16_t)0x0000),
+    UART_Parity_Even = ((uint16_t)0x0400),
+    UART_Parity_Odd  = ((uint16_t)0x0600),
 };
 
 class REVOMINI::REVOMINIUARTDriver : public AP_HAL::UARTDriver  {

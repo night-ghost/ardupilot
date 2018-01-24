@@ -514,22 +514,22 @@ void REVOI2CDevice::isr_ev(){
     if(err){
 
         /* I2C Bus error interrupt occurred ----------------------------------------*/
-        if(((sr1itflags & I2C_FLAG_BERR) != RESET) && ((itsources & I2C_IT_ERR) != RESET)) {    /* Clear BERR flag */
-          _dev->I2Cx->SR1 = (uint16_t)(~I2C_SR1_BERR); // Errata 2.4.6
+        if(((sr1itflags & I2C_BIT_BERR) != RESET) && ((itsources & I2C_IE_ERR) != RESET)) {    /* Clear BERR flag */
+          _dev->I2Cx->SR1 = (uint16_t)(~I2C_BIT_BERR); // Errata 2.4.6
         }
   
         /* I2C Arbitration Loss error interrupt occurred ---------------------------*/
-        if(((sr1itflags & I2C_FLAG_ARLO) != RESET) && ((itsources & I2C_IT_ERR) != RESET)) {
+        if(((sr1itflags & I2C_BIT_ARLO) != RESET) && ((itsources & I2C_IE_ERR) != RESET)) {
           _error = I2C_BUS_ERR;
     
           /* Clear ARLO flag */
-          _dev->I2Cx->SR1 = (uint16_t)(~I2C_SR1_ARLO); // reset them
+          _dev->I2Cx->SR1 = (uint16_t)(~I2C_BIT_ARLO); // reset them
         }
   
         /* I2C Acknowledge failure error interrupt occurred ------------------------*/
-        if(((sr1itflags & I2C_FLAG_AF) != RESET) && ((itsources & I2C_IT_ERR) != RESET))  {
+        if(((sr1itflags & I2C_BIT_AF) != RESET) && ((itsources & I2C_IE_ERR) != RESET))  {
             /* Clear AF flag */
-            _dev->I2Cx->SR1 = (uint16_t)(~I2C_SR1_AF); // reset it
+            _dev->I2Cx->SR1 = (uint16_t)(~I2C_BIT_AF); // reset it
 
             if(_state == I2C_want_ADDR) { // address transfer
                 _error = I2C_NO_DEVICE;
@@ -548,20 +548,20 @@ void REVOI2CDevice::isr_ev(){
     }else{
 
         /* SB Set ----------------------------------------------------------------*/
-        if(((sr1itflags & I2C_FLAG_SB & I2C_FLAG_MASK) != RESET) && ((itsources & I2C_IT_EVT) != RESET))    {
+        if(((sr1itflags & I2C_BIT_SB & I2C_BIT_MASK) != RESET) && ((itsources & I2C_IE_EVT) != RESET))    {
             // Send address for write
             if(_tx_len){
-                I2C_Send7bitAddress(_dev->I2Cx, _addr<<1, I2C_Direction_Transmitter);
+                i2c_send_address(_dev, _addr<<1, I2C_Direction_Transmitter);
                 _state = I2C_want_ADDR;
             } else {
-                I2C_Send7bitAddress(_dev->I2Cx, _addr<<1, I2C_Direction_Receiver);
+                i2c_send_address(_dev, _addr<<1, I2C_Direction_Receiver);
                 _state = I2C_want_RX_ADDR;
             }
 
             _dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP);    /* clear STOP condition - just to touch CR1*/
         }
         /* ADDR Set --------------------------------------------------------------*/
-        else if(((sr1itflags & I2C_FLAG_ADDR & I2C_FLAG_MASK) != RESET) && ((itsources & I2C_IT_EVT) != RESET))    {
+        else if(((sr1itflags & I2C_BIT_ADDR & I2C_BIT_MASK) != RESET) && ((itsources & I2C_IE_EVT) != RESET))    {
             /* Clear ADDR register by reading SR1 then SR2 register (SR1 has already been read) */
         
             if(_tx_len) { // transmit
@@ -580,10 +580,10 @@ void REVOI2CDevice::isr_ev(){
     
         uint32_t sr2itflags   = _dev->I2Cx->SR2; // read SR2 - ADDR is cleared
     
-        if((itsources & I2C_IT_BUF) != RESET ){ // data io
+        if((itsources & I2C_IE_BUF) != RESET ){ // data io
 
-            if((sr1itflags & I2C_FLAG_TXE & I2C_FLAG_MASK) != RESET) {// TXE set 
-                if((sr2itflags & (I2C_FLAG_TRA>>16) & I2C_FLAG_MASK) != RESET) {    // I2C in mode Transmitter
+            if((sr1itflags & I2C_BIT_TXE & I2C_BIT_MASK) != RESET) {// TXE set 
+                if((sr2itflags & (I2C_BIT_TRA) & I2C_BIT_MASK) != RESET) {    // I2C in mode Transmitter
 
                     if(_tx_len) {
                         _dev->I2Cx->DR = *_tx_buff++; // 1 byte
@@ -593,7 +593,7 @@ void REVOI2CDevice::isr_ev(){
                     }        
                 }
             } 
-            if((sr1itflags & I2C_FLAG_RXNE & I2C_FLAG_MASK) != RESET)   {       // RXNE set
+            if((sr1itflags & I2C_BIT_RXNE & I2C_BIT_MASK) != RESET)   {       // RXNE set
                 if(_rx_len && !_tx_len) {
                     *_rx_buff++ = (uint8_t)(_dev->I2Cx->DR);
                     _rx_len -= 1; // 1 byte done
@@ -612,8 +612,8 @@ void REVOI2CDevice::isr_ev(){
                 }
             }
         }
-        if((sr1itflags & I2C_FLAG_BTF & I2C_FLAG_MASK) != RESET) {// BTF set 
-            if((sr2itflags & (I2C_FLAG_TRA>>16) & I2C_FLAG_MASK) != RESET) {    // I2C in mode Transmitter
+        if((sr1itflags & I2C_BIT_BTF & I2C_BIT_MASK) != RESET) {// BTF set 
+            if((sr2itflags & (I2C_BIT_TRA) & I2C_BIT_MASK) != RESET) {    // I2C in mode Transmitter
                 // BTF on transmit
                 if(_rx_len) {
                     // wait a little - some devices requires time for internal operations
@@ -670,15 +670,15 @@ uint32_t REVOI2CDevice::wait_stop_done(bool is_write){
        // Wait to make sure that STOP control bit has been cleared - bus released
         t = hal_micros();
         while (_dev->I2Cx->CR1 & I2C_CR1_STOP ){
-            if((sr1=_dev->I2Cx->SR1) & I2C_FLAG_BERR & I2C_FLAG_MASK) _dev->I2Cx->SR1 = (uint16_t)(~I2C_SR1_BERR); // Errata 2.4.6
+            if((sr1=_dev->I2Cx->SR1) & I2C_BIT_BERR & I2C_BIT_MASK) _dev->I2Cx->SR1 = (uint16_t)(~I2C_BIT_BERR); // Errata 2.4.6
 
-            if(sr1 & I2C_FLAG_ARLO & I2C_FLAG_MASK) { // arbitration lost or bus error
-                _dev->I2Cx->SR1 = (uint16_t)(~I2C_SR1_ARLO); // reset them
+            if(sr1 & I2C_BIT_ARLO & I2C_BIT_MASK) { // arbitration lost or bus error
+                _dev->I2Cx->SR1 = (uint16_t)(~I2C_BIT_ARLO); // reset them
                 ret= I2C_STOP_BERR; // bus error on STOP
                 break;
             }
-            if(sr1 & I2C_FLAG_TIMEOUT & I2C_FLAG_MASK) { // bus timeout
-                _dev->I2Cx->SR1 = (uint16_t)(~I2C_FLAG_TIMEOUT); // reset it
+            if(sr1 & I2C_BIT_TIMEOUT & I2C_BIT_MASK) { // bus timeout
+                _dev->I2Cx->SR1 = (uint16_t)(~I2C_BIT_TIMEOUT); // reset it
                 ret= I2C_ERR_TIMEOUT;                             // STOP generated by hardware
                 break;
             }
@@ -691,7 +691,7 @@ uint32_t REVOI2CDevice::wait_stop_done(bool is_write){
 
         /* wait while the bus is busy */
         t = hal_micros();
-        while ((_dev->I2Cx->SR2 & (I2C_FLAG_BUSY>>16) & I2C_FLAG_MASK) != 0) {
+        while ((_dev->I2Cx->SR2 & (I2C_BIT_BUSY) & I2C_BIT_MASK) != 0) {
             if (hal_micros() - t > I2C_SMALL_TIMEOUT) {
                 ret=2; // bus busy
                 break;

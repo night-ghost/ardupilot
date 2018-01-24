@@ -489,7 +489,7 @@ uint32_t REVOI2CDevice::i2c_write(uint8_t addr, const uint8_t *tx_buff, uint8_t 
     state++;
     
     // Send address for write
-    I2C_Send7bitAddress(_dev->I2Cx, addr<<1, I2C_Direction_Transmitter );
+    i2c_send_address(_dev, addr<<1, I2C_Direction_Transmitter );
 
     _dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP);    /* clear STOP condition - just to touch CR1*/
 
@@ -938,7 +938,7 @@ uint32_t REVOI2CDevice::i2c_read(uint8_t addr, const uint8_t *tx_buff, uint8_t t
     state++; 
 
     // Send address for write
-    I2C_Send7bitAddress(_dev->I2Cx, addr<<1, I2C_Direction_Transmitter );
+    i2c_send_address(_dev, addr<<1, I2C_Direction_Transmitter );
     
     _dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP);    /* clear STOP condition - just to touch CR1 */
 
@@ -1038,7 +1038,7 @@ uint32_t REVOI2CDevice::i2c_read(uint8_t addr, const uint8_t *tx_buff, uint8_t t
     state++; 
 
     // Send device address for read
-    I2C_Send7bitAddress(_dev->I2Cx, addr<<1, I2C_Direction_Receiver );
+    i2c_send_address(_dev, addr<<1, I2C_Direction_Receiver );
 
     _dev->I2Cx->CR1 &= (uint16_t)(~I2C_CR1_STOP);    /* clear STOP condition - just to touch CR1 */
 

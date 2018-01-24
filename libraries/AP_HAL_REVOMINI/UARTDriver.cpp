@@ -72,7 +72,7 @@ void REVOMINIUARTDriver::begin(uint32_t baud, uint32_t bmode) {
         
     usart_init(_usart_device);
     usart_setup(_usart_device, (uint32_t)baud, 
-                USART_WordLength_8b, bmode & 0xffff /*USART_StopBits_1*/ , (bmode>>16) & 0xffff /* USART_Parity_No*/, mode, USART_HardwareFlowControl_None);
+                UART_Word_8b, bmode & 0xffff /*USART_StopBits_1*/ , (bmode>>16) & 0xffff /* USART_Parity_No*/, mode, UART_HardwareFlowControl_None);
     usart_enable(_usart_device);
 
     _initialized = true;

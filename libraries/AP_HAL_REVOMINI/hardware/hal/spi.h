@@ -66,26 +66,42 @@ typedef enum spi_mode {
  * @brief SPI baud rate configuration, as a divisor of f_PCLK, the
  *        PCLK clock frequency.
  */
+ 
 typedef enum spi_baud_rate {
-    SPI_BAUD_PCLK_DIV_2   = SPI_BaudRatePrescaler_2,   /**< f_PCLK/2 */
-    SPI_BAUD_PCLK_DIV_4   = SPI_BaudRatePrescaler_4,   /**< f_PCLK/4 */
-    SPI_BAUD_PCLK_DIV_8   = SPI_BaudRatePrescaler_8,   /**< f_PCLK/8 */
-    SPI_BAUD_PCLK_DIV_16  = SPI_BaudRatePrescaler_16,  /**< f_PCLK/16 */
-    SPI_BAUD_PCLK_DIV_32  = SPI_BaudRatePrescaler_32,  /**< f_PCLK/32 */
-    SPI_BAUD_PCLK_DIV_64  = SPI_BaudRatePrescaler_64,  /**< f_PCLK/64 */
-    SPI_BAUD_PCLK_DIV_128 = SPI_BaudRatePrescaler_128, /**< f_PCLK/128 */
-    SPI_BAUD_PCLK_DIV_256 = SPI_BaudRatePrescaler_256, /**< f_PCLK/256 */
+    SPI_BAUD_PCLK_DIV_2   = ((uint16_t)0x0000), /**< f_PCLK/2 */
+    SPI_BAUD_PCLK_DIV_4   = ((uint16_t)0x0008), /**< f_PCLK/4 */
+    SPI_BAUD_PCLK_DIV_8   = ((uint16_t)0x0010), /**< f_PCLK/8 */
+    SPI_BAUD_PCLK_DIV_16  = ((uint16_t)0x0018), /**< f_PCLK/16 */
+    SPI_BAUD_PCLK_DIV_32  = ((uint16_t)0x0020), /**< f_PCLK/32 */
+    SPI_BAUD_PCLK_DIV_64  = ((uint16_t)0x0028), /**< f_PCLK/64 */
+    SPI_BAUD_PCLK_DIV_128 = ((uint16_t)0x0030), /**< f_PCLK/128 */
+    SPI_BAUD_PCLK_DIV_256 = ((uint16_t)0x0038), /**< f_PCLK/256 */
 } spi_baud_rate;
+
+
+#define SPI_BIT_RXNE               ((uint16_t)0x0001)
+#define SPI_BIT_TXE                ((uint16_t)0x0002)
+#define SPI_BIT_CRCERR             ((uint16_t)0x0010)
+#define SPI_BIT_MODF               ((uint16_t)0x0020)
+#define SPI_BIT_OVR                ((uint16_t)0x0040)
+#define SPI_BIT_BSY                ((uint16_t)0x0080)
+#define SPI_BIT_TIFRFE             ((uint16_t)0x0100)
+
+#define SPI_size_16b                ((uint16_t)0x0800)
+#define SPI_size_8b                 ((uint16_t)0x0000)
+
+#define SPI_DMAreq_Tx               ((uint16_t)0x0002)
+#define SPI_DMAreq_Rx               ((uint16_t)0x0001)
 
 /** Available SPI interrupts  - see SPI_I2S_GetITStatus */
 typedef enum spi_interrupt {
-    SPI_TXE_INTERRUPT  = 1<<(SPI_I2S_IT_TXE>>4),  /**< TX buffer empty interrupt */
-    SPI_RXNE_INTERRUPT = 1<<(SPI_I2S_IT_RXNE>>4), /**< RX buffer not empty interrupt */
-    SPI_ERR_INTERRUPT  = 1<<(SPI_I2S_IT_ERR>>4),   /**<
-                                                  * Error interrupt (CRC, overrun,
-                                                  * and mode fault errors for SPI;
-                                                  * underrun, overrun errors for I2S)
-                                                  */
+    SPI_TXE_INTERRUPT  = 1<<7,   /**< TX buffer empty interrupt */
+    SPI_RXNE_INTERRUPT = 1<<6,   /**< RX buffer not empty interrupt */
+    SPI_ERR_INTERRUPT  = 1<<5,   /**< * Error interrupt (CRC, overrun,
+                                      * and mode fault errors for SPI;
+                                      * underrun, overrun errors for I2S)
+                                      */
+                                                                            
     SPI_RXNE_TXE_INTERRUPTS = SPI_RXNE_INTERRUPT | SPI_TXE_INTERRUPT,
     SPI_INTERRUPTS_ALL = SPI_TXE_INTERRUPT  | SPI_RXNE_INTERRUPT | SPI_ERR_INTERRUPT
 } spi_interrupt;
@@ -216,23 +232,14 @@ static inline void spi_peripheral_disable_all(void) {
     spi_foreach(spi_peripheral_disable);
 }
 
-//  [ old ones - for flags like SPI_I2S_IT_TXE. This flags can't be combined!
-static inline void spi_irq_enable(const spi_dev *dev, uint32_t interrupt_flag) {
-	SPI_I2S_ITConfig(dev->SPIx, interrupt_flag, ENABLE);
-}
-
-static inline void spi_irq_disable(const spi_dev *dev, uint32_t interrupt_flag) {
-	SPI_I2S_ITConfig(dev->SPIx, interrupt_flag, DISABLE);
-}
-//]
 
 //[ new ones - for enum spi_interrupt
 static inline void spi_enable_irq(const spi_dev *dev, spi_interrupt interrupt_flags) {
-	dev->SPIx->CR2 |= interrupt_flags;
+    dev->SPIx->CR2 |= interrupt_flags;
 }
 
 static inline void spi_disable_irq(const spi_dev *dev, spi_interrupt interrupt_flags) {
-	dev->SPIx->CR2 &= ~interrupt_flags;
+    dev->SPIx->CR2 &= ~interrupt_flags;
 }
 
 
@@ -242,11 +249,11 @@ static inline bool spi_is_irq_enabled(const spi_dev *dev, uint32_t interrupt_fla
 //]
 
 static inline uint16_t spi_dff(const spi_dev *dev) {
-    return ((dev->SPIx->CR1 & SPI_DataSize_16b) == SPI_DataSize_8b ? SPI_DataSize_8b : SPI_DataSize_16b);
+    return ((dev->SPIx->CR1 & SPI_size_16b) == SPI_size_8b ? SPI_size_8b : SPI_size_16b);
 }
 
 static inline uint8_t spi_is_rx_nonempty(const spi_dev *dev) {
-    return (dev->SPIx->SR & SPI_I2S_FLAG_RXNE);
+    return (dev->SPIx->SR & SPI_BIT_RXNE);
 }
 
 static inline uint8_t spi_rx_reg(const spi_dev *dev) {
@@ -254,7 +261,7 @@ static inline uint8_t spi_rx_reg(const spi_dev *dev) {
 }
 
 static inline uint8_t spi_is_tx_empty(const spi_dev *dev) {
-    return (dev->SPIx->SR & SPI_I2S_FLAG_TXE);
+    return (dev->SPIx->SR & SPI_BIT_TXE);
 }
 
 static inline void spi_tx_reg(const spi_dev *dev, uint8_t val) {
@@ -262,26 +269,26 @@ static inline void spi_tx_reg(const spi_dev *dev, uint8_t val) {
 }
 
 static inline uint8_t spi_is_busy(const spi_dev *dev) {
-    return (dev->SPIx->SR & SPI_I2S_FLAG_BSY);
+    return (dev->SPIx->SR & SPI_BIT_BSY);
 }
 
 static inline void spi_wait_busy(const spi_dev *dev) {
 // Wait until the transfer is complete - to not disable CS too early 
     uint32_t dly=3000;
-    while (dev->SPIx->SR & SPI_I2S_FLAG_BSY){ // but datasheet prohibits this usage
+    while (dev->SPIx->SR & SPI_BIT_BSY){ // but datasheet prohibits this usage
         dly--;
         if(dly==0) break;
     }
 }
 
-static inline void spi_enable_dma_req(const spi_dev *dev, uint16_t SPI_I2S_DMAReq) {
+static inline void spi_enable_dma_req(const spi_dev *dev, uint16_t SPI_DMAReq) {
     /* Enable the selected SPI DMA requests */
-    dev->SPIx->CR2 |= SPI_I2S_DMAReq;
+    dev->SPIx->CR2 |= SPI_DMAReq;
 }
 
-static inline void spi_disable_dma_req(const spi_dev *dev, uint16_t SPI_I2S_DMAReq) {
+static inline void spi_disable_dma_req(const spi_dev *dev, uint16_t SPI_DMAReq) {
     /* Disable the selected SPI DMA requests */
-    dev->SPIx->CR2 &= (uint16_t)~SPI_I2S_DMAReq;
+    dev->SPIx->CR2 &= (uint16_t)~SPI_DMAReq;
 }
 
 

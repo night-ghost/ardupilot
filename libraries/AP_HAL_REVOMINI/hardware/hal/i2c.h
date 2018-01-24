@@ -11,8 +11,45 @@
 #define I2C_250KHz_SPEED                        250000
 #define I2C_400KHz_SPEED                        400000
 
-// missed definition in .h
-#define I2C_FLAG_MASK         ((uint32_t)0x00FFFFFF)  /*<! I2C FLAG mask */
+
+#define I2C_BIT_MASK               ((uint32_t)0x00FFFFFF) 
+
+// SR1 bits
+#define I2C_BIT_SMBALERT           ((uint32_t)0x0008000)
+#define I2C_BIT_TIMEOUT                ((uint32_t)0x4000)
+#define I2C_BIT_PECERR                 ((uint32_t)0x1000)
+#define I2C_BIT_OVR                    ((uint32_t)0x0800)
+#define I2C_BIT_AF                     ((uint32_t)0x0400)
+#define I2C_BIT_ARLO                   ((uint32_t)0x0200)
+#define I2C_BIT_BERR                   ((uint32_t)0x0100)
+#define I2C_BIT_TXE                    ((uint32_t)0x0080)
+#define I2C_BIT_RXNE                   ((uint32_t)0x0040)
+#define I2C_BIT_STOPF                  ((uint32_t)0x0010)
+#define I2C_BIT_ADD10                  ((uint32_t)0x0008)
+#define I2C_BIT_BTF                    ((uint32_t)0x0004)
+#define I2C_BIT_ADDR                   ((uint32_t)0x0002)
+#define I2C_BIT_SB                     ((uint32_t)0x0001)
+
+// interrupt enable bits
+#define I2C_IE_BUF                      ((uint16_t)0x0400)
+#define I2C_IE_EVT                      ((uint16_t)0x0200)
+#define I2C_IE_ERR                      ((uint16_t)0x0100)
+
+//SR2 bits
+#define I2C_BIT_DUALF                  ((uint32_t)0x0080)
+#define I2C_BIT_SMBHOST                ((uint32_t)0x0040)
+#define I2C_BIT_SMBDEFAULT             ((uint32_t)0x0020)
+#define I2C_BIT_GENCALL                ((uint32_t)0x0010)
+#define I2C_BIT_TRA                    ((uint32_t)0x0004)
+#define I2C_BIT_BUSY                   ((uint32_t)0x0002)
+#define I2C_BIT_MSL                    ((uint32_t)0x0001)
+
+
+#define I2C_NACKPosition_Next           ((uint16_t)0x0800)
+#define I2C_NACKPosition_Current        ((uint16_t)0xF7FF)
+
+#define I2C_Direction_Transmitter      ((uint8_t)0x00)
+#define I2C_Direction_Receiver         ((uint8_t)0x01)
 
 /* Maximum Timeout values for events waiting loops */
    
@@ -104,6 +141,16 @@ static inline void i2c_clear_isr_handler(const i2c_dev *dev){
     dev->state->handler=0;
 }
 
+
+static inline void i2c_send_address(const i2c_dev *dev, uint8_t address, uint8_t direction)
+{
+  /* Test on the direction to set/reset the read/write bit */
+  if (direction != I2C_Direction_Transmitter) {    
+    dev->I2Cx->DR = address | I2C_OAR1_ADD0; /* Set the address bit0 for read */
+  } else {    
+    dev->I2Cx->DR = address & (uint8_t)~((uint8_t)I2C_OAR1_ADD0); /* Reset the address bit0 for write */
+  }
+}
 
 #ifdef I2C_DEBUG
 uint32_t i2c_get_operation_time(uint8_t *psr1);

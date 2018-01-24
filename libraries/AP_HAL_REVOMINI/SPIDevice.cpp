@@ -562,31 +562,29 @@ void  SPIDevice::setup_dma_transfer(const uint8_t *out, const uint8_t *recv, uin
   // receive stream
     if(recv) {
         DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)recv;
-        memory_inc                            = DMA_MemoryInc_Enable;
+        memory_inc                            = DMA_CR_MINC;
     } else {
         DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)rw_workbyte;
-        memory_inc                            = DMA_MemoryInc_Disable;
+        memory_inc                            = 0;
     }
 
-    DMA_InitStructure.DMA_flags      = DMA_PeripheralDataSize_Byte | DMA_MemoryDataSize_Byte |
-                                       DMA_MemoryBurst_Single | DMA_PeripheralBurst_Single |
-                                       DMA_Mode_Normal | DMA_DIR_PeripheralToMemory |
-                                       DMA_PeripheralInc_Disable | memory_inc |
+    DMA_InitStructure.DMA_flags      = DMA_CR_MSIZE_8BITS | DMA_CR_PSIZE_8BITS |
+                                       DMA_CR_MBURST0     | DMA_CR_PBURST0 |
+                                       DMA_CR_DIR_P2M     |  memory_inc |
                                        dp.channel | _desc.prio;
     dma_init_transfer(dp.stream_rx, &DMA_InitStructure);
 
   // transmit stream
     if(out) {
         DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)out;
-        memory_inc                            = DMA_MemoryInc_Enable;
+        memory_inc                            = DMA_CR_MINC;
     } else {
         DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t)rw_workbyte;
-        memory_inc                            = DMA_MemoryInc_Disable;
+        memory_inc                            = 0;
     }
-    DMA_InitStructure.DMA_flags      = DMA_PeripheralDataSize_Byte | DMA_MemoryDataSize_Byte |
-                                       DMA_MemoryBurst_Single | DMA_PeripheralBurst_Single |
-                                       DMA_Mode_Normal | DMA_DIR_MemoryToPeripheral |
-                                       DMA_PeripheralInc_Disable | memory_inc |
+    DMA_InitStructure.DMA_flags      = DMA_CR_MSIZE_8BITS | DMA_CR_PSIZE_8BITS |
+                                       DMA_CR_MBURST0     | DMA_CR_PBURST0 |
+                                       DMA_CR_DIR_M2P     | memory_inc |
                                        dp.channel | _desc.prio;
     dma_init_transfer(dp.stream_tx, &DMA_InitStructure);
 
@@ -597,7 +595,7 @@ void  SPIDevice::setup_dma_transfer(const uint8_t *out, const uint8_t *recv, uin
 }
 
 void SPIDevice::start_dma_transfer(){
-    spi_enable_dma_req(_desc.dev, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx); /* Enable SPI TX/RX request */
+    spi_enable_dma_req(_desc.dev, SPI_DMAreq_Rx | SPI_DMAreq_Tx); /* Enable SPI TX/RX request */
 }
 
 
@@ -608,7 +606,7 @@ void SPIDevice::disable_dma(){
     dma_detach_interrupt(dp.stream_rx); // we attach interrupt each request
 
     // Disable SPI RX/TX request 
-    spi_disable_dma_req(_desc.dev, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx);
+    spi_disable_dma_req(_desc.dev, SPI_DMAreq_Rx | SPI_DMAreq_Tx);
 
     dma_clear_isr_bits(dp.stream_rx); dma_clear_isr_bits(dp.stream_tx);
 }
@@ -690,7 +688,7 @@ void SPIDevice::init(){
                   uint8_t   sck_bit  = p.gpio_bit;
 
             gpio_set_mode(sck_dev,  sck_bit, GPIO_OUTPUT_PP);
-            gpio_set_speed(sck_dev, sck_bit, GPIO_Speed_100MHz);
+            gpio_set_speed(sck_dev, sck_bit, GPIO_speed_100MHz);
             gpio_write_bit(sck_dev, sck_bit, 1); // passive SCK high
             
 
@@ -704,7 +702,7 @@ void SPIDevice::init(){
             const gpio_dev *mosi_dev = p.gpio_device;
                   uint8_t   mosi_bit = p.gpio_bit;
             gpio_set_mode(mosi_dev,  mosi_bit, GPIO_OUTPUT_PP);
-            gpio_set_speed(mosi_dev, mosi_bit, GPIO_Speed_100MHz);
+            gpio_set_speed(mosi_dev, mosi_bit, GPIO_speed_100MHz);
             gpio_write_bit(mosi_dev, mosi_bit, 1); // passive MOSI high
 
             mosi_port = mosi_dev->GPIOx;
@@ -717,7 +715,7 @@ void SPIDevice::init(){
             const gpio_dev *miso_dev = p.gpio_device; 
                   uint8_t   miso_bit = p.gpio_bit;
             gpio_set_mode(miso_dev,  miso_bit, GPIO_INPUT_PU);
-            gpio_set_speed(miso_dev, miso_bit, GPIO_Speed_100MHz);
+            gpio_set_speed(miso_dev, miso_bit, GPIO_speed_100MHz);
 
             miso_port = miso_dev->GPIOx;
             miso_pin  = 1<<miso_bit;

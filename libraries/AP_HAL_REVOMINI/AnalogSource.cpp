@@ -146,8 +146,8 @@ void REVOMINIAnalogSource::setup_read() {
 	adc_set_reg_seqlen(dev, 1);
 
 	  /* Enable Vrefint on Channel17 */
-	ADC_RegularChannelConfig(dev->adcx, ADC_Channel_17, 1, ADC_SampleTime_84Cycles);
-	ADC_TempSensorVrefintCmd(ENABLE);
+	adc_channel_config(dev, ADC_Channel_17, 1, ADC_SampleTime_84Cycles);
+	adc_vref_enable();
 
 	  /* Wait until ADC + Temp sensor start */
         REVOMINIScheduler::_delay_microseconds(10);
@@ -157,14 +157,14 @@ void REVOMINIAnalogSource::setup_read() {
     } else if(dev != NULL && _pin < BOARD_NR_GPIO_PINS) {
 	adc_set_reg_seqlen(dev, 1);
 	uint8_t channel = PIN_MAP[_pin].adc_channel;
-        ADC_RegularChannelConfig(dev->adcx, channel, 1, ADC_SampleTime_84Cycles);
+        adc_channel_config(dev, channel, 1, ADC_SampleTime_84Cycles);
 	adc_enable(dev);
     }
 }
 
 void REVOMINIAnalogSource::stop_read() {
     if(_pin == ANALOG_INPUT_REVOMINI_VCC) {
-	ADC_TempSensorVrefintCmd(DISABLE);
+	adc_vref_disable();
     }
     if (_stop_pin != ANALOG_INPUT_NONE && _stop_pin < BOARD_NR_GPIO_PINS) {
         const adc_dev *dev = _find_device();

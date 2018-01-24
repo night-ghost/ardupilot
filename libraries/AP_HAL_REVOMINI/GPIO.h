@@ -166,7 +166,7 @@ public:
     static inline void    _write(uint8_t pin, uint8_t value) { const stm32_pin_info &pp = PIN_MAP[pin]; gpio_write_bit(pp.gpio_device, pp.gpio_bit, value); }
     static inline void    _toggle(uint8_t pin) {               const stm32_pin_info &p = PIN_MAP[pin];  gpio_toggle_bit(p.gpio_device, p.gpio_bit);  }
     
-    static inline void    _setSpeed(uint8_t pin, GPIOSpeed_TypeDef gpio_speed) { const stm32_pin_info &pp = PIN_MAP[pin]; gpio_set_speed(pp.gpio_device, pp.gpio_bit, gpio_speed);}
+    static inline void    _setSpeed(uint8_t pin, GPIOSpeed_t gpio_speed) { const stm32_pin_info &pp = PIN_MAP[pin]; gpio_set_speed(pp.gpio_device, pp.gpio_bit, gpio_speed);}
 
     static inline REVOMINIDigitalSource* get_channel(uint16_t pin) { const stm32_pin_info &pp = PIN_MAP[pin]; return new REVOMINIDigitalSource(pp.gpio_device, pp.gpio_bit); }
 };

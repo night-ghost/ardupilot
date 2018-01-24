@@ -120,11 +120,11 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     SCHED_TASK(lost_vehicle_check,    10,     50),
     SCHED_TASK(gcs_check_input,      400,    180),
     SCHED_TASK(gcs_send_heartbeat,     1,    110),
-    SCHED_TASK(gcs_send_deferred,     50,    550),
-    SCHED_TASK(gcs_data_stream_send,  50,    650),
+    SCHED_TASK(gcs_send_deferred,     50,    300),
+    SCHED_TASK(gcs_data_stream_send,  50,    300),
     SCHED_TASK(update_mount,          50,    100),
     SCHED_TASK(update_trigger,        50,     75),
-    SCHED_TASK(ten_hz_logging_loop,   10,    350),
+    SCHED_TASK(ten_hz_logging_loop,   10,    300),
     SCHED_TASK(twentyfive_hz_logging, 25,    110),
     SCHED_TASK(dataflash_periodic,   400,    300),
     SCHED_TASK(ins_periodic,         400,    100),
@@ -282,32 +282,37 @@ void Copter::loop()
 }
 
 
+//#define DEBUG_FASTLOOP_TIME
+
 // Main loop - 400hz
 void Copter::fast_loop()
 {
 #if defined(DEBUG_FASTLOOP_TIME)
     uint32_t t0 = micros();
+    uint32_t now;
+    static float t1,t2,t3,t4,t5,t6,t7,t8,t9,t10, t11;
+    static uint32_t count=0;
 #endif
     // update INS immediately to get current gyro data populated
     ins.update();
 
 
 #if defined(DEBUG_FASTLOOP_TIME)
-    uint32_t now = micros(); static uint32_t t1 = now - t0; t0 = now;
+    now = micros(); t1 += now - t0; t0 = now;
 #endif
 
     // run low level rate controllers that only require IMU data
     attitude_control->rate_controller_run();
 
 #if defined(DEBUG_FASTLOOP_TIME)
-    uint32_t now = micros(); static uint32_t t2 = now - t0; t0 = now;
+    now = micros(); t2 += now - t0; t0 = now;
 #endif
 
     // send outputs to the motors library immediately
     motors_output();
 
 #if defined(DEBUG_FASTLOOP_TIME)
-    uint32_t now = micros(); static uint32_t t3 = now - t0; t0 = now;
+    now = micros(); t3 += now - t0; t0 = now;
 #endif
 
     // run EKF state estimator (expensive)
@@ -316,20 +321,20 @@ void Copter::fast_loop()
 
 
 #if defined(DEBUG_FASTLOOP_TIME)
-    uint32_t now = micros(); static uint32_t t4 = now - t0; t0 = now;
+    now = micros(); t4 += now - t0; t0 = now;
 #endif
 
 
 #if FRAME_CONFIG == HELI_FRAME
     update_heli_control_dynamics();
-#endif //HELI_FRAME
+#endif
 
     // Inertial Nav
     // --------------------
     read_inertia();
 
 #if defined(DEBUG_FASTLOOP_TIME)
-    uint32_t now = micros(); static uint32_t t5 = now - t0; t0 = now;
+    now = micros(); t5 += now - t0; t0 = now;
 #endif
 
 
@@ -338,7 +343,7 @@ void Copter::fast_loop()
 
 
 #if defined(DEBUG_FASTLOOP_TIME)
-    uint32_t now = micros(); static uint32_t t6 = now - t0; t0 = now;
+    now = micros(); t6 += now - t0; t0 = now;
 #endif
 
     // run the attitude controllers
@@ -346,7 +351,7 @@ void Copter::fast_loop()
 
 
 #if defined(DEBUG_FASTLOOP_TIME)
-    uint32_t now = micros(); static uint32_t t7 = now - t0; t0 = now;
+    now = micros(); t7 += now - t0; t0 = now;
 #endif
 
 
@@ -354,7 +359,7 @@ void Copter::fast_loop()
     update_home_from_EKF();
 
 #if defined(DEBUG_FASTLOOP_TIME)
-    uint32_t now = micros(); static uint32_t t8 = now - t0; t0 = now;
+    now = micros(); t8 += now - t0; t0 = now;
 #endif
 
 
@@ -362,7 +367,7 @@ void Copter::fast_loop()
     update_land_and_crash_detectors();
 
 #if defined(DEBUG_FASTLOOP_TIME)
-    uint32_t now = micros(); static uint32_t t9 = now - t0; t0 = now;
+    now = micros(); t9 += now - t0; t0 = now;
 #endif
 
 
@@ -371,10 +376,34 @@ void Copter::fast_loop()
     camera_mount.update_fast();
 #endif
 
+#if defined(DEBUG_FASTLOOP_TIME)
+    now = micros(); t10 += now - t0; t0 = now;
+#endif
+
+
     // log sensor health
     if (should_log(MASK_LOG_ANY)) {
         Log_Sensor_Health();
     }
+
+#if defined(DEBUG_FASTLOOP_TIME)
+    now = micros(); t11 += now - t0; t0 = now;
+
+    count++;
+    if(count>=10000){
+        printf("fast loop t1=%5.2f t2=%5.2f t3=%5.2f t4=%5.2f t5=%5.2f t6=%5.2f t7=%5.2f t8=%5.2f t9=%5.2f t10=%5.2f t11=%5.2f\n",
+                          t1/count,t2/count,t3/count,t4/count,t5/count,t6/count,t7/count,t8/count,t9/count,t10/count,t11/count);
+        count=0;
+        t1=t2=t3=t4=t5=t6=t7=t8=t9=t10=t11=0;
+// fast loop t1=11.03 t2=12.76 t3=26.13 t4=167.75 t5=14.69 t6= 4.34 t7= 4.38 t8= 1.57 t9= 5.93 t10= 0.35 t11= 1.25
+// 1kHz, ekf3
+// fast loop t1= 9.64 t2=11.56 t3=41.71 t4=108.53 t5= 6.42 t6= 1.33 t7= 3.98 t8= 1.16 t9= 4.35 t10= 0.34 t11= 1.22
+// the same, armed
+// fast loop t1= 9.83 t2=13.02 t3=49.16 t4=217.37 t5=15.66 t6= 4.45 t7=14.34 t8= 1.67 t9= 6.79 t10= 0.36 t11= 1.75
+
+    }
+#endif // 4uS
+
 }
 
 // rc_loops - reads user input from transmitter/receiver

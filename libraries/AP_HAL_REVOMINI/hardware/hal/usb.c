@@ -328,8 +328,9 @@ int usb_periphcfg(FunctionalState state)
 	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
 
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource11, GPIO_AF_OTG1_FS);
-	GPIO_PinAFConfig(GPIOA, GPIO_PinSource12, GPIO_AF_OTG1_FS);
+	gpio_set_af_mode(_GPIOA, GPIO_PinSource11, GPIO_AF_OTG1_FS);
+	gpio_set_af_mode(_GPIOA, GPIO_PinSource12, GPIO_AF_OTG1_FS);
+
 
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 	RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_OTG_FS, ENABLE) ;

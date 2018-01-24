@@ -59,7 +59,7 @@ void REVOMINIGPIO::_pinMode(uint8_t pin, uint8_t mode)
     gpio_set_mode(dev, bit, outputMode);
 
     if (pwm && timer != NULL) {    
-        gpio_set_speed(dev, bit, GPIO_Speed_25MHz);  // cleanflight sets 2MHz
+        gpio_set_speed(dev, bit, GPIO_speed_25MHz);  // cleanflight sets 2MHz
 	gpio_set_af_mode(dev, bit, timer->af);
 	timer_set_mode(timer, p.timer_channel, TIMER_PWM); // init in setupTimers()
     } else {
@@ -174,7 +174,7 @@ void REVOMINIDigitalSource::mode(uint8_t md)
     }
 
     gpio_set_mode( _device, _bit, outputMode);
-    gpio_set_speed(_device, _bit, GPIO_Speed_100MHz); // to use as CS
+    gpio_set_speed(_device, _bit, GPIO_speed_100MHz); // to use as CS
 }
 
 void digitalWrite(uint8_t pin, uint8_t value) { REVOMINI::REVOMINIGPIO::_write(pin, value); }

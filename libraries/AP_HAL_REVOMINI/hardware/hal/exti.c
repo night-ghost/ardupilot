@@ -81,7 +81,7 @@ void exti_attach_interrupt(afio_exti_num num,
 	// Enable SYSCFG clock 
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 
-	SYSCFG_EXTILineConfig(port, num);
+	afio_exti_select(port, num);
 
         uint32_t line = exti_channels[num].irq_line;
 
@@ -119,7 +119,7 @@ void exti_attach_interrupt_pri(afio_exti_num num,
 
 	// Enable SYSCFG clock 
 
-	SYSCFG_EXTILineConfig(port, num); // select port as  EXTI interrupt source. SYSCFG not documented in STM docs
+	afio_exti_select(port, num); // select port as  EXTI interrupt source. SYSCFG not documented in STM docs
 
         uint32_t line = exti_channels[num].irq_line;
 

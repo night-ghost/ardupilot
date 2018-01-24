@@ -315,7 +315,7 @@ void timer_init(const timer_dev *dev) {
  */
 void timer_reset(const timer_dev *dev) {
     memset(dev->handlers, 0, dev->n_handlers * sizeof(Handler));
-    memset(dev->state, 0, sizeof(dev->state));
+    memset(dev->state, 0, sizeof(*dev->state));
 
     if(dev->bus) {
     	RCC_APB2PeriphClockCmd(dev->clk, ENABLE);

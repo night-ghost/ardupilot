@@ -77,8 +77,16 @@ extern const usart_dev * const _USART6;
 #define USART_MASK3_CTSIE  0x400
 #define USART_MASK3_EIE  0x1
 
+#define UART_Mode_Rx      (0x0004)
+#define UART_Mode_Tx      (0x0008)
 
+#define UART_HardwareFlowControl_None       (0x0000)
+#define UART_HardwareFlowControl_RTS        (0x0100)
+#define UART_HardwareFlowControl_CTS        (0x0200)
+#define UART_HardwareFlowControl_RTS_CTS    (0x0300)
 
+#define UART_Word_8b                  ((uint16_t)0x0000)
+#define UART_Word_9b                  ((uint16_t)0x1000)
 
 /**
  * @brief Initialize a serial port.

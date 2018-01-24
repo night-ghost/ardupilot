@@ -1,4 +1,6 @@
 /**
+
+
   ******************************************************************************
   * @file    Project/STM32F4xx_StdPeriph_Templates/stm32f4xx_conf.h  
   * @author  MCD Application Team
@@ -47,16 +49,12 @@
 #endif /* USE_FULL_ASSERT */
 
 /* Includes ------------------------------------------------------------------*/
-/* Uncomment the line below to enable peripheral header file inclusion */
+
 #include "stm32f4xx_adc.h"
-#include "stm32f4xx_can.h"
 #include "stm32f4xx_dbgmcu.h"
-#include "stm32f4xx_dma.h"
 #include "stm32f4xx_exti.h"
 #include "stm32f4xx_flash.h"
 #include "stm32f4xx_gpio.h"
-#include "stm32f4xx_i2c.h"
-#include "stm32f4xx_iwdg.h"
 #include "stm32f4xx_pwr.h"
 #include "stm32f4xx_rcc.h"
 #include "stm32f4xx_rtc.h"
@@ -64,17 +62,13 @@
 #include "stm32f4xx_syscfg.h"
 #include "stm32f4xx_tim.h"
 #include "stm32f4xx_usart.h"
-#include "stm32f4xx_wwdg.h"
-#include "stm32f4xx_nvic.h" /* High level functions for NVIC and SysTick (add-on to CMSIS functions) */
+#include "stm32f4xx_nvic.h"  // High level functions for NVIC and SysTick (add-on to CMSIS functions) 
 
-/* Exported types ------------------------------------------------------------*/
-/* Exported constants --------------------------------------------------------*/
-
-/* If an external clock source is used, then the value of the following define 
-   should be set to the value of the external clock source, else, if no external 
-   clock is used, keep this define commented */
-/*#define I2S_EXTERNAL_CLOCK_VAL   12288000 */ /* Value of the external clock in Hz */
-
+//#include "stm32f4xx_dma.h"
+//#include "stm32f4xx_i2c.h"
+//#include "stm32f4xx_iwdg.h"
+//#include "stm32f4xx_wwdg.h"
+//#include "stm32f4xx_can.h"
 
 
 #endif /* __STM32F4xx_CONF_H */

@@ -29,19 +29,6 @@ based on:
  * SOFTWARE.
  *****************************************************************************/
 
-/**
- * @file dma.h
- *
- * @author Marti Bolivar <mbolivar@leaflabs.com>;
- *         Original implementation by Michael Hope
- *
- * @brief Direct Memory Access peripheral support
- */
-
-/*
- * See /notes/dma.txt for more information.
- */
-
 #ifndef _DMA_H_
 #define _DMA_H_
 
@@ -163,6 +150,19 @@ typedef struct dma_reg_map {
 #define DMA_FLAG_TEIF                    ((uint32_t)0x08)
 #define DMA_FLAG_HTIF                    ((uint32_t)0x10)
 #define DMA_FLAG_TCIF                    ((uint32_t)0x20)
+
+#define DMA_FIFOMode_Disable              ((uint32_t)0x00000000) 
+#define DMA_FIFOMode_Enable               ((uint32_t)0x00000004)
+
+#define DMA_FIFOThreshold_1QuarterFull    ((uint32_t)0x00000000)
+#define DMA_FIFOThreshold_HalfFull        ((uint32_t)0x00000001) 
+#define DMA_FIFOThreshold_3QuartersFull   ((uint32_t)0x00000002)
+#define DMA_FIFOThreshold_Full            ((uint32_t)0x00000003)
+
+#define DMA_Priority_Low                  ((uint32_t)0x00000000)
+#define DMA_Priority_Medium               ((uint32_t)0x00010000) 
+#define DMA_Priority_High                 ((uint32_t)0x00020000)
+#define DMA_Priority_VeryHigh             ((uint32_t)0x00030000)
 
 /** DMA channels 
     переписано по образу и подобию либы от СТ, позволяющей не возиться с выяснением какой поток на каком ДМА
