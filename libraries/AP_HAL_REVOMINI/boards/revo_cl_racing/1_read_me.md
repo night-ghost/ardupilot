@@ -7,7 +7,7 @@ USB                (Serial0 in MP)
 Telemetry to UART1 (Serial1) 
 GPS  to      UART6 (Serial3) 
 
-Built-in OSD is     Serial4
+Built-in OSD is     Serial2
 
 this board REQUIRES external Baro and Compass via I2C bus: UART4 TX is SCL and UART4 RX is SDA
 
