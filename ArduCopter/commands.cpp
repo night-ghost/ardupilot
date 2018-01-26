@@ -36,6 +36,8 @@ void Copter::set_home_to_current_location_inflight() {
         }
         // we have successfully set AHRS home, set it for SmartRTL
         g2.smart_rtl.set_home(true);
+        // tell barometer about GPS altitude (for air pressure drift compensation)
+        barometer.set_home_alt(gps.location().alt*0.01f);
     }
 }
 
@@ -49,6 +51,8 @@ bool Copter::set_home_to_current_location(bool lock) {
         }
         // we have successfully set AHRS home, set it for SmartRTL
         g2.smart_rtl.set_home(true);
+        // tell barometer about GPS altitude (for air pressure drift compensation)
+        barometer.set_home_alt(gps.location().alt*0.01f);
         return true;
     }
     return false;

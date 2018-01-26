@@ -1048,7 +1048,7 @@ struct PACKED log_DSTL {
 
 // see "struct sensor" in AP_Baro.h and "Log_Write_Baro":
 #define BARO_LABELS "TimeUS,Alt,Press,Temp,CRt,SMS,Offset,GndTemp"
-#define BARO_FMT   "QffcfIff"
+#define BARO_FMT   "QffcfIffff"
 #define BARO_UNITS "smPOnsmO"
 #define BARO_MULTS "F00B0C?0"
 
