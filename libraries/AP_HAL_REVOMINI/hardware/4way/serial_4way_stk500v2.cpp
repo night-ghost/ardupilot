@@ -241,7 +241,7 @@ static uint8_t _CMD_SPI_MULTI_EX(volatile uint8_t * ResByte,uint8_t Cmd,uint8_t 
     StkSendByte(AdrLo);    // {TxData} AdrLoch
     StkSendByte(0); // {TxData} 0
     StkSendPacketFooter();
-    if (StkRcvPacket(StkInBuf)) { // NumRX + 3
+    if (StkRcvPacket((void *)StkInBuf)) { // NumRX + 3
          if ((StkInBuf[0] == 0x00) && ((StkInBuf[1] == Cmd)||(StkInBuf[1] == 0x00)/* ignore  zero returns */) &&(StkInBuf[2] == 0x00)) {
             *ResByte = StkInBuf[3];
          }
@@ -266,7 +266,7 @@ static uint8_t _CMD_LOAD_ADDRESS(ioMem_t *pMem)
     StkSendByte(pMem->D_FLASH_ADDR_H);
     StkSendByte(pMem->D_FLASH_ADDR_L);
     StkSendPacketFooter();
-    return StkRcvPacket(StkInBuf);
+    return StkRcvPacket((void *)StkInBuf);
 }
 
 static uint8_t _CMD_READ_MEM_ISP(ioMem_t *pMem)
@@ -321,7 +321,7 @@ static uint8_t _CMD_PROGRAM_MEM_ISP(ioMem_t *pMem)
         LenLo--;
     } while (LenLo);
     StkSendPacketFooter();
-    return StkRcvPacket(StkInBuf);
+    return StkRcvPacket((void *)StkInBuf);
 }
 
 uint8_t Stk_SignOn(void)
@@ -333,7 +333,7 @@ uint8_t Stk_SignOn(void)
     StkSendByte(TOKEN);
     StkSendByte(CMD_SIGN_ON);
     StkSendPacketFooter();
-    return StkRcvPacket(StkInBuf);
+    return StkRcvPacket((void *)StkInBuf);
 }
 
 uint8_t Stk_ConnectEx(uint8_32_u *pDeviceInfo)
@@ -363,7 +363,7 @@ uint8_t Stk_Chip_Erase(void)
     StkSendByte(0x13);
     StkSendByte(0x76);
     StkSendPacketFooter();
-    return StkRcvPacket(StkInBuf);
+    return StkRcvPacket((void *)StkInBuf);
 }
 
 uint8_t Stk_ReadFlash(ioMem_t *pMem)

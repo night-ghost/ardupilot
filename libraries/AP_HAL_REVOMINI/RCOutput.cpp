@@ -150,9 +150,10 @@ uint16_t REVOMINIRCOutput::_timer3_preload;
 
 uint8_t  REVOMINIRCOutput::_pwm_type=0;
 
-const timer_dev* REVOMINIRCOutput::out_timers[16];
-uint8_t          REVOMINIRCOutput::num_out_timers;
+const timer_dev* REVOMINIRCOutput::out_timers[16]  IN_CCM;
+uint8_t          REVOMINIRCOutput::num_out_timers  IN_CCM;
 
+bool REVOMINIRCOutput::_motors_disabled IN_CCM;
 
 #define PWM_TIMER_KHZ          2000  // 1000 in cleanflight
 #define ONESHOT125_TIMER_KHZ   8000  // 8000 in cleanflight
@@ -167,6 +168,8 @@ void REVOMINIRCOutput::init()
     memset(&_initialized[0], 0, sizeof(_initialized));
 
     _used_channels=0;
+    
+    _motors_disabled = false;
 }
 
 
@@ -305,6 +308,8 @@ void REVOMINIRCOutput::_set_output_mode(enum REVOMINIRCOutput::output_mode mode)
         _mode=BOARD_PWM_PWM125;
         break;
     }
+
+    if(_motors_disabled) return;
     
 // TODO: remove hardwiring timers
 // TODO: we should change mode only for channels with freq > 50Hz
@@ -487,6 +492,8 @@ void REVOMINIRCOutput::set_freq(uint32_t chmask, uint16_t freq_hz) {
 
 // for true one-shot        if(_once_mode && freq_hz>50) continue; // no frequency in OneShoot modes
             _freq[i] = freq_hz;
+            
+            if(_motors_disabled) continue;
 
             if(_once_mode && freq_hz>50) freq = freq_hz / 2; // divide frequency by 2 in OneShoot modes
             const uint8_t pin = output_channels[i];
@@ -531,6 +538,8 @@ static inline uint16_t constrain_period(uint16_t p) {
 }
 
 void REVOMINIRCOutput::set_pwm(uint8_t ch, uint16_t pwm){
+    if(_motors_disabled) return;
+    
     if(ch>=REVOMINI_MAX_OUTPUT_CHANNELS) return;
 
     if (!(_enabled_channels & _BV(ch))) return;      // not enabled
@@ -617,6 +626,7 @@ void REVOMINIRCOutput::enable_ch(uint8_t ch)
         _period[ch] = 0;
     }
     
+    if(_motors_disabled) return;
     
     if(!_initialized[ch]) {
     
@@ -670,6 +680,8 @@ void REVOMINIRCOutput::disable_ch(uint8_t ch)
 
 void REVOMINIRCOutput::push()
 {
+
+    if(_motors_disabled) return;
 
 #ifdef DEBUG_PWM
     uint8_t spin = output_channels[DEBUG_PWM]; // motor 6 as strobe

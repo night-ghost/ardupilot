@@ -80,6 +80,8 @@ public:
         return (uint32_t)((float)(dev->state->freq + speed_hz/2) / speed_hz);
     }
 
+    static inline void disable_motors(bool e) { _motors_disabled = e; }
+
 private:
     static void InitPWM(void);
     static void set_pwm(uint8_t ch, uint16_t pwm);
@@ -117,5 +119,6 @@ private:
     static uint8_t num_out_timers;
 
     static void fill_timers(); 
+    static bool _motors_disabled;
 };
 

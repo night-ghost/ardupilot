@@ -20,6 +20,7 @@
 #define imSIL_BLB 1
 #define imATM_BLB 2
 #define imSK 3
+#define imARM_BLB 4
 
 
 
