@@ -9,7 +9,7 @@ GPS  to      UART6 (Serial3)
 
 Built-in OSD is     Serial4
 
-this board REQUIRES external Compass via I2C bus
+this board REQUIRES external Baro and Compass via I2C bus: UART4 TX is SCL and UART4 RX is SDA
 
 Built-in OSD can be configured via files in root directory of SD card:
 
@@ -20,4 +20,3 @@ also supported connection to built-in OSD with CT from my MinimOSD (https://gith
 * set HAL_CONNECT_COM parameter to 4, then reboot / power cycle
 * USB will be connected to OSD after reboot, supported load/store/fonts in MAVLink mode
 
-OSD will work better when VSYNC out from MAX connected to PC3 (R8 to Vcc) 
