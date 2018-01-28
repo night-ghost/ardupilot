@@ -30,7 +30,7 @@ cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_tim.
 cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_usart.c
 #cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_can.c
 #cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_dma.c
-#cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_syscfg.c
+cSRCS_$(d) += $(STM_DIR)/Libraries/STM32F4xx_StdPeriph_Driver/src/stm32f4xx_syscfg.c
 
 
 sSRCS_$(d) := 

@@ -123,8 +123,10 @@ static INLINE void noInterrupts() {
 
 
 
-
-
+static inline void exti_clear_pending_bit(uint32_t EXTI_Line)
+{
+  EXTI->PR = EXTI_Line;
+}
 
 
 void EXTI0_IRQHandler(void);

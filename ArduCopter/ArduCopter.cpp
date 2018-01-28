@@ -604,7 +604,7 @@ void Copter::one_hz_loop()
         motors->set_throttle_range(channel_throttle->get_radio_min(), channel_throttle->get_radio_max());
 #endif
         
-        barometer.update_alt_target(pos_control.get_alt_target()*0.01f);
+        barometer.update_alt_target(pos_control->get_alt_target()*0.01f);
     }
 
     // update assigned functions and enable auxiliary servos

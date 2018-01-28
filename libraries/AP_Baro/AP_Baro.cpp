@@ -54,6 +54,7 @@
 #define GPS_DT            1.f/GPS_LOOP_FREQ
 #define ADJ_RATE_DEFAULT  0                     // disabled
 #define ADJ_DELAY_DEFAULT 120 
+#define ADJ_TC_DEFAULT    180    
 
 extern const AP_HAL::HAL& hal;
 

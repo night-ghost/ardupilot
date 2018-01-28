@@ -130,20 +130,27 @@ uint16_t EEPROMClass::_CheckPage(uint32_t pageBase, uint16_t status)
 FLASH_Status EEPROMClass::_ErasePageByAddress(uint32_t Page_Address)
 {
 
-	int Page_Offset = Page_Address - 0x08000000; // calculates sector by address
-	uint32_t FLASH_Sector;
+    int Page_Offset = Page_Address - 0x08000000; // calculates sector by address
+    uint32_t FLASH_Sector;
 
-	if(Page_Offset < 0x10000) {
-		FLASH_Sector = Page_Offset / 0x4000; // 4 * 16K pages
-	} else if(Page_Offset < 0x20000) {
-		FLASH_Sector = 4;                    // 1 * 64K page
-	} else {
-		FLASH_Sector = 4 + Page_Offset / 0x20000; // all another pages of 128K
-	}
+    if(Page_Offset < 0x10000) {
+	FLASH_Sector = Page_Offset / 0x4000; // 4 * 16K pages
+    } else if(Page_Offset < 0x20000) {
+	FLASH_Sector = 4;                    // 1 * 64K page
+    } else {
+	FLASH_Sector = 4 + Page_Offset / 0x20000; // all another pages of 128K
+    }
 
-	FLASH_Status ret = FLASH_EraseSector(8 * FLASH_Sector, VoltageRange_3);
+    uint8_t n_try = 16;
+again:
+    FLASH_Status ret = FLASH_EraseSector(8 * FLASH_Sector, VoltageRange_3);
+
+    if(ret != FLASH_COMPLETE ) {
+        reset_flash_errors();
+        if(n_try-- > 0) goto again;
+    }
 	
-	return ret;
+    return ret;
 }
 
 /**

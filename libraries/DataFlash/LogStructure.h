@@ -322,6 +322,8 @@ struct PACKED log_BARO {
     uint32_t sample_time_ms;
     float   drift_offset;
     float   ground_temp;
+    float   correction;
+    float   gpsalt_over_home;
 };
 
 struct PACKED log_AHRS {

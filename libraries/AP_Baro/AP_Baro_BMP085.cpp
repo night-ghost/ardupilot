@@ -58,7 +58,7 @@ bool AP_Baro_BMP085::_init()
 {
     union {
         uint8_t buff[22];
-        uint16_t w;
+        uint16_t wb[11];
     } bb;
 
     // get pointer to i2c bus semaphore
@@ -97,7 +97,7 @@ bool AP_Baro_BMP085::_init()
     }
 
     if(!prom_ok){
-        if(_read_prom((uint16_t *)&bb.buff[0]))  { // BMP180 requires reads by 2 bytes
+        if(_read_prom(&bb.wb[0]))  { // BMP180 requires reads by 2 bytes
             prom_ok=true;
             _type=1;
         }

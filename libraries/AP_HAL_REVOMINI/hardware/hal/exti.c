@@ -86,7 +86,7 @@ void exti_attach_interrupt(afio_exti_num num,
         uint32_t line = exti_channels[num].irq_line;
 
         // clear active request
-        EXTI_ClearITPendingBit(line);
+        exti_clear_pending_bit(line);
 
 	/* Configure EXTI Line */
 	EXTI_InitStructure.EXTI_Line = line;
@@ -124,7 +124,7 @@ void exti_attach_interrupt_pri(afio_exti_num num,
         uint32_t line = exti_channels[num].irq_line;
 
         // clear active request
-        EXTI_ClearITPendingBit(line);
+        exti_clear_pending_bit(line);
         
 	/* Configure EXTI Line */
 	EXTI_InitTypeDef   EXTI_InitStructure;
@@ -188,7 +188,7 @@ static void exti_serv(uint32_t extline, uint8_t num)
 	}
 
 	/* Clear the EXTI line pending bit */
-	EXTI_ClearITPendingBit(extline);
+	exti_clear_pending_bit(extline);
     }
 
 #ifdef ISR_PERF

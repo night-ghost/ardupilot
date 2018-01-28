@@ -24,6 +24,8 @@ extern const AP_HAL::HAL &hal;
 
 
 /*
+
+
     на первый взгляд, магнитометр MAG3110 состоит из одних лишь недостатков:
     * шумный, с кривой характеристикой, 
     * никак не калибруется, приходится просто верить тому что он намерял
@@ -261,31 +263,3 @@ void AP_Compass_MAG3110::read()
     publish_filtered_field(field, _compass_instance);
 }
 
-/*
-bool AP_Compass_MAG3110::_mag_set_samplerate(uint16_t frequency)
-{
-    uint8_t setbits = 0;
-    uint8_t clearbits = REG5_RATE_BITS_M;
-
-    if (frequency == 0) {
-        frequency = 100;
-    }
-
-    if (frequency <= 25) {
-        setbits |= REG5_RATE_25HZ_M;
-        _mag_samplerate = 25;
-    } else if (frequency <= 50) {
-        setbits |= REG5_RATE_50HZ_M;
-        _mag_samplerate = 50;
-    } else if (frequency <= 100) {
-        setbits |= REG5_RATE_100HZ_M;
-        _mag_samplerate = 100;
-    } else {
-        return false;
-    }
-
-    _register_modify(ADDR_CTRL_REG5, clearbits, setbits);
-
-    return true;
-}
-*/

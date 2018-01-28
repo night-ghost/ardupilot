@@ -165,14 +165,13 @@ static inline void gpio_set_speed(const gpio_dev* const dev, uint8_t pin, GPIOSp
 }
 
 
-static inline void afio_exti_select(afio_exti_num exti, afio_exti_port gpio_port)
+static inline void afio_exti_select(afio_exti_port gpio_port, afio_exti_num pin)
 {
-  uint32_t tmp = ((uint32_t)0x0F) << (0x04 * (exti & (uint8_t)0x03));
-  SYSCFG->EXTICR[exti >> 0x02] &= ~tmp;
-  SYSCFG->EXTICR[exti >> 0x02] |= (((uint32_t)gpio_port) << (0x04 * (exti & (uint8_t)0x03)));
+  uint32_t tmp = ((uint32_t)0x0F) << (0x04 * (pin & (uint8_t)0x03));
+  SYSCFG->EXTICR[pin >> 0x02] &= ~tmp;
+  SYSCFG->EXTICR[pin >> 0x02] |= (((uint32_t)gpio_port) << (0x04 * (pin & (uint8_t)0x03)));
 
 }
-
 
 
 #ifdef __cplusplus

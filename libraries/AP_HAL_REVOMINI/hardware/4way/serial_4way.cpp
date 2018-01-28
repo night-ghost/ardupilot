@@ -117,7 +117,6 @@ void setEscOutput(uint8_t selEsc)
 uint8_t esc4wayInit(const uint8_t *output_channels, uint8_t nm)
 {
     escCount = 0;
-    REVOMINIRCOutput::disable_motors(true);
     memset(&escHardware, 0, sizeof(escHardware));
     for (volatile uint8_t i = 0; i < nm; i++) {
         uint8_t pin = output_channels[i];
@@ -136,12 +135,10 @@ uint8_t esc4wayInit(const uint8_t *output_channels, uint8_t nm)
 
 void esc4wayRelease(void)
 {
-    REVOMINIRCOutput::disable_motors(false);
-    
     while (escCount > 0) {
         escCount--;
 
-        REVOMINIRCOutput::_set_pin_output_mode(escCount);
+//        REVOMINIRCOutput::_set_pin_output_mode(escCount); let just reboot
     }
 }
 
@@ -854,7 +851,7 @@ void esc4wayProcess(AP_HAL::UARTDriver *uartPort)
 
         i=O_PARAM_LEN;
         do {
-            while(UartTxPending()) hal_yield();
+            while(UartTxPending()) hal_yield(0);
             WriteByteCrc(*O_PARAM);
             O_PARAM++;
             i--;
