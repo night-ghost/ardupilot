@@ -3,7 +3,6 @@
 /*
 
 (c) 2017 night_ghost@ykoctpa.ru
- 
 
 */
 
@@ -31,8 +30,8 @@ Semaphore::Semaphore()
 
 bool Semaphore::give() {
     if(REVOMINIScheduler::in_interrupt()) { // SVC from interrupt will cause HardFault, but we need to give 
-        bool v=_is_waiting;
-        bool ret=svc_give();                      // bus semaphores from IO_Complete ISR. This is atomic and don't break anything
+        bool v=_is_waiting;                 //   bus semaphores from IO_Complete ISR.
+        bool ret=svc_give();                // This is atomic and don't breaks anything
         if(v) REVOMINIScheduler::context_switch_isr(); // if anyone waits for this semaphore then reschedule tasks after interrupt
         return ret;
     }
@@ -50,7 +49,7 @@ bool Semaphore::take(uint32_t timeout_ms) {
     do {     // task switching can be asyncronous but we can't return to caller before take semaphore
 
         if(REVOMINIScheduler::in_interrupt()) { // SVC from interrupt will cause HardFault
-            ret = svc_take_nonblocking();    // this can be called from failsafe_check which executed in ISR context
+            ret = svc_take_nonblocking();       //   but this can be called from failsafe_check which executed in ISR context
         } else {
             ret = _take_from_mainloop(timeout_ms);
         }

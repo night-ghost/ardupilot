@@ -628,10 +628,6 @@ void REVOMINIRCOutput::enable_ch(uint8_t ch)
         init_channel(ch);
         
         const timer_dev *dev = PIN_MAP[pin].timer_device;
-/*
-        uint32_t period    = ((PWM_TIMER_KHZ*1000UL) / 50); // 50Hz by default
-        configTimeBase(dev, period,  PWM_TIMER_KHZ);        // 2MHz 0.5us ticks - for 50..490Hz PWM
-*/
 
         timer_resume(dev);
     

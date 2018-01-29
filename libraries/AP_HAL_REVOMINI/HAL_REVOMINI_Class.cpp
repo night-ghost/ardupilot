@@ -148,7 +148,6 @@ HAL_REVOMINI::HAL_REVOMINI() :
 
         &uart3Driver,           // uartD - flexi port                                          - Serial2 
         &uart4Driver,           // uartE - PWM pins 5&6                                        - Serial4
-//        &uartPPM2,              // uartE - input data from PPM2 pin                            - Serial4
         &softDriver,            // uartF - soft UART on pins 7&8                               - Serial5 
 
 #elif BOARD_UARTS_LAYOUT == 2 // Airbot
@@ -181,7 +180,7 @@ HAL_REVOMINI::HAL_REVOMINI() :
         NULL,
         NULL,
         
-#elif BOARD_UARTS_LAYOUT == 7 // Cl_Racing
+#elif BOARD_UARTS_LAYOUT == 7 // Cl_Racing F4
 
         &uartOSDdriver,         // uartD - OSD emulated UART                                   - Serial2
         &uartPPM1,              // uartE - input data from PPM1 pin                            - Serial4
@@ -290,7 +289,6 @@ void HAL_REVOMINI::run(int argc,char* const argv[], Callbacks* callbacks) const
 #endif
 
 #if defined(BOARD_OSD_NAME)
-//        uartD->begin(57600); // init OSD after SD but before call to lateInit(), but only if not in USB_STORAGE
         uartOSDdriver.begin(57600); // init OSD after SD but before call to lateInit(), but only if not in USB_STORAGE
 #endif
 

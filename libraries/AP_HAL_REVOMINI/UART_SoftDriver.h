@@ -146,7 +146,6 @@ private:
     const stm32_pin_info &tx_pp; 
     const stm32_pin_info &rx_pp; 
     
-//    const struct TIM_Channel *channel;
     const timer_dev          *timer;
     const timer_Channel       channel;
 

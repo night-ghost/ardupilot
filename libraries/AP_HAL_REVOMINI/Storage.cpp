@@ -188,8 +188,7 @@ void REVOMINIStorage::read_block(void* dst, uint16_t loc, size_t n) {
 #endif
 }
 
-void REVOMINIStorage::write_byte(uint16_t loc, uint8_t value)
-{
+void REVOMINIStorage::write_byte(uint16_t loc, uint8_t value){
 #if defined(EEPROM_CACHED)
     if(eeprom_buffer[loc]==value) return;
     eeprom_buffer[loc]=value;
@@ -200,8 +199,7 @@ void REVOMINIStorage::write_byte(uint16_t loc, uint8_t value)
     _write_byte(loc,value);    
 }
 
-void REVOMINIStorage::_write_byte(uint16_t loc, uint8_t value)
-{
+void REVOMINIStorage::_write_byte(uint16_t loc, uint8_t value){
     // 'bytes' are packed 2 per word
     // Read existing data word and change upper or lower byte
     uint16_t data;

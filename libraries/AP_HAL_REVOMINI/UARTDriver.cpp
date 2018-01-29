@@ -47,7 +47,6 @@ void REVOMINIUARTDriver::begin(uint32_t baud, uint32_t bmode) {
 
 #ifdef BOARD_SBUS_UART
     if(_initialized &&  hal_param_helper->_uart_sbus && _usart_device==UARTS[hal_param_helper->_uart_sbus]) return; //already used as SBUS
-//    if(usart_is_used(_usart_device)) return; it is NORMAL to Ardupilot to open one USART many times
 #endif
 
     uint32_t mode=0;

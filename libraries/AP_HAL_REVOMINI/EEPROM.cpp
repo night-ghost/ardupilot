@@ -353,6 +353,7 @@ uint16_t EEPROMClass::_VerifyPageFullWriteVariable(uint16_t Address, uint16_t Da
 	FLASH_Status status;
 	uint32_t idx, pageBase, pageEnd, newPage;
 	uint16_t mycount;
+	uint16_t old_data;
 
 	// Get valid Page for write operation
 	pageBase = _FindValidPage();
@@ -361,15 +362,17 @@ uint16_t EEPROMClass::_VerifyPageFullWriteVariable(uint16_t Address, uint16_t Da
 
 	// Get the valid Page end Address
 	pageEnd = pageBase + PageSize;			// Set end of page
-
+	
+// read from end to begin
 	for (idx = pageEnd - 2; idx > pageBase; idx -= 4) { 
-		if (read_16(idx) == Address){		// Find last value for address
-			mycount = read_16(idx - 2);	// Read last data
-			if (mycount == Data)
-				return EEPROM_OK; // TODO: ERROR! this can be old data!
-			if (mycount == 0xFFFF || /* we can write - there is no '0' where we need '1' */ (~mycount & Data)==0 ) { 
+		if (read_16(idx) == Address){		// Find last value for address, will stop loop if found
+			old_data = read_16(idx - 2);	// Read last data
+			if (old_data == Data){
+			    return EEPROM_OK;   //      data already OK
+			}
+			if (old_data == 0xFFFF || /* we can write - there is no '0' where we need '1' */ (~old_data & Data)==0 ) { 
 				status = write_16(idx - 2, Data);	// Set variable data
-				if (status == FLASH_COMPLETE && read_16(idx - 2) == Data)
+				if (status == FLASH_COMPLETE && read_16(idx - 2) == Data) // check if writen
 					return EEPROM_OK;
 			}
 			break;
