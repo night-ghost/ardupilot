@@ -155,6 +155,7 @@
 * added MAVlink messages about SD card errors
 * renamed board *_MP32V1F4 to *_Revolution to simplify things
 * fixed bug in RC_Input that cause permanent Failsafe
+* added motor clipping reporting and baro compensation by GPS from https://github.com/DuraCopter/ardupilot
 * ...
 * a lot of minor enhancements
 

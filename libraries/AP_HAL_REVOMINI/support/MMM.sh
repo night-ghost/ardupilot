@@ -7,6 +7,9 @@ export PATH=/usr/local/bin:$PATH
 
 echo $ROOT
 
+mkdir -p $ROOT/Release/Copter
+mkdir -p $ROOT/Release/Plane
+
 
 ( # RevoMini board
  cd $ROOT/ArduCopter

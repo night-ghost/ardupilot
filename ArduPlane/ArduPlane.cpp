@@ -364,6 +364,9 @@ void Plane::one_second_loop()
     // indicates that the sensor or subsystem is present but not
     // functioning correctly
     update_sensor_status_flags();
+
+    // do barometer correction by GPS
+    barometer.update_alt_target(adjusted_altitude_cm()*0.01f);
 }
 
 void Plane::log_perf_info()
@@ -506,12 +509,14 @@ void Plane::update_GPS_10Hz(void)
             }
         }
 
+
         // see if we've breached the geo-fence
         geofence_check(false);
 
 #if CAMERA == ENABLED
         camera.update();
 #endif
+        barometer.update_gps_alt(float(gps.location().alt)* (1/100.0) );
 
         // update wind estimate
         ahrs.estimate_wind();
