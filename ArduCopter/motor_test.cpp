@@ -51,6 +51,11 @@ void Copter::motor_test_output()
         // calculate pwm based on throttle type
         switch (motor_test_throttle_type) {
 
+            case MOTOR_TEST_COMPASS_CAL:
+                 compass.set_voltage(battery.voltage());
+                 compass.per_motor_calibration_update();
+                 // fall through 
+                 
             case MOTOR_TEST_THROTTLE_PERCENT:
                 // sanity check motor_test_throttle value
 #if FRAME_CONFIG != HELI_FRAME
@@ -136,6 +141,7 @@ MAV_RESULT Copter::mavlink_motor_test_start(mavlink_channel_t chan, uint8_t moto
         if (!mavlink_motor_test_check(chan, throttle_type != 1)) {
             return MAV_RESULT_FAILED;
         } else {
+            gcs().send_text(MAV_SEVERITY_INFO, "starting motor test");
             // start test
             ap.motor_test = true;
 
@@ -166,6 +172,10 @@ MAV_RESULT Copter::mavlink_motor_test_start(mavlink_channel_t chan, uint8_t moto
     motor_test_throttle_type = throttle_type;
     motor_test_throttle_value = throttle_value;
 
+    if (motor_test_throttle_type == MOTOR_TEST_COMPASS_CAL) {
+        compass.per_motor_calibration_start();
+    }    
+ 
     // return success
     return MAV_RESULT_ACCEPTED;
 }
@@ -178,6 +188,8 @@ void Copter::motor_test_stop()
         return;
     }
 
+    gcs().send_text(MAV_SEVERITY_INFO, "finished motor test");
+    
     // flag test is complete
     ap.motor_test = false;
 

@@ -432,6 +432,11 @@ const AP_Param::GroupInfo Compass::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("TYPEMASK", 33, Compass, _driver_type_mask, 0),
     
+    
+    // @Group: PMOT
+    // @Path: Compass_PerMotor.cpp
+    AP_SUBGROUPINFO(_per_motor, "PMOT", 35, Compass, Compass_PerMotor),
+    
     AP_GROUPEND
 };
 

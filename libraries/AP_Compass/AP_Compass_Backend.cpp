@@ -58,12 +58,26 @@ void AP_Compass_Backend::correct_field(Vector3f &mag, uint8_t i)
      * being applied so it can be logged correctly
      */
     mag += offsets;
+#if 0 
     if(_compass._motor_comp_type != AP_COMPASS_MOT_COMP_DISABLED && !is_zero(_compass._thr_or_curr)) {
         state.motor_offset = mot * _compass._thr_or_curr;
         mag += state.motor_offset;
     } else {
         state.motor_offset.zero();
     }
+#else // per-motor
+
+    state.motor_offset.zero();
+
+    if (_compass._per_motor.enabled() && i == 0) {
+        // per-motor correction is only valid for first compass
+        _compass._per_motor.compensate(state.motor_offset);
+    } else if (_compass._motor_comp_type == AP_COMPASS_MOT_COMP_THROTTLE ||
+               _compass._motor_comp_type == AP_COMPASS_MOT_COMP_CURRENT) {
+    }
+    mag += state.motor_offset;
+
+#endif
 
     Matrix3f mat(
         diagonals.x, offdiagonals.x, offdiagonals.y,

@@ -740,3 +740,16 @@ void AP_Baro::set_home_alt(float gps_alt)
     _home_alt = gps_alt;
 }
  
+ /*
+ 
+   float vacc;
+ +    const bool gps_vacc_ret = _gps->vertical_accuracy(vacc);
+ +    const uint32_t last_fix = _gps->last_fix_time_ms();
+ +    const uint32_t now = AP_HAL::millis();
+ +
+ +    // Make sure the vertical accuracy is within limits
+ +    if (gps_vacc_ret && vacc < BARO_MAX_GPS_ACCURACY && (now - last_fix) < BARO_MAX_GPS_DELAY) {
+ +        const Location loc = _gps->location();
+ +        _gps_calibration_altitude = float(loc.alt) / 100.0;
+ 
+ */

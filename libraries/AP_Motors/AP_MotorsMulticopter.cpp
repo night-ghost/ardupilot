@@ -181,7 +181,7 @@ const AP_Param::GroupInfo AP_MotorsMulticopter::var_info[] = {
     // @Range: 0 1
     // @Units: 1
     // @User: Advanced
-    AP_GROUPINFO("THR_WARN", 37, AP_MotorsMulticopter, _thr_warn_threshold, AP_MOTORS_THR_WARN_DEFAULT),
+    AP_GROUPINFO("THR_WARN", 39, AP_MotorsMulticopter, _thr_warn_threshold, AP_MOTORS_THR_WARN_DEFAULT),
 
     AP_GROUPEND
 };
