@@ -21,3 +21,10 @@ also supported connection to built-in OSD with CT from my MinimOSD (https://gith
 * USB will be connected to OSD after reboot, supported load/store/fonts in MAVLink mode
 
 OSD will work better when VSYNC out from MAX connected to PC3 (R8 to Vcc) 
+
+How to get voltage/current reading(tested on omnibus, should work on other targets to):
+BAT_MONITOR 4
+BAT_VOLT_PIN 8
+BAT_CURR_PIN 7
+BAT_VOLT_MULT 11.0 (or 10.1 for apm power module)
+BAT_AMP_PERVOLT 38.0 (or 17 for apm power module)
