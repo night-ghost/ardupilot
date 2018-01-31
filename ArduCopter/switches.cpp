@@ -15,16 +15,21 @@ struct {
 
 void Copter::read_control_switch()
 {
+    if (g.flight_mode_chan <= 0) {
+        // no flight mode channel
+        return;
+    }
+    
     uint32_t tnow_ms = millis();
 
     // calculate position of flight mode switch
     int8_t switch_position;
-    uint16_t rc5_in = RC_Channels::rc_channel(CH_5)->get_radio_in();
-    if      (rc5_in < 1231) switch_position = 0;
-    else if (rc5_in < 1361) switch_position = 1;
-    else if (rc5_in < 1491) switch_position = 2;
-    else if (rc5_in < 1621) switch_position = 3;
-    else if (rc5_in < 1750) switch_position = 4;
+    uint16_t mode_in = RC_Channels::rc_channel(g.flight_mode_chan-1)->get_radio_in();
+    if      (mode_in < 1231) switch_position = 0;
+    else if (mode_in < 1361) switch_position = 1;
+    else if (mode_in < 1491) switch_position = 2;
+    else if (mode_in < 1621) switch_position = 3;
+    else if (mode_in < 1750) switch_position = 4;
     else switch_position = 5;
 
     // store time that switch last moved
@@ -198,6 +203,7 @@ void Copter::init_aux_switch_function(int8_t ch_option, uint8_t ch_flag)
         case AUXSW_AVOID_PROXIMITY:
         case AUXSW_INVERTED:
         case AUXSW_WINCH_ENABLE:
+        case AUXSW_RC_OVERRIDE_ENABLE:
             do_aux_switch_function(ch_option, ch_flag);
             break;
     }
@@ -656,6 +662,20 @@ void Copter::do_aux_switch_function(int8_t ch_function, uint8_t ch_flag)
                     g2.winch.set_desired_rate(0.0f);
                     break;
                 }
+            break;
+
+        case AUXSW_RC_OVERRIDE_ENABLE:
+            // Allow or disallow RC_Override
+            switch (ch_flag) {
+                case AUX_SWITCH_HIGH: {
+                    ap.rc_override_enable = true;
+                    break;
+                }
+                case AUX_SWITCH_LOW: {
+                    ap.rc_override_enable = false;
+                    break;
+                }
+            }
             break;
     }
 }

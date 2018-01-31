@@ -92,6 +92,9 @@ void Rover::init_ardupilot()
     // initialise rangefinder
     init_rangefinder();
 
+    // init proximity sensor
+    init_proximity();
+
     // init beacons used for non-gps position estimation
     init_beacon();
 
@@ -223,6 +226,11 @@ bool Rover::set_mode(Mode &new_mode, mode_reason_t reason)
     }
 
     control_mode = &new_mode;
+
+    // pilot requested flight mode change during a fence breach indicates pilot is attempting to manually recover
+    // this flight mode change could be automatic (i.e. fence, battery, GPS or GCS failsafe)
+    // but it should be harmless to disable the fence temporarily in these situations as well
+    g2.fence.manual_recovery_start();
 
 #if FRSKY_TELEM_ENABLED == ENABLED
     frsky_telemetry.update_control_mode(control_mode->mode_number());

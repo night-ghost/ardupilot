@@ -19,7 +19,7 @@
 #define AC_AVOID_DEFAULT                (AC_AVOID_STOP_AT_FENCE | AC_AVOID_USE_PROXIMITY_SENSOR)
 
 // definitions for non-GPS avoidance
-#define AC_AVOID_NONGPS_DIST_MAX_DEFAULT    10.0f   // objects over 10m away are ignored (default value for DIST_MAX parameter)
+#define AC_AVOID_NONGPS_DIST_MAX_DEFAULT    5.0f    // objects over 5m away are ignored (default value for DIST_MAX parameter)
 #define AC_AVOID_ANGLE_MAX_PERCENT          0.75f   // object avoidance max lean angle as a percentage (expressed in 0 ~ 1 range) of total vehicle max lean angle
 
 /*
@@ -42,6 +42,14 @@ public:
     void adjust_velocity(float kP, float accel_cmss, Vector2f &desired_vel, float dt);
     void adjust_velocity(float kP, float accel_cmss, Vector3f &desired_vel, float dt);
 
+    // adjust desired horizontal speed so that the vehicle stops before the fence or object
+    // accel (maximum acceleration/deceleration) is in m/s/s
+    // heading is in radians
+    // speed is in m/s
+    // kP should be zero for linear response, non-zero for non-linear response
+    // dt is the time since the last call in seconds
+    void adjust_speed(float kP, float accel, float heading, float &speed, float dt);
+
     // adjust vertical climb rate so vehicle does not break the vertical fence
     void adjust_velocity_z(float kP, float accel_cmss, float& climb_rate_cms, float dt);
 
@@ -57,6 +65,12 @@ public:
     static const struct AP_Param::GroupInfo var_info[];
 
 private:
+    // behaviour types (see BEHAVE parameter)
+    enum BehaviourType {
+        BEHAVIOR_SLIDE = 0,
+        BEHAVIOR_STOP = 1
+    };
+
     /*
      * Adjusts the desired velocity for the circular fence.
      */
@@ -96,13 +110,14 @@ private:
     /*
      * Computes the speed such that the stopping distance
      * of the vehicle will be exactly the input distance.
+     * kP should be non-zero for Copter which has a non-linear response
      */
-    float get_max_speed(float kP, float accel_cmss, float distance, float dt) const;
+    float get_max_speed(float kP, float accel_cmss, float distance_cm, float dt) const;
 
     /*
      * Computes distance required to stop, given current speed.
      */
-    float get_stopping_distance(float kP, float accel_cmss, float speed) const;
+    float get_stopping_distance(float kP, float accel_cmss, float speed_cms) const;
 
     /*
      * methods for avoidance in non-GPS flight modes
@@ -125,6 +140,7 @@ private:
     AP_Int16 _angle_max;        // maximum lean angle to avoid obstacles (only used in non-GPS flight modes)
     AP_Float _dist_max;         // distance (in meters) from object at which obstacle avoidance will begin in non-GPS modes
     AP_Float _margin;           // vehicle will attempt to stay this distance (in meters) from objects while in GPS modes
+    AP_Int8 _behavior;          // avoidance behaviour (slide or stop)
 
     bool _proximity_enabled = true; // true if proximity sensor based avoidance is enabled (used to allow pilot to enable/disable)
 };

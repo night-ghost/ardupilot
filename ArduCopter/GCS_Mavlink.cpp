@@ -253,7 +253,7 @@ void Copter::send_pid_tuning(mavlink_channel_t chan)
         }
     }
     if (g.gcs_pid_mask & 8) {
-        const DataFlash_Class::PID_Info &pid_info = g.pid_accel_z.get_pid_info();
+        const DataFlash_Class::PID_Info &pid_info = copter.pos_control->get_accel_z_pid().get_pid_info();
         mavlink_msg_pid_tuning_send(chan, PID_TUNING_ACCZ, 
                                     pid_info.desired*0.01f,
                                     -(ahrs.get_accel_ef_blended().z + GRAVITY_MSS),
@@ -761,6 +761,13 @@ void GCS_MAVLINK_Copter::handleMessage(mavlink_message_t* msg)
         // or for complete GCS control of switch position
         // and RC PWM values.
         if(msg->sysid != copter.g.sysid_my_gcs) break;                         // Only accept control from our gcs
+        if (!copter.ap.rc_override_enable) {
+            if (copter.failsafe.rc_override_active) {  // if overrides were active previously, disable them
+                copter.failsafe.rc_override_active = false;
+                hal.rcin->clear_overrides();
+            }
+            break;
+        }
         mavlink_rc_channels_override_t packet;
         int16_t v[8];
         mavlink_msg_rc_channels_override_decode(msg, &packet);

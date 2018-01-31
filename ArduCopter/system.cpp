@@ -178,8 +178,6 @@ void Copter::init_ardupilot()
     attitude_control->parameter_sanity_check();
     pos_control->set_dt(scheduler.get_loop_period_s());
 
-    g.pid_accel_z.set_dt(scheduler.get_loop_period_s());
-
     // init the optical flow sensor
     init_optflow();
 
@@ -597,9 +595,7 @@ void Copter::allocate_motors(void)
     }
     AP_Param::load_object_from_eeprom(attitude_control, ac_var_info);
         
-    pos_control = new AC_PosControl(*ahrs_view, inertial_nav, *motors, *attitude_control,
-                                    g.p_alt_hold, g.p_vel_z, g.pid_accel_z,
-                                    g.p_pos_xy, g.pi_vel_xy);
+    pos_control = new AC_PosControl(*ahrs_view, inertial_nav, *motors, *attitude_control);
     if (pos_control == nullptr) {
         AP_HAL::panic("Unable to allocate PosControl");
     }
