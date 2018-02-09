@@ -57,6 +57,7 @@
 #define HAL_BOARD_SUBTYPE_VRUBRAIN_V52     4004
 #define HAL_BOARD_SUBTYPE_VRCORE_V10       4005
 #define HAL_BOARD_SUBTYPE_VRBRAIN_V54      4006
+#define HAL_BOARD_SUBTYPE_VRBRAIN_V52E     4007
 
 
 /* HAL CHIBIOS sub-types, starting at 5000 */
@@ -65,8 +66,11 @@
 #define HAL_BOARD_SUBTYPE_CHIBIOS_FMUV4         5002
 #define HAL_BOARD_SUBTYPE_CHIBIOS_MINDPXV2      5003
 #define HAL_BOARD_SUBTYPE_CHIBIOS_SPARKY2       5004
+#define HAL_BOARD_SUBTYPE_CHIBIOS_REVOMINI      5005
+#define HAL_BOARD_SUBTYPE_CHIBIOS_MINIPIX       5006
 
 /* InertialSensor driver types */
+#define HAL_INS_NONE         0
 #define HAL_INS_MPU60XX_SPI  2
 #define HAL_INS_MPU60XX_I2C  3
 #define HAL_INS_HIL          4
@@ -85,8 +89,11 @@
 #define HAL_INS_MPU6500     19
 #define HAL_INS_EDGE        20
 #define HAL_INS_RST         21
+#define HAL_INS_LSM9DS1     22
+#define HAL_INS_ICM20789_SPI 23
 
 /* Barometer driver types */
+#define HAL_BARO_NONE        0
 #define HAL_BARO_BMP085      1
 #define HAL_BARO_MS5611_I2C  2
 #define HAL_BARO_MS5611_SPI  3
@@ -100,8 +107,11 @@
 #define HAL_BARO_BMP280_I2C 11
 #define HAL_BARO_BMP280_SPI 12
 #define HAL_BARO_LPS25H     13
+#define HAL_BARO_20789_I2C_I2C  14
+#define HAL_BARO_20789_I2C_SPI  15
 
 /* Compass driver types */
+#define HAL_COMPASS_NONE                0
 #define HAL_COMPASS_HMC5843             1
 #define HAL_COMPASS_PX4                 2
 #define HAL_COMPASS_HIL                 3
@@ -120,6 +130,8 @@
 #define HAL_COMPASS_OCPOC_ZYNQ         17
 #define HAL_COMPASS_EDGE               18
 #define HAL_COMPASS_LIS3MDL            19
+#define HAL_COMPASS_MAG3110            20
+#define HAL_COMPASS_BMM150_I2C         21
 
 /* Heat Types */
 #define HAL_LINUX_HEAT_PWM 1
@@ -190,6 +202,10 @@
 #define HAL_WITH_UAVCAN 0
 #endif
 
+#ifndef HAL_WITH_IO_MCU
+#define HAL_WITH_IO_MCU 0
+#endif
+
 // this is used as a general mechanism to make a 'small' build by
 // dropping little used features. We use this to allow us to keep
 // FMUv2 going for as long as possible
@@ -199,4 +215,20 @@
 
 #ifndef HAL_OS_FATFS_IO
 #define HAL_OS_FATFS_IO 0
+#endif
+
+#ifndef HAL_PX4_HAVE_PX4IO
+#define HAL_PX4_HAVE_PX4IO 0
+#endif
+
+#ifndef HAL_COMPASS_DEFAULT
+#define HAL_COMPASS_DEFAULT HAL_COMPASS_NONE
+#endif
+
+#ifndef HAL_BARO_DEFAULT
+#define HAL_BARO_DEFAULT HAL_BARO_NONE
+#endif
+
+#ifndef HAL_INS_DEFAULT
+#define HAL_INS_DEFAULT HAL_INS_NONE
 #endif

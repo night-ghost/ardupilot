@@ -55,6 +55,8 @@
 #  define BOARD_TYPE_DEFAULT VRX_BOARD_BRAIN51
 # elif defined(CONFIG_ARCH_BOARD_VRBRAIN_V52)
 #  define BOARD_TYPE_DEFAULT VRX_BOARD_BRAIN52
+# elif defined(CONFIG_ARCH_BOARD_VRBRAIN_V52E)
+#  define BOARD_TYPE_DEFAULT VRX_BOARD_BRAIN52E
 # elif defined(CONFIG_ARCH_BOARD_VRUBRAIN_V51)
 #  define BOARD_TYPE_DEFAULT VRX_BOARD_UBRAIN51
 # elif defined(CONFIG_ARCH_BOARD_VRUBRAIN_V52)
@@ -179,7 +181,11 @@ const AP_Param::GroupInfo AP_BoardConfig::var_info[] = {
 #endif
 #endif
 
-    // ID number 11 reserved for AP_Radio (pending PR)
+#ifdef HAL_RCINPUT_WITH_AP_RADIO
+    // @Group: RADIO
+    // @Path: ../AP_Radio/AP_Radio.cpp
+    AP_SUBGROUPINFO(_radio, "RADIO", 11, AP_BoardConfig, AP_Radio),
+#endif
     
     AP_GROUPEND
 };

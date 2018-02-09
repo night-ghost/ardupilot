@@ -24,6 +24,10 @@
 #define AP_FEATURE_SBUS_OUT 0
 #endif
 
+#ifdef HAL_RCINPUT_WITH_AP_RADIO
+#include <AP_Radio/AP_Radio.h>
+#endif
+
 extern "C" typedef int (*main_fn_t)(int argc, char **);
 
 class AP_BoardConfig {
@@ -64,7 +68,7 @@ public:
     // valid types for BRD_TYPE: these values need to be in sync with the
     // values from the param description
     enum px4_board_type {
-#if CONFIG_HAL_BOARD == HAL_BOARD_PX4 || CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
+#if CONFIG_HAL_BOARD == HAL_BOARD_PX4 || CONFIG_HAL_BOARD == HAL_BOARD_VRBRAIN || CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
         PX4_BOARD_AUTO     = 0,
         PX4_BOARD_PX4V1    = 1,
         PX4_BOARD_PIXHAWK  = 2,
@@ -77,15 +81,14 @@ public:
         PX4_BOARD_AUAV21   = 20,
         PX4_BOARD_PCNC1    = 21,
         PX4_BOARD_MINDPXV2 = 22,
+        VRX_BOARD_BRAIN51  = 30,
+        VRX_BOARD_BRAIN52  = 32,
+        VRX_BOARD_BRAIN52E = 33,
+        VRX_BOARD_UBRAIN51 = 34,
+        VRX_BOARD_UBRAIN52 = 35,
+        VRX_BOARD_CORE10   = 36,
+        VRX_BOARD_BRAIN54  = 38,
         PX4_BOARD_OLDDRIVERS = 100,
-#endif
-#if CONFIG_HAL_BOARD == HAL_BOARD_VRBRAIN
-        VRX_BOARD_BRAIN51  = 7,
-        VRX_BOARD_BRAIN52  = 8,
-        VRX_BOARD_UBRAIN51 = 9,
-        VRX_BOARD_UBRAIN52 = 10,
-        VRX_BOARD_CORE10   = 11,
-        VRX_BOARD_BRAIN54  = 12,
 #endif
     };
 #endif // AP_FEATURE_BOARD_DETECT
@@ -164,4 +167,9 @@ private:
 
     // target temperarure for IMU in Celsius, or -1 to disable
     AP_Int8 _imu_target_temperature;
+
+#ifdef HAL_RCINPUT_WITH_AP_RADIO
+    // direct attached radio
+    AP_Radio _radio;
+#endif
 };

@@ -29,7 +29,7 @@
 // drift_init - initialise drift controller
 bool Copter::ModeDrift::init(bool ignore_checks)
 {
-    if (_copter.position_ok() || ignore_checks) {
+    if (copter.position_ok() || ignore_checks) {
         return true;
     }else{
         return false;
@@ -48,8 +48,7 @@ void Copter::ModeDrift::run()
 
     // if landed and throttle at zero, set throttle to zero and exit immediately
     if (!motors->armed() || !motors->get_interlock() || (ap.land_complete && ap.throttle_zero)) {
-        motors->set_desired_spool_state(AP_Motors::DESIRED_SPIN_WHEN_ARMED);
-        attitude_control->set_throttle_out_unstabilized(0,true,g.throttle_filt);
+        zero_throttle_and_relax_ac();
         return;
     }
 
@@ -59,7 +58,7 @@ void Copter::ModeDrift::run()
     }
 
     // convert pilot input to lean angles
-    get_pilot_desired_lean_angles(channel_roll->get_control_in(), channel_pitch->get_control_in(), target_roll, target_pitch, _copter.aparm.angle_max);
+    get_pilot_desired_lean_angles(channel_roll->get_control_in(), channel_pitch->get_control_in(), target_roll, target_pitch, copter.aparm.angle_max);
 
     // get pilot's desired throttle
     pilot_throttle_scaled = get_pilot_desired_throttle(channel_throttle->get_control_in());
