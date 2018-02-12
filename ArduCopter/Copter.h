@@ -95,8 +95,6 @@
 #include <AP_Arming/AP_Arming.h>
 #include <AP_VisualOdom/AP_VisualOdom.h>
 #include <AP_SmartRTL/AP_SmartRTL.h>
-#include <AP_WheelEncoder/AP_WheelEncoder.h>
-#include <AP_Winch/AP_Winch.h>
 #include <AP_TempCalibration/AP_TempCalibration.h>
 
 // Configuration
@@ -132,6 +130,11 @@
 
 #if TOY_MODE_ENABLED == ENABLED
 #include "toy_mode.h"
+#endif
+
+#if WINCH_ENABLED == ENABLED
+#include <AP_WheelEncoder/AP_WheelEncoder.h>
+#include <AP_Winch/AP_Winch.h>
 #endif
 
 // Local modules
@@ -615,22 +618,16 @@ private:
 
     // ArduCopter.cpp
     void perf_update(void);
-    void stats_update();
     void fast_loop();
     void rc_loop();
     void throttle_loop();
-    void update_mount();
-    void update_trigger(void);
     void update_batt_compass(void);
     void fourhundred_hz_logging();
     void ten_hz_logging_loop();
     void twentyfive_hz_logging();
-    void dataflash_periodic(void);
-    void ins_periodic();
     void three_hz_loop();
     void one_hz_loop();
     void update_GPS(void);
-    void smart_rtl_save_position();
     void init_simple_bearing();
     void update_simple_mode(void);
     void update_super_simple_bearing(bool force_update);
@@ -761,9 +758,6 @@ private:
     // landing_gear.cpp
     void landinggear_update();
 
-    // leds.cpp
-    void update_notify();
-
     // Log.cpp
     void Log_Write_Optflow();
     void Log_Write_Nav_Tuning();
@@ -828,9 +822,6 @@ private:
     void motors_output();
     void lost_vehicle_check();
 
-    // toy_mode.cpp
-    void toy_mode_update(void);
-
     // navigation.cpp
     void run_nav_updates(void);
     int32_t home_bearing();
@@ -864,7 +855,6 @@ private:
     // sensors.cpp
     void init_barometer(bool full_calibration);
     void read_barometer(void);
-    void barometer_accumulate(void);
     void init_rangefinder(void);
     void read_rangefinder(void);
     bool rangefinder_alt_ok();
@@ -877,13 +867,10 @@ private:
     void read_receiver_rssi(void);
     void compass_cal_update(void);
     void accel_cal_update(void);
-    void gripper_update();
-    void button_update();
     void init_proximity();
     void update_proximity();
     void update_sensor_status_flags(void);
     void init_beacon();
-    void update_beacon();
     void init_visual_odom();
     void update_visual_odom();
     void winch_init();
@@ -981,15 +968,13 @@ private:
     ModeThrow mode_throw;
     ModeGuidedNoGPS mode_guided_nogps;
     ModeSmartRTL mode_smartrtl;
-#if OPTFLOW == ENABLED
+#if !HAL_MINIMIZE_FEATURES && OPTFLOW == ENABLED
     ModeFlowHold mode_flowhold;
 #endif
 
     // mode.cpp
     Mode *mode_from_mode_num(const uint8_t mode);
     void exit_mode(Mode *&old_flightmode, Mode *&new_flightmode);
-
-    void temp_cal_update(void);
 
 public:
     void mavlink_delay_cb();    // GCS_Mavlink.cpp

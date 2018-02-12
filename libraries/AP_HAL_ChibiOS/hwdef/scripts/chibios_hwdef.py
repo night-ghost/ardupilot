@@ -525,6 +525,7 @@ def write_I2C_config(f):
 def write_PWM_config(f):
     '''write PWM config defines'''
     rc_in = None
+    alarm = None
     pwm_out = []
     pwm_timers = []
     for l in bylabel.keys():
@@ -532,6 +533,8 @@ def write_PWM_config(f):
         if p.type.startswith('TIM'):
             if p.has_extra('RCIN'):
                 rc_in = p
+            elif p.has_extra('ALARM'):
+                alarm = p
             else:
                 if p.extra_value('PWM', type=int) is not None:
                     pwm_out.append(p)
@@ -557,6 +560,56 @@ def write_PWM_config(f):
             '#define RCIN_ICU_CHANNEL ICU_CHANNEL_%u\n' % int(chan_str))
         f.write('#define STM32_RCIN_DMA_CHANNEL %u' % dma_chan)
         f.write('\n')
+    if alarm is not None:
+
+        a = alarm.label.split('_')
+        chan_str = a[1][2:]
+        timer_str = a[0][3:]
+        if not is_int(chan_str) or not is_int(timer_str):
+            error("Bad timer channel %s" % alarm.label)
+        n = int(timer_str)
+        f.write('\n')
+        f.write('// Alarm PWM output config\n')
+        f.write('#define STM32_PWM_USE_TIM%u TRUE\n' % n)
+        f.write('#define STM32_TIM%u_SUPPRESS_ISR\n' % n)
+
+        chan_mode = [
+            'PWM_OUTPUT_DISABLED', 'PWM_OUTPUT_DISABLED',
+            'PWM_OUTPUT_DISABLED', 'PWM_OUTPUT_DISABLED'
+        ]
+        chan = int(chan_str)
+        if chan not in [1, 2, 3, 4]:
+            error("Bad channel number %u for ALARM PWM %s" % (chan, p))
+        chan_mode[chan - 1] = 'PWM_OUTPUT_ACTIVE_HIGH'
+
+        pwm_clock = 1000000
+        period = 1000
+
+        f.write('''#define HAL_PWM_ALARM \\
+        { /* pwmGroup */ \\
+          %u,  /* Timer channel */ \\
+          { /* PWMConfig */ \\
+            %u,    /* PWM clock frequency. */ \\
+            %u,    /* Initial PWM period 20ms. */ \\
+            NULL,  /* no callback */ \\
+            { /* Channel Config */ \\
+             {%s, NULL}, \\
+             {%s, NULL}, \\
+             {%s, NULL}, \\
+             {%s, NULL}  \\
+            }, \\
+            0, 0 \\
+          }, \\
+          &PWMD%u /* PWMDriver* */ \\
+        }\n''' %
+        (chan-1, pwm_clock, period, chan_mode[0],
+        chan_mode[1], chan_mode[2], chan_mode[3], n))
+    else:
+        f.write('\n')
+        f.write('// No Alarm output pin defined\n')
+        f.write('#undef HAL_PWM_ALARM\n')
+    f.write('\n')
+
     f.write('// PWM timer config\n')
     for t in sorted(pwm_timers):
         n = int(t[3])
