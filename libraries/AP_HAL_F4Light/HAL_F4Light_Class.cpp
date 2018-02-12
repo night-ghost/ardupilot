@@ -15,8 +15,6 @@
 #include "HAL_F4Light_Class.h"
 #include "RCInput.h"
 #include "Util.h"
-//#include <AP_HAL_Empty/AP_HAL_Empty.h>
-//#include <AP_HAL_Empty/AP_HAL_Empty_Private.h>
 
 #include <AP_Param_Helper/AP_Param_Helper.h>
 
@@ -280,10 +278,10 @@ void HAL_F4Light::run(int argc,char* const argv[], Callbacks* callbacks) const
 
 
 #if defined(BOARD_SDCARD_NAME) && defined(BOARD_SDCARD_CS_PIN)
-        printf("\nEnabling SD at %ldms\n", millis());            
+        printf("\nEnabling SD at %ldms\n", AP_HAL::millis());            
         SD.begin(F4Light::SPIDeviceManager::_get_device(BOARD_SDCARD_NAME));
 #elif defined(BOARD_DATAFLASH_FATFS)
-        printf("\nEnabling DataFlash as SD at %ldms\n", millis());            
+        printf("\nEnabling DataFlash as SD at %ldms\n", AP_HAL::millis());            
         SD.begin(F4Light::SPIDeviceManager::_get_device(HAL_DATAFLASH_NAME));
 #endif
 
@@ -321,7 +319,7 @@ void HAL_F4Light::run(int argc,char* const argv[], Callbacks* callbacks) const
 }
 
 
-#if USE_WAYBACK == ENABLED && defined(WAYBACK_DEBUG)
+#if USE_WAYBACK_ENABLE == ENABLED && defined(WAYBACK_DEBUG)
 
 #define SERIAL_BUFSIZE 128
 
@@ -454,7 +452,7 @@ void HAL_F4Light::lateInit() {
     }
 #endif
 
-#if USE_WAYBACK == ENABLED && defined(WAYBACK_DEBUG)
+#if USE_WAYBACK_ENABLE == ENABLED && defined(WAYBACK_DEBUG)
     {
         uint8_t dbg = hal_param_helper->_dbg_wayback;
         if(dbg){
