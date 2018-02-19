@@ -34,3 +34,11 @@ How to get voltage/current reading(tested on omnibus, should work on other targe
 - BAT_AMP_PERVOLT 38.0 (or 17 for apm power module)
 
 Don't try to configure Curr/Vol reading from Initial setup page of MP, because VOL/CURR variables will be reset.
+
+Attention!
+
+If you select PPM (both via jumper or removing 0 ohm resistor) UART1 is no more used for RC IN and can be 
+used for telemetry (Serial1 on MP settings).
+
+Once PPM is selected you can use this pin for RC IN with PPM/SBUS/DSM, the parser in the HAL is able to understand 
+which protocol are you using and to decode it properly. 

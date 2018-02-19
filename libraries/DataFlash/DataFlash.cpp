@@ -82,6 +82,7 @@ void DataFlash_Class::Init(const struct LogStructure *structures, uint8_t num_ty
     _structures = structures;
 
 #if defined(HAL_BOARD_LOG_DIRECTORY)
+ #if HAL_OS_POSIX_IO
     if (_params.backend_types == DATAFLASH_BACKEND_FILE ||
         _params.backend_types == DATAFLASH_BACKEND_BOTH) {
         DFMessageWriter_DFLogStart *message_writer =
@@ -97,7 +98,7 @@ void DataFlash_Class::Init(const struct LogStructure *structures, uint8_t num_ty
             _next_backend++;
         }
     }
-#elif CONFIG_HAL_BOARD == HAL_BOARD_F4LIGHT // restore dataflash logs
+ #elif CONFIG_HAL_BOARD == HAL_BOARD_F4LIGHT 
 
     if (_params.backend_types == DATAFLASH_BACKEND_FILE ||
         _params.backend_types == DATAFLASH_BACKEND_BOTH) {
@@ -106,7 +107,11 @@ void DataFlash_Class::Init(const struct LogStructure *structures, uint8_t num_ty
             new DFMessageWriter_DFLogStart(_firmware_string);
         if (message_writer != nullptr)  {
 
-            backends[_next_backend] = new DataFlash_Revo(*this, message_writer);
+  #if defined(BOARD_SDCARD_NAME) || defined(BOARD_DATAFLASH_FATFS)
+            backends[_next_backend] = new DataFlash_File(*this, message_writer, HAL_BOARD_LOG_DIRECTORY);
+  #else
+            backends[_next_backend] = new DataFlash_Revo(*this, message_writer); // restore dataflash logs
+  #endif
         }
 
         if (backends[_next_backend] == nullptr) {
@@ -115,7 +120,8 @@ void DataFlash_Class::Init(const struct LogStructure *structures, uint8_t num_ty
             _next_backend++;
         }
     }
-#endif
+ #endif
+#endif // HAL_BOARD_LOG_DIRECTORY
 
 #if DATAFLASH_MAVLINK_SUPPORT
     if (_params.backend_types == DATAFLASH_BACKEND_MAVLINK ||
@@ -354,6 +360,8 @@ bool DataFlash_Class::logging_enabled() const
 }
 bool DataFlash_Class::logging_failed() const
 {
+    if(_params.backend_types==0) return false;
+
     if (_next_backend < 1) {
         // we should not have been called!
         return true;
@@ -474,6 +482,8 @@ void DataFlash_Class::EraseAll() {
 }
 // change me to "LoggingAvailable"?
 bool DataFlash_Class::CardInserted(void) {
+    if(_params.backend_types == 0) return true; // logging disabled
+    
     for (uint8_t i=0; i< _next_backend; i++) {
         if (backends[i]->CardInserted()) {
             return true;
