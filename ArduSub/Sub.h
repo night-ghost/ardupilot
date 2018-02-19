@@ -147,7 +147,7 @@ private:
     ParametersG2 g2;
 
     // main loop scheduler
-    AP_Scheduler scheduler;
+    AP_Scheduler scheduler{FUNCTOR_BIND_MEMBER(&Sub::fast_loop, void)};
 
     // AP_Notify instance
     AP_Notify notify;
@@ -347,9 +347,6 @@ private:
     // Flag indicating if we are currently using input hold
     bool input_hold_engaged;
 
-    // loop performance monitoring:
-    AP::PerfInfo perf_info;
-
     // 3D Location vectors
     // Current location of the Sub (altitude is relative to home)
     Location_Class current_loc;
@@ -397,16 +394,6 @@ private:
 
     AC_WPNav wp_nav;
     AC_Circle circle_nav;
-
-    // Performance monitoring
-    int16_t pmTest1;
-
-    // System Timers
-    // --------------
-    // Time in microseconds of main control loop
-    uint32_t fast_loopTimer;
-    // Counter of main loop executions.  Used for performance monitoring and failsafe processing
-    uint16_t mainLoop_count;
 
     // Reference to the relay object
     AP_Relay relay;
@@ -461,10 +448,8 @@ private:
 
     void compass_accumulate(void);
     void compass_cal_update(void);
-    void perf_update(void);
     void fast_loop();
     void fifty_hz_loop();
-    void update_mount();
     void update_batt_compass(void);
     void ten_hz_logging_loop();
     void twentyfive_hz_logging();
@@ -622,7 +607,6 @@ private:
     void update_surface_and_bottom_detector();
     void set_surfaced(bool at_surface);
     void set_bottomed(bool at_bottom);
-    void update_notify();
     bool init_arm_motors(bool arming_from_gcs);
     void init_disarm_motors();
     void motors_output();
@@ -640,7 +624,6 @@ private:
     void clear_input_hold();
     void init_barometer(bool save);
     void read_barometer(void);
-    void barometer_accumulate(void);
     void init_rangefinder(void);
     void read_rangefinder(void);
     bool rangefinder_alt_ok(void);
@@ -650,9 +633,6 @@ private:
     void update_optical_flow(void);
 #endif
     void read_battery(void);
-#if GRIPPER_ENABLED == ENABLED
-    void gripper_update();
-#endif
     void terrain_update();
     void terrain_logging();
     bool terrain_use();
@@ -690,7 +670,6 @@ private:
 #if CAMERA == ENABLED
     void do_digicam_configure(const AP_Mission::Mission_Command& cmd);
     void do_digicam_control(const AP_Mission::Mission_Command& cmd);
-    void update_trigger();
 #endif
 
 #if GRIPPER_ENABLED == ENABLED
@@ -710,8 +689,6 @@ private:
     void auto_spline_start(const Location_Class& destination, bool stopped_at_start, AC_WPNav::spline_segment_end_type seg_end_type, const Location_Class& next_destination);
     void log_init(void);
     void init_capabilities(void);
-    void dataflash_periodic(void);
-    void ins_periodic();
     void accel_cal_update(void);
 
     void failsafe_leak_check();

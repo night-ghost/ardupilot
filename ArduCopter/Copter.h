@@ -79,7 +79,6 @@
 #include <AC_Fence/AC_Fence.h>           // Arducopter Fence library
 #include <AC_Avoidance/AC_Avoid.h>           // Arducopter stop at fence library
 #include <AP_Scheduler/AP_Scheduler.h>       // main loop scheduler
-#include <AP_Scheduler/PerfInfo.h>       // loop perf monitoring
 #include <AP_RCMapper/AP_RCMapper.h>        // RC input mapping library
 #include <AP_Notify/AP_Notify.h>          // Notify library
 #include <AP_BattMonitor/AP_BattMonitor.h>     // Battery monitor library
@@ -177,7 +176,7 @@ private:
     ParametersG2 g2;
 
     // main loop scheduler
-    AP_Scheduler scheduler;
+    AP_Scheduler scheduler{FUNCTOR_BIND_MEMBER(&Copter::fast_loop, void)};
 
     // AP_Notify instance
     AP_Notify notify;
@@ -423,9 +422,6 @@ private:
     // filtered pilot's throttle input used to cancel landing if throttle held high
     LowPassFilterFloat rc_throttle_control_in_filter;
 
-    // loop performance monitoring:
-    AP::PerfInfo perf_info;
-
     // 3D Location vectors
     // Current location of the vehicle (altitude is relative to home)
     Location_Class current_loc;
@@ -472,15 +468,8 @@ private:
     AC_WPNav *wp_nav;
     AC_Circle *circle_nav;
 
-    // Performance monitoring
-    int16_t pmTest1;
-
     // System Timers
     // --------------
-    // Time in microseconds of main control loop
-    uint32_t fast_loopTimer;
-    // Counter of main loop executions.  Used for performance monitoring and failsafe processing
-    uint16_t mainLoop_count;
     // arm_time_ms - Records when vehicle was armed. Will be Zero if we are disarmed.
     uint32_t arm_time_ms;
 
@@ -617,7 +606,6 @@ private:
     void set_motor_emergency_stop(bool b);
 
     // ArduCopter.cpp
-    void perf_update(void);
     void fast_loop();
     void rc_loop();
     void throttle_loop();
