@@ -229,7 +229,13 @@ void AP_Notify::add_backends(void)
     ADD_BACKEND(new ToshibaLED_I2C(TOSHIBA_LED_I2C_BUS_EXTERNAL));
     ADD_BACKEND(new ToshibaLED_I2C(TOSHIBA_LED_I2C_BUS_INTERNAL));
     ADD_BACKEND(new Display());
-#lese
+
+#elif CONFIG_HAL_BOARD == HAL_BOARD_F4LIGHT
+    ADD_BACKEND(new ToshibaLED_I2C(TOSHIBA_LED_I2C_BUS_EXTERNAL));
+    ADD_BACKEND(new Display());
+    ADD_BACKEND(new Buzzer());
+//    ADD_BACKEND(new AP_BoardLED2()); // needs AP_BoardLED2 in master
+#else
     ADD_BACKEND(new AP_BoardLED());
     ADD_BACKEND(new ToshibaLED_I2C(TOSHIBA_LED_I2C_BUS_EXTERNAL));
     ADD_BACKEND(new ToshibaLED_I2C(TOSHIBA_LED_I2C_BUS_INTERNAL));
