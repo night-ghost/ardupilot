@@ -552,9 +552,12 @@ void AP_Baro::init(void)
 #endif
 
 #if defined(BOARD_I2C_BUS_EXT) && CONFIG_HAL_BOARD == HAL_BOARD_F4LIGHT
+ #ifdef HAL_BARO_MS5611_I2C_BUS
     ADD_BACKEND(AP_Baro_MS56XX::probe(*this,
-                                          std::move(hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_BARO_MS5611_I2C_ADDR))));
+                                          std::move(hal.i2c_mgr->get_device(HAL_BARO_MS5611_I2C_BUS, HAL_BARO_MS5611_I2C_ADDR))));
+ #endif
 
+ #ifdef HAL_BARO_BMP280_BUS
     ADD_BACKEND(AP_Baro_BMP280::probe(*this,
                                           std::move(hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_BARO_BMP280_I2C_ADDR))));
   #ifdef HAL_BARO_BMP280_I2C_ADDR_ALT
@@ -562,8 +565,10 @@ void AP_Baro::init(void)
                                           std::move(hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_BARO_BMP280_I2C_ADDR_ALT))));
   #endif
 
+ #ifdef HAL_BARO_BMP085_BUS
     ADD_BACKEND(AP_Baro_BMP085::probe(*this,
-                                          std::move(hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_BARO_BMP085_I2C_ADDR))));
+                                          std::move(hal.i2c_mgr->get_device(HAL_BARO_BMP085_BUS, HAL_BARO_BMP085_I2C_ADDR))));
+  #endif
 #endif
 
     // can optionally have baro on I2C too
