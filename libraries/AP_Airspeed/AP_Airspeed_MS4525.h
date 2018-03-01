@@ -44,7 +44,7 @@ public:
 
 private:
     void _measure();
-    void _collect();
+    uint8_t _collect();
     void _timer();
     void _voltage_correction(float &diff_press_pa, float &temperature);
     float _get_pressure(int16_t dp_raw) const;

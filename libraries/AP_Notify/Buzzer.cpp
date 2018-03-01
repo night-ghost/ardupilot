@@ -30,7 +30,6 @@
 
 extern const AP_HAL::HAL& hal;
 
-
 bool Buzzer::init()
 {
     if (pNotify->buzzer_enabled() == false) {

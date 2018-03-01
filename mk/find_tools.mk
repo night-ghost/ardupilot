@@ -57,7 +57,7 @@ LD = $($(TOOLCHAIN)_LD)
 GDB = $($(TOOLCHAIN)_GDB)
 OBJCOPY = $($(TOOLCHAIN)_OBJCOPY)
 
-ifeq ($(CXX),)
+ifeq ($(AS),)
 $(error ERROR: cannot find the compiler tools for $(TOOLCHAIN) anywhere on the path $(TOOLPATH))
 endif
 

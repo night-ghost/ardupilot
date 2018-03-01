@@ -89,4 +89,5 @@ private:
     bool _discard_next;
 
     enum MS56XX_TYPE _ms56xx_type;
+    float _mean_pressure;
 };

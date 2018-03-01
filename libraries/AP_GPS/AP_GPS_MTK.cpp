@@ -213,7 +213,7 @@ AP_GPS_MTK::_detect(struct MTK_detect_state &state, uint8_t data)
         case 6:
             state.step = 0;
             if (state.ck_b == data) {
-				return true;
+			return true;
             }
 	}
     return false;

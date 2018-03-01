@@ -16,6 +16,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma GCC optimize ("O2")
+
 /*
  *  this module deals with calculations involving struct Location
  */

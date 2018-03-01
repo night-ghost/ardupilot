@@ -68,12 +68,11 @@ class build_binaries(object):
         while True:
             x = p.stdout.readline()
             if len(x) == 0:
-                returncode = os.waitpid(p.pid, 0)
-                if returncode:
+                if os.waitpid(p.pid, 0):
                     break
                     # select not available on Windows... probably...
-                time.sleep(0.1)
-                continue
+                    time.sleep(0.1)
+                    continue
             output += x
             x = x.rstrip()
             if show_output:
@@ -233,8 +232,7 @@ is bob we will attempt to checkout bob-AVR'''
             if match is None:
                 self.progress("Failed to retrieve THISFIRMWARE from version.h")
                 self.progress("Content: (%s)" % content)
-            self.progress("Writing version info to %s" %
-                          (gitversion_filepath,))
+            self.progress("Writing version info to %s" % (gitversion_filepath,))
             gitversion_content += "\nAPMVERSION: %s\n" % (match.group(1))
         else:
             self.progress("%s does not exist" % versionfile)
@@ -246,7 +244,7 @@ is bob we will attempt to checkout bob-AVR'''
         versionfile = os.path.join(src, "version.h")
         if not os.path.exists(versionfile):
             self.progress("%s does not exist" % (versionfile,))
-            return
+            return;
         ss = ".*define +FIRMWARE_VERSION[	 ]+(?P<major>\d+)[ ]*,[ 	]*" \
              "(?P<minor>\d+)[ ]*,[	 ]*(?P<point>\d+)[ ]*,[	 ]*" \
              "(?P<type>[A-Z_]+)[	 ]*"
@@ -612,7 +610,7 @@ is bob we will attempt to checkout bob-AVR'''
                     self.progress("%s: split failed: %s" % (filepath, str(e)))
                     continue
                 value = value.rstrip()
-                self.progress("%s: %s=%s" % (filepath, name, value))
+                self.progress("%s: %s=%s" % (filepath, name,value))
                 os.environ[name] = value
 
     def remove_tmpdir(self):

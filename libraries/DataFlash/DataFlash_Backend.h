@@ -76,7 +76,7 @@ public:
                                              mavlink_message_t* msg) { }
     // end for Dataflash_MAVlink
 
-   virtual void periodic_tasks();
+    virtual void periodic_tasks();
 
     uint8_t num_types() const;
     const struct LogStructure *structure(uint8_t structure) const;

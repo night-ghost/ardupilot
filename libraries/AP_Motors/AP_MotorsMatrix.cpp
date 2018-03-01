@@ -152,6 +152,10 @@ void AP_MotorsMatrix::output_armed_stabilizing()
     float   yaw_allowed = 1.0f;         // amount of yaw we can fit in
     float   thr_adj;                    // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
 
+    // init motor limit flags
+    limit.motor_upper = 0;
+    limit.motor_lower = 0;
+
     // apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain(); // compensation for battery voltage and altitude
     roll_thrust = _roll_in * compensation_gain;
@@ -334,6 +338,7 @@ void AP_MotorsMatrix::check_for_failed_motor(float throttle_thrust_best_plus_adj
     uint8_t number_motors = 0.0f;
     for (uint8_t i = 0; i < AP_MOTORS_MAX_NUM_MOTORS; i++) {
         if (motor_enabled[i]) {
+
             number_motors += 1;
             rpyt_sum += _thrust_rpyt_out_filt[i];
             // record highest thrust command
@@ -344,6 +349,15 @@ void AP_MotorsMatrix::check_for_failed_motor(float throttle_thrust_best_plus_adj
                     _motor_lost_index = i;
                 }
             }
+
+            _thrust_rpyt_out[i] = constrain_float(_thrust_rpyt_out[i], 0.0f, 1.0f);
+            if (_thrust_rpyt_out[i] > 1-_thr_warn_threshold) {
+                limit.motor_upper |= (1<<i);
+            }
+            else if (_thrust_rpyt_out[i] < _thr_warn_threshold) {
+                limit.motor_lower |= (1<<i);
+            }
+
         }
     }
 

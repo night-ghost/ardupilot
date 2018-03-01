@@ -15,6 +15,7 @@
 #include "AP_Baro_BMP280.h"
 
 #include <utility>
+#include <stdio.h>
 
 extern const AP_HAL::HAL &hal;
 
@@ -129,10 +130,19 @@ void AP_Baro_BMP280::_timer(void)
 
     _dev->read_registers(BMP280_REG_DATA, buf, sizeof(buf));
 
+<<<<<<< HEAD
     _update_temperature((buf[3] << 12) | (buf[4] << 4) | (buf[5] >> 4));
     _update_pressure((buf[0] << 12) | (buf[1] << 4) | (buf[2] >> 4));
 
     _dev->check_next_register();
+=======
+    _dev->get_semaphore()->give();  // give bus semaprore ASAP
+
+    if(_update_temperature((buf[3] << 12) | (buf[4] << 4) | (buf[5] >> 4))) {
+        _update_pressure((buf[0] << 12) | (buf[1] << 4) | (buf[2] >> 4));
+    }
+    return;
+>>>>>>> fixed repo after HAL was merged to upstream
 }
 
 // transfer data to the frontend
@@ -149,7 +159,7 @@ void AP_Baro_BMP280::update(void)
 }
 
 // calculate temperature
-void AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
+bool AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
 {
     int32_t var1, var2, t;
 
@@ -161,9 +171,17 @@ void AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
 
     const float temp = ((float)t) / 100.0f;
 
+<<<<<<< HEAD
     WITH_SEMAPHORE(_sem);
     
     _temperature = temp;
+=======
+    if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+        _temperature = temp;
+        _sem->give();
+    }
+    return true;
+>>>>>>> fixed repo after HAL was merged to upstream
 }
 
 // calculate pressure
@@ -188,7 +206,6 @@ void AP_Baro_BMP280::_update_pressure(int32_t press_raw)
     var1 = (((int64_t)_p9) * (p >> 13) * (p >> 13)) >> 25;
     var2 = (((int64_t)_p8) * p) >> 19;
     p = ((p + var1 + var2) >> 8) + (((int64_t)_p7) << 4);
-
 
     const float press = (float)p / 256.0f;
     if (!pressure_ok(press)) {

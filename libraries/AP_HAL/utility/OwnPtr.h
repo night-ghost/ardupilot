@@ -90,10 +90,10 @@ public:
         return _ptr;
     }
 
-    T& operator*() const { return *_ptr; }
-    T *operator->() const { return _ptr; }
-    bool operator !() const { return !_ptr; }
-    explicit operator bool() const { return _ptr != nullptr; }
+    inline T& operator*() const { return *_ptr; }
+    inline T *operator->() const { return _ptr; }
+    inline bool operator !() const { return !_ptr; }
+    inline explicit operator bool() const { return _ptr != nullptr; }
 
 private:
     T *_ptr;

@@ -94,13 +94,14 @@
 #include <AP_ADSB/AP_ADSB.h>
 #include <AP_Button/AP_Button.h>
 #include <AP_ICEngine/AP_ICEngine.h>
-#include <AP_Gripper/AP_Gripper.h>
 #include <AP_Landing/AP_Landing.h>
 
 #include "GCS_Mavlink.h"
 #include "GCS_Plane.h"
 #include "quadplane.h"
 #include "tuning.h"
+
+#include <AP_Param_Helper/AP_Param_Helper.h>
 
 // Configuration
 #include "config.h"

@@ -58,7 +58,9 @@ bool AP_Airspeed_MS4525::init()
     
         _measure();
         hal.scheduler->delay(10);
-        _collect();
+        uint8_t ret = _collect();
+        
+        printf("MS4525: collect returned %d\n", ret);
 
         found = (_last_sample_time_ms != 0);
         if (found) {
@@ -118,7 +120,7 @@ float AP_Airspeed_MS4525::_get_temperature(int16_t dT_raw) const
 }
 
 // read the values from the sensor
-void AP_Airspeed_MS4525::_collect()
+uint8_t AP_Airspeed_MS4525::_collect()
 {
     uint8_t data[4];
     uint8_t data2[4];
@@ -126,17 +128,17 @@ void AP_Airspeed_MS4525::_collect()
     _measurement_started_ms = 0;
 
     if (!_dev->transfer(nullptr, 0, data, sizeof(data))) {
-        return;
+        return 1;
     }
     // reread the data, so we can attempt to detect bad inputs
     if (!_dev->transfer(nullptr, 0, data2, sizeof(data2))) {
-        return;
+        return 2;
     }
 
     uint8_t status = (data[0] & 0xC0) >> 6;
     // only check the status on the first read, the second read is expected to be stale
     if (status == 2 || status == 3) {
-        return;
+        return 3;
     }
 
     int16_t dp_raw, dT_raw;
@@ -155,13 +157,13 @@ void AP_Airspeed_MS4525::_collect()
     // can happen due to gnd lifts or communication errors on the bus
     if (dp_raw  == 0x3FFF || dp_raw  == 0 || dT_raw  == 0x7FF || dT_raw == 0 ||
         dp_raw2 == 0x3FFF || dp_raw2 == 0 || dT_raw2 == 0x7FF || dT_raw2 == 0) {
-        return;
+        return 4;
     }
 
     // reject any double reads where the value has shifted in the upper more than
     // 0xFF
     if (abs(dp_raw - dp_raw2) > 0xFF || abs(dT_raw - dT_raw2) > 0xFF) {
-        return;
+        return 5;
     }
 
     float press  = _get_pressure(dp_raw);
@@ -180,6 +182,8 @@ void AP_Airspeed_MS4525::_collect()
     _temp_count += 2;
 
     _last_sample_time_ms = AP_HAL::millis();
+    
+    return 0;
 }
 
 /**

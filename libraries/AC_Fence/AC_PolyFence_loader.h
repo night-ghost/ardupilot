@@ -2,6 +2,7 @@
 
 #include <AP_Common/AP_Common.h>
 #include <AP_Math/AP_Math.h>
+#include <StorageManager/StorageManager.h>
 
 class AC_PolyFence_loader
 {

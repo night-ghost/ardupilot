@@ -50,6 +50,8 @@ AP_Motors::AP_Motors(uint16_t loop_rate, uint16_t speed_hz) :
     limit.throttle_upper = true;
     _thrust_boost = false;
     _thrust_balanced = true;
+    limit.motor_lower = 0;
+    limit.motor_upper = 0;
 };
 
 void AP_Motors::armed(bool arm)

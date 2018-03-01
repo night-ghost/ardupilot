@@ -49,7 +49,7 @@ public:
         : Functor(nullptr, nullptr) { }
 
     // Call the method on the obj this Functor is bound to
-    RetType operator()(Args... args) const
+    inline RetType operator()(Args... args) const
     {
         return _method(_obj, args...);
     }
@@ -66,13 +66,13 @@ public:
     }
 
     // Allow to check if there's a method set in the Functor
-    explicit operator bool() const
+    inline explicit operator bool() const
     {
         return _method != nullptr;
     }
 
     template<class T, RetType (T::*method)(Args...)>
-    static constexpr Functor bind(T *obj)
+    inline static constexpr Functor bind(T *obj)
     {
         return { obj, method_wrapper<T, method> };
     }
@@ -88,3 +88,4 @@ private:
         return (t->*method)(args...);
     }
 };
+

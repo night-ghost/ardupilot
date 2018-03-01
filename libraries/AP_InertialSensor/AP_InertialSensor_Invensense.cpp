@@ -17,6 +17,8 @@
   ICM-20608 and ICM-20602
  */
 
+#pragma GCC optimize ("O2")
+
 #include <assert.h>
 #include <utility>
 #include <stdio.h>
