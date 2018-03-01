@@ -87,7 +87,7 @@ const AP_Scheduler::Task Rover::scheduler_tasks[] = {
     SCHED_TASK_CLASS(AP_InertialSensor,   &rover.ins,              periodic,       50,   50),
     SCHED_TASK_CLASS(AP_Scheduler,        &rover.scheduler,        update_logging, 0.1,  75),
     SCHED_TASK_CLASS(AP_Button,           &rover.button,           update,          5,  100),
-#if STATS_ENABLED == ENABLED
+#ifndef DISABLE_STATS_UPDATE
     SCHED_TASK(stats_update,            1,    100),
 #endif
     SCHED_TASK(crash_check,            10,   1000),
@@ -97,7 +97,6 @@ const AP_Scheduler::Task Rover::scheduler_tasks[] = {
 #endif
 };
 
-#if STATS_ENABLED == ENABLED
 /*
   update AP_Stats
 */
@@ -106,7 +105,6 @@ void Rover::stats_update(void)
     g2.stats.set_flying(motor_active());
     g2.stats.update();
 }
-#endif
 
 /*
   setup is called when the sketch starts

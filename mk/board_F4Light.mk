@@ -1,5 +1,3 @@
-
-#TOOLCHAIN = NATIVE
 TOOLCHAIN = ARM
 
 ARM_CXX     :=  arm-none-eabi-g++

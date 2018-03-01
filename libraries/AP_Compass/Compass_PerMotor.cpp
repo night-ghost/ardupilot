@@ -150,6 +150,8 @@ void Compass_PerMotor::calibration_start(void)
     
     base_field = compass.get_field(0);
     running = true;
+
+    gcs().send_text(MAV_SEVERITY_INFO, "PMOT starting");
 }
 
 // per-motor calibration update
@@ -201,6 +203,7 @@ void Compass_PerMotor::calibration_end(void)
         Vector3f c = field_change / output;
         compensation[i].set_and_save(c);
     }
+    gcs().send_text(MAV_SEVERITY_INFO, "PMOT finished");
 
     // enable per-motor compensation
     enable.set_and_save(1);

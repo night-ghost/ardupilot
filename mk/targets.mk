@@ -12,8 +12,9 @@ sitl-arm: all
 apm1 apm1-1280 apm2 apm2beta:
 	$(error $@ is deprecated on master branch; use master-AVR)
 
-flymaple flymaple-hil:
-	$(error $@ is deprecated on master branch; use master-AVR)
+flymaple: HAL_BOARD = HAL_BOARD_FLYMAPLE
+flymaple: TOOLCHAIN = ARM
+flymaple: all
 
 f4light: HAL_BOARD = HAL_BOARD_F4LIGHT
 f4light: TOOLCHAIN = ARM

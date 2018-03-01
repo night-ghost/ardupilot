@@ -16,6 +16,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma GCC optimize ("O2")
+
 #include "AP_Math.h"
 
 /*
@@ -85,7 +87,7 @@ bool Polygon_outside(const Vector2<T> &P, const Vector2<T> *V, unsigned n)
 template <typename T>
 bool Polygon_complete(const Vector2<T> *V, unsigned n)
 {
-    return (n >= 4 && V[n-1] == V[0]);
+    return (n >= 4 && is_equal(V[n-1].x, V[0].x) && is_equal(V[n-1].y, V[0].y));
 }
 
 // Necessary to avoid linker errors

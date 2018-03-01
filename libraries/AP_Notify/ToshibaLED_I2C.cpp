@@ -53,6 +53,7 @@ bool ToshibaLED_I2C::hw_init(void)
     bool ret = _dev->write_register(TOSHIBA_LED_ENABLE, 0x03);
     if (!ret) {
         _dev->get_semaphore()->give();
+        _dev=nullptr; // @NG - don't let zombie to eat memory
         return false;
     }
 
@@ -67,6 +68,8 @@ bool ToshibaLED_I2C::hw_init(void)
 
     if (ret) {
         _dev->register_periodic_callback(20000, FUNCTOR_BIND_MEMBER(&ToshibaLED_I2C::_timer, void));
+    } else {
+        _dev=nullptr; // @NG - don't let zombie to eat memory
     }
 
     return ret;

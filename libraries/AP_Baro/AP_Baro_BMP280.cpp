@@ -15,6 +15,7 @@
 #include "AP_Baro_BMP280.h"
 
 #include <utility>
+#include <stdio.h>
 
 extern const AP_HAL::HAL &hal;
 
@@ -66,9 +67,13 @@ AP_Baro_Backend *AP_Baro_BMP280::probe(AP_Baro &baro,
 
 bool AP_Baro_BMP280::_init()
 {
-    if (!_dev | !_dev->get_semaphore()->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+    if (!_dev ) {
         return false;
     }
+
+    AP_HAL::Semaphore *sem=_dev->get_semaphore();
+    
+    if(!sem || !sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) return false;
 
     _has_sample = false;
 
@@ -78,7 +83,7 @@ bool AP_Baro_BMP280::_init()
     if (!_dev->read_registers(BMP280_REG_ID, &whoami, 1)  ||
         whoami != BMP280_ID) {
         // not a BMP280
-        _dev->get_semaphore()->give();
+        sem->give();
         return false;
     }
 
@@ -112,7 +117,7 @@ bool AP_Baro_BMP280::_init()
 
     _instance = _frontend.register_sensor();
 
-    _dev->get_semaphore()->give();
+    sem->give();
 
     // request 50Hz update
     _dev->register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP280::_timer, void));
@@ -129,8 +134,12 @@ void AP_Baro_BMP280::_timer(void)
 
     _dev->read_registers(BMP280_REG_DATA, buf, sizeof(buf));
 
-    _update_temperature((buf[3] << 12) | (buf[4] << 4) | (buf[5] >> 4));
-    _update_pressure((buf[0] << 12) | (buf[1] << 4) | (buf[2] >> 4));
+    _dev->get_semaphore()->give();  // give bus semaprore ASAP
+
+    if(_update_temperature((buf[3] << 12) | (buf[4] << 4) | (buf[5] >> 4))) {
+        _update_pressure((buf[0] << 12) | (buf[1] << 4) | (buf[2] >> 4));
+    }
+    return;
 }
 
 // transfer data to the frontend
@@ -149,7 +158,7 @@ void AP_Baro_BMP280::update(void)
 }
 
 // calculate temperature
-void AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
+bool AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
 {
     int32_t var1, var2, t;
 
@@ -158,10 +167,14 @@ void AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
     var2 = (((((temp_raw >> 4) - ((int32_t)_t1)) * ((temp_raw >> 4) - ((int32_t)_t1))) >> 12) * ((int32_t)_t3)) >> 14;
     _t_fine = var1 + var2;
     t = (_t_fine * 5 + 128) >> 8;
+
+    float temp = ((float)t) / 100;
+
     if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
-        _temperature = ((float)t) / 100;
+        _temperature = temp;
         _sem->give();
     }
+    return true;
 }
 
 // calculate pressure
@@ -187,9 +200,31 @@ void AP_Baro_BMP280::_update_pressure(int32_t press_raw)
     var2 = (((int64_t)_p8) * p) >> 19;
     p = ((p + var1 + var2) >> 8) + (((int64_t)_p7) << 4);
 
-    if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
-        _pressure = (float)p / 25600;
-        _has_sample = true;
-        _sem->give();
+    bool ret=true;
+
+    float press = p / 256.0;
+    
+    if(is_zero(_mean_pressure)) {
+        _mean_pressure=press;
+    } else {
+#define FILTER_KOEF 0.1
+
+        float d = abs(_mean_pressure-press)/(_mean_pressure+press);
+        if(d*100 > 10) { // difference more than 20% from mean value
+            printf("\nBaro pressure error: mean %f got %f\n", _mean_pressure, press );
+            ret= false;
+            float k = FILTER_KOEF / (d*10); // 2.5 and more, so one bad sample never change mean more than 4%
+            _mean_pressure = _mean_pressure * (1-k) + press*k; // complimentary filter 1/k on bad samples
+        } else {
+            _mean_pressure = _mean_pressure * (1-FILTER_KOEF) + press*FILTER_KOEF; // complimentary filter 1/10 on good samples
+        }
+    }
+
+    if(ret) {
+        if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+            _pressure = press;
+            _has_sample = true;
+            _sem->give();
+        }
     }
 }

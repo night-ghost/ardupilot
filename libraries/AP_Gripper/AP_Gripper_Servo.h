@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include <AP_HAL/AP_HAL.h>
 #include <AP_Gripper/AP_Gripper_Backend.h>
 #include <SRV_Channel/SRV_Channel.h>
 

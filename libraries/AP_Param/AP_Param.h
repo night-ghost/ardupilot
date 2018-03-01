@@ -24,10 +24,14 @@
 #include <stdint.h>
 #include <cmath>
 
-#include <AP_HAL/AP_HAL.h>
-#include <StorageManager/StorageManager.h>
+//#include <AP_HAL/AP_HAL.h>
+#include <AP_HAL/AP_HAL_Namespace.h>
+//#include <StorageManager/StorageManager.h>
 
 #include "float.h"
+
+// for PACKED define
+#include "AP_Common/AP_Common.h"
 
 #define AP_MAX_NAME_SIZE 16
 
@@ -131,6 +135,7 @@ enum ap_var_type {
     AP_PARAM_GROUP
 };
 
+class StorageAccess; // forward
 
 /// Base class for variables.
 ///
@@ -479,13 +484,14 @@ private:
     /*
       structure for built-in defaults file that can be modified using apj_tool.py
      */
-    struct PACKED param_defaults_struct {
+    struct /* PACKED */ param_defaults_struct {
         char magic_str[8];
         uint8_t param_magic[8];
         uint16_t max_length;
         volatile uint16_t length;
         volatile char data[AP_PARAM_MAX_EMBEDDED_PARAM];
     };
+    
     static const param_defaults_struct param_defaults_data;
     
     
@@ -569,7 +575,7 @@ private:
 
     static bool parse_param_line(char *line, char **vname, float &value);
     
-#if HAL_OS_POSIX_IO == 1
+#if HAL_OS_POSIX_IO == 1 || defined(BOARD_HAS_SDIO)
     /*
       load a parameter defaults file. This happens as part of load_all()
      */

@@ -130,7 +130,7 @@
 
 
 #define BOARD_DATAFLASH_NAME "dataflash"
-#define BOARD_DATAFLASH_PAGES 0x2000
+#define BOARD_DATAFLASH_PAGES 0x10000
 #define BOARD_DATAFLASH_ERASE_SIZE (4096)// in bytes
 
 #if 1// if board's dataflash supports 4k erases then we can use it as FAT and share it via USB

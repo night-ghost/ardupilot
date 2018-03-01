@@ -1,6 +1,7 @@
 #include <AP_HAL/AP_HAL.h>
 #include <AP_AHRS/AP_AHRS.h>
-#if AP_AHRS_NAVEKF_AVAILABLE
+
+#if AP_AHRS_NAVEKF_AVAILABLE && SOLO_GIMBAL_ENABLED
 
 #include "AP_Mount_SoloGimbal.h"
 #include "SoloGimbal.h"

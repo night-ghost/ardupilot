@@ -83,15 +83,11 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
     SCHED_TASK(ins_periodic,           50,     50),
     SCHED_TASK(avoidance_adsb_update,  10,    100),
     SCHED_TASK(button_update,           5,    100),
-#if STATS_ENABLED == ENABLED
+#ifndef DISABLE_STATS_UPDATE
     SCHED_TASK(stats_update,            1,    100),
-#endif
-#if GRIPPER_ENABLED == ENABLED
-    SCHED_TASK_CLASS(AP_Gripper, &plane.g2.gripper, update, 10, 75),
 #endif
 };
 
-#if STATS_ENABLED == ENABLED
 /*
   update AP_Stats
  */
@@ -99,7 +95,7 @@ void Plane::stats_update(void)
 {
     g2.stats.update();
 }
-#endif
+
 
 void Plane::setup() 
 {
@@ -337,6 +333,9 @@ void Plane::one_second_loop()
     // indicates that the sensor or subsystem is present but not
     // functioning correctly
     update_sensor_status_flags();
+
+    // do barometer correction by GPS
+    barometer.update_alt_target(adjusted_altitude_cm()*0.01f);
 }
 
 void Plane::compass_save()
@@ -461,12 +460,14 @@ void Plane::update_GPS_10Hz(void)
             }
         }
 
+
         // see if we've breached the geo-fence
         geofence_check(false);
 
 #if CAMERA == ENABLED
         camera.update();
 #endif
+        barometer.update_gps_alt(float(gps.location().alt)* (1/100.0) );
 
         // update wind estimate
         ahrs.estimate_wind();

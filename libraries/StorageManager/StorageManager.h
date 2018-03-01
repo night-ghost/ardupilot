@@ -20,6 +20,7 @@
  */
 #pragma once
 
+#include <AP_Param/AP_Param.h>
 #include <AP_HAL/AP_HAL.h>
 
 /*

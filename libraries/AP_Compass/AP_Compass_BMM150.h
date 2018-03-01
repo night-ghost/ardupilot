@@ -24,6 +24,10 @@
 #include "AP_Compass.h"
 #include "AP_Compass_Backend.h"
 
+#ifndef HAL_COMPASS_BMM150_I2C_ADDR
+#define HAL_COMPASS_BMM150_I2C_ADDR 0x12
+#endif
+
 class AP_Compass_BMM150 : public AP_Compass_Backend
 {
 public:

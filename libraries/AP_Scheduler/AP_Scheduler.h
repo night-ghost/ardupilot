@@ -27,6 +27,9 @@
 
 #define AP_SCHEDULER_NAME_INITIALIZER(_name) .name = #_name,
 
+
+
+
 /*
   useful macro for creating scheduler task table
  */
@@ -145,6 +148,22 @@ public:
     // loop performance monitoring:
     AP::PerfInfo perf_info;
 
+#ifdef DEBUG_LOOP_TIME
+ #define MAX_TASKS 100// should be greater than _num_tasks
+    uint32_t get_longest_task(uint16_t &id) {
+        uint32_t max=0;
+        uint16_t ptr;
+        for(uint16_t i=0; i<_num_tasks; i++){
+            if(times[i]>max){
+                max=times[i];
+                ptr = i;
+            }
+        }
+        id = ptr;
+        return max;
+    }
+#endif
+
 private:
     // function that is called before anything in the scheduler table:
     scheduler_fastloop_fn_t _fastloop_fn;
@@ -200,4 +219,7 @@ private:
 
     // bitmask bit which indicates if we should log PERF message to dataflash
     uint32_t _log_performance_bit;
+#ifdef DEBUG_LOOP_TIME
+    volatile uint32_t times[MAX_TASKS];
+#endif
 };

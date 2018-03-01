@@ -1,3 +1,5 @@
+#pragma GCC optimize("O2")
+
 #include "AP_Baro_Backend.h"
 
 extern const AP_HAL::HAL& hal;

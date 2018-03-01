@@ -1,3 +1,4 @@
+PACK.sh
 /.lock-waf*
 /.waf*
 /Tools/autotest/aircraft/Rascal/reset.xml
@@ -12,9 +13,14 @@
 /Tools/autotest/jsbsim_fgout_0.xml
 /Tools/autotest/jsbsim_start_0.xml
 /tmp/*
+*.bad
+*.diff
+*.h.diff
+*.c.diff
 *.bin
 *.d
 *.dfu
+*.tgz
 *.dll
 *.elf
 *.exe
@@ -29,7 +35,6 @@
 *.tlog.raw
 *.vbrain
 *.vrx
-*.zip
 *~
 .*.swo
 .*.swp
@@ -95,4 +100,8 @@ GPATH
 GRTAGS
 GTAGS
 config.mk
+cov-int/
+ArduCopter/cov-int/*
+ArduCopter/cov-int/
+*.ok
 *.apj

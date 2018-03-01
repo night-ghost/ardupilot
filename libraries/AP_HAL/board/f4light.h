@@ -25,6 +25,8 @@
 #define INVENSENSE_DRDY_PIN             BOARD_MPU6000_DRDY_PIN
 // via interrupt
 
+#define MAG3110_ENABLE_LEN_FILTER 1
+
 #ifdef BOARD_HMC5883_DRDY_PIN
 #define HMC5883_DRDY_PIN                BOARD_HMC5883_DRDY_PIN
 #endif
@@ -51,7 +53,7 @@
 #define TOSHIBA_LED_I2C_BUS  2       // external I2C
 
 
- #define HAL_MINIMIZE_FEATURES 1
+#define HAL_MINIMIZE_FEATURES 1
 
  #define AC_TERRAIN             DISABLED // no SD card with POSIX IO
  #define PRECISION_LANDING      DISABLED
@@ -70,7 +72,8 @@
 // #define MOUNT                 DISABLED 
 // #define ADSB_ENABLED          DISABLED
 
+ #define USE_WAYBACK_ENABLE ENABLED
 
-#define LOGGING_ENABLED ENABLED
+ #define LOGGING_ENABLED ENABLED
 
-#define STATS_ENABLED DISABLED // to reduce flash degradation
+#define DISABLE_STATS_UPDATE 1 // to reduce flash degradation

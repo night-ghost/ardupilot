@@ -143,6 +143,7 @@ MAV_RESULT Copter::mavlink_motor_test_start(mavlink_channel_t chan, uint8_t moto
         if (!mavlink_motor_test_check(chan, throttle_type != 1)) {
             return MAV_RESULT_FAILED;
         } else {
+            gcs().send_text(MAV_SEVERITY_INFO, "starting motor test");
             // start test
             ap.motor_test = true;
 

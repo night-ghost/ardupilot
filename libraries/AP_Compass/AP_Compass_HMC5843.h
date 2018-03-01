@@ -16,13 +16,19 @@ class AP_HMC5843_BusDriver;
 class AP_Compass_HMC5843 : public AP_Compass_Backend
 {
 public:
+    enum Type {
+        Unknown,
+        HMC5883L,
+        HMC5983,
+        HMC5843,
+    };
+        
     static AP_Compass_Backend *probe(Compass &compass,
                                      AP_HAL::OwnPtr<AP_HAL::Device> dev,
                                      bool force_external = false,
                                      enum Rotation rotation = ROTATION_NONE);
 
-    static AP_Compass_Backend *probe_mpu6000(Compass &compass,
-                                             enum Rotation rotation = ROTATION_NONE);
+    static AP_Compass_Backend *probe_mpu6000(Compass &compass, enum Rotation rotation = ROTATION_NONE);
 
     static constexpr const char *name = "HMC5843";
 
@@ -48,9 +54,11 @@ private:
     void _take_sample();
 
     AP_HMC5843_BusDriver *_bus;
+    AP_HAL::DigitalSource *_drdy_pin;
 
     float _scaling[3];
     float _gain_scale;
+    float compass_len;
 
     int16_t _mag_x;
     int16_t _mag_y;
@@ -61,6 +69,7 @@ private:
     uint8_t _accum_count;
 
     uint8_t _compass_instance;
+    enum Type _type;
 
     enum Rotation _rotation;
     

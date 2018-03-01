@@ -73,6 +73,10 @@
 #define AP_SERIALMANAGER_SBUS1_BUFSIZE_TX     32
 
 
+#define AP_SERIALMANAGER_DEVO_TELEM_BAUD        38400
+#define AP_SERIALMANAGER_DEVO_BUFSIZE_RX        0
+#define AP_SERIALMANAGER_DEVO_BUFSIZE_TX        32
+
 class AP_SerialManager {
 public:
     AP_SerialManager();
@@ -98,7 +102,8 @@ public:
         SerialProtocol_Aerotenna_uLanding      = 12, // Ulanding support - deprecated, users should use Rangefinder
         SerialProtocol_Beacon = 13,
         SerialProtocol_Volz = 14,                    // Volz servo protocol
-        SerialProtocol_Sbus1 = 15
+        SerialProtocol_Sbus1 = 15,
+        SerialProtocol_Devo_Telem = 16,
     };
 
     // get singleton instance

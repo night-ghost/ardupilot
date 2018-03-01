@@ -440,6 +440,8 @@ void DataFlash_Class::Log_Write_Baro_instance(AP_Baro &baro, uint64_t time_us, u
         sample_time_ms: baro.get_last_update(baro_instance),
         drift_offset  : drift_offset,
         ground_temp   : ground_temp,
+        correction       : baro.get_offset(),
+        gpsalt_over_home : baro.get_gps(),
     };
     WriteBlock(&pkt, sizeof(pkt));
 }

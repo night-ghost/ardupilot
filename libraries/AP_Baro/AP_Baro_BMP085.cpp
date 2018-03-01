@@ -15,6 +15,7 @@
 #include "AP_Baro_BMP085.h"
 
 #include <utility>
+#include <stdio.h>
 
 #include <AP_Common/AP_Common.h>
 #include <AP_HAL/AP_HAL.h>
@@ -85,7 +86,6 @@ bool AP_Baro_BMP085::_init()
     if (id!=0x55) {
         return false;    // not BMP180
     }
-
 
     _dev->read_registers(0xD1, &_vers, 1);
 
@@ -307,10 +307,32 @@ void AP_Baro_BMP085::_calculate()
     x2 = (-7357 * p) >> 16;
     p += ((x1 + x2 + 3791) >> 4);
 
-    if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
-        _pressure_filter.apply(p);
-        _has_sample = true;
-        _sem->give();
+    bool ret=true;
+
+    float press = p;
+
+    if(is_zero(_mean_pressure)) {
+        _mean_pressure=press;
+    } else {
+#define FILTER_KOEF 0.1
+
+        float d = abs(_mean_pressure-press)/(_mean_pressure+press);
+        if(d*100 > 10) { // difference more than 20% from mean value
+            printf("\nBaro pressure error: mean %f got %f\n", _mean_pressure, press );
+            ret= false;
+            float k = FILTER_KOEF / (d*10); // 2.5 and more, so one bad sample never change mean more than 4%
+            _mean_pressure = _mean_pressure * (1-k) + press*k; // complimentary filter 1/k on bad samples
+        } else {
+            _mean_pressure = _mean_pressure * (1-FILTER_KOEF) + press*FILTER_KOEF; // complimentary filter 1/10 on good samples
+        }
+    }
+   
+    if(ret) {
+        if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+            _pressure_filter.apply(p);
+            _has_sample = true;
+            _sem->give();
+        }
     }
 }
 

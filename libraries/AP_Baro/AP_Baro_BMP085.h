@@ -17,9 +17,8 @@ public:
 
     /* AP_Baro public interface: */
     void update();
-
+    
     static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::Device> dev);
-
 
 private:
     bool _init();
@@ -35,7 +34,6 @@ private:
 
     uint16_t _read_prom_word(uint8_t word);
     bool     _read_prom(uint16_t *prom);
-
 
     AP_HAL::OwnPtr<AP_HAL::Device> _dev;
     AP_HAL::DigitalSource *_eoc;
@@ -61,4 +59,5 @@ private:
 
     uint8_t _vers;
     uint8_t _type;
+    float _mean_pressure;
 };

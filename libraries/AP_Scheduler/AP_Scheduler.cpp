@@ -113,7 +113,7 @@ void AP_Scheduler::run(uint32_t time_available)
             }
         }
     }
-    
+
     for (uint8_t i=0; i<_num_tasks; i++) {
         uint16_t dt = _tick_counter - _last_run[i];
         uint16_t interval_ticks = _loop_rate_hz / _tasks[i].rate_hz;
@@ -134,7 +134,7 @@ void AP_Scheduler::run(uint32_t time_available)
                       (unsigned)_task_time_allowed);
             }
 
-            if (_task_time_allowed <= time_available) {
+            if (_task_time_allowed <= time_available && time_available > 90) { // 100uS multitask quant so not schedule anything if time less
                 // run it
                 _task_time_started = now;
                 current_task = i;
@@ -155,7 +155,11 @@ void AP_Scheduler::run(uint32_t time_available)
                 now = AP_HAL::micros();
                 uint32_t time_taken = now - _task_time_started;
 
-                if (time_taken > _task_time_allowed) {
+#ifdef DEBUG_LOOP_TIME
+                times[i] = time_taken;
+#endif
+
+                if (time_taken > _task_time_allowed && time_taken - _task_time_allowed > 100) { // overruns below 100uS multitask quant should be ignored
                     // the event overran!
                     debug(3, "Scheduler overrun task[%u-%s] (%u/%u)\n",
                           (unsigned)i,

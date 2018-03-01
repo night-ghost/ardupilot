@@ -327,6 +327,8 @@ struct PACKED log_BARO {
     uint32_t sample_time_ms;
     float   drift_offset;
     float   ground_temp;
+    float   correction;
+    float   gpsalt_over_home;
 };
 
 struct PACKED log_AHRS {
@@ -1065,7 +1067,7 @@ struct PACKED log_DSTL {
 
 // see "struct sensor" in AP_Baro.h and "Log_Write_Baro":
 #define BARO_LABELS "TimeUS,Alt,Press,Temp,CRt,SMS,Offset,GndTemp"
-#define BARO_FMT   "QffcfIff"
+#define BARO_FMT   "QffcfIffff"
 #define BARO_UNITS "smPOnsmO"
 #define BARO_MULTS "F00B0C?0"
 
