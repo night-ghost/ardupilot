@@ -51,6 +51,8 @@ NavEKF2_core::NavEKF2_core(void) :
 // setup this core backend
 bool NavEKF2_core::setup_core(NavEKF2 *_frontend, uint8_t _imu_index, uint8_t _core_index)
 {
+    if(this==NULL) return false;
+
     frontend = _frontend;
     imu_index = _imu_index;
     core_index = _core_index;

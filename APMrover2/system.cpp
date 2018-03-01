@@ -32,10 +32,9 @@ void Rover::init_ardupilot()
     //
 
     load_parameters();
-#if STATS_ENABLED == ENABLED
+
     // initialise stats module
     g2.stats.init();
-#endif
 
     gcs().set_dataflash(&DataFlash);
 
@@ -128,6 +127,9 @@ void Rover::init_ardupilot()
 #if MOUNT == ENABLED
     // initialise camera mount
     camera_mount.init(serial_manager);
+#endif
+#if DEVO_TELEM_ENABLED == ENABLED
+    devo_telemetry.init(serial_manager);
 #endif
 
     /*

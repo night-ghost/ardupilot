@@ -65,5 +65,4 @@ private:
     const AP_AHRS &_ahrs;                   // reference to attitude estimate
     AP_HAL::UARTDriver *_port;              // UART used to send data to receiver
     uint32_t _last_frame_ms;
-
 };

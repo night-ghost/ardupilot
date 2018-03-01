@@ -172,7 +172,9 @@
 #elif CONFIG_HAL_BOARD == HAL_BOARD_VRBRAIN
     #include <AP_HAL/board/vrbrain.h>
 #elif CONFIG_HAL_BOARD == HAL_BOARD_CHIBIOS
-	#include <AP_HAL/board/chibios.h>
+    #include <AP_HAL/board/chibios.h>
+#elif CONFIG_HAL_BOARD == HAL_BOARD_FLYMAPLE
+    #include <AP_HAL/board/flymaple.h>
 #elif CONFIG_HAL_BOARD == HAL_BOARD_F4LIGHT
     #include <AP_HAL/board/f4light.h>
 #else

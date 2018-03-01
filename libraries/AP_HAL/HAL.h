@@ -79,6 +79,8 @@ public:
         AP_HAL::init();
     }
 
+    ~HAL(){};
+
     struct Callbacks {
         virtual void setup() = 0;
         virtual void loop() = 0;
@@ -90,7 +92,7 @@ public:
         void setup() override { _setup(); }
         void loop() override { _loop(); }
 
-    private:
+private:
         void (*_setup)(void);
         void (*_loop)(void);
     };

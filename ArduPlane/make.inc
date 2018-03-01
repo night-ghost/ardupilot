@@ -59,3 +59,4 @@ LIBRARIES += PID
 LIBRARIES += AP_Soaring
 LIBRARIES += AP_Gripper
 LIBRARIES += AP_Devo_Telem
+LIBRARIES += AP_WayBack

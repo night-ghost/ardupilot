@@ -15,6 +15,7 @@
 #include "AP_Baro_BMP280.h"
 
 #include <utility>
+#include <stdio.h>
 
 extern const AP_HAL::HAL &hal;
 
@@ -66,9 +67,13 @@ AP_Baro_Backend *AP_Baro_BMP280::probe(AP_Baro &baro,
 
 bool AP_Baro_BMP280::_init()
 {
-    if (!_dev | !_dev->get_semaphore()->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+    if (!_dev ) {
         return false;
     }
+
+    AP_HAL::Semaphore *sem=_dev->get_semaphore();
+    
+    if(!sem || !sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) return false;
 
     _has_sample = false;
 
@@ -78,7 +83,7 @@ bool AP_Baro_BMP280::_init()
     if (!_dev->read_registers(BMP280_REG_ID, &whoami, 1)  ||
         whoami != BMP280_ID) {
         // not a BMP280
-        _dev->get_semaphore()->give();
+        sem->give();
         return false;
     }
 
@@ -112,7 +117,7 @@ bool AP_Baro_BMP280::_init()
 
     _instance = _frontend.register_sensor();
 
-    _dev->get_semaphore()->give();
+    sem->give();
 
     // request 50Hz update
     _dev->register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP280::_timer, void));
@@ -129,8 +134,12 @@ void AP_Baro_BMP280::_timer(void)
 
     _dev->read_registers(BMP280_REG_DATA, buf, sizeof(buf));
 
-    _update_temperature((buf[3] << 12) | (buf[4] << 4) | (buf[5] >> 4));
-    _update_pressure((buf[0] << 12) | (buf[1] << 4) | (buf[2] >> 4));
+    _dev->get_semaphore()->give();  // give bus semaprore ASAP
+
+    if(_update_temperature((buf[3] << 12) | (buf[4] << 4) | (buf[5] >> 4))) {
+        _update_pressure((buf[0] << 12) | (buf[1] << 4) | (buf[2] >> 4));
+    }
+    return;
 }
 
 // transfer data to the frontend
@@ -149,7 +158,7 @@ void AP_Baro_BMP280::update(void)
 }
 
 // calculate temperature
-void AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
+bool AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
 {
     int32_t var1, var2, t;
 
@@ -165,6 +174,7 @@ void AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
         _temperature = temp;
         _sem->give();
     }
+    return true;
 }
 
 // calculate pressure
@@ -190,7 +200,10 @@ void AP_Baro_BMP280::_update_pressure(int32_t press_raw)
     var2 = (((int64_t)_p8) * p) >> 19;
     p = ((p + var1 + var2) >> 8) + (((int64_t)_p7) << 4);
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> fixed repo after HAL was merged to upstream
     const float press = (float)p / 256.0f;
     if (!pressure_ok(press)) {
         return;

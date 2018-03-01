@@ -21,6 +21,9 @@
  *       Sensor is initialized in Continuos mode (10Hz)
  *
  */
+ 
+#pragma GCC optimize("O3")
+ 
 #include <AP_HAL/AP_HAL.h>
 
 #ifdef HAL_COMPASS_HMC5843_I2C_ADDR
@@ -93,11 +96,14 @@ extern const AP_HAL::HAL& hal;
 
 #define HMC5843_REG_ID_A 0x0A
 
+#define HMC5843_REG_STATUS 0x09
+
 
 AP_Compass_HMC5843::AP_Compass_HMC5843(Compass &compass, AP_HMC5843_BusDriver *bus,
                                        bool force_external, enum Rotation rotation)
     : AP_Compass_Backend(compass)
     , _bus(bus)
+    , compass_len(0)
     , _rotation(rotation)
     , _force_external(force_external)
 {
@@ -154,7 +160,12 @@ bool AP_Compass_HMC5843::init()
 {
     AP_HAL::Semaphore *bus_sem = _bus->get_semaphore();
 
-    if (!bus_sem || !bus_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+    if (!bus_sem) {
+        hal.console->printf("HMC5843: Failed to allocate bus semaphore\n");
+        return false;
+    }
+
+    if (!bus_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         hal.console->printf("HMC5843: Unable to get bus semaphore\n");
         return false;
     }
@@ -186,12 +197,20 @@ bool AP_Compass_HMC5843::init()
         goto errout;
     }
 
+    _gain_scale = (1.0f / 1090) * 1000;
+
     _initialised = true;
 
     // lower retries for run
     _bus->set_retries(3);
     
     bus_sem->give();
+
+#if defined(HMC5883_DRDY_PIN)
+    _drdy_pin = hal.gpio->channel(HMC5883_DRDY_PIN);
+    _drdy_pin->mode(HAL_GPIO_INPUT);
+#endif
+
 
     // perform an initial read
     read();
@@ -227,10 +246,20 @@ errout:
  */
 void AP_Compass_HMC5843::_timer()
 {
+
+#if defined(HMC5883_DRDY_PIN)
+    if(_drdy_pin->read() == 0) {
+        return; // data not ready
+    }
+#endif
+
+
     bool result = _read_sample();
 
-    // always ask for a new sample
+//    if(!_setup_sampling_mode() )
     _take_sample();
+
+    _bus->get_semaphore()->give();  // give bus semaprore ASAP
     
     if (!result) {
         return;
@@ -294,9 +323,7 @@ void AP_Compass_HMC5843::read()
         return;
     }
 
-    if (!_sem->take_nonblocking()) {
-        return;
-    }
+    if (_sem->take_nonblocking()) {
     
     if (_accum_count == 0) {
         _sem->give();
@@ -314,21 +341,44 @@ void AP_Compass_HMC5843::read()
     _sem->give();
     
     publish_filtered_field(field, _compass_instance);
+    }
 }
 
 bool AP_Compass_HMC5843::_setup_sampling_mode()
 {
-    _gain_scale = (1.0f / 1090) * 1000;
-    if (!_bus->register_write(HMC5843_REG_CONFIG_A,
-                              HMC5843_CONF_TEMP_ENABLE |
-                              HMC5843_OSR_75HZ |
-                              HMC5843_SAMPLE_AVERAGING_1) ||
-        !_bus->register_write(HMC5843_REG_CONFIG_B,
-                              HMC5883L_GAIN_1_30_GA) ||
-        !_bus->register_write(HMC5843_REG_MODE,
-                              HMC5843_MODE_SINGLE)) {
+//    uint8_t mode = HMC5843_CONF_TEMP_ENABLE | HMC5843_OSR_75HZ |  HMC5843_SAMPLE_AVERAGING_1;
+    uint8_t mode = HMC5843_CONF_TEMP_ENABLE | HMC5843_OSR_75HZ | HMC5843_SAMPLE_AVERAGING_8;
+    uint8_t gain = HMC5883L_GAIN_1_30_GA;
+    
+    if (!_bus->register_write(HMC5843_REG_CONFIG_A, mode) ) {
         return false;
     }
+
+//[ autodetect compass type
+    hal.scheduler->delay_microseconds(2);
+
+    uint8_t ma;
+    
+    if(!_bus->register_read(HMC5843_REG_CONFIG_A, &ma)) return false;
+    
+    if(ma == mode) {        // a 5883L supports the sample averaging config
+        _type = HMC5983;
+    } else if(ma == (HMC5843_OSR_75HZ | HMC5843_SAMPLE_AVERAGING_8) ){
+        _type = HMC5883L;
+    } else if(ma == (HMC5843_CONF_TEMP_ENABLE | HMC5843_OSR_75HZ) || ma == HMC5843_OSR_75HZ){
+        gain = HMC5843_GAIN_1_50_GA;
+        _type = HMC5843;
+    } else { // can't detect compass type
+        hal.console->printf("can't detect HMC5843 type! RegA=%x\n", ma);
+        return false;
+    }
+
+//]
+    mode = HMC5843_CONF_TEMP_ENABLE | HMC5843_OSR_75HZ | HMC5843_SAMPLE_AVERAGING_1; // return original settings
+    if( !_bus->register_write(HMC5843_REG_CONFIG_A, mode) ||
+        !_bus->register_write(HMC5843_REG_CONFIG_B, gain) ||
+        !_bus->register_write(HMC5843_REG_MODE,     HMC5843_MODE_SINGLE)) return false;
+        
     return true;
 }
 
@@ -348,16 +398,24 @@ bool AP_Compass_HMC5843::_read_sample()
         return false;
     }
 
+    if(_type == HMC5843){
+        rx = be16toh(val.rx);
+        ry = be16toh(val.ry);
+        rz = be16toh(val.rz);
+    } else {
     rx = be16toh(val.rx);
     ry = be16toh(val.rz);
     rz = be16toh(val.ry);
+    }
+
+// temperature in regs 0x31, 0x32
 
     if (rx == -4096 || ry == -4096 || rz == -4096) {
         // no valid data available
         return false;
     }
 
-    _mag_x = -rx;
+    _mag_x = -rx; // rotate pitch_180
     _mag_y =  ry;
     _mag_z = -rz;
 

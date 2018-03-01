@@ -1,5 +1,7 @@
 #include <AP_HAL/AP_HAL.h>
 
+#pragma GCC optimize("O3")
+
 #include "AP_Compass.h"
 #include "AP_Compass_Backend.h"
 #include <stdio.h>

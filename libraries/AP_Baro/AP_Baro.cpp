@@ -50,6 +50,13 @@
  #define HAL_BARO_FILTER_DEFAULT 0 // turned off by default
 #endif
 
+// for baro drivt compensation
+#define GPS_LOOP_FREQ     50.f                  // GPS loop frequency in Hz
+#define GPS_DT            1.f/GPS_LOOP_FREQ
+#define ADJ_RATE_DEFAULT  0                     // disabled
+#define ADJ_DELAY_DEFAULT 120 
+#define ADJ_TC_DEFAULT    180    
+
 extern const AP_HAL::HAL& hal;
 
 // table of user settable parameters
@@ -143,6 +150,30 @@ const AP_Param::GroupInfo AP_Baro::var_info[] = {
     // @Increment: 1
     AP_GROUPINFO("FLTR_RNG", 13, AP_Baro, _filter_range, HAL_BARO_FILTER_DEFAULT),
 
+    // @Param: ADJ_RATE
+    // @DisplayName: baro adjustment rate
+    // @Description: Rate of barometer adjustment using GPS. If enabled (>=0.1), the barometer ground pressure is slowly adjusted during flight segments with constant altitude target by using GPS information.  Recommended value: 1cm/sec
+    // @Units: cm/second
+    // @Range: 0 10
+    // @Increment: 0.1
+    AP_GROUPINFO("ADJ_RATE", 14, AP_Baro, _adj_step, ADJ_RATE_DEFAULT),
+
+    // @Param: ADJ_TC
+    // @DisplayName: GPS filter time constant
+    // @Description: Time constant for the low pass filter applied to the GPS signal. As we only want to compensate for long-term trends, the should be fairly large (30sec...several mintes)
+    // @Units: seconds
+    // @Range: 10 600
+    // @Increment: 1
+    AP_GROUPINFO("ADJ_TC", 15, AP_Baro, _adj_timeconstant, ADJ_TC_DEFAULT),
+
+    // @Param: ADJ_DELAY
+    // @DisplayName: Alt adjust delay
+    // @Description: Dead time before alt tuning starts after constant alt target has been reached.
+    // @Units: seconds
+    // @Range: 10 600
+    // @Increment: 1
+    AP_GROUPINFO("ADJ_DELAY", 16, AP_Baro, _adj_delay, ADJ_DELAY_DEFAULT),
+
     AP_GROUPEND
 };
 
@@ -153,10 +184,14 @@ AP_Baro *AP_Baro::_instance;
   AP_Baro constructor
  */
 AP_Baro::AP_Baro()
+    : _home_alt(0.f)
+    , _last_alt_target(0.f)
+    , _adj_sample_count(0)
 {
     _instance = this;
     
     AP_Param::setup_object_defaults(this, var_info);
+    _gps_alt_over_home.set_cutoff_frequency(1.f/float(_adj_timeconstant.get()));
 }
 
 // calibrate the barometer. This must be called at least once before
@@ -183,8 +218,9 @@ void AP_Baro::calibrate(bool save)
         do {
             update();
             if (AP_HAL::millis() - tstart > 500) {
-                AP_HAL::panic("PANIC: AP_Baro::read unsuccessful "
+                printf( /* AP_HAL::panic(*/ "PANIC: AP_Baro::read unsuccessful "
                         "for more than 500ms in AP_Baro::calibrate [2]\r\n");
+                return;
             }
             hal.scheduler->delay(10);
         } while (!healthy());
@@ -202,7 +238,8 @@ void AP_Baro::calibrate(bool save)
         uint32_t tstart = AP_HAL::millis();
         do {
             update();
-            if (AP_HAL::millis() - tstart > 500) {
+            if (AP_HAL::millis() - tstart > 900) {
+
                 AP_HAL::panic("PANIC: AP_Baro::read unsuccessful "
                         "for more than 500ms in AP_Baro::calibrate [3]\r\n");
             }
@@ -264,6 +301,7 @@ void AP_Baro::update_calibration()
 
     // force EAS2TAS to recalculate
     _EAS2TAS = 0;
+    _alt_offset.set_and_save(0);
 }
 
 // return altitude difference in meters between current pressure and a
@@ -427,10 +465,6 @@ void AP_Baro::init(void)
 #if AP_FEATURE_BOARD_DETECT
     switch (AP_BoardConfig::get_board_type()) {
     case AP_BoardConfig::PX4_BOARD_PX4V1:
-#ifdef HAL_BARO_MS5611_I2C_BUS
-        ADD_BACKEND(AP_Baro_MS56XX::probe(*this,
-                                          std::move(hal.i2c_mgr->get_device(HAL_BARO_MS5611_I2C_BUS, HAL_BARO_MS5611_I2C_ADDR))));
-#endif
         break;
 
     case AP_BoardConfig::PX4_BOARD_PIXHAWK:
@@ -571,6 +605,8 @@ void AP_Baro::init(void)
   #endif
 #endif
 
+
+
     // can optionally have baro on I2C too
     if (_ext_bus >= 0) {
 #if APM_BUILD_TYPE(APM_BUILD_ArduSub)
@@ -582,9 +618,6 @@ void AP_Baro::init(void)
 #else
         ADD_BACKEND(AP_Baro_MS56XX::probe(*this,
                                           std::move(hal.i2c_mgr->get_device(_ext_bus, HAL_BARO_MS5611_I2C_ADDR))));
-
- #if CONFIG_HAL_BOARD == HAL_BOARD_F4LIGHT // we don't know which baro user will solder
-
         ADD_BACKEND(AP_Baro_BMP280::probe(*this,
                                           std::move(hal.i2c_mgr->get_device(_ext_bus, HAL_BARO_BMP280_I2C_ADDR))));
   #ifdef HAL_BARO_BMP280_I2C_ADDR_ALT
@@ -593,11 +626,10 @@ void AP_Baro::init(void)
   #endif
         ADD_BACKEND(AP_Baro_BMP085::probe(*this,
                                           std::move(hal.i2c_mgr->get_device(_ext_bus, HAL_BARO_BMP085_I2C_ADDR))));
- #endif                                         
 #endif
     }
 
-#if CONFIG_HAL_BOARD != HAL_BOARD_F4LIGHT // most boards requires external baro
+#if 0 // to debug without baro
 
     if (_num_drivers == 0 || _num_sensors == 0 || drivers[0] == nullptr) {
         AP_BoardConfig::sensor_config_error("Baro: unable to initialise driver");
@@ -736,6 +768,73 @@ void AP_Baro::set_pressure_correction(uint8_t instance, float p_correction)
         sensors[instance].p_correction = p_correction;
     }
 }
+
+
+// update altitude_target
+// alt_target: cm above home
+void AP_Baro::update_alt_target(float alt_target)
+{
+    if (_adj_step < 0.1f) return; // disabled
+
+    if (fabsf(alt_target - _last_alt_target) > 0.02f*_adj_step) {
+        // alt target changed significantly (>2 steps), trigger GPS filter reset
+        _adj_sample_count = 0;
+        _last_alt_target = alt_target;
+    }
+    else {
+        // alt target is constant
+        if (_adj_sample_count >= _adj_delay*GPS_LOOP_FREQ) {
+            // enough GPS samples, start adjusting, with a max rate of one inc per second (0.1 m/s)
+            float difference = _gps_alt_over_home.get() - get_altitude();
+
+            // check difference with hysteresis of 3 steps
+            if (fabsf(difference) > 0.03f*_adj_step) {
+                // if we see a 1 hz pulsing as a result, we should do 1/10 steps in update() instead
+                _alt_offset.set(_alt_offset.get() + copysignf(_adj_step*0.01f, difference));
+            }
+        }
+    }
+}
+
+
+// store and buffer a single GPS alt reading
+// gps_alt: GPS altitude in cm (AMSL)
+void AP_Baro::update_gps_alt(float gps_alt)
+{
+    // re-initialize filter after alt change
+    if (_adj_sample_count == 0) {
+        _gps_alt_over_home.reset(gps_alt - _home_alt);
+    }
+    else {
+        _gps_alt_over_home.apply(gps_alt - _home_alt, GPS_DT);
+    }
+
+
+    if (_adj_sample_count < _adj_delay*GPS_LOOP_FREQ) {
+        _adj_sample_count++;
+    }
+}
+
+
+// set altitude reference (in meters)
+void AP_Baro::set_home_alt(float gps_alt)
+{
+    _home_alt = gps_alt;
+}
+ 
+ /*
+ 
+   float vacc;
+ +    const bool gps_vacc_ret = _gps->vertical_accuracy(vacc);
+ +    const uint32_t last_fix = _gps->last_fix_time_ms();
+ +    const uint32_t now = AP_HAL::millis();
+ +
+ +    // Make sure the vertical accuracy is within limits
+ +    if (gps_vacc_ret && vacc < BARO_MAX_GPS_ACCURACY && (now - last_fix) < BARO_MAX_GPS_DELAY) {
+ +        const Location loc = _gps->location();
+ +        _gps_calibration_altitude = float(loc.alt) / 100.0;
+ 
+ */
 
 namespace AP {
 

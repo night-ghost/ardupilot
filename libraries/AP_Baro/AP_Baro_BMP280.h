@@ -24,7 +24,7 @@ private:
 
     bool _init(void);
     void _timer(void);
-    void _update_temperature(int32_t);
+    bool _update_temperature(int32_t);
     void _update_pressure(int32_t);
 
     AP_HAL::OwnPtr<AP_HAL::Device> _dev;
@@ -34,6 +34,7 @@ private:
     int32_t _t_fine;
     float _pressure;
     float _temperature;
+    float _mean_pressure;
 
     // Internal calibration registers
     int16_t _t2, _t3, _p2, _p3, _p4, _p5, _p6, _p7, _p8, _p9;

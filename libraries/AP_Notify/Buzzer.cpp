@@ -30,7 +30,6 @@
 
 extern const AP_HAL::HAL& hal;
 
-
 bool Buzzer::init()
 {
 #if defined(HAL_BUZZER_PIN)

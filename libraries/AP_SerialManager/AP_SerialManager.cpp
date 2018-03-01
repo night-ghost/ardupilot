@@ -201,6 +201,13 @@ void AP_SerialManager::init()
                     state[i].baud = AP_SERIALMANAGER_FRSKY_SPORT_BAUD/1000; // update baud param in case user looks at it
                     // begin is handled by AP_Frsky_telem library
                     break;
+
+                case SerialProtocol_Devo_Telem:
+                    // Note baudrate is hardcoded to 38400
+                    state[i].baud = AP_SERIALMANAGER_DEVO_TELEM_BAUD/1000; // update baud param in case user looks at it
+                    // begin is handled by AP_DEVO_telem library
+                    break;
+
                 case SerialProtocol_GPS:
                 case SerialProtocol_GPS2:
                     state[i].uart->begin(map_baudrate(state[i].baud), 

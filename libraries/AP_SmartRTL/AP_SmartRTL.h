@@ -8,22 +8,32 @@
 #include <DataFlash/DataFlash.h>
 #include <GCS_MAVLink/GCS.h>
 
+#define USE_WAYBACK
+
 // definitions and macros
 #define SMARTRTL_ACCURACY_DEFAULT        2.0f   // default _ACCURACY parameter value.  Points will be no closer than this distance (in meters) together.
-#define SMARTRTL_POINTS_DEFAULT          150    // default _POINTS parameter value.  High numbers improve path pruning but use more memory and CPU for cleanup. Memory used will be 20bytes * this number.
-#define SMARTRTL_POINTS_MAX              500    // the absolute maximum number of points this library can support.
-#define SMARTRTL_TIMEOUT                 15000  // the time in milliseconds with no points saved to the path (for whatever reason), before SmartRTL is disabled for the flight
-#define SMARTRTL_CLEANUP_POINT_TRIGGER   50     // simplification will trigger when this many points are added to the path
-#define SMARTRTL_CLEANUP_START_MARGIN    10     // routine cleanup algorithms begin when the path array has only this many empty slots remaining
-#define SMARTRTL_CLEANUP_POINT_MIN       10     // cleanup algorithms will remove points if they remove at least this many points
-#define SMARTRTL_SIMPLIFY_EPSILON (_accuracy * 0.5f)
-#define SMARTRTL_SIMPLIFY_STACK_LEN_MULT (2.0f/3.0f)+1  // simplify buffer size as compared to maximum number of points.
+#ifdef USE_WAYBACK
+ #include <AP_WayBack/AP_WayBack.h>
+
+ // good implementation has no such dumb limits. This value is enough to hold track Vladivostok-Kaliningrad by the roads
+ #define SMARTRTL_POINTS_DEFAULT          4000    // default _POINTS parameter value. 
+ 
+#else
+ #define SMARTRTL_POINTS_DEFAULT          150    // default _POINTS parameter value.  High numbers improve path pruning but use more memory and CPU for cleanup. Memory used will be 20bytes * this number.
+ #define SMARTRTL_POINTS_MAX              500    // the absolute maximum number of points this library can support.
+ #define SMARTRTL_TIMEOUT                 15000  // the time in milliseconds with no points saved to the path (for whatever reason), before SmartRTL is disabled for the flight
+ #define SMARTRTL_CLEANUP_POINT_TRIGGER   50     // simplification will trigger when this many points are added to the path
+ #define SMARTRTL_CLEANUP_START_MARGIN    10     // routine cleanup algorithms begin when the path array has only this many empty slots remaining
+ #define SMARTRTL_CLEANUP_POINT_MIN       10     // cleanup algorithms will remove points if they remove at least this many points
+ #define SMARTRTL_SIMPLIFY_EPSILON (_accuracy * 0.5f)
+ #define SMARTRTL_SIMPLIFY_STACK_LEN_MULT (2.0f/3.0f)+1  // simplify buffer size as compared to maximum number of points.
                                                 // The minimum is int((s/2-1)+min(s/2, SMARTRTL_POINTS_MAX-s)), where s = pow(2, floor(log(SMARTRTL_POINTS_MAX)/log(2)))
                                                 // To avoid this annoying math, a good-enough overestimate is ceil(SMARTRTL_POINTS_MAX*2.0f/3.0f)
-#define SMARTRTL_SIMPLIFY_TIME_US        200    // maximum time (in microseconds) the simplification algorithm will run before returning
-#define SMARTRTL_PRUNING_DELTA (_accuracy * 0.99)   // How many meters apart must two points be, such that we can assume that there is no obstacle between them.  must be smaller than _ACCURACY parameter
-#define SMARTRTL_PRUNING_LOOP_BUFFER_LEN_MULT 0.25f // pruning loop buffer size as compared to maximum number of points
-#define SMARTRTL_PRUNING_LOOP_TIME_US    200    // maximum time (in microseconds) that the loop finding algorithm will run before returning
+ #define SMARTRTL_SIMPLIFY_TIME_US        200    // maximum time (in microseconds) the simplification algorithm will run before returning
+ #define SMARTRTL_PRUNING_DELTA (_accuracy * 0.99)   // How many meters apart must two points be, such that we can assume that there is no obstacle between them.  must be smaller than _ACCURACY parameter
+ #define SMARTRTL_PRUNING_LOOP_BUFFER_LEN_MULT 0.25f // pruning loop buffer size as compared to maximum number of points
+ #define SMARTRTL_PRUNING_LOOP_TIME_US    200    // maximum time (in microseconds) that the loop finding algorithm will run before returning
+#endif
 
 class AP_SmartRTL {
 
@@ -35,14 +45,20 @@ public:
     // initialise safe rtl including setting up background processes
     void init();
 
+#ifdef USE_WAYBACK
+    inline bool is_active() const { return wb.is_active(); }
+#else
     // return true if smart_rtl is usable (it may become unusable if the user took off without GPS lock or the path became too long)
-    bool is_active() const { return _active; }
+    inline bool is_active() const { return _active; }
+#endif
 
     // returns number of points on the path
     uint16_t get_num_points() const;
 
+#ifndef USE_WAYBACK
     // get a point on the path
     const Vector3f& get_point(uint16_t index) const { return _path[index]; }
+#endif
 
     // get next point on the path to home, returns true on success
     bool pop_point(Vector3f& point);
@@ -83,6 +99,22 @@ public:
 
 private:
 
+#ifdef USE_WAYBACK
+
+    // external references
+    const AP_AHRS& _ahrs;
+
+    bool _example_mode;
+
+    // parameters
+    AP_Float _accuracy;
+    AP_Int16 _points_max;
+    AP_Int8  _blind_shortcut;
+
+ // do all job via AP_WAYBACK library
+    AP_WayBack &wb;
+
+#else
     // enums for logging latest actions
     enum SRTL_Actions {
         SRTL_POINT_ADD,
@@ -223,4 +255,5 @@ private:
 
     // returns true if the two loops overlap (used within add_loop to determine which loops to keep or throw away)
     bool loops_overlap(const prune_loop_t& loop1, const prune_loop_t& loop2) const;
+#endif
 };

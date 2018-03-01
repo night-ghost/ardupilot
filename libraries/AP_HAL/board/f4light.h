@@ -27,6 +27,8 @@
 #define INVENSENSE_DRDY_PIN             BOARD_MPU6000_DRDY_PIN
 // via interrupt
 
+#define MAG3110_ENABLE_LEN_FILTER 1
+
 #ifdef BOARD_HMC5883_DRDY_PIN
 #define HMC5883_DRDY_PIN                BOARD_HMC5883_DRDY_PIN
 #endif
@@ -81,5 +83,6 @@
  #define MODE_BRAKE_ENABLED DISABLE
  #define MODE_GUIDED_NOGPS_ENABLED DISABLE
  
+ #define USE_WAYBACK_ENABLE ENABLED
  
 #define STATS_ENABLED DISABLED // to reduce flash degradation

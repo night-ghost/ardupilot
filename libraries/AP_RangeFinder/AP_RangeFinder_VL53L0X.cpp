@@ -263,7 +263,7 @@ bool AP_RangeFinder_VL53L0X::check_id(void)
         v2 != 0xAA) {
         return false;
     }
-    printf("Detected VL53L0X on bus 0x%x\n", dev->get_bus_id());
+    printf("Detected VL53L0X on bus 0x%x\n", (uint16_t)dev->get_bus_id());
     return true;
 }
 

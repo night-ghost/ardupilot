@@ -376,6 +376,8 @@ bool DataFlash_Class::logging_enabled() const
 }
 bool DataFlash_Class::logging_failed() const
 {
+    if(_params.backend_types==0) return false;
+
     if (_next_backend < 1) {
         // we should not have been called!
         return true;
@@ -496,6 +498,8 @@ void DataFlash_Class::EraseAll() {
 }
 // change me to "LoggingAvailable"?
 bool DataFlash_Class::CardInserted(void) {
+    if(_params.backend_types == 0) return true; // logging disabled
+    
     for (uint8_t i=0; i< _next_backend; i++) {
         if (backends[i]->CardInserted()) {
             return true;

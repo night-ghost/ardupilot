@@ -88,6 +88,22 @@ void Copter::ModeSmartRTL::path_follow_run()
     if (wp_nav->reached_wp_destination()) {
         Vector3f next_point;
         if (g2.smart_rtl.pop_point(next_point)) {
+/*
+    don't spent energy by unnecessary excessive ups and downs, so lets check current altitude and 
+    never descent below usual RTL altitude
+    
+*/
+#ifdef WSE_WAYBACK
+            // curr_alt is current altitude above home or above terrain depending upon use_terrain
+        //[ copied from control_rtl.cpp rtl_compute_return_target()
+            int32_t curr_alt = current_loc.alt;
+            // increase target to maximum of current altitude + climb_min and rtl altitude
+            int32_t target_alt = MAX(next_point.z, curr_alt + MAX(0, g.rtl_climb_min));
+            target_alt = MAX(target_alt, MAX(g.rtl_altitude, RTL_ALT_MIN));
+        //]
+            next_point.z = target_alt;
+#endif
+
             bool fast_waypoint = true;
             if (g2.smart_rtl.get_num_points() == 0) {
                 // this is the very last point, add 2m to the target alt and move to pre-land state

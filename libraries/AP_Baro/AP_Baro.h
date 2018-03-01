@@ -181,6 +181,24 @@ public:
     void set_log_baro_bit(uint32_t bit) { _log_baro_bit = bit; }
     bool should_df_log() const;
 
+    // update altitude_target
+    // alt_target: meters above home
+    void update_alt_target(float alt_target);
+
+
+    // store and buffer a single GPS alt reading
+    // gps_alt: GPS altitude in meters (AMSL)
+    void update_gps_alt(float gps_alt);
+
+    // set altitude reference (in meters)
+    void set_home_alt(float gps_alt);
+
+    // current alt_offset (in meters)
+    float get_offset() { return _alt_offset.get(); }
+
+    // current filtered gps altitude
+    float get_gps() { return _gps_alt_over_home.get(); }
+
 private:
     // singleton
     static AP_Baro *_instance;
@@ -229,7 +247,17 @@ private:
     uint32_t                            _last_notify_ms;
 
     bool _add_backend(AP_Baro_Backend *backend);
+
     AP_Int8                            _filter_range;  // valid value range from mean value
+    
+    AP_Float                            _adj_step;
+    AP_Int16                            _adj_delay;
+    AP_Int16                            _adj_timeconstant;
+    
+    float                               _home_alt;          // GPS altitude of HOME in meters
+    float                               _last_alt_target;          // alt target above home in meters
+    uint16_t                            _adj_sample_count;         // GPS samples to pass before adjustment starts
+    LowPassFilterFloat                  _gps_alt_over_home;        // GPS alt over home in meters    
 };
 
 namespace AP {

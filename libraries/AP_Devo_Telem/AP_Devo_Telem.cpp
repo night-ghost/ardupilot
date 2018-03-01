@@ -82,6 +82,34 @@ void AP_DEVO_Telem::send_frames(uint8_t control_mode)
     }
 
     const AP_GPS &gps = AP::gps();
+
+#if 1 
+// GPS-based location. RC can show only the last coordinates, so if it got wrong coorginates from AHRS (eg. because EKF malfunction) 
+// then pilot couldn't to get the right ones
+
+    if (gps.status() >= 3) {
+        struct Location loc = gps.location();//get gps instance 0
+
+        devoPacket.lat = gpsDdToDmsFormat(loc.lat);
+        devoPacket.lon = gpsDdToDmsFormat(loc.lng);
+        devoPacket.speed = (int16_t)(gps.ground_speed() * DEVO_SPEED_FACTOR * 100.0f);  // * 100 for cm
+        if(_ahrs.get_position(loc)) {
+            int32_t baro_alt = loc.alt; // in cantimeters as DEVO needs
+            if (!loc.flags.relative_alt) {
+                baro_alt -= _ahrs.get_home().alt; // subtract home if set, in cantimeters too
+            }
+
+        /*
+          Note that this isn't actually barometric altitude, it is the
+          inertial nav estimate of altitude above home.
+        */
+            devoPacket.alt   = baro_alt; // in cm!
+        } else
+            devoPacket.alt=0;
+
+
+#else // AHRS-based location, forced by Ardupilot team in upstream
+
     Location loc;
 
     if (_ahrs.get_position(loc)) {
@@ -92,10 +120,12 @@ void AP_DEVO_Telem::send_frames(uint8_t control_mode)
         /*
           Note that this isn't actually barometric altitude, it is the
           inertial nav estimate of altitude above home.
-        */
+        */            
         float alt;
         _ahrs.get_relative_position_D_home(alt);
         devoPacket.alt   = alt * -100.0f; // coordinates was in NED, so it needs to change sign. Protocol requires in cm!
+            
+#endif
     } else {
         devoPacket.lat = 0;
         devoPacket.lon = 0;

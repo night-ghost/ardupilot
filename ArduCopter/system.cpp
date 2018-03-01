@@ -43,12 +43,15 @@ void Copter::init_ardupilot()
     // actual loop rate
     G_Dt = 1.0 / scheduler.get_loop_rate_hz();
 
-#if STATS_ENABLED == ENABLED
     // initialise stats module
     g2.stats.init();
-#endif
 
     gcs().set_dataflash(&DataFlash);
+
+#if DEVO_TELEM_ENABLED == ENABLED
+    // setup frsky
+    devo_telemetry.init(serial_manager);
+#endif
 
     // identify ourselves correctly with the ground station
     mavlink_system.sysid = g.sysid_this_mav;
@@ -311,13 +314,31 @@ void Copter::startup_INS_ground()
 // position_ok - returns true if the horizontal absolute position is ok and home position is set
 bool Copter::position_ok()
 {
+    bool ret = true;
+
+#define POSTION_LOST_TIMER (10 * 1000)
+
+    if(_position_lost_time){
+        if(AP_HAL::millis() - _position_lost_time < POSTION_LOST_TIMER) {
+            return ret; // we remember position 10 seconds and reports as OK
+        }
+        _position_lost_time=0; // time is over. Report real situation
+    }
     // return false if ekf failsafe has triggered
     if (failsafe.ekf) {
-        return false;
-    }
+        ret=false;
+    } else if(!(ekf_position_ok() || optflow_position_ok()) ) {    // check ekf position estimate
 
-    // check ekf position estimate
-    return (ekf_position_ok() || optflow_position_ok());
+        ret = false;
+        
+        if(_last_position_ok) { // just turned off
+            _position_lost_time = AP_HAL::millis();
+            _last_position_ok = false;
+            return true;
+        }
+    }
+    _last_position_ok = ret;
+    return ret;
 }
 
 // ekf_position_ok - returns true if the ekf claims it's horizontal absolute position estimate is ok and home position is set
@@ -676,3 +697,17 @@ void Copter::allocate_motors(void)
     // upgrade parameters. This must be done after allocating the objects
     convert_pid_parameters();
 }
+
+
+/*
+    Vector3f point;
+    if(srtl->pop_point(point)){    // get last point if any
+        srtl.update(true, point);  // restore it
+    } else {
+        point = pv_location_to_vector(ahrs.get_home());
+    }
+    
+    const Vector3f curr = inertial_nav.get_position();
+    point_bearing = get_bearing_cd(curr,point);        
+
+*/

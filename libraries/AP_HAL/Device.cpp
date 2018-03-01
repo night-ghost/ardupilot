@@ -102,7 +102,25 @@ bool AP_HAL::Device::check_next_register(void)
                (unsigned)get_bus_id(),
                (unsigned)reg.regnum, (unsigned)v, (unsigned)reg.value);
 #endif
-        write_register(reg.regnum, reg.value);
+        bool ret = write_register(reg.regnum, reg.value);
+        if(!ret) { // things went wrong
+            uint16_t  err_count=0;
+            for(uint16_t i=0;i<_checked.n_set; i++){
+                read_registers(_checked.regs[i].regnum, &v, 1);
+                if(_checked.regs[i].value != v) {
+                    //extern const AP_HAL::HAL& hal;
+                    err_count++;
+                    ret = write_register(_checked.regs[i].regnum, _checked.regs[i].value);
+                    //hal.console->printf("MPU reg %d want %x read %x \n", _checked.regs[i].regnum, _checked.regs[i].value, v );
+                }
+            }
+/*            
+            if(err_count == _checked.n_set){ // all bad
+                volatile int zz=0;
+            }
+*/
+        }
+        
         return false;
     }
     _checked.next = (_checked.next+1) % _checked.n_set;

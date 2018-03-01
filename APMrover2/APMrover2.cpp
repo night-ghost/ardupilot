@@ -108,7 +108,6 @@ void Rover::stats_update(void)
     g2.stats.set_flying(motor_active());
     g2.stats.update();
 }
-#endif
 
 /*
   setup is called when the sketch starts

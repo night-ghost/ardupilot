@@ -166,6 +166,15 @@
  #include <AP_RPM/AP_RPM.h>
 #endif
 
+#if TOY_MODE_ENABLED == ENABLED
+#include "toy_mode.h"
+#endif
+
+#if WINCH_ENABLED == ENABLED
+#include <AP_WheelEncoder/AP_WheelEncoder.h>
+#include <AP_Winch/AP_Winch.h>
+#endif
+
 // Local modules
 #include "Parameters.h"
 #if ADSB_ENABLED == ENABLED
@@ -176,6 +185,8 @@
 #include <SITL/SITL.h>
 #endif
 
+
+extern const AP_HAL::HAL& hal;
 
 class Copter : public AP_HAL::HAL::Callbacks {
 public:
@@ -447,11 +458,17 @@ private:
     AP_DEVO_Telem devo_telemetry{ahrs};
 #endif
 
+#if DEVO_TELEM_ENABLED == ENABLED
+    AP_DEVO_Telem devo_telemetry = AP_DEVO_Telem::create(ahrs, battery);
+#endif
+
     // Variables for extended status MAVLink messages
     uint32_t control_sensors_present;
     uint32_t control_sensors_enabled;
     uint32_t control_sensors_health;
 
+    uint16_t motor_limits;
+    
     // Altitude
     // The cm/s we are moving up or down based on filtered data - Positive = UP
     int16_t climb_rate;
@@ -1013,6 +1030,9 @@ private:
     // mode.cpp
     Mode *mode_from_mode_num(const uint8_t mode);
     void exit_mode(Mode *&old_flightmode, Mode *&new_flightmode);
+
+    uint32_t _position_lost_time;
+    bool _last_position_ok;
 
 public:
     void mavlink_delay_cb();    // GCS_Mavlink.cpp

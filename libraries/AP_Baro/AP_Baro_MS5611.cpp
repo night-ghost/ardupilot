@@ -12,6 +12,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#pragma GCC optimize("O2")
+
 #include "AP_Baro_MS5611.h"
 
 #include <utility>
@@ -81,7 +84,14 @@ bool AP_Baro_MS56XX::_init()
         return false;
     }
 
-    if (!_dev->get_semaphore()->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+    AP_HAL::Semaphore *sem=_dev->get_semaphore();// bus semaphore
+    _sem = hal.util->new_semaphore(); // update semaphore
+    
+    if (!sem || !_sem) {
+         AP_HAL::panic("AP_Baro_MS56XX: failed to create semaphore");
+    }
+
+    if (!sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         AP_HAL::panic("PANIC: AP_Baro_MS56XX: failed to take serial semaphore for init");
     }
 
@@ -113,7 +123,7 @@ bool AP_Baro_MS56XX::_init()
     }
 
     if (!prom_read_ok) {
-        _dev->get_semaphore()->give();
+        sem->give();
         return false;
     }
 
@@ -142,7 +152,7 @@ bool AP_Baro_MS56XX::_init()
     // lower retries for run
     _dev->set_retries(3);
     
-    _dev->get_semaphore()->give();
+    sem->give();
 
     /* Request 100Hz update */
     _dev->register_periodic_callback(10 * AP_USEC_PER_MSEC,
@@ -272,6 +282,8 @@ void AP_Baro_MS56XX::_timer(void)
 {
     uint8_t next_cmd;
     uint8_t next_state;
+
+
     uint32_t adc_val = _read_adc();
 
     /*
@@ -286,6 +298,7 @@ void AP_Baro_MS56XX::_timer(void)
 
     next_cmd = next_state == 0 ? ADDR_CMD_CONVERT_TEMPERATURE
                                : ADDR_CMD_CONVERT_PRESSURE;
+                               
     if (!_dev->transfer(&next_cmd, 1, nullptr, 0)) {
         return;
     }
@@ -304,7 +317,13 @@ void AP_Baro_MS56XX::_timer(void)
         return;
     }
 
-    if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
+    _dev->get_semaphore()->give();  // give bus semaprore ASAP
+
+    if (!_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)){
+          return;
+    }
+
+
         if (_state == 0) {
             _update_and_wrap_accumulator(&_accum.s_D2, adc_val,
                                          &_accum.d2_count, 32);
@@ -314,14 +333,16 @@ void AP_Baro_MS56XX::_timer(void)
                                              &_accum.d1_count, 128);
             }
         }
-        _sem->give();
         _state = next_state;
-    }
+
+    _sem->give();
 }
 
 void AP_Baro_MS56XX::_update_and_wrap_accumulator(uint32_t *accum, uint32_t val,
                                                   uint8_t *count, uint8_t max_count)
 {
+//    float mean = *accum / *count;
+
     *accum += val;
     *count += 1;
     if (*count == max_count) {
@@ -332,8 +353,8 @@ void AP_Baro_MS56XX::_update_and_wrap_accumulator(uint32_t *accum, uint32_t val,
 
 void AP_Baro_MS56XX::update()
 {
-    uint32_t sD1, sD2;
-    uint8_t d1count, d2count;
+    volatile uint32_t sD1, sD2;
+    volatile uint8_t d1count, d2count; // if this vars are not volatile then compiler optimizes it out and uses directly _accum 
 
     if (!_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         return;
@@ -406,7 +427,7 @@ void AP_Baro_MS56XX::_calculate_5611()
 
     float pressure = (_D1*SENS/2097152 - OFF)/32768;
     float temperature = (TEMP + 2000) * 0.01f;
-    _copy_to_frontend(_instance, pressure, temperature);
+    _copy_to_frontend(_instance, pressure, temperature); // it sets last_update_ms
 }
 
 // Calculate Temperature and compensated Pressure in real units (Celsius degrees*100, mbar*100).

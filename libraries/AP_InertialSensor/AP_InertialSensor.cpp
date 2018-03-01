@@ -1,5 +1,7 @@
 #include <assert.h>
 
+#pragma GCC optimize("O2")
+
 #include <AP_Common/AP_Common.h>
 #include <AP_HAL/AP_HAL.h>
 #include <AP_HAL/I2CDevice.h>
@@ -1187,7 +1189,8 @@ AP_InertialSensor::_init_gyro()
 
     // we've kept the user waiting long enough - use the best pair we
     // found so far
-    hal.console->printf("\n");
+    hal.console->printf(" done!\n");
+    
     for (uint8_t k=0; k<num_gyros; k++) {
         if (!converged[k]) {
             hal.console->printf("gyro[%u] did not converge: diff=%f dps (expected < %f)\n",
@@ -1403,8 +1406,13 @@ check_sample:
             if (gyro_available && accel_available) {
                 break;
             }
+            uint32_t t = AP_HAL::micros();
+            if(t - now > 100000) {
+                printf("\no INS sample for 100ms!\n");
+                now=t;
+            }
 
-            hal.scheduler->delay_microseconds(100);
+            hal.scheduler->delay_microseconds_boost(100);
         }
     }
 

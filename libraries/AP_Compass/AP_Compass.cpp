@@ -1,3 +1,5 @@
+#pragma GCC optimize("O2")
+
 #include <AP_HAL/AP_HAL.h>
 #if CONFIG_HAL_BOARD == HAL_BOARD_LINUX
 #include <AP_HAL_Linux/I2CDevice.h>
@@ -444,6 +446,11 @@ const AP_Param::GroupInfo Compass::var_info[] = {
     // @Increment: 1
     AP_GROUPINFO("FLTR_RNG", 34, Compass, _filter_range, HAL_COMPASS_FILTER_DEFAULT),
     
+    
+    // @Group: PMOT
+    // @Path: Compass_PerMotor.cpp
+    AP_SUBGROUPINFO(_per_motor, "PMOT", 35, Compass, Compass_PerMotor),
+    
     AP_GROUPEND
 };
 
@@ -846,6 +853,7 @@ void Compass::_detect_backends(void)
     ADD_BACKEND(DRIVER_AK8963, AP_Compass_AK8963::probe_mpu9250(*this, 0),
                 AP_Compass_AK8963::name, false);
 #elif HAL_COMPASS_DEFAULT == HAL_COMPASS_HMC5843
+
 #ifndef HAL_COMPASS_HMC5843_ROTATION
 # define HAL_COMPASS_HMC5843_ROTATION ROTATION_NONE
 #endif
@@ -856,6 +864,7 @@ void Compass::_detect_backends(void)
     ADD_BACKEND(DRIVER_HMC5883, AP_Compass_HMC5843::probe(*this, hal.i2c_mgr->get_device(HAL_COMPASS_HMC5843_I2C_EXT_BUS, HAL_COMPASS_HMC5843_I2C_ADDR),true),
                  AP_Compass_HMC5843::name, true);
  #endif
+
 #elif HAL_COMPASS_DEFAULT == HAL_COMPASS_HMC5843_MPU6000
     ADD_BACKEND(DRIVER_HMC5883, AP_Compass_HMC5843::probe_mpu6000(*this),
                 AP_Compass_HMC5843::name, false);
@@ -904,12 +913,11 @@ void Compass::_detect_backends(void)
     #error Unrecognised HAL_COMPASS_TYPE setting
 #endif
 
-
 #if defined(BOARD_I2C_BUS_EXT) && CONFIG_HAL_BOARD == HAL_BOARD_F4LIGHT
 // autodetect external i2c bus
     ADD_BACKEND(DRIVER_QMC5883, AP_Compass_QMC5883L::probe(*this, hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_COMPASS_QMC5883L_I2C_ADDR),
-                                                               true,ROTATION_NONE),
-               AP_Compass_QMC5883L::name, true);
+    								true,ROTATION_NONE),
+    		AP_Compass_QMC5883L::name, true);
 
     ADD_BACKEND(DRIVER_HMC5883, AP_Compass_HMC5843::probe(*this, hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_COMPASS_HMC5843_I2C_ADDR)),
                 AP_Compass_HMC5843::name, true);
@@ -935,9 +943,6 @@ void Compass::_detect_backends(void)
 
     ADD_BACKEND(DRIVER_MAG3110, AP_Compass_MAG3110::probe(*this, hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_MAG3110_I2C_ADDR), ROTATION_NONE),
                 AP_Compass_MAG3110::name, true);
-
-    ADD_BACKEND(DRIVER_QMC5883, AP_Compass_QMC5883L::probe(*this, hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_COMPASS_QMC5883L_I2C_ADDR), ROTATION_NONE),
-                       AP_Compass_QMC5883L::name, true);
 #endif
 
 /* for chibios external board coniguration */
@@ -957,6 +962,12 @@ void Compass::_detect_backends(void)
             }
         } while (added);
     }
+#endif
+
+#ifdef BOARD_I2C_BUS_EXT
+    //external i2c bus
+    ADD_BACKEND(DRIVER_QMC5883, AP_Compass_QMC5883L::probe(*this, hal.i2c_mgr->get_device(BOARD_I2C_BUS_EXT, HAL_COMPASS_QMC5883L_I2C_ADDR), ROTATION_NONE),
+    			AP_Compass_QMC5883L::name, true);
 #endif
 
     if (_backend_count == 0 ||

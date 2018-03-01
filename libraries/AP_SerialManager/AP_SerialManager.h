@@ -72,6 +72,14 @@
 #define AP_SERIALMANAGER_SBUS1_BUFSIZE_RX     16
 #define AP_SERIALMANAGER_SBUS1_BUFSIZE_TX     32
 
+<<<<<<< HEAD
+=======
+
+#define AP_SERIALMANAGER_DEVO_TELEM_BAUD        38400
+#define AP_SERIALMANAGER_DEVO_BUFSIZE_RX        0
+#define AP_SERIALMANAGER_DEVO_BUFSIZE_TX        32
+
+>>>>>>> fixed repo after HAL was merged to upstream
 class AP_SerialManager {
 public:
     AP_SerialManager();

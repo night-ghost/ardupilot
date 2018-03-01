@@ -218,6 +218,7 @@ public:
         k_param_takeoff_trigger_dz,
         k_param_gcs3,
         k_param_gcs_pid_mask,    // 126
+        k_param_param_helper,    // 129 - HAL parameters
 
         //
         // 135 : reserved for Solo until features merged with master
@@ -503,10 +504,8 @@ public:
     // button checking
     AP_Button button;
 
-#if STATS_ENABLED == ENABLED
     // vehicle statistics
     AP_Stats stats;
-#endif
 
 #if GRIPPER_ENABLED
     AP_Gripper gripper;

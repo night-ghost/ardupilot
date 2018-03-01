@@ -439,7 +439,7 @@ void AP_Mount::init(const AP_SerialManager& serial_manager)
             _backends[instance] = new AP_Mount_Servo(*this, state[instance], instance);
             _num_instances++;
 
-#if AP_AHRS_NAVEKF_AVAILABLE
+#if AP_AHRS_NAVEKF_AVAILABLE && SOLO_GIMBAL_ENABLED
 #if !HAL_MINIMIZE_FEATURES
         // check for MAVLink mounts
         } else if (mount_type == Mount_Type_SoloGimbal) {

@@ -32,6 +32,15 @@ const AP_Param::GroupInfo AP_SmartRTL::var_info[] = {
     // @RebootRequired: True
     AP_GROUPINFO("POINTS", 1, AP_SmartRTL, _points_max, SMARTRTL_POINTS_DEFAULT),
 
+#ifdef USE_WAYBACK
+// @Param: _BLIND_CUT
+    // @DisplayName: Enable blind shortcuts
+    // @Description: If enabled, points on track wich are near to each other will be considered as intersection
+    // @Values: 0:Disabled,1:Enabled
+    // @User: Standard
+    AP_GROUPINFO("BLIND_CUT",  2, AP_SmartRTL, _blind_shortcut,       1),
+#endif
+
     AP_GROUPEND
 };
 
@@ -70,18 +79,39 @@ const AP_Param::GroupInfo AP_SmartRTL::var_info[] = {
 *    which is run as the vehicle initiates the SmartRTL flight mode, waits for
 *    these flags to become true.  This can force the vehicle to pause for a few
 *    seconds before initiating the return journey.
+
+@NG: The described above "naive" implementation causes quadratic complexity so time to one simplification increases as O(n^2) which is inacceptable.
+     Also original implementation uses a lots of memory - ~30 bytes per point.
+     As the result, maximal point count is limited to 500 points.
+     
+     Ap_WayBack library uses only 8 bytes per point, and checks only new point and the last leg which it creates so its complexity is O(n) in worst case,
+     As the result its work checked with 4000 points and time never exceeds 100ms (in low-priority thread). The only exception - if memory overflows and
+     library should increase EPS and do a full simplification to free some memory, but this case is absilutely unreal because
+     track Vladivostok-Kaliningrad by the roads with 10m EPS requires ~3800 points.
+     
+     Also, no error can cause abort of RTL - even an unsuccessful attempt is much better than to immediately surrender.
+
 */
 
-AP_SmartRTL::AP_SmartRTL(bool example_mode) :
-    _example_mode(example_mode)
+AP_SmartRTL::AP_SmartRTL(bool example_mode)
+    : _example_mode(example_mode)
+#ifdef USE_WAYBACK
+    , wb( *(new AP_WayBack))
+#endif
 {
     AP_Param::setup_object_defaults(this, var_info);
+    
+#ifndef USE_WAYBACK
     _simplify.bitmask.setall();
+#endif
 }
 
 // initialise safe rtl including setting up background processes
 void AP_SmartRTL::init()
 {
+#ifdef USE_WAYBACK
+    wb.init(_accuracy, _points_max, _blind_shortcut);
+#else
     // protect against repeated call to init
     if (_path != nullptr) {
         return;
@@ -127,17 +157,27 @@ void AP_SmartRTL::init()
         // register background cleanup to run in IO thread
         hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&AP_SmartRTL::run_background_cleanup, void));
     }
+#endif
 }
 
 // returns number of points on the path
 uint16_t AP_SmartRTL::get_num_points() const
 {
+#ifdef USE_WAYBACK
+    return wb.get_points_count();
+#else
     return _path_points_count;
+#endif
 }
 
 // get next point on the path to home, returns true on success
 bool AP_SmartRTL::pop_point(Vector3f& point)
 {
+#ifdef USE_WAYBACK
+// we can get points without semaprores because first get_point() will stop points recording
+    return wb.get_point(point.x, point.y, point.z);
+    
+#else
     // check we are active
     if (!_active) {
         return false;
@@ -163,11 +203,21 @@ bool AP_SmartRTL::pop_point(Vector3f& point)
 
     _path_sem->give();
     return true;
+#endif
 }
 
 // clear return path and set home location.  This should be called as part of the arming procedure
 void AP_SmartRTL::set_home(bool position_ok)
 {
+#ifdef USE_WAYBACK
+
+    bool ret = wb.start(); // restart
+    (void)ret;
+
+    Vector3f current_pos;
+    position_ok &= _ahrs.get_relative_position_NED_origin(current_pos);
+    if(position_ok) wb.push_point(current_pos);
+#else
     Vector3f current_pos;
     position_ok &= AP::ahrs().get_relative_position_NED_origin(current_pos);
     set_home(position_ok, current_pos);
@@ -201,20 +251,26 @@ void AP_SmartRTL::set_home(bool position_ok, const Vector3f& current_pos)
     _last_good_position_ms = AP_HAL::millis();
     _active = true;
     _home_saved = true;
+#endif
 }
 
 // call this at 3hz (or higher) regardless of what mode the vehicle is in
 void AP_SmartRTL::update(bool position_ok, bool save_position)
 {
     // try to save home if not already saved
+
+#ifdef USE_WAYBACK
+    if (position_ok) {
+        set_home(true);
+    }
+#else
     if (position_ok && !_home_saved) {
         set_home(true);
     }
-
     if (!_active || !save_position) {
         return;
     }
-
+#endif
     Vector3f current_pos;
     position_ok &= AP::ahrs().get_relative_position_NED_origin(current_pos);
     update(position_ok, current_pos);
@@ -222,10 +278,18 @@ void AP_SmartRTL::update(bool position_ok, bool save_position)
 
 void AP_SmartRTL::update(bool position_ok, const Vector3f& current_pos)
 {
+
+#ifdef USE_WAYBACK
+ /*
+  we never should reset full path or abort RTL by any reason! 
+  may be UAV will lost on bad return path, but it has a chance
+  if we will abort RTL there will be no chances at all
+*/    
+    if(position_ok) wb.push_point(current_pos);
+#else
     if (!_active) {
         return;
     }
-
     if (position_ok) {
         const uint32_t now = AP_HAL::millis();
         _last_good_position_ms = now;
@@ -243,6 +307,7 @@ void AP_SmartRTL::update(bool position_ok, const Vector3f& current_pos)
             return;
         }
     }
+#endif
 }
 
 // request thorough cleanup including simplification, pruning and removal of all unnecessary points
@@ -250,6 +315,11 @@ void AP_SmartRTL::update(bool position_ok, const Vector3f& current_pos)
 // this method should be called repeatedly until it returns true before initiating the return journey
 bool AP_SmartRTL::request_thorough_cleanup(ThoroughCleanupType clean_type)
 {
+
+#ifdef USE_WAYBACK      
+    wb.stop(); // stop recording
+    return true;  // we always have already simplified path
+#else
     // this should never happen but just in case
     if (!_active) {
         return false;
@@ -271,13 +341,23 @@ bool AP_SmartRTL::request_thorough_cleanup(ThoroughCleanupType clean_type)
     }
 
     return false;
+#endif
 }
 
 // cancel request for thorough cleanup
 void AP_SmartRTL::cancel_request_for_thorough_cleanup()
 {
+#ifdef USE_WAYBACK      
+    bool ret = wb.start(); // restart because mode changed to any another
+    (void)ret;
+#else
     _thorough_clean_request_ms = 0;
+#endif
 }
+
+#ifdef USE_WAYBACK      
+ // done
+#else
 
 //
 // Private methods
@@ -855,3 +935,4 @@ bool AP_SmartRTL::loops_overlap(const prune_loop_t &loop1, const prune_loop_t &l
     // if we got here, no overlap
     return false;
 }
+#endif // USE_WAYBACK

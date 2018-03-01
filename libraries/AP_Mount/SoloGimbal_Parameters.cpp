@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+#if SOLO_GIMBAL_ENABLED
+
 extern const AP_HAL::HAL& hal;
 
 const uint32_t SoloGimbal_Parameters::_retry_period = 3000;
@@ -277,3 +279,6 @@ bool SoloGimbal_Parameters::flashing()
 {
     return _flashing_step != GMB_PARAM_NOT_FLASHING;
 }
+
+
+#endif

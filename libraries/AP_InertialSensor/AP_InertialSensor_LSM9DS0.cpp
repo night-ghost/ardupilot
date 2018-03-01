@@ -13,11 +13,15 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma GCC push_options
+#pragma GCC optimize ("O2")
 #include <AP_HAL/AP_HAL.h>
 
 #include "AP_InertialSensor_LSM9DS0.h"
 
 #include <utility>
+
+#pragma GCC pop_options
 
 extern const AP_HAL::HAL &hal;
 

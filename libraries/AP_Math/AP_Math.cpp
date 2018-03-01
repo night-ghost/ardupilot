@@ -1,3 +1,5 @@
+#pragma GCC optimize ("O2")
+
 #include "AP_Math.h"
 
 #include <float.h>
@@ -104,6 +106,7 @@ float wrap_180(const T angle, float unit_mod)
 
 template float wrap_180<int>(const int angle, float unit_mod);
 template float wrap_180<short>(const short angle, float unit_mod);
+template float wrap_180<long>(const long angle, float unit_mod);
 template float wrap_180<float>(const float angle, float unit_mod);
 template float wrap_180<double>(const double angle, float unit_mod);
 
@@ -115,8 +118,8 @@ auto wrap_180_cd(const T angle) -> decltype(wrap_180(angle, 100.f))
 
 template auto wrap_180_cd<float>(const float angle) -> decltype(wrap_180(angle, 100.f));
 template auto wrap_180_cd<int>(const int angle) -> decltype(wrap_180(angle, 100.f));
-template auto wrap_180_cd<long>(const long angle) -> decltype(wrap_180(angle, 100.f));
 template auto wrap_180_cd<short>(const short angle) -> decltype(wrap_180(angle, 100.f));
+template auto wrap_180_cd<long>(const long angle) -> decltype(wrap_180(angle, 100.f));
 template auto wrap_180_cd<double>(const double angle) -> decltype(wrap_360(angle, 100.f));
 
 template <typename T>
@@ -144,8 +147,8 @@ auto wrap_360_cd(const T angle) -> decltype(wrap_360(angle, 100.f))
 
 template auto wrap_360_cd<float>(const float angle) -> decltype(wrap_360(angle, 100.f));
 template auto wrap_360_cd<int>(const int angle) -> decltype(wrap_360(angle, 100.f));
-template auto wrap_360_cd<long>(const long angle) -> decltype(wrap_360(angle, 100.f));
 template auto wrap_360_cd<short>(const short angle) -> decltype(wrap_360(angle, 100.f));
+template auto wrap_360_cd<long>(const long angle) -> decltype(wrap_360(angle, 100.f));
 template auto wrap_360_cd<double>(const double angle) -> decltype(wrap_360(angle, 100.f));
 
 template <typename T>
@@ -160,6 +163,7 @@ float wrap_PI(const T radian)
 
 template float wrap_PI<int>(const int radian);
 template float wrap_PI<short>(const short radian);
+template float wrap_PI<long>(const long radian);
 template float wrap_PI<float>(const float radian);
 template float wrap_PI<double>(const double radian);
 
@@ -200,8 +204,8 @@ T constrain_value(const T amt, const T low, const T high)
 }
 
 template int constrain_value<int>(const int amt, const int low, const int high);
-template long constrain_value<long>(const long amt, const long low, const long high);
 template short constrain_value<short>(const short amt, const short low, const short high);
+template long constrain_value<long>(const long amt, const long low, const long high);
 template float constrain_value<float>(const float amt, const float low, const float high);
 template double constrain_value<double>(const double amt, const double low, const double high);
 
