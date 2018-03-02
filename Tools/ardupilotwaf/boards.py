@@ -397,94 +397,13 @@ class chibios(Board):
         super(chibios, self).build(bld)
         bld.load('chibios')
 
-class skyviper_f412(chibios):
-    name = 'skyviper-f412'
-    def configure_env(self, cfg, env):
-        super(skyviper_f412, self).configure_env(cfg, env)
-        env.DEFINES.update(
-            CONFIG_HAL_BOARD_SUBTYPE = 'HAL_BOARD_SUBTYPE_CHIBIOS_SKYVIPER_F412',
-        )
-        env.CHIBIOS_FATFS_FLAG = 'USE_FATFS=no'
-        env.DEFAULT_PARAMETERS = '../../Tools/Frame_params/SkyViper-F412/defaults.parm'
-
-class skyviper_f412_rev1(skyviper_f412):
-    name = 'skyviper-f412-rev1'
-    def configure_env(self, cfg, env):
-        super(skyviper_f412_rev1, self).configure_env(cfg, env)
-
-class fmuv3(chibios):
-    name = 'fmuv3'
-    def __init__(self):
-        super(fmuv3, self).__init__()
-        self.with_uavcan = True
-
-    def configure_env(self, cfg, env):
-        super(fmuv3, self).configure_env(cfg, env)
-        env.DEFINES.update(
-            CONFIG_HAL_BOARD_SUBTYPE = 'HAL_BOARD_SUBTYPE_CHIBIOS_FMUV3',
-        )
-
-class skyviper_v2450(fmuv3):
-    name = 'skyviper-v2450'
-    def __init__(self):
-        super(skyviper_v2450, self).__init__()
-        self.with_uavcan = False
-        
-    def configure_env(self, cfg, env):
-        super(skyviper_v2450, self).configure_env(cfg, env)
-        env.DEFAULT_PARAMETERS = '../../Tools/Frame_params/SkyViper-2450GPS/defaults.parm'
-        env.CHIBIOS_FATFS_FLAG = 'USE_FATFS=no'
-
-class fmuv4(chibios):
-    name = 'fmuv4'
-    def configure_env(self, cfg, env):
-        super(fmuv4, self).configure_env(cfg, env)
-        env.DEFINES.update(
-            CONFIG_HAL_BOARD_SUBTYPE = 'HAL_BOARD_SUBTYPE_CHIBIOS_FMUV4',
-        )
-
-class mindpx_v2(chibios):
-    name = 'mindpx-v2'
-    def configure_env(self, cfg, env):
-        super(mindpx_v2, self).configure_env(cfg, env)
-        env.DEFINES.update(
-            CONFIG_HAL_BOARD_SUBTYPE = 'HAL_BOARD_SUBTYPE_CHIBIOS_MINDPXV2',
-        )
-
-class sparky2(chibios):
-    name = 'sparky2'
-    def configure_env(self, cfg, env):
-        super(sparky2, self).configure_env(cfg, env)
-        env.DEFINES.update(
-            CONFIG_HAL_BOARD_SUBTYPE = 'HAL_BOARD_SUBTYPE_CHIBIOS_SPARKY2',
-        )
-        env.CHIBIOS_FATFS_FLAG = 'USE_FATFS=no'
-
-class revo_mini(chibios):
-    name = 'revo-mini'
-    def configure_env(self, cfg, env):
-        super(revo_mini, self).configure_env(cfg, env)
-        env.DEFINES.update(
-            CONFIG_HAL_BOARD_SUBTYPE = 'HAL_BOARD_SUBTYPE_CHIBIOS_REVOMINI',
-        )
-        env.CHIBIOS_FATFS_FLAG = 'USE_FATFS=no'
-
-class crazyflie2(chibios):
-    name = 'crazyflie2'
-    def configure_env(self, cfg, env):
-        super(crazyflie2, self).configure_env(cfg, env)
-        env.DEFINES.update(
-            CONFIG_HAL_BOARD_SUBTYPE = 'HAL_BOARD_SUBTYPE_CHIBIOS_CRAZYFLIE2',
-        )
-        env.CHIBIOS_FATFS_FLAG = 'USE_FATFS=no'
-
-class mini_pix(chibios):
-    name = 'mini-pix'
-    def configure_env(self, cfg, env):
-        super(mini_pix, self).configure_env(cfg, env)
-        env.DEFINES.update(
-            CONFIG_HAL_BOARD_SUBTYPE = 'HAL_BOARD_SUBTYPE_CHIBIOS_MINIPIX',
-        )
+    def pre_build(self, bld):
+        '''pre-build hook that gets called before dynamic sources'''
+        from waflib.Context import load_tool
+        module = load_tool('chibios', [], with_sys_path=True)
+        fun = getattr(module, 'pre_build', None)
+        if fun:
+            fun(bld)
 
 class linux(Board):
     def configure_env(self, cfg, env):

@@ -46,6 +46,7 @@ private:
     float _mag_y_accum;
     float _mag_z_accum;
     uint8_t _accum_count;
+    float compass_len;
 
     uint8_t _compass_instance;
     bool _initialised;
