@@ -102,7 +102,7 @@ mkdir -p $ROOT/Release/Plane
  cd $ROOT
 
  zip -r latest.zip Release
- git add . -A
+ git add latest.zip
 )
 
 
