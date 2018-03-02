@@ -41,6 +41,8 @@ private:
     int32_t _mag_y;
     int32_t _mag_z;
 
+    float compass_len;
+
     uint8_t _compass_instance;
     bool _initialised;
 };
