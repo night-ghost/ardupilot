@@ -16,7 +16,10 @@ public:
 
     static const AP_Param::GroupInfo var_info[];
 
-// only if defined
+// common HAL params
+    F4LIGHT_HAL_PARAMS
+    
+// per board params - only if defined
 #ifdef BOARD_HAL_PARAMS
     BOARD_HAL_PARAMS
 #endif
