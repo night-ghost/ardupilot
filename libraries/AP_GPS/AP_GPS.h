@@ -417,6 +417,8 @@ public:
     // returns true if all GPS instances have passed all final arming checks/state changes
     bool prepare_for_arming(void);
 
+    // called when packet is finished
+    inline void register_packet_callback(AP_HAL::MemberProc proc){ _packet_cb = proc; }
 protected:
 
     // configuration parameters
@@ -440,6 +442,8 @@ protected:
     AP_Float _blend_tc;
 
     uint32_t _log_gps_bit = -1;
+
+    AP_HAL::MemberProc _packet_cb; // callback
 
 private:
     static AP_GPS *_singleton;
