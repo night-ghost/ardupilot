@@ -19,6 +19,7 @@
 
 #include <AP_Notify/AP_Notify.h>
 #include <AP_Math/AP_Math.h>
+#include <AP_Param_Helper/AP_Param_Helper.h>
 
 #include "RCInput.h"
 #include <systick.h>
@@ -525,7 +526,7 @@ void Scheduler::_reboot(bool hold_in_bootloader) {
 
     if(hold_in_bootloader) {
 #if 1
-        if(is_bare_metal()) { // bare metal build without bootloader
+        if(is_bare_metal() || hal_param_helper->_boot_dfu) { // bare metal build without bootloader of parameter set
 
             board_set_rtc_register(DFU_RTC_SIGNATURE, RTC_SIGNATURE_REG);
 

@@ -89,7 +89,8 @@
     AP_GROUPINFO("AIBAO_FS",     12, AP_Param_Helper, _aibao_fs, 0), \
     AP_GROUPINFO("OVERCLOCK",    13, AP_Param_Helper, _overclock, 0), \
     AP_GROUPINFO("CORRECT_GYRO", 14, AP_Param_Helper, _correct_gyro, 0), \
-    AP_GROUPINFO("RC_FS",        15, AP_Param_Helper, _rc_fs, 0),
+    AP_GROUPINFO("RC_FS",        15, AP_Param_Helper, _rc_fs, 0),      \
+    AP_GROUPINFO("BOOT_DFU",     16, AP_Param_Helper, _boot_dfu, 0),
 
 
 // parameters
@@ -108,4 +109,5 @@
     AP_Int8 _aibao_fs; \
     AP_Int8 _overclock; \
     AP_Int8 _correct_gyro; \
-    AP_Int8 _rc_fs;
+    AP_Int8 _rc_fs; \
+    AP_Int8 _boot_dfu;
