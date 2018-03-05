@@ -120,6 +120,9 @@
 #if ADSB_ENABLED == ENABLED
  # include <AP_ADSB/AP_ADSB.h>
 #endif
+#if MODE_FOLLOW_ENABLED == ENABLED
+ # include <AP_Follow/AP_Follow.h>
+#endif
 #if AC_FENCE == ENABLED
  # include <AC_Fence/AC_Fence.h>
 #endif
@@ -1001,6 +1004,9 @@ private:
     ModeDrift mode_drift;
 #endif
     ModeFlip mode_flip;
+#if MODE_FOLLOW_ENABLED == ENABLED
+    ModeFollow mode_follow;
+#endif
 #if MODE_GUIDED_ENABLED == ENABLED
     ModeGuided mode_guided;
 #endif

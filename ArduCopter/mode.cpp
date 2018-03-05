@@ -145,7 +145,13 @@ Copter::Mode *Copter::mode_from_mode_num(const uint8_t mode)
             ret = (Copter::Mode *)g2.mode_flowhold_ptr;
             break;
 #endif
-            
+
+#if MODE_FOLLOW_ENABLED == ENABLED
+        case FOLLOW:
+            ret = &mode_follow;
+            break;
+#endif
+
         default:
             break;
     }

@@ -347,8 +347,6 @@ static void getSerialLine(char *cp ){      // получение строки
 
 static bool lateInitDone=false;
 
-
-
 void HAL_F4Light::lateInit() {
     
     if(lateInitDone) return;

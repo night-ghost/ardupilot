@@ -47,6 +47,7 @@ NOINLINE void Copter::send_heartbeat(mavlink_channel_t chan)
     case RTL:
     case LOITER:
     case AVOID_ADSB:
+    case FOLLOW:
     case GUIDED:
     case CIRCLE:
     case POSHOLD:
@@ -696,6 +697,10 @@ void GCS_MAVLINK_Copter::packetReceived(const mavlink_status_t &status,
         copter.avoidance_adsb.handle_msg(msg);
     }
 #endif
+#if MODE_FOLLOW_ENABLED == ENABLED
+    // pass message to follow library
+    copter.g2.follow.handle_msg(msg);
+#endif
     GCS_MAVLINK::packetReceived(status, msg);
 }
 
@@ -825,6 +830,16 @@ void GCS_MAVLINK_Copter::handleMessage(mavlink_message_t* msg)
         mavlink_msg_command_int_decode(msg, &packet);
         switch(packet.command)
         {
+            case MAV_CMD_DO_FOLLOW:
+#if MODE_FOLLOW_ENABLED == ENABLED
+                // param1: sysid of target to follow
+                if ((packet.param1 > 0) && (packet.param1 <= 255)) {
+                    copter.g2.follow.set_target_sysid((uint8_t)packet.param1);
+                    result = MAV_RESULT_ACCEPTED;
+                }
+#endif
+                break;
+
             case MAV_CMD_DO_SET_HOME: {
                 // assume failure
                 result = MAV_RESULT_FAILED;
@@ -942,6 +957,16 @@ void GCS_MAVLINK_Copter::handleMessage(mavlink_message_t* msg)
             if (copter.set_mode(LAND, MODE_REASON_GCS_COMMAND)) {
                 result = MAV_RESULT_ACCEPTED;
             }
+            break;
+
+        case MAV_CMD_DO_FOLLOW:
+#if MODE_FOLLOW_ENABLED == ENABLED
+            // param1: sysid of target to follow
+            if ((packet.param1 > 0) && (packet.param1 <= 255)) {
+                copter.g2.follow.set_target_sysid((uint8_t)packet.param1);
+                result = MAV_RESULT_ACCEPTED;
+            }
+#endif
             break;
 
         case MAV_CMD_CONDITION_YAW:
