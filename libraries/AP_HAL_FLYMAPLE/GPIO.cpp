@@ -40,41 +40,41 @@ void libmaple_digitalWrite(uint8_t pin, uint8_t value)
     digitalWrite(pin, value);
 }
 
-FLYMAPLEGPIO::FLYMAPLEGPIO()
+GPIO::GPIO()
 {}
 
-void FLYMAPLEGPIO::init()
+void GPIO::init()
 {}
 
-void FLYMAPLEGPIO::pinMode(uint8_t pin, uint8_t output)
+void GPIO::pinMode(uint8_t pin, uint8_t output)
 {
     return libmaple_pinMode(pin, output);
 }
 
 
 
-uint8_t FLYMAPLEGPIO::read(uint8_t pin) 
+uint8_t GPIO::read(uint8_t pin) 
 {
     return libmaple_digitalRead(pin);
 }
 
-void FLYMAPLEGPIO::write(uint8_t pin, uint8_t value)
+void GPIO::write(uint8_t pin, uint8_t value)
 {
     libmaple_digitalWrite(pin, value);
 }
 
-void FLYMAPLEGPIO::toggle(uint8_t pin)
+void GPIO::toggle(uint8_t pin)
 {
     libmaple_digitalWrite(pin, !libmaple_digitalRead(pin));
 }
 
 /* Alternative interface: */
-AP_HAL::DigitalSource* FLYMAPLEGPIO::channel(uint16_t n) {
-    return new FLYMAPLEDigitalSource(n);
+AP_HAL::DigitalSource* GPIO::channel(uint16_t n) {
+    return new DigitalSource(n);
 }
 
 /* Interrupt interface: */
-bool FLYMAPLEGPIO::attach_interrupt(uint8_t interrupt_num, AP_HAL::Proc p, uint8_t mode) 
+bool GPIO::attach_interrupt(uint8_t interrupt_num, AP_HAL::Proc p, uint8_t mode) 
 {
     // Flymaple can only handle RISING, FALLING and CHANGE
     ExtIntTriggerMode flymaple_interrupt_mode;
@@ -90,29 +90,29 @@ bool FLYMAPLEGPIO::attach_interrupt(uint8_t interrupt_num, AP_HAL::Proc p, uint8
     return true;
 }
 
-bool    FLYMAPLEGPIO::usb_connected(void)
+bool    GPIO::usb_connected(void)
 {
     return SerialUSB.isConnected();
 }
 
-FLYMAPLEDigitalSource::FLYMAPLEDigitalSource(uint8_t v) :    _v(v) {
+DigitalSource::DigitalSource(uint8_t v) :    _v(v) {
     SerialUSB.println(_v);
 }
 
-void FLYMAPLEDigitalSource::mode(uint8_t output)
+void DigitalSource::mode(uint8_t output)
 {
     libmaple_pinMode(_v, output);
 }
 
-uint8_t FLYMAPLEDigitalSource::read() {
+uint8_t DigitalSource::read() {
     return libmaple_digitalRead(_v);
 }
 
-void FLYMAPLEDigitalSource::write(uint8_t value) {
+void DigitalSource::write(uint8_t value) {
     libmaple_digitalWrite(_v, value);
 }
 
-void FLYMAPLEDigitalSource::toggle() {
+void DigitalSource::toggle() {
     libmaple_digitalWrite(_v, !libmaple_digitalRead(_v));
 }
 #endif

@@ -32,28 +32,28 @@ extern const AP_HAL::HAL& hal;
  * This seems to be determined empirically */
 #define CHANNEL_READ_REPEAT 2
 
-FLYMAPLEAnalogIn::FLYMAPLEAnalogIn() :
-    _vcc(FLYMAPLEAnalogSource(ANALOG_INPUT_BOARD_VCC))
+AnalogIn::AnalogIn() :
+    _vcc(AnalogSource(ANALOG_INPUT_BOARD_VCC))
 {}
 
-void FLYMAPLEAnalogIn::init() {
-    /* Register FLYMAPLEAnalogIn::_timer_event with the scheduler. */
-    hal.scheduler->register_timer_process(FUNCTOR_BIND_MEMBER(&FLYMAPLEAnalogIn::_timer_event, void));
-    /* Register each private channel with FLYMAPLEAnalogIn. */
+void AnalogIn::init() {
+    /* Register AnalogIn::_timer_event with the scheduler. */
+    hal.scheduler->register_timer_process(FUNCTOR_BIND_MEMBER(&AnalogIn::_timer_event, void));
+    /* Register each private channel with AnalogIn. */
     _register_channel(&_vcc);
 }
 
-FLYMAPLEAnalogSource* FLYMAPLEAnalogIn::_create_channel(int16_t chnum) {
-    FLYMAPLEAnalogSource *ch = new FLYMAPLEAnalogSource(chnum);
+AnalogSource* AnalogIn::_create_channel(int16_t chnum) {
+    AnalogSource *ch = new AnalogSource(chnum);
     _register_channel(ch);
     return ch;
 }
 
-void FLYMAPLEAnalogIn::_register_channel(FLYMAPLEAnalogSource* ch) {
+void AnalogIn::_register_channel(AnalogSource* ch) {
     if (_num_channels >= FLYMAPLE_INPUT_MAX_CHANNELS) {
         for(;;) {
             hal.console->print(
-                "Error: AP_HAL_FLYMAPLE::FLYMAPLEAnalogIn out of channels\r\n");
+                "Error: AP_HAL_FLYMAPLE::AnalogIn out of channels\r\n");
             hal.scheduler->delay(1000);
         }
     }
@@ -68,7 +68,7 @@ void FLYMAPLEAnalogIn::_register_channel(FLYMAPLEAnalogSource* ch) {
     regs->CR2 |= ADC_CR2_SWSTART;
 }
 
-void FLYMAPLEAnalogIn::_timer_event(void) 
+void AnalogIn::_timer_event(void) 
 {
     adc_reg_map *regs = ADC1->regs;
     if (_channels[_active_channel]->_pin == ANALOG_INPUT_NONE) {
@@ -117,7 +117,7 @@ next_channel:
 }
 
 
-AP_HAL::AnalogSource* FLYMAPLEAnalogIn::channel(int16_t ch) 
+AP_HAL::AnalogSource* AnalogIn::channel(int16_t ch) 
 {
     if (ch == ANALOG_INPUT_BOARD_VCC) {
             return &_vcc;
@@ -126,7 +126,7 @@ AP_HAL::AnalogSource* FLYMAPLEAnalogIn::channel(int16_t ch)
     }
 }
 
-float FLYMAPLEAnalogIn::board_voltage(void)
+float AnalogIn::board_voltage(void)
 {
     return _vcc.voltage_latest();
 }

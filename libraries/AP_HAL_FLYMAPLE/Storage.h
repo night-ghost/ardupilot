@@ -19,9 +19,9 @@
 
 #include "AP_HAL_FLYMAPLE.h"
 
-class AP_HAL_FLYMAPLE_NS::FLYMAPLEStorage : public AP_HAL::Storage {
+class AP_HAL_FLYMAPLE_NS::Storage : public AP_HAL::Storage {
 public:
-    FLYMAPLEStorage();
+    Storage();
     void init();
     void read_block(void *dst, uint16_t src, size_t n);
     void write_block(uint16_t dst, const void* src, size_t n);

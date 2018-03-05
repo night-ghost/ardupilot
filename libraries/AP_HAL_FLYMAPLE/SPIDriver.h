@@ -22,9 +22,9 @@
 
 class HardwareSPI; // in libmaple
 
-class AP_HAL_FLYMAPLE_NS::FLYMAPLESPIDeviceDriver : public AP_HAL::SPIDeviceDriver {
+class AP_HAL_FLYMAPLE_NS::SPIDeviceDriver : public AP_HAL::SPIDeviceDriver {
 public:
-    FLYMAPLESPIDeviceDriver();
+    SPIDeviceDriver();
     void init();
     AP_HAL::Semaphore* get_semaphore();
     bool transaction(const uint8_t *tx, uint8_t *rx, uint16_t len);
@@ -34,14 +34,14 @@ public:
     uint8_t transfer (uint8_t data);
     void transfer (const uint8_t *data, uint16_t len);
 private:
-    FLYMAPLESemaphore _semaphore;
+    Semaphore _semaphore;
 };
 
-class AP_HAL_FLYMAPLE_NS::FLYMAPLESPIDeviceManager : public AP_HAL::SPIDeviceManager {
+class AP_HAL_FLYMAPLE_NS::SPIDeviceManager : public AP_HAL::SPIDeviceManager {
 public:
-    FLYMAPLESPIDeviceManager();
+    SPIDeviceManager();
     void init();
     AP_HAL::SPIDeviceDriver* device(enum AP_HAL::SPIDeviceType, uint8_t index);
 private:
-    FLYMAPLESPIDeviceDriver _device;
+    SPIDeviceDriver _device;
 };
