@@ -38,16 +38,24 @@ AP_DEVO_Telem::AP_DEVO_Telem(const AP_AHRS &ahrs) :
     devoPacket.header = DEVOM_SYNC_BYTE;
 }
 
+//#define USE_GPS_CALLBACK
+
 // init - perform require initialisation including detecting which protocol to use
 void AP_DEVO_Telem::init(const AP_SerialManager& serial_manager)
 {
     // check for DEVO_DPort
     if ((_port = serial_manager.find_serial(AP_SerialManager::SerialProtocol_Devo_Telem, 0))) {
+
+#if defined(USE_GPS_CALLBACK)
+        // called when the packet just finished, to minimize impact
+        AP::gps().register_packet_callback(FUNCTOR_BIND_MEMBER(&AP_DEVO_Telem::tick, void));
+#else
         _port->set_flow_control(AP_HAL::UARTDriver::FLOW_CONTROL_DISABLE);
         // initialise uart
         _port->begin(AP_SERIALMANAGER_DEVO_TELEM_BAUD, AP_SERIALMANAGER_DEVO_BUFSIZE_RX, AP_SERIALMANAGER_DEVO_BUFSIZE_TX);
 
         hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&AP_DEVO_Telem::tick, void));
+#endif
     }
 }
 
@@ -154,6 +162,15 @@ void AP_DEVO_Telem::tick(void)
 
     if (now - _last_frame_ms > 1000) {
         _last_frame_ms = now;
+
+#if defined(USE_GPS_CALLBACK)
+        _port->set_flow_control(AP_HAL::UARTDriver::FLOW_CONTROL_DISABLE);
+        _port->end();
+        // initialise uart
+        _port->begin(AP_SERIALMANAGER_DEVO_TELEM_BAUD, AP_SERIALMANAGER_DEVO_BUFSIZE_RX, AP_SERIALMANAGER_DEVO_BUFSIZE_TX);
+        _port->end();
+#else
         send_frames(_control_mode);
+#endif
     }
 }
