@@ -32,7 +32,7 @@ using namespace AP_HAL_FLYMAPLE_NS;
 
 extern const AP_HAL::HAL& hal;
 
-FLYMAPLEUARTDriver::FLYMAPLEUARTDriver(HardwareSerial* hws):
+UARTDriver::UARTDriver(HardwareSerial* hws):
     _hws(hws),
     _txBuf(NULL),
     _txBufSize(63), // libmaple internal usart default driver buffer is 63
@@ -40,7 +40,7 @@ FLYMAPLEUARTDriver::FLYMAPLEUARTDriver(HardwareSerial* hws):
     _rxBufSize(63)  // libmaple internal usart default driver buffer is 63
  {}
 
-void FLYMAPLEUARTDriver::begin(uint32_t b) 
+void UARTDriver::begin(uint32_t b) 
 {
     // Dont let the ISRs access the ring buffers until we are fully set up:
     nvic_irq_disable(_hws->c_dev()->irq_num);
@@ -52,7 +52,7 @@ void FLYMAPLEUARTDriver::begin(uint32_t b)
     nvic_irq_enable(_hws->c_dev()->irq_num);
 }
 
-void FLYMAPLEUARTDriver::begin(uint32_t b, uint16_t rxS, uint16_t txS) 
+void UARTDriver::begin(uint32_t b, uint16_t rxS, uint16_t txS) 
 {
     // Our private buffers can only grow, never shrink
     // rxS == 0 or txS == 0 means no change to buffer size
@@ -89,50 +89,50 @@ void FLYMAPLEUARTDriver::begin(uint32_t b, uint16_t rxS, uint16_t txS)
 	free(oldRxBuf);
 }
 
-void FLYMAPLEUARTDriver::end() 
+void UARTDriver::end() 
 {
     _hws->end();
 }
 
-void FLYMAPLEUARTDriver::flush() 
+void UARTDriver::flush() 
 {
     _hws->flush();
 }
 
-bool FLYMAPLEUARTDriver::is_initialized() 
+bool UARTDriver::is_initialized() 
 { 
     return true; 
 }
 
-void FLYMAPLEUARTDriver::set_blocking_writes(bool blocking) {}
+void UARTDriver::set_blocking_writes(bool blocking) {}
 
-bool FLYMAPLEUARTDriver::tx_pending() { return false; }
+bool UARTDriver::tx_pending() { return false; }
 
 /* FLYMAPLE implementations of Stream virtual methods */
-int16_t FLYMAPLEUARTDriver::available() 
+int16_t UARTDriver::available() 
 { 
     return _hws->available(); 
 }
 
-int16_t FLYMAPLEUARTDriver::txspace() 
+int16_t UARTDriver::txspace() 
 { 
     // Mikems fork of libmaple includes usart TX buffering
     return _hws->c_dev()->tx_rb->size - rb_full_count(_hws->c_dev()->tx_rb);
 }
 
-int16_t FLYMAPLEUARTDriver::read() 
+int16_t UARTDriver::read() 
 { 
     return _hws->read(); 
 }
 
 /* FLYMAPLE implementations of Print virtual methods */
-size_t FLYMAPLEUARTDriver::write(uint8_t c) 
+size_t UARTDriver::write(uint8_t c) 
 {
     _hws->write(c); 
     return 1; 
 }
 
-size_t FLYMAPLEUARTDriver::write(const uint8_t *buffer, size_t size)
+size_t UARTDriver::write(const uint8_t *buffer, size_t size)
 {
     size_t n = 0;
     while (size--) {

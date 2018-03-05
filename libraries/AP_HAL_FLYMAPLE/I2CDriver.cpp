@@ -33,27 +33,27 @@ extern const AP_HAL::HAL& hal;
 // This is the instance of the libmaple I2C device to use
 #define FLYMAPLE_I2C_DEVICE I2C1
 
-FLYMAPLEI2CDriver::FLYMAPLEI2CDriver(AP_HAL::Semaphore* semaphore) 
+I2CDriver::I2CDriver(AP_HAL::Semaphore* semaphore) 
     : _semaphore(semaphore),
       _timeout_ms(0) 
 {
 }
 
-void FLYMAPLEI2CDriver::begin() 
+void I2CDriver::begin() 
 {
     _reset();
 }
 
-void FLYMAPLEI2CDriver::end() {}
+void I2CDriver::end() {}
 
-void FLYMAPLEI2CDriver::setTimeout(uint16_t ms) 
+void I2CDriver::setTimeout(uint16_t ms) 
 {
     _timeout_ms = ms;
 }
 
-void FLYMAPLEI2CDriver::setHighSpeed(bool active) {}
+void I2CDriver::setHighSpeed(bool active) {}
 
-uint8_t FLYMAPLEI2CDriver::write(uint8_t addr, uint8_t len, uint8_t* data)
+uint8_t I2CDriver::write(uint8_t addr, uint8_t len, uint8_t* data)
 {
     i2c_msg msgs[1];
     msgs[0].addr = addr;
@@ -63,12 +63,12 @@ uint8_t FLYMAPLEI2CDriver::write(uint8_t addr, uint8_t len, uint8_t* data)
     return _transfer(msgs, 1);
 } 
 
-uint8_t FLYMAPLEI2CDriver::writeRegister(uint8_t addr, uint8_t reg, uint8_t val)
+uint8_t I2CDriver::writeRegister(uint8_t addr, uint8_t reg, uint8_t val)
 {
     return writeRegisters(addr, reg, 1, &val);
 }
 
-uint8_t FLYMAPLEI2CDriver::writeRegisters(uint8_t addr, uint8_t reg,
+uint8_t I2CDriver::writeRegisters(uint8_t addr, uint8_t reg,
                                uint8_t len, uint8_t* data)
 {
     uint8_t buffer[100];
@@ -83,7 +83,7 @@ uint8_t FLYMAPLEI2CDriver::writeRegisters(uint8_t addr, uint8_t reg,
     return _transfer(msgs, 1);
 }
 
-uint8_t FLYMAPLEI2CDriver::read(uint8_t addr, uint8_t len, uint8_t* data)
+uint8_t I2CDriver::read(uint8_t addr, uint8_t len, uint8_t* data)
 {
     // For devices that do not honour normal register conventions (not on flymaple?)
     // Now read it
@@ -95,12 +95,12 @@ uint8_t FLYMAPLEI2CDriver::read(uint8_t addr, uint8_t len, uint8_t* data)
     return _transfer(msgs, 1);
 }
 
-uint8_t FLYMAPLEI2CDriver::readRegister(uint8_t addr, uint8_t reg, uint8_t* data)
+uint8_t I2CDriver::readRegister(uint8_t addr, uint8_t reg, uint8_t* data)
 {
     return readRegisters(addr, reg, 1, data);
 }
 
-uint8_t FLYMAPLEI2CDriver::readRegisters(uint8_t addr, uint8_t reg,
+uint8_t I2CDriver::readRegisters(uint8_t addr, uint8_t reg,
                               uint8_t len, uint8_t* data)
 {
     // We conduct a write of the register number we want followed by a read
@@ -118,11 +118,11 @@ uint8_t FLYMAPLEI2CDriver::readRegisters(uint8_t addr, uint8_t reg,
     return _transfer(msgs, 2);
 }
 
-uint8_t FLYMAPLEI2CDriver::lockup_count() {
+uint8_t I2CDriver::lockup_count() {
 return _lockup_count;
 }
 
-uint8_t            FLYMAPLEI2CDriver::_transfer(i2c_msg *msgs, uint16 num)
+uint8_t            I2CDriver::_transfer(i2c_msg *msgs, uint16 num)
 {
     // ALERT: patch to libmaple required for this to work else
     // crashes next line due to a bug in latest git libmaple see http://forums.leaflabs.com/topic.php?id=13458
@@ -137,7 +137,7 @@ uint8_t            FLYMAPLEI2CDriver::_transfer(i2c_msg *msgs, uint16 num)
     return result != 0;
 }
 
-void FLYMAPLEI2CDriver::_reset()
+void I2CDriver::_reset()
 {
     i2c_disable(FLYMAPLE_I2C_DEVICE);
     i2c_master_enable(FLYMAPLE_I2C_DEVICE, I2C_FAST_MODE | I2C_BUS_RESET);

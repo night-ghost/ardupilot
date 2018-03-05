@@ -31,9 +31,9 @@ using namespace AP_HAL_FLYMAPLE_NS;
 extern const AP_HAL::HAL& hal;
 
 // Constructor
-FLYMAPLESemaphore::FLYMAPLESemaphore() : _taken(false) {}
+Semaphore::Semaphore() : _taken(false) {}
 
-bool FLYMAPLESemaphore::give() {
+bool Semaphore::give() {
     if (!_taken) {
         return false;
     } else {
@@ -42,16 +42,16 @@ bool FLYMAPLESemaphore::give() {
     }
 }
 
-bool FLYMAPLESemaphore::take(uint32_t timeout_ms) {
+bool Semaphore::take(uint32_t timeout_ms) {
     if (hal.scheduler->in_timerprocess()) {
-        AP_HAL::panic("PANIC: FLYMAPLESemaphore::take used from "
+        AP_HAL::panic("PANIC: Semaphore::take used from "
                     "inside timer process");
         return false; /* Never reached - panic does not return */
     }
     return _take_from_mainloop(timeout_ms);
 }
 
-bool FLYMAPLESemaphore::take_nonblocking() {
+bool Semaphore::take_nonblocking() {
     if (hal.scheduler->in_timerprocess()) {
         return _take_nonblocking();
     } else {
@@ -59,7 +59,7 @@ bool FLYMAPLESemaphore::take_nonblocking() {
     }
 }
 
-bool FLYMAPLESemaphore::_take_from_mainloop(uint32_t timeout_ms) {
+bool Semaphore::_take_from_mainloop(uint32_t timeout_ms) {
     /* Try to take immediately */
     if (_take_nonblocking()) {
         return true;
@@ -80,7 +80,7 @@ bool FLYMAPLESemaphore::_take_from_mainloop(uint32_t timeout_ms) {
     return false;
 }
 
-bool FLYMAPLESemaphore::_take_nonblocking() {
+bool Semaphore::_take_nonblocking() {
     bool result = false;
     noInterrupts();
     if (!_taken) {

@@ -35,19 +35,19 @@ extern HardwareSerial Serial3; // Serial3 is labelled "GPS" on Flymaple pins 29 
 
 static Empty::I2CDeviceManager i2c_mgr_instance;
 
-static FLYMAPLEUARTDriver uartADriver(&Serial1); // AP Console and highspeed mavlink
-static FLYMAPLEUARTDriver uartBDriver(&Serial2); // AP GPS connection
-static FLYMAPLEUARTDriver uartCDriver(&Serial3); // Optional AP telemetry radio
-static FLYMAPLESemaphore  i2cSemaphore;
-static FLYMAPLEI2CDriver  i2cDriver(&i2cSemaphore);
-static FLYMAPLESPIDeviceManager spiDeviceManager;
-static FLYMAPLEAnalogIn analogIn;
-static FLYMAPLEStorage storageDriver;
-static FLYMAPLEGPIO gpioDriver;
-static FLYMAPLERCInput rcinDriver;
-static FLYMAPLERCOutput rcoutDriver;
-static FLYMAPLEScheduler schedulerInstance;
-static FLYMAPLEUtil utilInstance;
+static UARTDriver uartADriver(&Serial1); // AP Console and highspeed mavlink
+static UARTDriver uartBDriver(&Serial2); // AP GPS connection
+static UARTDriver uartCDriver(&Serial3); // Optional AP telemetry radio
+static Semaphore  i2cSemaphore;
+static I2CDriver  i2cDriver(&i2cSemaphore);
+static SPIDeviceManager spiDeviceManager;
+static AnalogIn analogIn;
+static Storage storageDriver;
+static GPIO gpioDriver;
+static RCInput rcinDriver;
+static RCOutput rcoutDriver;
+static Scheduler schedulerInstance;
+static Util utilInstance;
 
 HAL_FLYMAPLE::HAL_FLYMAPLE() :
     AP_HAL::HAL(

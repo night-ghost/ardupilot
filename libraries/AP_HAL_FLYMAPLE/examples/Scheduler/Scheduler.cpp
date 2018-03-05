@@ -95,7 +95,7 @@ void setup (void) {
 
     hal.scheduler->delay(2000);
 
-    // not yet working on flymaple: see FLYMAPLEScheduler::_timer_procs_timer_event()
+    // not yet working on flymaple: see Scheduler::_timer_procs_timer_event()
 #if 1
     hal.console->printf("Test running a pathological timer process.\r\n"
                 "Failsafe should continue even as pathological process "

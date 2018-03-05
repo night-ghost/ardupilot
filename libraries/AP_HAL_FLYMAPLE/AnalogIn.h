@@ -26,11 +26,11 @@
 // this pin to the board 3.3V VCC
 #define FLYMAPLE_VCC_ANALOG_IN_PIN 15
 
-class AP_HAL_FLYMAPLE_NS::FLYMAPLEAnalogSource : public AP_HAL::AnalogSource {
+class AP_HAL_FLYMAPLE_NS::AnalogSource : public AP_HAL::AnalogSource {
 public:
-    friend class AP_HAL_FLYMAPLE_NS::FLYMAPLEAnalogIn;
+    friend class AP_HAL_FLYMAPLE_NS::AnalogIn;
 
-    FLYMAPLEAnalogSource(uint8_t pin);
+    AnalogSource(uint8_t pin);
     float read_average();
     float read_latest();
     void set_pin(uint8_t p);
@@ -77,18 +77,18 @@ private:
     uint32_t _read_start_time_ms;
 };
 
-class AP_HAL_FLYMAPLE_NS::FLYMAPLEAnalogIn : public AP_HAL::AnalogIn {
+class AP_HAL_FLYMAPLE_NS::AnalogIn : public AP_HAL::AnalogIn {
 public:
-    FLYMAPLEAnalogIn();
+    AnalogIn();
     void init();
     AP_HAL::AnalogSource* channel(int16_t n);
     float board_voltage(void);
 
 protected: 
-    FLYMAPLEAnalogSource* _create_channel(int16_t num);
-    void _register_channel(FLYMAPLEAnalogSource*);
+    AnalogSource* _create_channel(int16_t num);
+    void _register_channel(AnalogSource*);
     void _timer_event(void);
-    FLYMAPLEAnalogSource* _channels[FLYMAPLE_INPUT_MAX_CHANNELS];
+    AnalogSource* _channels[FLYMAPLE_INPUT_MAX_CHANNELS];
     int16_t _num_channels;
     int16_t _active_channel;
     uint16_t _channel_repeat_count;
@@ -97,5 +97,5 @@ private:
     // On Flymaple, VCC measurement is at pin 20. VCC (=VIN) of 5V is only present
     // if external voltage (not USB) is connected. Also there is a voltage
     // divider (25k/5k) 
-    FLYMAPLEAnalogSource _vcc;
+    AnalogSource _vcc;
 };

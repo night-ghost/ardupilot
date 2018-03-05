@@ -40,20 +40,20 @@ using namespace AP_HAL_FLYMAPLE_NS;
 
 extern const AP_HAL::HAL& hal;
 
-AP_HAL::Proc FLYMAPLEScheduler::_failsafe = NULL;
-volatile bool     FLYMAPLEScheduler::_timer_suspended = false;
-volatile bool     FLYMAPLEScheduler::_timer_event_missed = false;
-volatile bool     FLYMAPLEScheduler::_in_timer_proc = false;
-AP_HAL::MemberProc FLYMAPLEScheduler::_timer_proc[FLYMAPLE_SCHEDULER_MAX_TIMER_PROCS] = {NULL};
-uint8_t           FLYMAPLEScheduler::_num_timer_procs = 0;
+AP_HAL::Proc Scheduler::_failsafe = NULL;
+volatile bool     Scheduler::_timer_suspended = false;
+volatile bool     Scheduler::_timer_event_missed = false;
+volatile bool     Scheduler::_in_timer_proc = false;
+AP_HAL::MemberProc Scheduler::_timer_proc[FLYMAPLE_SCHEDULER_MAX_TIMER_PROCS] = {NULL};
+uint8_t           Scheduler::_num_timer_procs = 0;
 
-FLYMAPLEScheduler::FLYMAPLEScheduler() :
+Scheduler::Scheduler() :
     _delay_cb(NULL),
     _min_delay_cb_ms(65535),
     _initialized(false)
 {}
 
-void FLYMAPLEScheduler::init()
+void Scheduler::init()
 {
     delay_us(2000000); // Wait for startup so we have time to connect a new USB console
     // 1kHz interrupts from systick for normal timers
@@ -75,7 +75,7 @@ void FLYMAPLEScheduler::init()
 }
 
 // This function may calls the _delay_cb to use up time
-void FLYMAPLEScheduler::delay(uint16_t ms)
+void Scheduler::delay(uint16_t ms)
 {    
     uint32_t start = AP_HAL::micros();
     
@@ -93,24 +93,24 @@ void FLYMAPLEScheduler::delay(uint16_t ms)
     }
 }
 
-void FLYMAPLEScheduler::delay_microseconds(uint16_t us)
+void Scheduler::delay_microseconds(uint16_t us)
 { 
     delay_us(us);
 }
 
 /*
-uint32_t FLYMAPLEScheduler::millis() {
+uint32_t Scheduler::millis() {
     return millis();
 }
 */
 
-void FLYMAPLEScheduler::register_delay_callback(AP_HAL::Proc proc, uint16_t min_time_ms)
+void Scheduler::register_delay_callback(AP_HAL::Proc proc, uint16_t min_time_ms)
 {
     _delay_cb = proc;
     _min_delay_cb_ms = min_time_ms;
 }
 
-void FLYMAPLEScheduler::register_timer_process(AP_HAL::MemberProc proc)
+void Scheduler::register_timer_process(AP_HAL::MemberProc proc)
 {
     for (int i = 0; i < _num_timer_procs; i++) {
         if (_timer_proc[i] == proc) {
@@ -130,23 +130,23 @@ void FLYMAPLEScheduler::register_timer_process(AP_HAL::MemberProc proc)
     }
 }
 
-void FLYMAPLEScheduler::register_io_process(AP_HAL::MemberProc k)
+void Scheduler::register_io_process(AP_HAL::MemberProc k)
 {
     // IO processes not supported on FLYMAPLE
 }
 
-void FLYMAPLEScheduler::register_timer_failsafe(AP_HAL::Proc failsafe, uint32_t period_us)
+void Scheduler::register_timer_failsafe(AP_HAL::Proc failsafe, uint32_t period_us)
 {
     /* XXX Assert period_us == 1000 */
     _failsafe = failsafe;
 }
 
-void FLYMAPLEScheduler::suspend_timer_procs()
+void Scheduler::suspend_timer_procs()
 {
     _timer_suspended = true;
 }
 
-void FLYMAPLEScheduler::resume_timer_procs()
+void Scheduler::resume_timer_procs()
 {
     _timer_suspended = false;
     if (_timer_event_missed == true) {
@@ -155,23 +155,23 @@ void FLYMAPLEScheduler::resume_timer_procs()
     }
 }
 
-bool FLYMAPLEScheduler::in_timerprocess() {
+bool Scheduler::in_timerprocess() {
     return _in_timer_proc;
 }
 
-void FLYMAPLEScheduler::_timer_procs_timer_event() {
+void Scheduler::_timer_procs_timer_event() {
     _run_timer_procs(true);
 }
 
 // Called by HardwareTimer when a failsafe timer event occurs
-void FLYMAPLEScheduler::_failsafe_timer_event() 
+void Scheduler::_failsafe_timer_event() 
 {
     // run the failsafe, if one is setup
     if (_failsafe != NULL)
         _failsafe();
 }
 
-void FLYMAPLEScheduler::_run_timer_procs(bool called_from_isr) 
+void Scheduler::_run_timer_procs(bool called_from_isr) 
 {
     _in_timer_proc = true;
 
@@ -189,7 +189,7 @@ void FLYMAPLEScheduler::_run_timer_procs(bool called_from_isr)
     _in_timer_proc = false;
 }
 
-void FLYMAPLEScheduler::system_initialized()
+void Scheduler::system_initialized()
 {
     if (_initialized) {
         AP_HAL::panic("PANIC: scheduler::system_initialized called"
@@ -198,7 +198,7 @@ void FLYMAPLEScheduler::system_initialized()
     _initialized = true;
 }
 
-void FLYMAPLEScheduler::reboot(bool hold_in_bootloader) {
+void Scheduler::reboot(bool hold_in_bootloader) {
     hal.uartA->println("GOING DOWN FOR A REBOOT\r\n");
     hal.scheduler->delay(100);
     nvic_sys_reset();

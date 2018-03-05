@@ -33,9 +33,9 @@ extern const AP_HAL::HAL& hal;
 
 
 /* private variables to communicate with input capture isr */
-volatile uint16_t FLYMAPLERCInput::_pulse_capt[FLYMAPLE_RC_INPUT_NUM_CHANNELS] = {0};  
-volatile uint8_t  FLYMAPLERCInput::_valid_channels = 0;
-volatile uint32_t FLYMAPLERCInput::_last_input_interrupt_time = 0; // Last time the input interrupt ran
+volatile uint16_t RCInput::_pulse_capt[FLYMAPLE_RC_INPUT_NUM_CHANNELS] = {0};  
+volatile uint8_t  RCInput::_valid_channels = 0;
+volatile uint32_t RCInput::_last_input_interrupt_time = 0; // Last time the input interrupt ran
 
 // Pin 6 is connected to timer 1 channel 1
 #define FLYMAPLE_RC_INPUT_PIN 6
@@ -45,11 +45,11 @@ volatile uint32_t FLYMAPLERCInput::_last_input_interrupt_time = 0; // Last time 
 // We cant reliably measure intervals that exceed this time.
 #define FLYMAPLE_TIMER_RELOAD 60000
 
-FLYMAPLERCInput::FLYMAPLERCInput()
+RCInput::RCInput()
 {}
 
 // This interrupt triggers on a negative transiution of the PPM-SIM pin
-void FLYMAPLERCInput::_timer_capt_cb(void)
+void RCInput::_timer_capt_cb(void)
 {
     _last_input_interrupt_time = AP_HAL::millis();
 
@@ -106,7 +106,7 @@ void FLYMAPLERCInput::_timer_capt_cb(void)
     previous_count = current_count;
 }
 
-void FLYMAPLERCInput::init()
+void RCInput::init()
 {
     /* initialize overrides */
     clear_overrides();
@@ -127,13 +127,13 @@ void FLYMAPLERCInput::init()
     timer_resume(tdev); // reenabled
 }
 
-bool FLYMAPLERCInput::new_input() {
+bool RCInput::new_input() {
     if ((AP_HAL::millis() - _last_input_interrupt_time) > 50)
 	_valid_channels = 0; // Lost RC Input?
     return _valid_channels != 0;
 }
 
-uint8_t FLYMAPLERCInput::num_channels() {
+uint8_t RCInput::num_channels() {
     return _valid_channels;
 }
 
@@ -144,7 +144,7 @@ static inline uint16_t constrain_pulse(uint16_t p) {
     return p;
 }
 
-uint16_t FLYMAPLERCInput::read(uint8_t ch) {
+uint16_t RCInput::read(uint8_t ch) {
     timer_dev *tdev = PIN_MAP[FLYMAPLE_RC_INPUT_PIN].timer_device;
     uint8 timer_channel = PIN_MAP[FLYMAPLE_RC_INPUT_PIN].timer_channel;
 
@@ -162,7 +162,7 @@ uint16_t FLYMAPLERCInput::read(uint8_t ch) {
     return (over == 0) ? pulse : over;
 }
 
-uint8_t FLYMAPLERCInput::read(uint16_t* periods, uint8_t len) {
+uint8_t RCInput::read(uint16_t* periods, uint8_t len) {
     timer_dev *tdev = PIN_MAP[FLYMAPLE_RC_INPUT_PIN].timer_device;
     uint8 timer_channel = PIN_MAP[FLYMAPLE_RC_INPUT_PIN].timer_channel;
 
@@ -188,7 +188,7 @@ uint8_t FLYMAPLERCInput::read(uint16_t* periods, uint8_t len) {
     return _valid_channels;
 }
 
-bool FLYMAPLERCInput::set_overrides(int16_t *overrides, uint8_t len) {
+bool RCInput::set_overrides(int16_t *overrides, uint8_t len) {
     bool res = false;
     for (uint8_t i = 0; i < len; i++) {
         res |= set_override(i, overrides[i]);
@@ -196,7 +196,7 @@ bool FLYMAPLERCInput::set_overrides(int16_t *overrides, uint8_t len) {
     return res;
 }
 
-bool FLYMAPLERCInput::set_override(uint8_t channel, int16_t override) {
+bool RCInput::set_override(uint8_t channel, int16_t override) {
     if (override < 0) return false; /* -1: no change. */
     if (channel < FLYMAPLE_RC_INPUT_NUM_CHANNELS) {
         _override[channel] = override;
@@ -208,7 +208,7 @@ bool FLYMAPLERCInput::set_override(uint8_t channel, int16_t override) {
     return false;
 }
 
-void FLYMAPLERCInput::clear_overrides()
+void RCInput::clear_overrides()
 {
     for (uint8_t i = 0; i < FLYMAPLE_RC_INPUT_NUM_CHANNELS; i++) {
         _override[i] = 0;

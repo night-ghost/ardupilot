@@ -33,22 +33,22 @@ using namespace AP_HAL_FLYMAPLE_NS;
 HardwareSPI spi(FLYMAPLE_SPI_PORT);
 
 
-FLYMAPLESPIDeviceDriver::FLYMAPLESPIDeviceDriver()
+SPIDeviceDriver::SPIDeviceDriver()
 {}
 
-void FLYMAPLESPIDeviceDriver::init()
+void SPIDeviceDriver::init()
 {
     spi.begin(SPI_9MHZ, MSBFIRST, SPI_MODE_0);
     digitalWrite(FLYMAPLE_SPI_CS_PIN, 1);
     pinMode(FLYMAPLE_SPI_CS_PIN, OUTPUT);
 }
 
-AP_HAL::Semaphore* FLYMAPLESPIDeviceDriver::get_semaphore()
+AP_HAL::Semaphore* SPIDeviceDriver::get_semaphore()
 {
     return &_semaphore;
 }
 
-bool FLYMAPLESPIDeviceDriver::transaction(const uint8_t *tx, uint8_t *rx, uint16_t len)
+bool SPIDeviceDriver::transaction(const uint8_t *tx, uint8_t *rx, uint16_t len)
 {
     cs_assert();
     if (rx == NULL) {
@@ -65,35 +65,35 @@ bool FLYMAPLESPIDeviceDriver::transaction(const uint8_t *tx, uint8_t *rx, uint16
 }
 
 
-void FLYMAPLESPIDeviceDriver::cs_assert()
+void SPIDeviceDriver::cs_assert()
 {
     digitalWrite(FLYMAPLE_SPI_CS_PIN, 0);
 }
 
-void FLYMAPLESPIDeviceDriver::cs_release()
+void SPIDeviceDriver::cs_release()
 {
     digitalWrite(FLYMAPLE_SPI_CS_PIN, 1);
 }
 
-uint8_t FLYMAPLESPIDeviceDriver::transfer (uint8_t data)
+uint8_t SPIDeviceDriver::transfer (uint8_t data)
 {
     return spi.transfer(data);
 }
 
-void FLYMAPLESPIDeviceDriver::transfer (const uint8_t *data, uint16_t len)
+void SPIDeviceDriver::transfer (const uint8_t *data, uint16_t len)
 {
     spi.write(data, len);
 }
 
-FLYMAPLESPIDeviceManager::FLYMAPLESPIDeviceManager()
+SPIDeviceManager::SPIDeviceManager()
 {
 }
 
-void FLYMAPLESPIDeviceManager::init()
+void SPIDeviceManager::init()
 {
 }
 
-AP_HAL::SPIDeviceDriver* FLYMAPLESPIDeviceManager::device(enum AP_HAL::SPIDeviceType, uint8_t index)
+AP_HAL::SPIDeviceDriver* SPIDeviceManager::device(enum AP_HAL::SPIDeviceType, uint8_t index)
 {
     _device.init(); // Defer this until GPIO pin 13 is set up else its a slave
     return &_device;

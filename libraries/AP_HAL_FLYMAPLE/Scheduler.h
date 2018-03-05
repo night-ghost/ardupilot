@@ -21,9 +21,9 @@
 
 #define FLYMAPLE_SCHEDULER_MAX_TIMER_PROCS 4
 
-class AP_HAL_FLYMAPLE_NS::FLYMAPLEScheduler : public AP_HAL::Scheduler {
+class AP_HAL_FLYMAPLE_NS::Scheduler : public AP_HAL::Scheduler {
 public:
-    FLYMAPLEScheduler();
+    Scheduler();
     void     init();
     void     delay(uint16_t ms);
     void     delay_microseconds(uint16_t us);
