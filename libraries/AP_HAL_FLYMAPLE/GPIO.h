@@ -19,9 +19,9 @@
 
 #include "AP_HAL_FLYMAPLE.h"
 
-class AP_HAL_FLYMAPLE_NS::FLYMAPLEGPIO : public AP_HAL::GPIO {
+class AP_HAL_FLYMAPLE_NS::GPIO : public AP_HAL::GPIO {
 public:
-    FLYMAPLEGPIO();
+    GPIO();
     void    init();
     void    pinMode(uint8_t pin, uint8_t output);
     uint8_t read(uint8_t pin);
@@ -42,9 +42,9 @@ public:
 
 };
 
-class AP_HAL_FLYMAPLE_NS::FLYMAPLEDigitalSource : public AP_HAL::DigitalSource {
+class AP_HAL_FLYMAPLE_NS::DigitalSource : public AP_HAL::DigitalSource {
 public:
-    FLYMAPLEDigitalSource(uint8_t v);
+    DigitalSource(uint8_t v);
     void    mode(uint8_t output);
     uint8_t read();
     void    write(uint8_t value); 

@@ -19,9 +19,9 @@
 
 #include "AP_HAL_FLYMAPLE.h"
 
-class AP_HAL_FLYMAPLE_NS::FLYMAPLESemaphore : public AP_HAL::Semaphore {
+class AP_HAL_FLYMAPLE_NS::Semaphore : public AP_HAL::Semaphore {
 public:
-    FLYMAPLESemaphore();
+    Semaphore();
     bool give();
     bool take(uint32_t timeout_ms);
     bool take_nonblocking();

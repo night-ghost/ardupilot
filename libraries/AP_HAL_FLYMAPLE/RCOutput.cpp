@@ -31,9 +31,9 @@ extern const AP_HAL::HAL& hal;
 
 #define MAX_OVERFLOW    ((1 << 16) - 1)
 
-void FLYMAPLERCOutput::init() {}
+void RCOutput::init() {}
 
-void FLYMAPLERCOutput::set_freq(uint32_t chmask, uint16_t freq_hz) 
+void RCOutput::set_freq(uint32_t chmask, uint16_t freq_hz) 
 {
     for (int i = 0; i < 32; i++) {
         if ((chmask >> i) & 1) {
@@ -42,7 +42,7 @@ void FLYMAPLERCOutput::set_freq(uint32_t chmask, uint16_t freq_hz)
     }
 }
 
-uint16_t FLYMAPLERCOutput::get_freq(uint8_t ch) 
+uint16_t RCOutput::get_freq(uint8_t ch) 
 {
     if (ch >= FLYMAPLE_RC_OUTPUT_NUM_CHANNELS)
 	return 0;
@@ -56,7 +56,7 @@ uint16_t FLYMAPLERCOutput::get_freq(uint8_t ch)
     return F_CPU / (prescaler+1) / overflow;
 }
 
-void FLYMAPLERCOutput::enable_ch(uint8_t ch)
+void RCOutput::enable_ch(uint8_t ch)
 {
     if (ch >= FLYMAPLE_RC_OUTPUT_NUM_CHANNELS)
 	return;
@@ -72,7 +72,7 @@ void FLYMAPLERCOutput::enable_ch(uint8_t ch)
     _set_freq(ch, 50); // Default to 50 Hz
 }
 
-void FLYMAPLERCOutput::disable_ch(uint8_t ch)
+void RCOutput::disable_ch(uint8_t ch)
 {
     if (ch >= FLYMAPLE_RC_OUTPUT_NUM_CHANNELS)
 	return;
@@ -87,7 +87,7 @@ void FLYMAPLERCOutput::disable_ch(uint8_t ch)
     pinMode(pin, INPUT);
 }
 
-void FLYMAPLERCOutput::write(uint8_t ch, uint16_t period_us)
+void RCOutput::write(uint8_t ch, uint16_t period_us)
 {
     if (ch >= FLYMAPLE_RC_OUTPUT_NUM_CHANNELS)
 	return;
@@ -95,7 +95,7 @@ void FLYMAPLERCOutput::write(uint8_t ch, uint16_t period_us)
     pwmWrite(pin, (period_us * _clocks_per_msecond[ch]) / 1000);
 }
 
-uint16_t FLYMAPLERCOutput::read(uint8_t ch)
+uint16_t RCOutput::read(uint8_t ch)
 {
     if (ch >= FLYMAPLE_RC_OUTPUT_NUM_CHANNELS)
 	return 0;
@@ -106,13 +106,13 @@ uint16_t FLYMAPLERCOutput::read(uint8_t ch)
     return *ccr * 1000 / _clocks_per_msecond[ch];
 }
 
-void FLYMAPLERCOutput::read(uint16_t* period_us, uint8_t len)
+void RCOutput::read(uint16_t* period_us, uint8_t len)
 {
     for (int i = 0; i < len; i++)
         period_us[i] = read(i);
 }
 
-uint8_t FLYMAPLERCOutput::_channel_to_flymaple_pin(uint8_t ch)
+uint8_t RCOutput::_channel_to_flymaple_pin(uint8_t ch)
 {
     // This maps the ArduPilot channel numbers to Flymaple PWM output pins
     // Channels on the same timer ALWAYS use the same frequency (the last one set)
@@ -127,7 +127,7 @@ uint8_t FLYMAPLERCOutput::_channel_to_flymaple_pin(uint8_t ch)
 	return ch_to_pin[ch];
 }
 
-void FLYMAPLERCOutput::_set_freq(uint8_t ch, uint16_t freq_hz) 
+void RCOutput::_set_freq(uint8_t ch, uint16_t freq_hz) 
 {
     if (ch >= FLYMAPLE_RC_OUTPUT_NUM_CHANNELS)
 	return;

@@ -21,9 +21,9 @@
 
 class HardwareSerial; // A libmaple classs
 
-class AP_HAL_FLYMAPLE_NS::FLYMAPLEUARTDriver : public AP_HAL::UARTDriver {
+class AP_HAL_FLYMAPLE_NS::UARTDriver : public AP_HAL::UARTDriver {
 public:
-    FLYMAPLEUARTDriver(HardwareSerial* hws);
+    UARTDriver(HardwareSerial* hws);
 
     /* FLYMAPLE implementations of UARTDriver virtual methods */
     void begin(uint32_t b);

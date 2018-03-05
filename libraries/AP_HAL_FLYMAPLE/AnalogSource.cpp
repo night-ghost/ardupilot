@@ -27,7 +27,7 @@ using namespace AP_HAL_FLYMAPLE_NS;
 
 extern const AP_HAL::HAL& hal;
 
-FLYMAPLEAnalogSource::FLYMAPLEAnalogSource(uint8_t pin) :
+AnalogSource::AnalogSource(uint8_t pin) :
     _sum_count(0),
     _sum(0),
     _last_average(0),
@@ -38,11 +38,11 @@ FLYMAPLEAnalogSource::FLYMAPLEAnalogSource(uint8_t pin) :
     set_pin(pin);
 }
 
-float FLYMAPLEAnalogSource::read_average() {
+float AnalogSource::read_average() {
     return _read_average();
 }
 
-float FLYMAPLEAnalogSource::read_latest() {
+float AnalogSource::read_latest() {
     noInterrupts();
     uint16_t latest = _latest;
     interrupts();
@@ -52,12 +52,12 @@ float FLYMAPLEAnalogSource::read_latest() {
 /*
   return voltage from 0.0 to 3.3V, scaled to Vcc
  */
-float FLYMAPLEAnalogSource::voltage_average(void)
+float AnalogSource::voltage_average(void)
 {
     return voltage_average_ratiometric();
 }
 
-float FLYMAPLEAnalogSource::voltage_latest(void)
+float AnalogSource::voltage_latest(void)
 {
     float v = read_latest();
     return v * (3.3f / 4095.0f);
@@ -68,13 +68,13 @@ float FLYMAPLEAnalogSource::voltage_latest(void)
   means the result is really a pseudo-voltage, that assumes the supply
   voltage is exactly 3.3V.
  */
-float FLYMAPLEAnalogSource::voltage_average_ratiometric(void)
+float AnalogSource::voltage_average_ratiometric(void)
 {
     float v = read_average();
     return v * (3.3f / 4095.0f);
 }
 
-void FLYMAPLEAnalogSource::set_pin(uint8_t pin) {
+void AnalogSource::set_pin(uint8_t pin) {
     if (pin != _pin) {
         // ensure the pin is marked as an INPUT pin
         if (pin != ANALOG_INPUT_NONE && pin != ANALOG_INPUT_BOARD_VCC) {
@@ -93,17 +93,17 @@ void FLYMAPLEAnalogSource::set_pin(uint8_t pin) {
     }
 }
 
-void FLYMAPLEAnalogSource::set_stop_pin(uint8_t pin) {
+void AnalogSource::set_stop_pin(uint8_t pin) {
     _stop_pin = pin;
 }
 
-void FLYMAPLEAnalogSource::set_settle_time(uint16_t settle_time_ms) 
+void AnalogSource::set_settle_time(uint16_t settle_time_ms) 
 {
     _settle_time_ms = settle_time_ms;
 }
 
 /* read_average is called from the normal thread (not an interrupt). */
-float FLYMAPLEAnalogSource::_read_average() 
+float AnalogSource::_read_average() 
 {
     uint16_t sum;
     uint8_t sum_count;
@@ -127,7 +127,7 @@ float FLYMAPLEAnalogSource::_read_average()
     return avg;
 }
 
-void FLYMAPLEAnalogSource::setup_read() {
+void AnalogSource::setup_read() {
     if (_stop_pin != ANALOG_INPUT_NONE) {
         uint8_t digital_pin = hal.gpio->analogPinToDigitalPin(_stop_pin);
         hal.gpio->pinMode(digital_pin, HAL_GPIO_OUTPUT);
@@ -148,7 +148,7 @@ void FLYMAPLEAnalogSource::setup_read() {
     regs->SQR3 = channel;
 }
 
-void FLYMAPLEAnalogSource::stop_read() {
+void AnalogSource::stop_read() {
     if (_stop_pin != ANALOG_INPUT_NONE) {
         uint8_t digital_pin = hal.gpio->analogPinToDigitalPin(_stop_pin);
         hal.gpio->pinMode(digital_pin, HAL_GPIO_OUTPUT);
@@ -156,7 +156,7 @@ void FLYMAPLEAnalogSource::stop_read() {
     }
 }
 
-bool FLYMAPLEAnalogSource::reading_settled() 
+bool AnalogSource::reading_settled() 
 {
     if (_settle_time_ms != 0 && (AP_HAL::millis() - _read_start_time_ms) < _settle_time_ms) {
         return false;
@@ -167,7 +167,7 @@ bool FLYMAPLEAnalogSource::reading_settled()
 /* new_sample is called from an interrupt. It always has access to
  *  _sum and _sum_count. Lock out the interrupts briefly with
  * noInterrupts()/interrupts() to read these variables from outside an interrupt. */
-void FLYMAPLEAnalogSource::new_sample(uint16_t sample) {
+void AnalogSource::new_sample(uint16_t sample) {
     _sum += sample;
     _latest = sample;
     if (_sum_count >= 15) { // Flymaple has a 12 bit ADC, so can only sum 16 in a uint16_t
