@@ -19,7 +19,6 @@
 
 #define DEVOM_SYNC_BYTE        0xAA
 
-
 #define AP_SERIALMANAGER_DEVO_TELEM_BAUD        38400
 #define AP_SERIALMANAGER_DEVO_BUFSIZE_RX        0
 #define AP_SERIALMANAGER_DEVO_BUFSIZE_TX        32
@@ -38,24 +37,22 @@ AP_DEVO_Telem::AP_DEVO_Telem(const AP_AHRS &ahrs) :
     devoPacket.header = DEVOM_SYNC_BYTE;
 }
 
-//#define USE_GPS_CALLBACK
+
 
 // init - perform require initialisation including detecting which protocol to use
 void AP_DEVO_Telem::init(const AP_SerialManager& serial_manager)
 {
-    // check for DEVO_DPort
+    // check for DEVO_Port
     if ((_port = serial_manager.find_serial(AP_SerialManager::SerialProtocol_Devo_Telem, 0))) {
-
-#if defined(USE_GPS_CALLBACK)
-        // called when the packet just finished, to minimize impact
-        AP::gps().register_packet_callback(FUNCTOR_BIND_MEMBER(&AP_DEVO_Telem::tick, void));
-#else
         _port->set_flow_control(AP_HAL::UARTDriver::FLOW_CONTROL_DISABLE);
         // initialise uart
         _port->begin(AP_SERIALMANAGER_DEVO_TELEM_BAUD, AP_SERIALMANAGER_DEVO_BUFSIZE_RX, AP_SERIALMANAGER_DEVO_BUFSIZE_TX);
 
         hal.scheduler->register_io_process(FUNCTOR_BIND_MEMBER(&AP_DEVO_Telem::tick, void));
-#endif
+    } else if ((_port = serial_manager.find_serial(AP_SerialManager::SerialProtocol_GPS_Devo_Telem, 0))) {
+        // called when the packet just finished, to minimize impact
+        AP::gps().register_packet_callback(FUNCTOR_BIND_MEMBER(&AP_DEVO_Telem::tick, void));
+        on_gps_uart = true;
     }
 }
 
@@ -96,8 +93,14 @@ void AP_DEVO_Telem::send_frames(uint8_t control_mode)
 // then pilot couldn't to get the right ones
 
     if (gps.status() >= 3) {
-        struct Location loc = gps.location();//get gps instance 0
-
+#if 0
+        // GPS version, tested, working
+        Location loc = gps.location();
+#else
+        // AHRS version, untested
+        Location loc;
+        _ahrs.get_position(loc);
+#endif
         devoPacket.lat = gpsDdToDmsFormat(loc.lat);
         devoPacket.lon = gpsDdToDmsFormat(loc.lng);
         devoPacket.speed = (int16_t)(gps.ground_speed() * DEVO_SPEED_FACTOR * 100.0f);  // * 100 for cm
@@ -163,14 +166,13 @@ void AP_DEVO_Telem::tick(void)
     if (now - _last_frame_ms > 1000) {
         _last_frame_ms = now;
 
-#if defined(USE_GPS_CALLBACK)
-        _port->set_flow_control(AP_HAL::UARTDriver::FLOW_CONTROL_DISABLE);
-        _port->end();
         // initialise uart
-        _port->begin(AP_SERIALMANAGER_DEVO_TELEM_BAUD, AP_SERIALMANAGER_DEVO_BUFSIZE_RX, AP_SERIALMANAGER_DEVO_BUFSIZE_TX);
-        _port->end();
-#else
-        send_frames(_control_mode);
-#endif
+        if(on_gps_uart) {
+            _port->begin(AP_SERIALMANAGER_DEVO_TELEM_BAUD);
+            send_frames(_control_mode);
+            _port->end();
+        } else {
+            send_frames(_control_mode);
+        }
     }
 }
