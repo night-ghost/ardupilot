@@ -159,6 +159,8 @@ public:
         int32_t  rtk_baseline_z_mm;        ///< Current baseline in ECEF z or NED down component in mm
         uint32_t rtk_accuracy;             ///< Current estimate of 3D baseline accuracy (receiver dependent, typical 0 to 9999)
         int32_t  rtk_iar_num_hypotheses;   ///< Current number of integer ambiguity hypotheses
+        
+        uint32_t speed; // port speed
     };
 
     /// Startup initialisation.
@@ -442,7 +444,7 @@ protected:
 
     uint32_t _log_gps_bit = -1;
 
-    AP_HAL::MemberProc _packet_cb; // callback
+    void packet_finished(uint8_t inst);
 
 private:
     static AP_GPS *_singleton;
@@ -561,6 +563,7 @@ private:
         GPS_AUTO_CONFIG_ENABLE  = 1
     };
 
+    AP_HAL::MemberProc _packet_cb; // callback
 };
 
 namespace AP {

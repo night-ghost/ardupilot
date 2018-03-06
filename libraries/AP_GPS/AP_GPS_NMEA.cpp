@@ -145,8 +145,8 @@ bool AP_GPS_NMEA::_decode(char c)
         ++_term_number;
         _term_offset = 0;
         _is_checksum_term = c == '*';
-        if(c=='\n' && gps._packet_cb){
-            gps._packet_cb();   // call callback when packet finished
+        if(c=='\n'){
+            gps.packet_finished(state.instance);   // call callback when packet finished
         }
         return valid_sentence;
 

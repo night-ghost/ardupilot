@@ -283,6 +283,7 @@ void AP_GPS::init(const AP_SerialManager& serial_manager)
     // search for serial ports with gps protocol
     _port[0] = serial_manager.find_serial(AP_SerialManager::SerialProtocol_GPS, 0);
     _port[1] = serial_manager.find_serial(AP_SerialManager::SerialProtocol_GPS, 1);
+    if(_port[0] == nullptr) _port[0] = serial_manager.find_serial(AP_SerialManager::SerialProtocol_GPS_Devo_Telem, 0);
     _last_instance_swap_ms = 0;
 
     // Initialise class variables used to do GPS blending
@@ -1545,6 +1546,14 @@ bool AP_GPS::prepare_for_arming(void) {
     return all_passed;
 }
 
+void AP_GPS::packet_finished(uint8_t inst){ 
+    if(inst==0 && _packet_cb ) {
+        _port[inst]->end();   // free port for callback     
+        _packet_cb(); 
+        _port[inst]->begin(_baudrates[detect_state[inst].current_baud]); // restore receiving at last speed
+    }
+}
+
 namespace AP {
 
 AP_GPS &gps()
@@ -1553,3 +1562,4 @@ AP_GPS &gps()
 }
 
 };
+
