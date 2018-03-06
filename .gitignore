@@ -105,3 +105,4 @@ ArduCopter/cov-int/*
 ArduCopter/cov-int/
 *.ok
 *.apj
+/Release/*
