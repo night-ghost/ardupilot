@@ -75,14 +75,14 @@
 // #define MOUNT                 DISABLED 
 // #define ADSB_ENABLED          DISABLED
 
- #define LOGGING_ENABLED ENABLED
+#define LOGGING_ENABLED ENABLED
 
- // exclude some useless modes 
- #define MODE_SPORT_ENABLED DISABLE
- #define MODE_DRIFT_ENABLED DISABLE
- #define MODE_BRAKE_ENABLED DISABLE
- #define MODE_GUIDED_NOGPS_ENABLED DISABLE
+// exclude some useless modes 
+#define MODE_SPORT_ENABLED DISABLE
+#define MODE_DRIFT_ENABLED DISABLE
+#define MODE_BRAKE_ENABLED DISABLE
+#define MODE_GUIDED_NOGPS_ENABLED DISABLE
  
- #define USE_WAYBACK_ENABLE ENABLED
+#define USE_WAYBACK_ENABLE ENABLED
  
 #define STATS_ENABLED DISABLED // to reduce flash degradation
