@@ -8,7 +8,6 @@
 #include "AP_Compass.h"
 #include "AP_Compass_Backend.h"
 
-
 #ifndef HAL_MAG3110_I2C_ADDR 
  #define HAL_MAG3110_I2C_ADDR     0x0E
 #endif

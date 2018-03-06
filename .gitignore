@@ -107,3 +107,4 @@ ArduCopter/cov-int/
 *.apj
 .gdbinit
 /.vscode
+/Release/*
