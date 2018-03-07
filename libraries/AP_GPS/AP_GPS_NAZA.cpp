@@ -8,8 +8,6 @@
 
 #include "AP_GPS_NAZA.h"
 
-#if 1
-
 
 AP_GPS_NAZA::AP_GPS_NAZA(AP_GPS &_gps, AP_GPS::GPS_State &_state, AP_HAL::UARTDriver *_port) :
     AP_GPS_Backend(_gps, _state, _port),
@@ -34,16 +32,6 @@ bool AP_GPS_NAZA::read(void)
     }
     return parsed;
 }
-
-
-
-
-
-
-
-
-
-
 
 int32_t AP_GPS_NAZA::decodeLong(uint32_t idx, uint8_t mask)
 {
@@ -198,11 +186,12 @@ bool AP_GPS_NAZA::_parse_gps(void)
         mask_mag = (_buffernaza.mag.z)&0xFF;
         mask_mag = (((mask_mag ^ (mask_mag >> 4)) & 0x0F) | ((mask_mag << 3) & 0xF0)) ^ (((mask_mag & 0x01) << 3) | ((mask_mag & 0x01) << 7));
 
-        _mag.x = decodeShort(_buffernaza.mag.x, mask_mag);
-        _mag.y = decodeShort(_buffernaza.mag.y, mask_mag);
-        _mag.z = (_buffernaza.mag.z ^ (mask_mag<<8));
+        Vector3f mag;
+        mag.x = decodeShort(_buffernaza.mag.x, mask_mag);
+        mag.y = decodeShort(_buffernaza.mag.y, mask_mag);
+        mag.z = (_buffernaza.mag.z ^ (mask_mag<<8));
 
-        _mag.valid = true;
+        gps.update_compass(mag);
         }
         break;
     case ID_VER:
@@ -215,4 +204,3 @@ bool AP_GPS_NAZA::_parse_gps(void)
     return ret;
 }
 
-#endif
