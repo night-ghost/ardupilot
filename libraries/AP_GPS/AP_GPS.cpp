@@ -34,6 +34,7 @@
 #include "AP_GPS_SIRF.h"
 #include "AP_GPS_UBLOX.h"
 #include "AP_GPS_MAV.h"
+#include "AP_GPS_NAZA.h"
 #include "GPS_Backend.h"
 
 #if HAL_WITH_UAVCAN
@@ -424,6 +425,14 @@ void AP_GPS::detect_instance(uint8_t instance)
         new_gps = new AP_GPS_MAV(*this, state[instance], nullptr);
         goto found_gps;
         break;
+
+    case GPS_TYPE_NAZA:
+        dstate->auto_detected_baud = false; // specified, not detected
+        new_gps = new AP_GPS_NAZA(*this, state[instance], _port[instance]);
+        _has_compass = true;
+        goto found_gps;
+        break;
+
 
 #if HAL_WITH_UAVCAN
     // user has to explicitly set the UAVCAN type, do not use AUTO

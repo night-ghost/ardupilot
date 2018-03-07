@@ -86,13 +86,6 @@ static union {
 } _buffernaza;
 
 
-typedef struct Mag {
-    float x;
-    float y;
-    float z;
-    bool valid;
-} mag_t;
-
 class AP_GPS_NAZA : public AP_GPS_Backend {
 public:
     AP_GPS_NAZA(AP_GPS &_gps, AP_GPS::GPS_State &_state, AP_HAL::UARTDriver *_port);
@@ -105,7 +98,6 @@ public:
     const char *name() const override { return "NAZA"; }
 
 private:
-
     bool _decode(uint8_t c);
     bool _parse_gps();
     
@@ -122,9 +114,6 @@ private:
     uint8_t _msg_id;
     uint16_t _payload_length;
     uint16_t _payload_counter;
-    
-    
-    mag_t _mag;
     
     struct {
         uint32_t errors;
