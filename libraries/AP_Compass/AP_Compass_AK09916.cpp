@@ -197,6 +197,7 @@ void AP_Compass_AK09916::timer()
 
     field(data.magx * range_scale, data.magy * range_scale, data.magz * range_scale);
 
+
     /* rotate raw_field from sensor frame to body frame */
     rotate_field(field, compass_instance);
 
@@ -205,6 +206,7 @@ void AP_Compass_AK09916::timer()
 
     /* correct raw_field for known errors */
     correct_field(field, compass_instance);
+
 
     if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         accum += field;

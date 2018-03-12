@@ -220,7 +220,6 @@ void AP_Compass_QMC5883L::timer()
             _accum.z /= 2;
             _accum_count = 10;
         }
-        _sem->give();
     }
 }
 

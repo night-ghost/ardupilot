@@ -307,10 +307,10 @@ void AP_Baro_ICM20789::convert_data(uint32_t Praw, uint32_t Traw)
 
     if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
 #if BARO_ICM20789_DEBUG
-        dd.Praw = Praw;
-        dd.Traw = Traw;
-        dd.P = P;
-        dd.T = T;
+            dd.Praw = Praw;
+            dd.Traw = Traw;
+            dd.P = P;
+            dd.T = T;
 #endif
         
         accum.psum += P;

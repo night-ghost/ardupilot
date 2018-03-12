@@ -199,6 +199,8 @@ public:
     // current filtered gps altitude
     float get_gps() { return _gps_alt_over_home.get(); }
 
+    float get_filtrer_range() { return _filtrer_range; }
+
 private:
     // singleton
     static AP_Baro *_instance;
@@ -258,6 +260,9 @@ private:
     float                               _last_alt_target;          // alt target above home in meters
     uint16_t                            _adj_sample_count;         // GPS samples to pass before adjustment starts
     LowPassFilterFloat                  _gps_alt_over_home;        // GPS alt over home in meters    
+
+    AP_Float                            _filtrer_range;
+
 };
 
 namespace AP {

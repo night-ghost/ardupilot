@@ -86,7 +86,7 @@ bool AP_Baro_Backend::pressure_ok(float press)
         float koeff = FILTER_KOEF;
 
         if (d * 200.0f > range) {  // check the difference from mean value outside allowed range
-            // printf("\nBaro pressure error: mean %f got %f\n", (double)_mean_pressure, (double)press );
+            printf("\nBaro pressure error: mean %f got %f\n", (double)_mean_pressure, (double)press );
             ret = false;
             koeff /= (d * 10.0f);  // 2.5 and more, so one bad sample never change mean more than 4%
             _error_count++;

@@ -209,6 +209,7 @@ void AP_Compass_MAG3110::_update()
 
     Vector3f raw_field = Vector3f((float)_mag_x, (float)_mag_y, (float)_mag_z) * MAG_SCALE;
 
+
     // rotate raw_field from sensor frame to body frame
     rotate_field(raw_field, _compass_instance);
     
