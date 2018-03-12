@@ -39,6 +39,10 @@ extern AP_HAL::HAL& hal;
 #define AP_COMPASS_OFFSETS_MAX_DEFAULT 850
 #endif
 
+#ifndef HAL_COMPASS_FILTER_DEFAULT
+ #define HAL_COMPASS_FILTER_DEFAULT 0 // turned off by default
+#endif
+
 const AP_Param::GroupInfo Compass::var_info[] = {
     // index 0 was used for the old orientation matrix
 

@@ -329,6 +329,8 @@ public:
         return (uint16_t)_offset_max.get();
     }
 
+    float get_filtrer_range() { return _filtrer_range; }
+
 private:
     /// Register a new compas driver, allocating an instance number
     ///
@@ -467,4 +469,6 @@ private:
 
     // mask of driver types to not load. Bit positions match DEVTYPE_ in backend
     AP_Int32 _driver_type_mask;
+    
+    AP_Float     _filtrer_range;
 };

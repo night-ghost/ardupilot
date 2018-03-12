@@ -205,29 +205,7 @@ void AP_Compass_MAG3110::_update()
 
     Vector3f raw_field = Vector3f(_mag_x, _mag_y, _mag_z) * MAG_SCALE;
 
-
-    bool ret=true;
-
-#if MAG3110_ENABLE_LEN_FILTER
-    float len = raw_field.length();
-    if(is_zero(compass_len)) {
-        compass_len=len;
-    } else {
-#define FILTER_KOEF 0.1
-
-        float d = abs(compass_len-len)/(compass_len+len);
-        if(d*100 > 25) { // difference more than 50% from mean value
-            printf("\ncompass len error: mean %f got %f\n", compass_len, len );
-            ret= false;
-            float k = FILTER_KOEF / (d*10); // 2.5 and more, so one bad sample never change mean more than 4%
-            compass_len = compass_len * (1-k) + len*k; // complimentary filter 1/k on bad samples
-        } else {
-            compass_len = compass_len * (1-FILTER_KOEF) + len*FILTER_KOEF; // complimentary filter 1/10 on good samples
-        }
-    }
-#endif
-    
-    if(ret) {
+    if(field_ok(raw_field.length())) {
 
         // rotate raw_field from sensor frame to body frame
         rotate_field(raw_field, _compass_instance);

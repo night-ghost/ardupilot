@@ -2,6 +2,7 @@
 
 #include "AP_Compass.h"
 #include "AP_Compass_Backend.h"
+#include <stdio.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -143,3 +144,26 @@ void AP_Compass_Backend::set_rotation(uint8_t instance, enum Rotation rotation)
 {
     _compass._state[instance].rotation = rotation;
 }
+
+#define FILTER_KOEF 0.1
+
+bool AP_Compass_Backend::field_ok(float length) {
+    if(isinf(length) || isnan(length)) return false;
+    
+    bool ret=true;
+    if(is_zero(_mean_field_length)){ 
+        _mean_field_length = length;
+    } else {
+        float range = _compass.get_filtrer_range();
+        float d = abs(_mean_field_length-length)/(_mean_field_length+length);
+        float k = FILTER_KOEF;
+        if(!is_zero(range) && d*200 > range) { // check the difference from mean value outside allowed range
+            printf("\nCompass field length error: mean %f got %f\n", _mean_field_length, length );
+            ret= false;
+            k /= (d*10); // 2.5 and more, so one bad sample never change mean more than 4%
+        }
+        _mean_field_length = _mean_field_length * (1-k) + length*k; // complimentary filter 1/k
+    }
+    return ret;
+}
+
