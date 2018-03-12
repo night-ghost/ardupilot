@@ -20,6 +20,7 @@
 #include "AP_Baro.h"
 
 #include <utility>
+#include <stdio.h>
 
 #include <AP_Common/AP_Common.h>
 #include <AP_HAL/AP_HAL.h>
@@ -50,6 +51,9 @@
 
 #define INTERNAL_TEMPERATURE_CLAMP 35.0f
 
+#ifndef HAL_BARO_FILTER_DEFAULT
+ #define HAL_BARO_FILTER_DEFAULT 0 // turned off by default
+#endif
 
 extern const AP_HAL::HAL& hal;
 
@@ -135,6 +139,14 @@ const AP_Param::GroupInfo AP_Baro::var_info[] = {
 
     // Slot 12 used to be TEMP3
 #endif
+
+    // @Param: FILTER_RANGE
+    // @DisplayName: Range in which sample can vary beein good, in %
+    // @Description: Tunes bad sample filter, allowing to set range (0 - filter is off)
+    // @Units: percents
+    // @Range: 0 100
+    // @Increment: 1
+    AP_GROUPINFO("FILTER_RANGE", 16, AP_Baro, _filtrer_range, HAL_BARO_FILTER_DEFAULT),
 
     AP_GROUPEND
 };

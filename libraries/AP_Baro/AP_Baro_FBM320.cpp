@@ -187,6 +187,7 @@ void AP_Baro_FBM320::timer(void)
     } else {
         int32_t pressure, temperature;
         calculate_PT(value_T, value, pressure, temperature);
+        if(pressure_ok(pressure)) {
         if (_sem->take_nonblocking()) {
             pressure_sum += pressure;
             // sum and convert to degrees
@@ -194,6 +195,7 @@ void AP_Baro_FBM320::timer(void)
             count++;
             _sem->give();
         }
+    }
     }
 
     if (step++ >= 5) {

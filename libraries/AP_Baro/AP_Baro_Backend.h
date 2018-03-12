@@ -22,6 +22,8 @@ public:
 
     void backend_update(uint8_t instance);
 
+    bool pressure_ok(float p);
+    uint32_t get_error_count() { return _error_count; }
 protected:
     // reference to frontend object
     AP_Baro &_frontend;
@@ -33,4 +35,8 @@ protected:
 
     virtual void update_healthy_flag(uint8_t instance);
 
+    // mean pressure for range filter
+    float _mean_pressure; 
+    // number of dropped samples. Not used for now, but can be usable to choose more reliable sensor
+    uint32_t _error_count;
 };
