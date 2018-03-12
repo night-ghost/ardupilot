@@ -62,6 +62,8 @@ void AP_Baro_Backend::_copy_to_frontend(uint8_t instance, float pressure, float 
 
 static constexpr float FILTER_KOEF = 0.1f;
 
+#pragma GCC optimize("O2")// checked that this don't increases size
+
 /* Check that the baro value is valid by using a mean filter. If the
  * value is further than filtrer_range from mean value, it is
  * rejected. 

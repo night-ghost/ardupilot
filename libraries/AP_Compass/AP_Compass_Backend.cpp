@@ -1,7 +1,5 @@
 #include <AP_HAL/AP_HAL.h>
 
-#pragma GCC optimize("O3")
-
 #include "AP_Compass.h"
 #include "AP_Compass_Backend.h"
 #include <stdio.h>
@@ -157,14 +155,14 @@ void AP_Compass_Backend::set_rotation(uint8_t instance, enum Rotation rotation)
 
 static constexpr float FILTER_KOEF = 0.1f;
 
+#pragma GCC optimize("O2")
+
 /* Check that the compass value is valid by using a mean filter. If
  * the value is further than filtrer_range from mean value, it is
  * rejected. 
 */
 bool AP_Compass_Backend::field_ok(const Vector3f &field)
 {
-
-    
     if (field.is_inf() || field.is_nan()) {
         return false;
     }

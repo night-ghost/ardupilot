@@ -221,6 +221,7 @@ void AP_Compass_QMC5883L::timer()
             _accum_count = 10;
         }
     }
+    }
 }
 
 void AP_Compass_QMC5883L::read()
