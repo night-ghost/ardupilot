@@ -22,8 +22,10 @@ public:
 
     void backend_update(uint8_t instance);
 
-    bool pressure_ok(float p);
-    uint32_t get_error_count() { return _error_count; }
+    //  Check that the baro valid by using a mean filter.
+    // If the value further that filtrer_range from mean value, it is rejected.
+    bool pressure_ok(float press);
+    uint32_t get_error_count() const { return _error_count; }
 protected:
     // reference to frontend object
     AP_Baro &_frontend;

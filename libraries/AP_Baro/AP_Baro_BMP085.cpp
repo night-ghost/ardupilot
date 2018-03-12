@@ -308,7 +308,7 @@ void AP_Baro_BMP085::_calculate()
     x2 = (-7357 * p) >> 16;
     p += ((x1 + x2 + 3791) >> 4);
 
-    if(pressure_ok(p)) {
+    if (pressure_ok(p)) {
         if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
             _pressure_filter.apply(p);
             _has_sample = true;
