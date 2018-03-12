@@ -259,7 +259,7 @@ void AP_Compass_HMC5843::_timer()
     // correct raw_field for known errors
     correct_field(raw_field, _compass_instance);
     
-    if(field_ok(raw_field.length())) {
+    if (field_ok(raw_field.length())) {
         if (!_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
             return; 
         }

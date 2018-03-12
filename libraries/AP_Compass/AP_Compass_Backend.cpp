@@ -145,24 +145,28 @@ void AP_Compass_Backend::set_rotation(uint8_t instance, enum Rotation rotation)
     _compass._state[instance].rotation = rotation;
 }
 
-#define FILTER_KOEF 0.1
-
+static constexpr float FILTER_KOEF = 0.1f;
+/* Check that the compass value is valid by using a mean filter. If the value is further than filtrer_range from mean value, it is rejected. */
 bool AP_Compass_Backend::field_ok(float length) {
-    if(isinf(length) || isnan(length)) return false;
-    
-    bool ret=true;
-    if(is_zero(_mean_field_length)){ 
+    if (isinf(length) || isnan(length)) {
+        return false;
+    }
+
+    bool ret = true;
+    if (is_zero(_mean_field_length)) {
         _mean_field_length = length;
     } else {
-        float range = _compass.get_filtrer_range();
-        float d = abs(_mean_field_length-length)/(_mean_field_length+length);
-        float k = FILTER_KOEF;
-        if(!is_zero(range) && d*200 > range) { // check the difference from mean value outside allowed range
-            printf("\nCompass field length error: mean %f got %f\n", _mean_field_length, length );
-            ret= false;
-            k /= (d*10); // 2.5 and more, so one bad sample never change mean more than 4%
+        const float range = _compass.get_filter_range();
+        const float d = fabsf(_mean_field_length - length) / (_mean_field_length + length);  // diff divide by mean value in percent ( with the * 200.0f on later line)
+        float koeff = FILTER_KOEF;
+
+        if (!is_zero(range) && d * 200.0f > range) {  // check the difference from mean value outside allowed range
+            printf("\nCompass field length error: mean %f got %f\n", (double)_mean_field_length, (double)length );
+            ret = false;
+            koeff /= (d * 10.0f);  // 2.5 and more, so one bad sample never change mean more than 4%
+            _error_count++;
         }
-        _mean_field_length = _mean_field_length * (1-k) + length*k; // complimentary filter 1/k
+        _mean_field_length = _mean_field_length * (1 - koeff) + length * koeff;  // complimentary filter 1/k
     }
     return ret;
 }
