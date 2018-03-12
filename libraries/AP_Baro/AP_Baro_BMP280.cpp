@@ -136,9 +136,9 @@ void AP_Baro_BMP280::_timer(void)
 
     _dev->get_semaphore()->give();  // give bus semaprore ASAP
 
-    if(_update_temperature((buf[3] << 12) | (buf[4] << 4) | (buf[5] >> 4))) {
-        _update_pressure((buf[0] << 12) | (buf[1] << 4) | (buf[2] >> 4));
-    }
+    _update_temperature((buf[3] << 12) | (buf[4] << 4) | (buf[5] >> 4));
+    _update_pressure((buf[0] << 12) | (buf[1] << 4) | (buf[2] >> 4));
+
     return;
 }
 

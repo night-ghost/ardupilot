@@ -173,7 +173,6 @@ const AP_Param::GroupInfo AP_Baro::var_info[] = {
     // @Range: 10 600
     // @Increment: 1
     AP_GROUPINFO("ADJ_DELAY", 16, AP_Baro, _adj_delay, ADJ_DELAY_DEFAULT),
-
     AP_GROUPEND
 };
 

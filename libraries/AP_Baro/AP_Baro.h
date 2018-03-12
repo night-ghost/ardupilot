@@ -199,7 +199,7 @@ public:
     // current filtered gps altitude
     float get_gps() { return _gps_alt_over_home.get(); }
 
-    float get_filtrer_range() { return _filtrer_range; }
+    float get_filter_range() { return _filter_range; }
 
 private:
     // singleton
@@ -261,9 +261,7 @@ private:
     uint16_t                            _adj_sample_count;         // GPS samples to pass before adjustment starts
     LowPassFilterFloat                  _gps_alt_over_home;        // GPS alt over home in meters    
 
-    AP_Float                            _filtrer_range;
-
-    AP_Float                            _filtrer_range;
+    AP_Float                            _filter_range;
 };
 
 namespace AP {
