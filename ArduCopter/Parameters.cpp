@@ -1052,9 +1052,10 @@ const AP_Param::ConversionInfo conversion_table[] = {
 
 void Copter::load_parameters(void)
 {
-    if (!AP_Param::check_var_info()) {
-        hal.console->printf("Bad var table\n");
-        AP_HAL::panic("Bad var table");
+    uint8_t sts = AP_Param::check_var_info();
+    if (sts != 0) {
+        hal.console->printf("Bad var table: %d\n", sts);
+        AP_HAL::panic("Bad var table: %d", sts);
     }
 
     // disable centrifugal force correction, it will be enabled as part of the arming process

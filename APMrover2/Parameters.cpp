@@ -613,11 +613,11 @@ const AP_Param::ConversionInfo conversion_table[] = {
 
 void Rover::load_parameters(void)
 {
-    if (!AP_Param::check_var_info()) {
-        hal.console->printf("Bad var table\n");
-        AP_HAL::panic("Bad var table");
+    uint8_t sts = AP_Param::check_var_info();
+    if (sts != 0) {
+        hal.console->printf("Bad var table: %d\n", sts);
+        AP_HAL::panic("Bad var table: %d", sts);
     }
-
     if (!g.format_version.load() ||
          g.format_version != Parameters::k_format_version) {
         // erase all parameters

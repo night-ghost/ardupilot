@@ -398,7 +398,7 @@ public:
     float                   cast_to_float(enum ap_var_type type) const;
 
     // check var table for consistency
-    static bool             check_var_info(void);
+    static uint8_t             check_var_info(void);
 
     // return true if the parameter is configured in the defaults file
     bool configured_in_defaults_file(void) const;

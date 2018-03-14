@@ -249,7 +249,7 @@ const struct AP_Param::GroupInfo *AP_Param::get_group_info(const struct Info &in
 }
 
 // validate the _var_info[] table
-bool AP_Param::check_var_info(void)
+uint8_t AP_Param::check_var_info(void)
 {
     uint16_t total_size = sizeof(struct EEPROM_header);
 
@@ -259,30 +259,31 @@ bool AP_Param::check_var_info(void)
         if (type == AP_PARAM_GROUP) {
             if (i == 0) {
                 // first element can't be a group, for first() call
-                return false;
+                return 1;
             }
             const struct GroupInfo *group_info = get_group_info(_var_info[i]);
             if (group_info == nullptr) {
                 continue;
             }
             if (!check_group_info(group_info, &total_size, 0, strlen(_var_info[i].name))) {
-                return false;
+                printf("\nbad group: %s\n", _var_info[i].name);
+                return 2;
             }
         } else {
             uint8_t size = type_size((enum ap_var_type)type);
             if (size == 0) {
                 // not a valid type - the top level list can't contain
                 // AP_PARAM_NONE
-                return false;
+                return 3;
             }
             total_size += size + sizeof(struct Param_header);
         }
         if (duplicate_key(i, key)) {
-            return false;
+            return 4;
         }
         if (type != AP_PARAM_GROUP && (_var_info[i].flags & AP_PARAM_FLAG_POINTER)) {
             // only groups can be pointers
-            return false;
+            return 5;
         }
     }
 
@@ -290,7 +291,7 @@ bool AP_Param::check_var_info(void)
     // as we allow for more variables than could fit, relying on not
     // saving default values
 
-    return true;
+    return 0;
 }
 
 

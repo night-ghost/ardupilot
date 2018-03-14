@@ -456,7 +456,7 @@ const AP_Param::GroupInfo Compass::var_info[] = {
     // @Units: percents
     // @Range: 0 100
     // @Increment: 1
-    AP_GROUPINFO("FILTER_RANGE", 36, Compass, _filtrer_range, HAL_COMPASS_FILTER_DEFAULT), // difference more than 20% from mean value
+    AP_GROUPINFO("FLTR_RNG", 36, Compass, _filter_range, HAL_COMPASS_FILTER_DEFAULT), // difference more than 20% from mean value
     
     AP_GROUPEND
 };

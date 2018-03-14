@@ -88,8 +88,10 @@ const AP_Param::Info ReplayVehicle::var_info[] = {
 void ReplayVehicle::load_parameters(void)
 {
     unlink("Replay.stg");
-    if (!AP_Param::check_var_info()) {
-        AP_HAL::panic("Bad parameter table");
+    uint8_t sts = AP_Param::check_var_info();
+    if (sts != 0) {
+        hal.console->printf("Bad var table: %d\n", sts);
+        AP_HAL::panic("Bad var table: %d", sts);
     }
     AP_Param::set_default_by_name("EK2_ENABLE", 1);
     AP_Param::set_default_by_name("EK2_IMU_MASK", 1);
