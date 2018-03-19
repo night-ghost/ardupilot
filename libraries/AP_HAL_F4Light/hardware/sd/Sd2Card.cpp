@@ -197,12 +197,12 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<F4Light::SPIDevice> spi) {
 
     _spi_sem->give();
 
-    uint8_t n_try=3;
+    uint8_t n_try=7;
     
     DSTATUS ret;
     do {
         ret = disk_initialize(0);    
-    } while(ret!=RES_OK && n_try-- != 0);
+    } while(ret!=RES_OK  && n_try-- != 0  );
 
     printf("\nSD initialize: status %d size %ldMb\n", ret, sectorCount()/2048UL);
     gcs().send_text(MAV_SEVERITY_INFO, "\nSD initialize: status %d size %ldMb\n", ret, sectorCount()/2048UL);
