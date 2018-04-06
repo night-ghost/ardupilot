@@ -162,7 +162,7 @@ DBG_PRINTF("\nAP_WayBack: allocating memory for %d poins\n", max_num_points);
 
     }
     
-DBG_PRINT("start ");
+DBG_PRINTF("start \n");
     recording=true;    
     return true;
 }
@@ -174,7 +174,7 @@ void AP_WayBack::stop(){
     
     if(num_points) num_points -= 1; // skip the last point - current coordinates
 
-DBG_PRINT("stop ");
+DBG_PRINTF("stop \n");
 
     simplify(last_reduce, num_points); // reduce all remaining points
 
@@ -185,13 +185,13 @@ DBG_PRINT("stop ");
         uint16_t p0 = move_back(p1,1); // points can be not removed so we use relative coordinates
          // check segment for track intersection
 
-    DBG_PRINT("check loop1 ");     DBG_PRINTVAR(p0);    DBG_PRINTVARLN(p1);
+    DBG_PRINTF("check loop1 \n");     DBG_PRINTVAR(p0);    DBG_PRINTVARLN(p1);
 
         uint16_t sb = try_remove_loop(p0, p1);
 
         if(sb) { // loop found
             p0=move_back(sb,1);    // prev point 
-    DBG_PRINT("loop found at ");       DBG_PRINTVARLN(p1);            
+    DBG_PRINTF("loop found at \n");       DBG_PRINTVARLN(p1);            
 
             simplify(p0, p1); // try to reduce after removal
             break; // we move back so just find shortest path
@@ -377,7 +377,7 @@ again:
                 p1 = move_back(num_points, RAW_POINTS); // skip points that should be raw        
             }
 
-    DBG_PRINT("reduce ");    DBG_PRINTVAR(p0);     DBG_PRINTVARLN(p1);
+    DBG_PRINTF("reduce \n");    DBG_PRINTVAR(p0);     DBG_PRINTVARLN(p1);
 
             was_reduce = simplify(p0, p1);
         
@@ -425,7 +425,7 @@ again:
             uint16_t sb=0;
             
             if(p1>p0){
-//    DBG_PRINT("check loop ");     DBG_PRINTVAR(p0);    DBG_PRINTVARLN(p1);
+//    DBG_PRINTF("check loop \n");     DBG_PRINTVAR(p0);    DBG_PRINTVARLN(p1);
 
                 sb = try_remove_loop(p0, p1);
             }
@@ -574,7 +574,7 @@ uint8_t AP_WayBack::linesAreClose(const Point &p1, const Point &p2,
     return 0;
     
 found:
-//    DBG_PRINT("closest found ");  DBG_PRINTVAR(closest->x); DBG_PRINTVAR(closest->y); DBG_PRINTVARLN(d); 
+//    DBG_PRINTF("closest found ");  DBG_PRINTVAR(closest->x); DBG_PRINTVAR(closest->y); DBG_PRINTVARLN(d); 
 
     *np = n;
     return seg;
@@ -603,7 +603,7 @@ uint16_t AP_WayBack::try_remove_loop(uint16_t sb, uint16_t se) { // begin and en
             points[i]=p;        // replace 2nd point of 1st segment by point of intersection        
             removePoints(i+1,se); // remove all points up to 2nd point of 2nd segment
 
-//            DBG_PRINT("loop found at ");       DBG_PRINTVARLN(i);
+//            DBG_PRINTF("loop found at ");       DBG_PRINTVARLN(i);
             return i;  // point of intersection
         
         } else if(_params.blind_shortcut) { // try to treat close points as intersecting
@@ -630,7 +630,7 @@ uint16_t AP_WayBack::try_remove_loop(uint16_t sb, uint16_t se) { // begin and en
                     points[i]=p;
                     removePoints(i+1,ep); // remove all points up to 2nd point of 2nd segment
 
-//                    DBG_PRINT("close to 1seg at ");       DBG_PRINTVARLN(i);
+//                    DBG_PRINTF("close to 1seg at ");       DBG_PRINTVARLN(i);
                     return i;  // point of intersection
 
                 }else {  // point on 2nd segment
@@ -641,7 +641,7 @@ uint16_t AP_WayBack::try_remove_loop(uint16_t sb, uint16_t se) { // begin and en
                     points[sb]=p;       // replace 1st point of 2nd segment with intersection
                     removePoints(sp+1, sb); // remove all points up to 2nd point of 2nd segment
 
-//                    DBG_PRINT("close to 2seg at ");       DBG_PRINTVARLN(sp);
+//                    DBG_PRINTF("close to 2seg at ");       DBG_PRINTVARLN(sp);
                     return sp;  // point of intersection
                 }
             }
@@ -843,7 +843,7 @@ bool AP_WayBack::removePoints(uint16_t start, uint16_t end){
 
     if(start>=end) return ret; // to remove empty messages
 
-//DBG_PRINT("remove poins "); DBG_PRINTVARLN(start); DBG_PRINTVARLN(end);
+//DBG_PRINTF("remove poins "); DBG_PRINTVARLN(start); DBG_PRINTVARLN(end);
 
     while(start<end){
         ret=true;
@@ -879,7 +879,7 @@ void AP_WayBack::squizze(){
     if(!gap_found) return; // в массиве нет дыр
     
 
-//DBG_PRINT("squizze"); DBG_PRINTVAR(wp); DBG_PRINTVAR(rp); DBG_PRINTVARLN(num_points);
+//DBG_PRINTF("squizze "); DBG_PRINTVAR(wp); DBG_PRINTVAR(rp); DBG_PRINTVARLN(num_points);
 
 
     for(;rp<num_points; rp++){          // scan for points
@@ -891,7 +891,7 @@ void AP_WayBack::squizze(){
     num_points = wp;
     points_count = num_points;  // all points are good
 
-//DBG_PRINT("new");  DBG_PRINTVARLN(num_points);
+//DBG_PRINTF("new ");  DBG_PRINTVARLN(num_points);
 
 }
 

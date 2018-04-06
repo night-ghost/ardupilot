@@ -35,17 +35,17 @@
 
 
 #ifdef WAYBACK_DEBUG
-  #define DBG_PRINTLN(x)     { hal.uartA->print("#"); hal.uartA->print(x); hal.uartA->println();  }
-  #define DBG_PRINT(x)       { hal.uartA->print("#"); hal.uartA->print(x); hal.uartA->print(" "); }
-  #define DBG_PRINTVARLN(x)  { hal.uartA->print("#" #x); hal.uartA->print(": "); hal.uartA->println(x); }
-  #define DBG_PRINTVAR(x)    { hal.uartA->print("#" #x); hal.uartA->print(": "); hal.uartA->print(x); hal.uartA->print(" ");  }
-  #define DBG_PRINTF(x,...)  { hal.uartA->printf("#" x,## __VA_ARGS__); }
+    #define DBG_PRINTLN(x)     { hal.uartA->printf("#%d\n"); }
+    #define DBG_PRINT(x)       { hal.uartA->printf("#%d ");  }
+    #define DBG_PRINTVARLN(x)  { hal.uartA->print("#" #x ": %d\n"); }
+    #define DBG_PRINTVAR(x)    { hal.uartA->print("#" #x ": %d ");  }
+    #define DBG_PRINTF(x,...)  { hal.uartA->printf("#" x,## __VA_ARGS__); }
 #else
-     #define DBG_PRINTLN(x)     {}
-     #define DBG_PRINT(x)       {}
-     #define DBG_PRINTVARLN(x)  {}
-     #define DBG_PRINTVAR(x)    {}
-     #define DBG_PRINTF(x,...)  {}
+    #define DBG_PRINTLN(x)     {}
+    #define DBG_PRINT(x)       {}
+    #define DBG_PRINTVARLN(x)  {}
+    #define DBG_PRINTVAR(x)    {}
+    #define DBG_PRINTF(x,...)  {}
 #endif
 
 #define LOOPS_MOVE_BACK 12 // new segments not checked for loops
