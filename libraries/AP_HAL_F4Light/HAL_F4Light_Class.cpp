@@ -474,6 +474,10 @@ void HAL_F4Light::lateInit() {
         uint8_t dbg = hal_param_helper->_dbg_wayback;
         if(dbg){
                     
+
+            hal_param_helper->_dbg_wayback = 0;
+            hal_param_helper->_dbg_wayback.save();
+
             dbg -=1;
 
             if(dbg < sizeof(uarts)/sizeof(AP_HAL::UARTDriver**) ){
@@ -509,9 +513,7 @@ void HAL_F4Light::lateInit() {
                                 track.stop();
 
                                 while(track.get_point(x,y)){
-                                    uart->print(x);
-                                    uart->print(",");
-                                    uart->println(y);
+                                    uart->printf("%f,%f\n",x,y);
                                 }
                                 uart->println(".");
                                 break;
@@ -535,11 +537,7 @@ void HAL_F4Light::lateInit() {
                                 while(true){
                                     uint16_t k=i;
                                     if(!track.show_track(i, x, y )) break;
-                                    uart->print(k);
-                                    uart->print(",");
-                                    uart->print(x);
-                                    uart->print(",");
-                                    uart->println(y);
+                                    uart->printf("%d,%f,%f\n",k,x,y);
                                 }
                                 uart->println(".");
                                 break;
@@ -569,9 +567,7 @@ void HAL_F4Light::lateInit() {
                             track.add_point(x,y);
                             t=AP_HAL::micros() - t;
 
-                            uart->print("# time=");
-                            uart->println(t);
-                        
+                            uart->printf("# time=%ld\n", t);
                         }
                     }
                 }

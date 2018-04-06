@@ -77,13 +77,6 @@ typedef enum {
     FIX_DGPS = 4
 } fixType_t;
 
-// Receive buffer
-static union {
-    naza_mag mag;
-    naza_nav nav;
-    naza_ver ver;
-    uint8_t bytes[NAZA_MAX_PAYLOAD_SIZE];
-} _buffernaza;
 
 
 class AP_GPS_NAZA : public AP_GPS_Backend {
@@ -119,5 +112,13 @@ private:
         uint32_t errors;
         uint32_t packets;
     } _stats;
+
+    // Receive buffer
+    union {
+        naza_mag mag;
+        naza_nav nav;
+        naza_ver ver;
+        uint8_t bytes[NAZA_MAX_PAYLOAD_SIZE];
+    } _buffernaza;
 };
 
