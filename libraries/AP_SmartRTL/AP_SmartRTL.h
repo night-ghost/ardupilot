@@ -102,8 +102,6 @@ private:
 #ifdef USE_WAYBACK
 
     // external references
-    const AP_AHRS& _ahrs;
-
     bool _example_mode;
 
     // parameters

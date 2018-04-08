@@ -215,7 +215,7 @@ void AP_SmartRTL::set_home(bool position_ok)
     (void)ret;
 
     Vector3f current_pos;
-    position_ok &= _ahrs.get_relative_position_NED_origin(current_pos);
+    position_ok &= AP::ahrs().get_relative_position_NED_origin(current_pos);
     if(position_ok) wb.push_point(current_pos);
 #else
     Vector3f current_pos;
