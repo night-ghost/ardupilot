@@ -25,6 +25,22 @@ public:
     }
     
     inline bool get_soft_armed() { return soft_armed; }
+    
+    uint64_t get_system_clock_ms() const {
+        int64_t offs=  hal_param_helper->_time_offset * 3600 * 1000; // in ms
+        
+        return Scheduler::_millis64() + (gps_shift+500)/1000 + offs;
+    }
+
+    uint64_t get_system_clock_us() const {
+        int64_t offs=  hal_param_helper->_time_offset * 3600 * 1000 * 1000L; // in us
+        
+        return Scheduler::_micros64() + gps_shift + offs;
+    }
+
+    void set_system_clock(uint64_t time_utc_usec){
+        gps_shift = time_utc_usec - Scheduler::_micros64();
+    }
 
     uint32_t available_memory(void) override
     {

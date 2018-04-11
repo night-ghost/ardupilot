@@ -306,18 +306,6 @@ typedef enum usb_dev_state {
     USB_ADDRESSED,
     USB_CONFIGURED
 } usb_dev_state;
-    
-    
-// Encapsulates global state formerly handled by usb_lib/ 
-/*
-typedef struct usblib_dev {
-    uint32_t irq_mask;
-    void (**ep_int_in)(void);
-    void (**ep_int_out)(void);
-    usb_dev_state state;
-    usb_dev_state prevState;
-    rcc_clk_id clk_id;
-} usblib_dev;
-*/
+
 
 #endif

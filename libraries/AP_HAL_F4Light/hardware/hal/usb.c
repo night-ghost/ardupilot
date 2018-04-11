@@ -749,7 +749,6 @@ int usb_ioctl(int request, void *ctl)
 
 // following functions can't be inline!
 void USB_OTG_BSP_uDelay (const uint32_t usec) {   
-    //stopwatch_delay_us(usec); 
     hal_delay_microseconds(usec);
 }
 

@@ -527,10 +527,12 @@ static point create_point(char *px,   char *py, char *pVis,  char *pSign, char *
 
 #define write_point(n,p) eeprom_write_len((byte *)&p,  OffsetBITpanel * (int)panel_num + n * sizeof(Point),  sizeof(Point) );
 
+#ifdef BOARD_SDCARD_NAME // only if SD card exists
+
 static void load_config(){
     File fd = SD.open("eeprom.osd", FILE_READ);
     if (fd) {
-        printf("\nLoading OSD config\n");
+        printf("\nLoading OSD config...");
         char buf[80];
 //        memset(buf, 0, sizeof(buf));
         uint32_t panel_num=-1;
@@ -614,6 +616,7 @@ static void load_config(){
             
         }
         fd.close();
+        printf("OK\n");
 
         // we don't save flags when parsing so lets do it now
         eeprom_write_len( &sets.flags.pad[0],  EEPROM_offs(sets) + ((byte *)&sets.flags.pad - (byte *)&sets),  sizeof(sets.flags.pad));
@@ -633,7 +636,7 @@ static void load_font(){
         char buf[80];
         
         if(fd.gets(buf, sizeof(buf)-1)){
-            printf("\nLoading OSD font\n");
+            printf("\nLoading OSD font...");
 
             OSD::setPanel(5, 5);
             osd_print_S(PSTR("font uploading "));
@@ -708,6 +711,12 @@ static void load_font(){
     }
 
 }
+#else
+static void load_font() {}
+static void load_config(){}
+
+#endif
+
 
 static bool osd_need_redraw = false;
 static void * task_handle;
@@ -797,6 +806,21 @@ void osd_begin(AP_HAL::OwnPtr<F4Light::SPIDevice> spi){
         
     }
 
+
+    
+#ifdef BOARD_OSD_VSYNC_PIN
+    Revo_hal_handler h = { .vp = vsync_ISR };
+    
+    GPIO::_attach_interrupt(BOARD_OSD_VSYNC_PIN, h.h, RISING, VSI_INT_PRIORITY);
+#endif
+
+    task_handle = Scheduler::start_task(OSDns::osd_loop, SMALL_TASK_STACK); // 
+    Scheduler::set_task_priority(task_handle, OSD_LOW_PRIORITY); // less than main task
+    Scheduler::set_task_active(task_handle);
+    Scheduler::set_task_period(task_handle, 10000);              // 100Hz 
+}
+
+void osd_setup(){
     while(millis()<1000) { // delay initialization until video stabilizes
         hal_yield(1000);
     }
@@ -838,16 +862,11 @@ void osd_begin(AP_HAL::OwnPtr<F4Light::SPIDevice> spi){
     
     logo();
 
+    Scheduler::set_task_period(task_handle, 10000);    // 100Hz 
+    Scheduler::replace_task(OSDns::osd_loop); // like exec(), replaces current task with new one
     
-#ifdef BOARD_OSD_VSYNC_PIN
-    Revo_hal_handler h = { .vp = vsync_ISR };
-    
-    GPIO::_attach_interrupt(BOARD_OSD_VSYNC_PIN, h.h, RISING, VSI_INT_PRIORITY);
-#endif
+    printf("OSD started\n");
 
-    task_handle = Scheduler::start_task(OSDns::osd_loop, SMALL_TASK_STACK); // 
-    Scheduler::set_task_priority(task_handle, OSD_LOW_PRIORITY); // less than main task
-    Scheduler::set_task_period(task_handle, 10000);              // 100Hz 
 }
 
 // all task is in one thread so no sync required
