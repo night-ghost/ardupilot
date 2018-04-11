@@ -920,23 +920,6 @@ void  hal_set_task_priority(void * handle, uint8_t prio);
 bool hal_is_armed();
 //]
     
-#define FLASH_ERASE_QUEUE_SIZE 16
-
-static void *_flash_erase_task IN_CCM;
-static volatile uint16_t fe_read_ptr IN_CCM;
-static volatile uint16_t fe_write_ptr IN_CCM;
-typedef struct {
-    uint32_t b;
-    uint32_t e;
-} fe_item;
-
-static fe_item flash_erase_queue[FLASH_ERASE_QUEUE_SIZE] IN_CCM;
-static void * _flash_erase_task IN_CCM;
-
-static void sd_flash_eraser();
-    
-
-
 static bool chip_is_clear=false;
 
 uint8_t sd_get_type() {
@@ -1536,23 +1519,6 @@ DRESULT sd_write (
 /* Miscellaneous drive controls other than data read/write               */
 /*-----------------------------------------------------------------------*/
 
-static inline void enqueue_flash_erase(uint32_t from, uint32_t to){
-
-    int16_t new_wp = fe_write_ptr+1;
-    if(new_wp >= FLASH_ERASE_QUEUE_SIZE) { // move write pointer
-        new_wp=0;                         // ring
-    }
-    while(new_wp == fe_read_ptr) hal_yield(0); // buffer overflow
-
-    flash_erase_queue[fe_write_ptr].b = from;
-    flash_erase_queue[fe_write_ptr].e = to;
-
-    fe_write_ptr=new_wp; // move forward
-
-    hal_set_task_active(_flash_erase_task);
-}
-
-
 DRESULT sd_ioctl (
 	uint8_t ctl,		/* Control command code */
 	void *buff		/* Pointer to the conrtol data */
@@ -1619,12 +1585,6 @@ DRESULT sd_ioctl (
 
             if(hal_is_armed()) return RES_OK;
 
-#if 0 // in separate thread
-
-            erase_page(start_sector * (FAT_SECTOR_SIZE/DF_PAGE_SIZE));    // clear 1st sector of DataFlash
-
-            enqueue_flash_erase(start_sector+(erase_size/DF_PAGE_SIZE), end_sector); //and enqueue
-#else
             uint32_t  sector;
 	    for(sector=start_sector; sector <= end_sector;sector++){
                 uint32_t  df_sect = sector * (FAT_SECTOR_SIZE/DF_PAGE_SIZE);    // sector in DataFlash
@@ -1638,7 +1598,6 @@ DRESULT sd_ioctl (
                     digitalToggle(HAL_GPIO_A_LED_PIN);
                 }
             }
-#endif
 	    res = RES_OK;
 	    
             } break;
