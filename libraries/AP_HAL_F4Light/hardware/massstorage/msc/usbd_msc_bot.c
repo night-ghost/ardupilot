@@ -183,9 +183,7 @@ void MSC_BOT_DataIn (USB_OTG_CORE_HANDLE  *pdev,
   {
   case BOT_DATA_IN:
     if(SCSI_ProcessCmd(pdev,
-                        MSC_BOT_cbw.bLUN,
-                        &MSC_BOT_cbw.CB[0]) < 0)
-    {
+                        MSC_BOT_cbw.bLUN, &MSC_BOT_cbw.CB[0]) < 0) {
       MSC_BOT_SendCSW (pdev, CSW_CMD_FAILED);
     }
     break;
@@ -219,9 +217,7 @@ void MSC_BOT_DataOut (USB_OTG_CORE_HANDLE  *pdev,
   case BOT_DATA_OUT:
     
     if(SCSI_ProcessCmd(pdev,
-                        MSC_BOT_cbw.bLUN,
-                        &MSC_BOT_cbw.CB[0]) < 0)
-    {
+                        MSC_BOT_cbw.bLUN, &MSC_BOT_cbw.CB[0]) < 0) {
       MSC_BOT_SendCSW (pdev, CSW_CMD_FAILED);
     }
 

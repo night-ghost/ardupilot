@@ -169,32 +169,31 @@ uint32_t USBD_OTG_EP1IN_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
   msk |= ((emp >> 1 ) & 0x1) << 7;
   diepint.d32  = USB_OTG_READ_REG32(&pdev->regs.INEP_REGS[1]->DIEPINT) & msk;  
   
-  if ( diepint.b.xfercompl )
-  {
+  if ( diepint.b.xfercompl ) {
     fifoemptymsk = 0x1 << 1;
     USB_OTG_MODIFY_REG32(&pdev->regs.DREGS->DIEPEMPMSK, fifoemptymsk, 0);
     CLEAR_IN_EP_INTR(1, xfercompl);
     /* TX COMPLETE */
     USBD_DCD_INT_fops->DataInStage(pdev , 1);
   }
-  if ( diepint.b.epdisabled )
-  {
+  
+  if ( diepint.b.epdisabled ) {
     CLEAR_IN_EP_INTR(1, epdisabled);
   }  
-  if ( diepint.b.timeout )
-  {
+  
+  if ( diepint.b.timeout ) {
     CLEAR_IN_EP_INTR(1, timeout);
   }
-  if (diepint.b.intktxfemp)
-  {
+  
+  if (diepint.b.intktxfemp) {
     CLEAR_IN_EP_INTR(1, intktxfemp);
   }
-  if (diepint.b.inepnakeff)
-  {
+  
+  if (diepint.b.inepnakeff) {
     CLEAR_IN_EP_INTR(1, inepnakeff);
   }
-  if (diepint.b.emptyintr)
-  {
+  
+  if (diepint.b.emptyintr) {
     DCD_WriteEmptyTxFifo(pdev , 1);
     CLEAR_IN_EP_INTR(1, emptyintr);
   }
@@ -217,23 +216,19 @@ uint32_t USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
     gintr_status.d32 = USB_OTG_ReadCoreItr(pdev); 
     
 //40000
-    if (!gintr_status.d32) /* avoid spurious interrupt */
-    {
+    if (!gintr_status.d32) {/* avoid spurious interrupt */
       return 0;
     }
     
-    if (gintr_status.b.outepintr)
-    {
+    if (gintr_status.b.outepintr) {
       retval |= DCD_HandleOutEP_ISR(pdev);
     }    
     
-    if (gintr_status.b.inepint)
-    {
+    if (gintr_status.b.inepint) {
       retval |= DCD_HandleInEP_ISR(pdev);
     }
     
-    if (gintr_status.b.modemismatch)
-    {
+    if (gintr_status.b.modemismatch) {
       USB_OTG_GINTSTS_TypeDef  gintsts;
       
       /* Clear interrupt */
@@ -242,55 +237,46 @@ uint32_t USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
       USB_OTG_WRITE_REG32(&pdev->regs.GREGS->GINTSTS, gintsts.d32);
     }
     
-    if (gintr_status.b.wkupintr)
-    {
+    if (gintr_status.b.wkupintr) {
       retval |= DCD_HandleResume_ISR(pdev);
     }
     
-    if (gintr_status.b.usbsuspend)
-    {
+    if (gintr_status.b.usbsuspend) {
       retval |= DCD_HandleUSBSuspend_ISR(pdev);
     }
 
-    if (gintr_status.b.sofintr)
-    {
+    if (gintr_status.b.sofintr) {
       retval |= DCD_HandleSof_ISR(pdev);
       
     }
     
-    if (gintr_status.b.rxstsqlvl)
-    {
+    if (gintr_status.b.rxstsqlvl) {
       retval |= DCD_HandleRxStatusQueueLevel_ISR(pdev);
       
     }
     
-    if (gintr_status.b.usbreset)
-    {
+    if (gintr_status.b.usbreset) {
       retval |= DCD_HandleUsbReset_ISR(pdev);
       
     }
-    if (gintr_status.b.enumdone)
-    {
+    
+    if (gintr_status.b.enumdone) {
       retval |= DCD_HandleEnumDone_ISR(pdev);
     }
     
-    if (gintr_status.b.incomplisoin)
-    {
+    if (gintr_status.b.incomplisoin) {
       retval |= DCD_IsoINIncomplete_ISR(pdev);
     }
 
-    if (gintr_status.b.incomplisoout)
-    {
+    if (gintr_status.b.incomplisoout) {
       retval |= DCD_IsoOUTIncomplete_ISR(pdev);
     }    
 #ifdef VBUS_SENSING_ENABLED
-    if (gintr_status.b.sessreqintr)
-    {
+    if (gintr_status.b.sessreqintr) {
       retval |= DCD_SessionRequest_ISR(pdev);
     }
 
-    if (gintr_status.b.otgintr)
-    {
+    if (gintr_status.b.otgintr) {
       retval |= DCD_OTG_ISR(pdev);
     }   
 #endif    
@@ -303,21 +289,7 @@ uint32_t USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev)
         
      /* Clear ALL interrupts */
         USB_OTG_WRITE_REG32(&pdev->regs.GREGS->GINTSTS, 0xffffffff);
-/*
-        USB_OTG_WRITE_REG32(&pdev->regs.GREGS->GOTGINT, 0xffffffff);
 
-        USB_OTG_WRITE_REG32(&pdev->regs.DREGS->DAINT, 0xffffffff);
-        USB_OTG_WRITE_REG32(&pdev->regs.DREGS->DEACHINT, 0xffffffff);
-
-        USB_OTG_WRITE_REG32(&pdev->regs.HREGS->HFIR, 0xffffffff);
-    
-        uint8_t i;
-        for(i=0;i<USB_OTG_MAX_TX_FIFOS; i++){
-            USB_OTG_WRITE_REG32(&pdev->regs.INEP_REGS[i]->DIEPINT, 0xffffffff);
-            USB_OTG_WRITE_REG32(&pdev->regs.OUTEP_REGS[i]->DOEPINT, 0xffffffff);
-            USB_OTG_WRITE_REG32(&pdev->regs.HC_REGS[i]->HCINT, 0xffffffff);
-        }
-*/    
    } //]
   
   return retval;
@@ -459,46 +431,40 @@ static uint32_t DCD_HandleInEP_ISR(USB_OTG_CORE_HANDLE *pdev)
   diepint.d32 = 0;
   ep_intr = USB_OTG_ReadDevAllInEPItr(pdev);
   
-  while ( ep_intr )
-  {
-    if (ep_intr&0x1) /* In ITR */
-    {
+  while ( ep_intr ) {
+    if (ep_intr&0x1) { /* In ITR */
+
       diepint.d32 = DCD_ReadDevInEP(pdev , epnum); /* Get In ITR status */
-      if ( diepint.b.xfercompl )
-      {
+      if ( diepint.b.xfercompl ) {
         fifoemptymsk = 0x1 << epnum;
         USB_OTG_MODIFY_REG32(&pdev->regs.DREGS->DIEPEMPMSK, fifoemptymsk, 0);
         CLEAR_IN_EP_INTR(epnum, xfercompl);
         /* TX COMPLETE */
         USBD_DCD_INT_fops->DataInStage(pdev , epnum);
         
-        if (pdev->cfg.dma_enable == 1)
-        {
-          if((epnum == 0) && (pdev->dev.device_state == USB_OTG_EP0_STATUS_IN))
-          {
+        if (pdev->cfg.dma_enable == 1) {
+          if((epnum == 0) && (pdev->dev.device_state == USB_OTG_EP0_STATUS_IN)) {
             /* prepare to rx more setup packets */
             USB_OTG_EP0_OutStart(pdev);
           }
         }           
       }
-      if ( diepint.b.timeout )
-      {
+      if ( diepint.b.timeout ) {
         CLEAR_IN_EP_INTR(epnum, timeout);
       }
-      if (diepint.b.intktxfemp)
-      {
+      
+      if (diepint.b.intktxfemp) {
         CLEAR_IN_EP_INTR(epnum, intktxfemp);
       }
-      if (diepint.b.inepnakeff)
-      {
+      if (diepint.b.inepnakeff) {
         CLEAR_IN_EP_INTR(epnum, inepnakeff);
       }
-      if ( diepint.b.epdisabled )
-      {
+      
+      if ( diepint.b.epdisabled ) {
         CLEAR_IN_EP_INTR(epnum, epdisabled);
-      }       
-      if (diepint.b.emptyintr)
-      {
+      }
+      
+      if (diepint.b.emptyintr) {
         
         DCD_WriteEmptyTxFifo(pdev , epnum);
         

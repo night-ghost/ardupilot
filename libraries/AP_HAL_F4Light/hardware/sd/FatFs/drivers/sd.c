@@ -1092,14 +1092,14 @@ static void Flash_Enter4B_Mode(){
 }
 
 
-static bool read_page( uint8_t *ptr, uint32_t pageNum){
+static bool read_page(uint8_t *ptr, uint32_t pageNum){
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
     if (!wait_ready(500)) return 0;  /* Wait for card ready */
 
     if (!cs_assert()) return 0;
 
-    {    
+    { // isolate i
         uint8_t i = 0;
 
         buf.cmd[i++] = JEDEC_READ_DATA;
@@ -1128,7 +1128,7 @@ static bool read_page( uint8_t *ptr, uint32_t pageNum){
 static bool write_page(const uint8_t *ptr, uint32_t pageNum){
     uint32_t PageAdr = pageNum * DF_PAGE_SIZE;
 
-    {
+    { // isolate i
         uint16_t i;
         for(i=0; i<DF_PAGE_SIZE;i++){
             buf.sector[i] = ~ptr[i];       // let filesystem will be inverted, this allows extend files without having to Read-Modify-Write on FAT

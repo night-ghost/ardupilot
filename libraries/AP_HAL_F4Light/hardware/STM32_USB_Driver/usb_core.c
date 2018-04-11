@@ -1581,13 +1581,11 @@ USB_OTG_STS USB_OTG_EPStartXfer(USB_OTG_CORE_HANDLE *pdev , USB_OTG_EP *ep)
   depctl.d32 = 0;
   deptsiz.d32 = 0;
   /* IN endpoint */
-  if (ep->is_in == 1)
-  {
+  if (ep->is_in == 1) {
     depctl.d32  = USB_OTG_READ_REG32(&(pdev->regs.INEP_REGS[ep->num]->DIEPCTL));
     deptsiz.d32 = USB_OTG_READ_REG32(&(pdev->regs.INEP_REGS[ep->num]->DIEPTSIZ));
     /* Zero Length Packet? */
-    if (ep->xfer_len == 0)
-    {
+    if (ep->xfer_len == 0) {
       deptsiz.b.xfersize = 0;
       deptsiz.b.pktcnt = 1;
     }
@@ -1601,24 +1599,20 @@ USB_OTG_STS USB_OTG_EPStartXfer(USB_OTG_CORE_HANDLE *pdev , USB_OTG_EP *ep)
       deptsiz.b.xfersize = ep->xfer_len;
       deptsiz.b.pktcnt = (ep->xfer_len - 1 + ep->maxpacket) / ep->maxpacket;
       
-      if (ep->type == EP_TYPE_ISOC)
-      {
+      if (ep->type == EP_TYPE_ISOC) {
         deptsiz.b.mc = 1;
       }       
     }
     USB_OTG_WRITE_REG32(&pdev->regs.INEP_REGS[ep->num]->DIEPTSIZ, deptsiz.d32);
     
-    if (pdev->cfg.dma_enable == 1)
-    {
+    if (pdev->cfg.dma_enable == 1) {
       USB_OTG_WRITE_REG32(&pdev->regs.INEP_REGS[ep->num]->DIEPDMA, ep->dma_addr);
     }
     else
     {
-      if (ep->type != EP_TYPE_ISOC)
-      {
+      if (ep->type != EP_TYPE_ISOC) {
         /* Enable the Tx FIFO Empty Interrupt for this EP */
-        if (ep->xfer_len > 0)
-        {
+        if (ep->xfer_len > 0) {
           fifoemptymsk = 1 << ep->num;
           USB_OTG_MODIFY_REG32(&pdev->regs.DREGS->DIEPEMPMSK, 0, fifoemptymsk);
         }
@@ -1626,16 +1620,12 @@ USB_OTG_STS USB_OTG_EPStartXfer(USB_OTG_CORE_HANDLE *pdev , USB_OTG_EP *ep)
     }
     
     
-    if (ep->type == EP_TYPE_ISOC)
-    {
+    if (ep->type == EP_TYPE_ISOC) {
       dsts.d32 = USB_OTG_READ_REG32(&pdev->regs.DREGS->DSTS);
       
-      if (((dsts.b.soffn)&0x1) == 0)
-      {
+      if (((dsts.b.soffn)&0x1) == 0) {
         depctl.b.setd1pid = 1;
-      }
-      else
-      {
+      } else {
         depctl.b.setd0pid = 1;
       }
     } 
@@ -1645,45 +1635,36 @@ USB_OTG_STS USB_OTG_EPStartXfer(USB_OTG_CORE_HANDLE *pdev , USB_OTG_EP *ep)
     depctl.b.epena = 1;
     USB_OTG_WRITE_REG32(&pdev->regs.INEP_REGS[ep->num]->DIEPCTL, depctl.d32);
     
-    if (ep->type == EP_TYPE_ISOC)
-    {
+    if (ep->type == EP_TYPE_ISOC) {
       USB_OTG_WritePacket(pdev, ep->xfer_buff, ep->num, ep->xfer_len);   
     }    
   }
-  else
+  else    /* OUT endpoint */
   {
-    /* OUT endpoint */
     depctl.d32  = USB_OTG_READ_REG32(&(pdev->regs.OUTEP_REGS[ep->num]->DOEPCTL));
     deptsiz.d32 = USB_OTG_READ_REG32(&(pdev->regs.OUTEP_REGS[ep->num]->DOEPTSIZ));
     /* Program the transfer size and packet count as follows:
     * pktcnt = N
     * xfersize = N * maxpacket
     */
-    if (ep->xfer_len == 0)
-    {
+    if (ep->xfer_len == 0) {
       deptsiz.b.xfersize = ep->maxpacket;
       deptsiz.b.pktcnt = 1;
-    }
-    else
-    {
+    } else {
       deptsiz.b.pktcnt = (ep->xfer_len + (ep->maxpacket - 1)) / ep->maxpacket;
       deptsiz.b.xfersize = deptsiz.b.pktcnt * ep->maxpacket;
     }
+    
     USB_OTG_WRITE_REG32(&pdev->regs.OUTEP_REGS[ep->num]->DOEPTSIZ, deptsiz.d32);
     
-    if (pdev->cfg.dma_enable == 1)
-    {
+    if (pdev->cfg.dma_enable == 1) {
       USB_OTG_WRITE_REG32(&pdev->regs.OUTEP_REGS[ep->num]->DOEPDMA, ep->dma_addr);
     }
     
-    if (ep->type == EP_TYPE_ISOC)
-    {
-      if (ep->even_odd_frame)
-      {
+    if (ep->type == EP_TYPE_ISOC) {
+      if (ep->even_odd_frame) {
         depctl.b.setd1pid = 1;
-      }
-      else
-      {
+      } else {
         depctl.b.setd0pid = 1;
       }
     }
@@ -1713,35 +1694,27 @@ USB_OTG_STS USB_OTG_EP0StartXfer(USB_OTG_CORE_HANDLE *pdev , USB_OTG_EP *ep)
   depctl.d32   = 0;
   deptsiz.d32  = 0;
   /* IN endpoint */
-  if (ep->is_in == 1)
-  {
+  if (ep->is_in == 1) {
     in_regs = pdev->regs.INEP_REGS[0];
     depctl.d32  = USB_OTG_READ_REG32(&in_regs->DIEPCTL);
     deptsiz.d32 = USB_OTG_READ_REG32(&in_regs->DIEPTSIZ);
     /* Zero Length Packet? */
-    if (ep->xfer_len == 0)
-    {
+    if (ep->xfer_len == 0) {
       deptsiz.b.xfersize = 0;
       deptsiz.b.pktcnt = 1;
       
-    }
-    else
-    {
-      if (ep->xfer_len > ep->maxpacket)
-      {
+    } else {
+      if (ep->xfer_len > ep->maxpacket) {
         ep->xfer_len = ep->maxpacket;
         deptsiz.b.xfersize = ep->maxpacket;
-      }
-      else
-      {
+      } else {
         deptsiz.b.xfersize = ep->xfer_len;
       }
       deptsiz.b.pktcnt = 1;
     }
     USB_OTG_WRITE_REG32(&in_regs->DIEPTSIZ, deptsiz.d32);
     
-    if (pdev->cfg.dma_enable == 1)
-    {
+    if (pdev->cfg.dma_enable == 1) {
       USB_OTG_WRITE_REG32(&pdev->regs.INEP_REGS[ep->num]->DIEPDMA, ep->dma_addr);  
     }
     
@@ -1750,17 +1723,11 @@ USB_OTG_STS USB_OTG_EP0StartXfer(USB_OTG_CORE_HANDLE *pdev , USB_OTG_EP *ep)
     depctl.b.epena = 1;
     USB_OTG_WRITE_REG32(&in_regs->DIEPCTL, depctl.d32);
     
-    
-    
-    if (pdev->cfg.dma_enable == 0)
-    {
+    if (pdev->cfg.dma_enable == 0) {
       /* Enable the Tx FIFO Empty Interrupt for this EP */
-      if (ep->xfer_len > 0)
-      {
-        {
+      if (ep->xfer_len > 0) {
           fifoemptymsk |= 1 << ep->num;
           USB_OTG_MODIFY_REG32(&pdev->regs.DREGS->DIEPEMPMSK, 0, fifoemptymsk);
-        }
       }
     }
   }
