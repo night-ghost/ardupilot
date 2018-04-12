@@ -186,6 +186,11 @@ public:
     int16_t get_log_data_raw(uint16_t log_num, uint16_t page, uint32_t offset, uint16_t len, uint8_t *data);
     int16_t get_log_data(uint16_t log_num, uint16_t page, uint32_t offset, uint16_t len, uint8_t *data);
 
+    void get_log_info(uint16_t log_num, uint32_t &size, uint32_t &time_utc);
+    void ListAvailableLogs(AP_HAL::BetterStream *port);
+    void DumpPageInfo(AP_HAL::BetterStream *port);
+    void ShowDeviceInfo(AP_HAL::BetterStream *port);
+
     uint32_t bufferspace_available();
     
     bool logging_started(void) const { return log_write_started; }
