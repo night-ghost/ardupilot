@@ -58,6 +58,7 @@
 .globl UsageFault_Handler
 .globl __default_exc
 .globl __do_context_switch
+.globl __go_next_task
 
 .code 16
 .thumb_func
@@ -138,6 +139,23 @@ __default_exc:
     bx lr                       @ Exception exit
 
 
+
+.thumb_func
+__go_next_task: @ switch to next task after exception, without saving current state
+    LDR     R2, px_running      @ address of s_running
+    LDR     R1, [R2]            @ value of s_running - address of old task_t
+    
+    LDR     R3, px_nextTask     @ address of next_task
+    LDR     R1, [R3]            @ value of next_task - address of new task_t
+    STR     R1, [R2]            @ save to s_running
+    LDR     R0, [R1]            @ R0 is new process SP
+        @load context of new process
+    LDMIA     R0!, {R4-R11, LR} @  Restore r4-11 and LR from new process stack
+    TST       LR, #0x10         @  exc_return[4]=0? (it means that new process
+    IT        EQ                @  has active floating point context)
+    VLDMIAEQ  R0!, {S16-S31}    @  if so - restore it.
+    MSR       PSP, R0           @  Load PSP with new process SP
+    BX        LR                @  Return to saved exc_return. Exception return will restore remaining context                              
 
 .thumb_func
 __do_context_switch: @ we already in interrupt so all interrupts with higher priority will use MSP - so dont need to disable interrupts
