@@ -89,11 +89,11 @@
 //#define BOARD_SOFTSERIAL_RX 15
 
 
-# define BOARD_BLUE_LED_PIN        25   // PB9
-# define BOARD_GREEN_LED_PIN       107  // PA14
+#define BOARD_BLUE_LED_PIN        25   // PB9
+//#define BOARD_GREEN_LED_PIN       107  // PA14
 
-# define HAL_GPIO_A_LED_PIN      BOARD_BLUE_LED_PIN
-# define HAL_GPIO_B_LED_PIN      BOARD_GREEN_LED_PIN
+#define HAL_GPIO_A_LED_PIN      BOARD_BLUE_LED_PIN
+//#define HAL_GPIO_B_LED_PIN      BOARD_GREEN_LED_PIN
 
 # define BOARD_LED_ON           LOW
 # define BOARD_LED_OFF          HIGH
@@ -147,10 +147,14 @@
 //#define BOARD_OSD_RESET_PIN   6 
 
 
+/*
 #define DATAFLASH_CS_PIN        PC0
+#define BOARD_DATAFLASH_NAME "dataflash"
+#define BOARD_DATAFLASH_PAGES 0x10000
+#define BOARD_DATAFLASH_ERASE_SIZE (4096)// in bytes
+*/
 
-
-#define BOARD_OWN_NAME "MatekF4_OSD"
+#define BOARD_OWN_NAME "MatekF4_CTR"
 
 # define BOARD_PUSHBUTTON_PIN   254
 # define BOARD_USB_MUX_PIN      -1
