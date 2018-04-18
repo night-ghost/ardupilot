@@ -34,38 +34,38 @@
 #define HAL_BUZZER_ON     0
 #define HAL_BUZZER_OFF    1
 
-#define BOARD_NR_USARTS         5
+#define BOARD_NR_USARTS         4
+
+#define BOARD_HAS_UART3
 
 #define BOARD_USART1_TX_PIN     PA10
 #define BOARD_USART1_RX_PIN     PA9
 
-#define BOARD_USART2_RX_PIN     PA3
-#define BOARD_USART2_TX_PIN     PA2
+//#define BOARD_USART2_TX_PIN     PA2
+//#define BOARD_USART2_RX_PIN     PA3 - used for PPM
 
 #define BOARD_USART3_TX_PIN     PC11
 #define BOARD_USART3_RX_PIN     PC10
 
-#define BOARD_USART4_RX_PIN     PA1
 #define BOARD_USART4_TX_PIN     PA0
+#define BOARD_USART4_RX_PIN     PA1
 
 #define BOARD_USART5_RX_PIN     PD2
 #define BOARD_USART5_TX_PIN     PC12
 
-#define BOARD_USART6_TX_PIN     255
-#define BOARD_USART6_RX_PIN     255
-
-//#define BOARD_DSM_USART (_USART2)
+//#define BOARD_USART6_TX_PIN     255
+//#define BOARD_USART6_RX_PIN     255
    
 #define BOARD_NR_SPI            3
-#define BOARD_SPI1_SCK_PIN      52 // PA5
-#define BOARD_SPI1_MISO_PIN     53 // PA6
-#define BOARD_SPI1_MOSI_PIN     54 // PA7
-#define BOARD_SPI2_SCK_PIN      3 // PB13
-#define BOARD_SPI2_MISO_PIN     4 // PB14
-#define BOARD_SPI2_MOSI_PIN     5 // PB15
-#define BOARD_SPI3_SCK_PIN      104 // PB3
-#define BOARD_SPI3_MISO_PIN     105 // PB4
-#define BOARD_SPI3_MOSI_PIN     36  // PB5
+#define BOARD_SPI1_SCK_PIN      PA5
+#define BOARD_SPI1_MISO_PIN     PA6
+#define BOARD_SPI1_MOSI_PIN     PA7
+#define BOARD_SPI2_SCK_PIN      PB13
+#define BOARD_SPI2_MISO_PIN     PB14
+#define BOARD_SPI2_MOSI_PIN     PB15
+#define BOARD_SPI3_SCK_PIN      PB3
+#define BOARD_SPI3_MISO_PIN     PB4
+#define BOARD_SPI3_MOSI_PIN     PB5
 
 
 #define BOARD_MPU6000_CS_PIN	PC2
@@ -89,8 +89,8 @@
 //#define BOARD_SOFTSERIAL_RX 15
 
 
-#define BOARD_BLUE_LED_PIN        25   // PB9
-//#define BOARD_GREEN_LED_PIN       107  // PA14
+#define BOARD_BLUE_LED_PIN        PB9
+//#define BOARD_GREEN_LED_PIN       PA14
 
 #define HAL_GPIO_A_LED_PIN      BOARD_BLUE_LED_PIN
 //#define HAL_GPIO_B_LED_PIN      BOARD_GREEN_LED_PIN
@@ -125,7 +125,7 @@
 #define HAL_COMPASS_HMC5843_ROTATION    BOARD_COMPASS_HMC5843_ROTATION
 
 #define BOARD_INS_DEFAULT HAL_INS_MPU60XX_SPI
-#define BOARD_INS_ROTATION  ROTATION_YAW_270
+#define BOARD_INS_ROTATION  ROTATION_NONE
 #define BOARD_INS_MPU60x0_NAME            "mpu6000"
 
 #define BOARD_STORAGE_SIZE            8192 // 4096 // EEPROM size
@@ -158,9 +158,9 @@
 
 # define BOARD_PUSHBUTTON_PIN   254
 # define BOARD_USB_MUX_PIN      -1
-# define BOARD_BATTERY_VOLT_PIN     11  // Battery voltage on PC5
-# define BOARD_BATTERY_CURR_PIN     10   // Battery current on PC4
-# define BOARD_SONAR_SOURCE_ANALOG_PIN 45 // rssi PB1
+# define BOARD_BATTERY_VOLT_PIN     PC5 // Battery voltage on PC5
+# define BOARD_BATTERY_CURR_PIN     PC4   // Battery current on PC4
+# define BOARD_SONAR_SOURCE_ANALOG_PIN PB1 // rssi PB1
 
 # define HAL_BATT_VOLT_PIN      PC5 // ChibiOS compatible defines
 # define HAL_BATT_CURR_PIN      PC4
@@ -182,12 +182,14 @@
 
 #define BOARD_UARTS_LAYOUT 6
 
-#define SERVO_PIN_1 12 // PC6
-#define SERVO_PIN_2 13 // PC7
-#define SERVO_PIN_3 14 // PC8
-#define SERVO_PIN_4 15 // PC9
-#define SERVO_PIN_5 103 // PA15
-#define SERVO_PIN_6 22 // PA8
+#define SERVO_PIN_1 12  // PC6  S1
+#define SERVO_PIN_2 13  // PC7  S2
+#define SERVO_PIN_3 14  // PC8  S3
+#define SERVO_PIN_4 15  // PC9  S4
+#define SERVO_PIN_5 103 // PA15 S5
+#define SERVO_PIN_6 22  // PA8  S6
+
+#define MOTOR_LAYOUT_DEFAULT 3 // Cleanflight
 
 #if 1
  #define HAL_CONSOLE USB_Driver // console on USB
