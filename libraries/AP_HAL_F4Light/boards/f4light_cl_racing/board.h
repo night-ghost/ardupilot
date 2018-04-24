@@ -46,7 +46,7 @@
 #define BOARD_USART4_RX_PIN     48
 #define BOARD_USART4_TX_PIN     47
 
-#define BOARD_DSM_USART (_USART1)
+//#define BOARD_DSM_USART (_USART1)
    
 #define BOARD_NR_SPI            3
 #define BOARD_SPI1_SCK_PIN      52
