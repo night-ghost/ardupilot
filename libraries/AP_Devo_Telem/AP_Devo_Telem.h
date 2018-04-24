@@ -19,6 +19,7 @@
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_SerialManager/AP_SerialManager.h>
 
+
 class AP_DEVO_Telem {
 public:
     //constructor

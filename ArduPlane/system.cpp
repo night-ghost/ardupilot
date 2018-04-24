@@ -560,7 +560,6 @@ void Plane::check_short_failsafe()
     }
 }
 
-
 void Plane::startup_INS_ground(void)
 {
 #if HIL_SUPPORT
@@ -572,12 +571,6 @@ void Plane::startup_INS_ground(void)
             hal.scheduler->delay(1000);
         }
     }
-#endif
-#if DEVO_TELEM_ENABLED == ENABLED
-void Plane::devo_telemetry_send(void)
-{
-    devo_telemetry.send_frames((uint8_t)control_mode);
-}
 #endif
 
     if (ins.gyro_calibration_timing() != AP_InertialSensor::GYRO_CAL_NEVER) {

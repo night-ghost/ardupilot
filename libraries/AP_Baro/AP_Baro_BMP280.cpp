@@ -200,10 +200,6 @@ void AP_Baro_BMP280::_update_pressure(int32_t press_raw)
     var2 = (((int64_t)_p8) * p) >> 19;
     p = ((p + var1 + var2) >> 8) + (((int64_t)_p7) << 4);
 
-<<<<<<< HEAD
-
-=======
->>>>>>> fixed repo after HAL was merged to upstream
     const float press = (float)p / 256.0f;
     if (!pressure_ok(press)) {
         return;

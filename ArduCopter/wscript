@@ -34,7 +34,6 @@ def build(bld):
             'AP_WheelEncoder',
             'AP_Winch',
             'AP_Follow',
-            'AP_Devo_Telem',
         ],
     )
 

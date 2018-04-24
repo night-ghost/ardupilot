@@ -72,6 +72,8 @@
 #define AP_SERIALMANAGER_SBUS1_BUFSIZE_RX     16
 #define AP_SERIALMANAGER_SBUS1_BUFSIZE_TX     32
 
+#define AP_SERIALMANAGER_DEVO_TELEM_BAUD      38400
+
 class AP_SerialManager {
 public:
     AP_SerialManager();

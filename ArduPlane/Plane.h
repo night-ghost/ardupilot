@@ -391,11 +391,7 @@ private:
 #endif
 #if DEVO_TELEM_ENABLED == ENABLED
     // DEVO-M telemetry support
-<<<<<<< HEAD
     AP_DEVO_Telem devo_telemetry {ahrs};
-=======
-    AP_Devo_Telem devo_telemetry {ahrs, battery};
->>>>>>> fixed repo after HAL was merged to upstream
 #endif
 
     // Variables for extended status MAVLink messages

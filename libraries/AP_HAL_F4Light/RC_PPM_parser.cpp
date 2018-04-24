@@ -359,4 +359,3 @@ reset:
     memset(&dsm_state, 0, sizeof(dsm_state));
 }
 
-

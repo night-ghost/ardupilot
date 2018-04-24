@@ -458,10 +458,6 @@ private:
     AP_DEVO_Telem devo_telemetry{ahrs};
 #endif
 
-#if DEVO_TELEM_ENABLED == ENABLED
-    AP_DEVO_Telem devo_telemetry = AP_DEVO_Telem::create(ahrs, battery);
-#endif
-
     // Variables for extended status MAVLink messages
     uint32_t control_sensors_present;
     uint32_t control_sensors_enabled;
