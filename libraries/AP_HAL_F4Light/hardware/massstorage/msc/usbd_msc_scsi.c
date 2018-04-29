@@ -144,6 +144,8 @@ typedef struct SCSI_LOG {
     int8_t ret;
     uint8_t rdp;
     uint8_t wrp;
+    uint8_t code;
+    uint8_t key;
 } SCSI_log;
 
 static uint16_t scsi_log_ptr=0;
@@ -203,21 +205,20 @@ int8_t SCSI_ProcessCmd(USB_OTG_CORE_HANDLE  *pdev,
 
     int8_t ret=-1;
     
-//    if(!task_handle) SCSI_Init(); can't be registered from ISR!
-
 #ifdef SCSI_DEBUG
   printf("\nSCSI cmd=%d ", params[0]);
 
   SCSI_log *p = &scsi_log[scsi_log_ptr++];
-  if(scsi_log_ptr>=SCSI_LOG_LEN) scsi_log_ptr=0;
-  p->cmd = params[0];
-  p->state = MSC_BOT_State;
-  memmove(p->params,params+1,8);
-  p->ret=55;
+  
+    if(scsi_log_ptr>=SCSI_LOG_LEN) scsi_log_ptr=0;
+    p->cmd = params[0];
+    p->state = MSC_BOT_State;
+    memmove(p->params,params+1,8);
+    p->ret=55;
     p->alt = false;
     p->addr=0;
     p->len=0;
-  curr_log=p;
+    curr_log=p;
 #endif
   switch (params[0]) {
   case SCSI_TEST_UNIT_READY:
@@ -258,11 +259,11 @@ int8_t SCSI_ProcessCmd(USB_OTG_CORE_HANDLE  *pdev,
     
   case SCSI_READ10:
     ret= SCSI_Read10(lun, params); 
-    return ret; // without MSC_BOT_CBW_finish(p->pdev);
+    goto exit; // without MSC_BOT_CBW_finish(p->pdev);
     
   case SCSI_WRITE10:
     ret= SCSI_Write10(lun, params);
-    return ret; // without MSC_BOT_CBW_finish(p->pdev);
+    goto exit; // without MSC_BOT_CBW_finish(p->pdev);
     
   case SCSI_VERIFY10:
     ret=SCSI_Verify10(lun, params);
@@ -278,6 +279,7 @@ int8_t SCSI_ProcessCmd(USB_OTG_CORE_HANDLE  *pdev,
 
   MSC_BOT_CBW_finish(pdev);
 
+exit:
   return ret;
 }
 
@@ -363,7 +365,7 @@ static int8_t SCSI_ReadCapacity10(uint8_t lun, uint8_t *params)
   {
     SCSI_SenseCode(lun,
                    NOT_READY, 
-                   MEDIUM_NOT_PRESENT);
+                   READ_CAPACITY10_DATA_LEN); //MEDIUM_NOT_PRESENT);
     return -1;
   } 
   else
@@ -406,7 +408,7 @@ static int8_t SCSI_ReadFormatCapacity(uint8_t lun, uint8_t *params)
   {
     SCSI_SenseCode(lun,
                    NOT_READY, 
-                   MEDIUM_NOT_PRESENT);
+                   READ_CAPACITY10_DATA_LEN); //MEDIUM_NOT_PRESENT);
     return -1;
   } 
   else
@@ -517,6 +519,11 @@ static int8_t SCSI_RequestSense (uint8_t lun, uint8_t *params)
 */
 void SCSI_SenseCode(uint8_t lun, uint8_t sKey, uint8_t ASC)
 {
+#ifdef SCSI_DEBUG
+  curr_log->code = ASC;
+  curr_log->key  = sKey;
+#endif
+
   SCSI_Sense[SCSI_Sense_Tail].Skey  = sKey;
   SCSI_Sense[SCSI_Sense_Tail].w.ASC = ASC << 8;
   SCSI_Sense_Tail++;
@@ -851,8 +858,9 @@ static int8_t SCSI_ProcessRead (uint8_t lun)
   
   len = MIN(SCSI_blk_len , MSC_MEDIA_PACKET); 
   
+  
   // read block from storage
-  if( USBD_STORAGE_fops->Read(lun ,
+  if(len > 0 && USBD_STORAGE_fops->Read(lun ,
                               MSC_BOT_Data, 
                               SCSI_blk_addr / SCSI_blk_size, 
                               len / SCSI_blk_size) < 0) {
