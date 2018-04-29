@@ -85,7 +85,9 @@ extern int printf(const char *msg, ...);
 
 #if defined(BOARD_SDCARD_CS_PIN)
 
+// see https://habr.com/post/336968/
 #define WAIT_IN_ISR
+
 
 static uint8_t CardType;			/* Card type flags */
 static uint8_t no_CMD13 = 0;
