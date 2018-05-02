@@ -151,11 +151,50 @@ void AP_Baro_BMP280::update(void)
             return;
         }
 
-        _copy_to_frontend(_instance, _pressure, _temperature);
+        float pressure = _pressure_filter.getf();
+        _copy_to_frontend(_instance, pressure, _temperature);
         _has_sample = false;
         _sem->give();
     }
 }
+
+
+/*
+in datasheet:
+// Returns temperature in DegC, resolution is 0.01 DegC. Output value of “5123” equals 51.23 DegC.
+// t_fine carries fine temperature as global value
+BMP280_S32_t t_fine;
+BMP280_S32_t bmp280_compensate_T_int32(BMP280_S32_t adc_T){
+    BMP280_S32_t var1, var2, T;
+    var1 = ((((adc_T>>3) – ((BMP280_S32_t)dig_T1<<1))) * ((BMP280_S32_t)dig_T2)) >> 11;
+    var2 = (((((adc_T>>4) – ((BMP280_S32_t)dig_T1)) * ((adc_T>>4) – ((BMP280_S32_t)dig_T1))) >> 12) * ((BMP280_S32_t)dig_T3)) >> 14;
+    t_fine = var1 + var2;
+    T = (t_fine * 5 + 128) >> 8;
+    return T;
+}
+
+// Returns pressure in Pa as unsigned 32 bit integer in Q24.8 format (24 integer bits and 8 fractional bits).
+// Output value of “24674867” represents 24674867/256 = 96386.2 Pa = 963.862 hPa
+BMP280_U32_t bmp280_compensate_P_int64(BMP280_S32_t adc_P){
+    BMP280_S64_t var1, var2, p;
+    var1 = ((BMP280_S64_t)t_fine) – 128000;
+    var2 = var1 * var1 * (BMP280_S64_t)dig_P6;
+    var2 = var2 + ((var1*(BMP280_S64_t)dig_P5)<<17);
+    var2 = var2 + (((BMP280_S64_t)dig_P4)<<35);
+    var1 = ((var1 * var1 * (BMP280_S64_t)dig_P3)>>8) + ((var1 * (BMP280_S64_t)dig_P2)<<12);
+    var1 = (((((BMP280_S64_t)1)<<47)+var1))*((BMP280_S64_t)dig_P1)>>33;
+    if (var1 == 0){
+        return 0; // avoid exception caused by division by zero
+    }
+    p = 1048576-adc_P;
+    p = (((p<<31)-var2)*3125)/var1;
+    var1 = (((BMP280_S64_t)dig_P9) * (p>>13) * (p>>13)) >> 25;
+    var2 = (((BMP280_S64_t)dig_P8) * p) >> 19;
+    p = ((p + var1 + var2) >> 8) + (((BMP280_S64_t)dig_P7)<<4);
+    return (BMP280_U32_t)p;
+}
+
+*/
 
 // calculate temperature
 bool AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
@@ -165,10 +204,15 @@ bool AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
     // according to datasheet page 22
     var1 = ((((temp_raw >> 3) - ((int32_t)_t1 << 1))) * ((int32_t)_t2)) >> 11;
     var2 = (((((temp_raw >> 4) - ((int32_t)_t1)) * ((temp_raw >> 4) - ((int32_t)_t1))) >> 12) * ((int32_t)_t3)) >> 14;
-    _t_fine = var1 + var2;
-    t = (_t_fine * 5 + 128) >> 8;
+    t = var1 + var2;
+    
+    if(!temperature_ok(t)) return false;
 
-    const float temp = ((float)t) / 100.0f;
+    _t_fine = t; // store for pressure calculations
+
+    t = (t * 5 + 128) >> 8;
+
+    const float temp = ((float)t) / 100.0f /* seems that datasheet is wrong */ * 2;
 
     if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         _temperature = temp;
@@ -200,13 +244,46 @@ void AP_Baro_BMP280::_update_pressure(int32_t press_raw)
     var2 = (((int64_t)_p8) * p) >> 19;
     p = ((p + var1 + var2) >> 8) + (((int64_t)_p7) << 4);
 
-    const float press = (float)p / 256.0f;
+    const float press = (float)p / 256.0f /* seems that datasheet is wrong */ /4;
     if (!pressure_ok(press)) {
         return;
     }
     if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
-        _pressure = press;
+        _pressure_filter.apply(press);    
         _has_sample = true;
         _sem->give();
     }
+}
+
+
+static constexpr float FILTER_KOEF = 0.1f;
+
+bool AP_Baro_BMP280::temperature_ok(float temp)
+{
+
+    if (isinf(temp) || isnan(temp)) {
+        return false;
+    }
+
+    const float range = (float)_frontend.get_filter_range();
+    if (range <= 0) {
+        return true;
+    }
+
+    bool ret = true;
+    if (is_zero(_mean_temperature)) {
+        _mean_temperature = temp;
+    } else {
+        const float d = fabsf(_mean_temperature - temp) / (_mean_temperature + temp);  // diff divide by mean value in percent ( with the * 200.0f on later line
+        float koeff = FILTER_KOEF;
+
+        if (d * 200.0f > range) {  // check the difference from mean value outside allowed range
+            printf("\nBaro temperature error: mean %f got %f\n", (double)_mean_temperature, (double)temp );
+            ret = false;
+            koeff /= (d * 10.0f);  // 2.5 and more, so one bad sample never change mean more than 4%
+            _error_count++;
+        }
+        _mean_temperature = _mean_temperature * (1 - koeff) + temp * koeff; // complimentary filter 1/k
+    }
+    return ret;
 }
