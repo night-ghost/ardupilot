@@ -290,8 +290,8 @@ void HAL_F4Light::run(int argc,char* const argv[], Callbacks* callbacks) const
 
     printf("\nHAL startup  at %ldms\n", start_t);            
 
-    if(!state.sd_busy) {
 
+    if(!state.sd_busy) {
 
 #if defined(BOARD_SDCARD_NAME) && defined(BOARD_SDCARD_CS_PIN)
         printf("\nEnabling SD at %ldms\n", AP_HAL::millis());            
@@ -317,6 +317,39 @@ void HAL_F4Light::run(int argc,char* const argv[], Callbacks* callbacks) const
     
     lateInit();
 #endif //]
+
+
+#if 0 // I2C scan for debugging
+    {
+        printf("\nstarting I2C scan\n");            
+    
+        I2CDevice *dev = new I2CDevice(BOARD_I2C_BUS_EXT,0);
+        dev->set_retries(2);
+    
+        for(uint8_t i=0; i<128; i++){
+            printf("%x  ",i);
+            uint8_t n = dev->get_dev_count();
+            bool skip = false;
+            for(uint8_t j=0; j<n;j++){
+                I2CDevice * d = I2CDevice::get_device(j);
+                if(d && d->get_addr() == i && d->get_bus() == BOARD_I2C_BUS_EXT) {
+                    skip = true;
+                }
+                
+            }
+            if(skip) {
+                printf("\nI2C device used at %x\n",i);
+                continue;
+            }
+            dev->set_address(i);
+            uint8_t v=0;
+            if(dev->transfer(&v,1,&v,1)){
+                printf("\nI2C device found at %x\n",i);
+            }            
+        }
+        printf("starting I2C scan done\n");
+    }
+#endif
 
     
     scheduler->system_initialized(); // clear bootloader flag

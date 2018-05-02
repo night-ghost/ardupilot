@@ -666,14 +666,20 @@ void I2CDevice::isr_ev(){
         if((sr1itflags & I2C_BIT_BTF & I2C_BIT_MASK) != RESET) {// BTF set 
             if((sr2itflags & (I2C_BIT_TRA) & I2C_BIT_MASK) != RESET) {    // I2C in mode Transmitter
                 // BTF on transmit
-                if(_rx_len) {
-                    // wait a little - some devices requires time for internal operations
-                    delay_ns100(3);
+                if(_rx_len){
+//                    if(_state == I2C_want_RX_SB) { // check state to prevent endless interrupt
+//                        _dev->I2Cx->CR1 |= I2C_CR1_STOP;     // Send STOP condition
+//                        _error = I2C_ERROR;                    // TX is done
+//                        finish_transfer();
+//                    } else {
+                        // wait a little - some devices requires time for internal operations
+                        delay_ns100(3);
                     
-                    // Send START condition a second time
-                    _dev->I2Cx->CR1 |= I2C_CR1_START;
-                    _state = I2C_want_RX_SB;
-                    _dev->I2Cx->CR2 &= ~I2C_CR2_ITBUFEN; // disable TXE interrupt - just for case, should be disabled
+                        // Send START condition a second time
+                        _dev->I2Cx->CR1 |= I2C_CR1_START;
+                        _state = I2C_want_RX_SB;
+                        _dev->I2Cx->CR2 &= ~I2C_CR2_ITBUFEN; // disable TXE interrupt - just for case, should be disabled
+//                    }
                 } else {   
                     _dev->I2Cx->CR1 |= I2C_CR1_STOP;     // Send STOP condition
                     _error = I2C_OK;                    // TX is done
@@ -684,6 +690,10 @@ void I2CDevice::isr_ev(){
             } else { // BTF on receive??
                 // 
             }
+        }
+        
+        if((sr1itflags & I2C_BIT_ADD10 & I2C_BIT_MASK) != RESET) {// Addr10 set 
+            _dev->I2Cx->DR = 0; // reset by write to DR
         }
 
 #ifdef I2C_DEBUG
