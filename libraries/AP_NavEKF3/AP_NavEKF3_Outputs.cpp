@@ -597,8 +597,8 @@ void NavEKF3_core::send_status_report(mavlink_channel_t chan)
         temp = 0.0f;
     }
 
-    // send message
-    mavlink_msg_ekf_status_report_send(chan, flags, velVar, posVar, hgtVar, magVar.length(), temp, tasVar);
+    // send message    mavlink_channel_t chan, uint16_t flags, float velocity_variance, loat pos_horiz_variance, float pos_vert_variance, float compass_variance, float terrain_alt_variance)
+    mavlink_msg_ekf_status_report_send(chan, flags, velVar, posVar, hgtVar, magVar.length(), tasVar);
 
 }
 

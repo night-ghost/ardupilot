@@ -588,7 +588,7 @@ void NavEKF2_core::send_status_report(mavlink_channel_t chan)
     }
 
     // send message
-    mavlink_msg_ekf_status_report_send(chan, flags, velVar, posVar, hgtVar, magVar.length(), temp, tasVar);
+    mavlink_msg_ekf_status_report_send(chan, flags, velVar, posVar, hgtVar, magVar.length(), tasVar);
 }
 
 // report the reason for why the backend is refusing to initialise
