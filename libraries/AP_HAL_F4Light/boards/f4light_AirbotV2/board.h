@@ -67,7 +67,6 @@
 #define BOARD_MPU6000_CS_PIN	51
 #define BOARD_MPU6000_DRDY_PIN	10  // PC4
 
-
 //#define BOARD_SBUS_INVERTER     6
 
 #define BOARD_USB_SENSE 11      // PC5
@@ -192,8 +191,6 @@
 #endif
 
 /*
-
-
     // @Param: USB_STORAGE
     // @DisplayName: allows access to SD card at next reboot
     // @Description: Allows to read/write internal SD card via USB mass-storage protocol. Auto-reset.
@@ -209,9 +206,10 @@
     AP_GROUPINFO("SD_REFORMAT",     7, AP_Param_Helper, _sd_format, 0),
 
 */
+
 #define BOARD_HAL_VARINFO \
     AP_GROUPINFO("USB_STORAGE",  30, AP_Param_Helper, _usb_storage, 0), \
-    AP_GROUPINFO("SD_REFORMAT",  31, AP_Param_Helper, _sd_format, 0),
+    AP_GROUPINFO("SD_REFORMAT",  31, AP_Param_Helper, _sd_format, 0), 
     
 
 // parameters
@@ -220,5 +218,4 @@
     AP_Int8 _sd_format; 
     
 #endif
-
 
