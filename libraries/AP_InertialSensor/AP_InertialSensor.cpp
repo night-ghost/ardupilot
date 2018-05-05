@@ -676,7 +676,7 @@ AP_InertialSensor::detect_backends(void)
     _backends_detected = true;
 
     uint8_t probe_count = 0;
-    uint8_t enable_mask = uint8_t(_enable_mask.get());
+    uint8_t enable_mask = 0xff; // uint8_t(_enable_mask.get());
     uint8_t found_mask = 0;
 
     /*
@@ -861,7 +861,7 @@ AP_InertialSensor::detect_backends(void)
     #error Unrecognised HAL_INS_TYPE setting
 #endif
 
-    _enable_mask.set(found_mask);
+//    _enable_mask.set(found_mask);
 
     if (_backend_count == 0) {
         AP_BoardConfig::sensor_config_error("INS: unable to initialise driver");
