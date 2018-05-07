@@ -22,7 +22,7 @@ extern const AP_HAL::HAL &hal;
 #define BMP280_MODE_SLEEP  0
 #define BMP280_MODE_FORCED 1
 #define BMP280_MODE_NORMAL 3
-#define BMP280_MODE BMP280_MODE_NORMAL
+#define BMP280_MODE BMP280_MODE_FORCED
 
 #define BMP280_OVERSAMPLING_1  1
 #define BMP280_OVERSAMPLING_2  2
@@ -43,6 +43,10 @@ extern const AP_HAL::HAL &hal;
 #define BMP280_REG_CTRL_MEAS 0xF4
 #define BMP280_REG_CONFIG    0xF5
 #define BMP280_REG_DATA      0xF7
+
+
+#define BMP280_MEASURE_TIME (44+1) // 44ms by datasheet, 1 for case
+
 
 AP_Baro_BMP280::AP_Baro_BMP280(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::Device> dev)
     : AP_Baro_Backend(baro)
@@ -76,20 +80,36 @@ bool AP_Baro_BMP280::_init()
     if(!sem || !sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) return false;
 
     _has_sample = false;
+    _letterY = false;
 
     _dev->set_speed(AP_HAL::Device::SPEED_HIGH);
+    _dev->set_retries(10);
 
     uint8_t whoami;
     if (!_dev->read_registers(BMP280_REG_ID, &whoami, 1)  ||
         whoami != BMP280_ID) {
         // not a BMP280
-        sem->give();
+fail:   sem->give();
         return false;
     }
 
     // read the calibration data
     uint8_t buf[24];
+    uint8_t buf_chk[24];
+    uint8_t n;
+    
+    memset(buf, 0, sizeof(buf));
+    
     _dev->read_registers(BMP280_REG_CALIB, buf, sizeof(buf));
+
+// paranoid check for data consistency inspired by s_s
+    for(n=10; n; n--){ // try to read the same data twice
+        if( !_dev->read_registers(BMP280_REG_CALIB, buf_chk, sizeof(buf_chk)) ) continue;
+        if( memcmp(buf, buf_chk, sizeof(buf)) ==0 ) break; // got it!
+        memmove(buf, buf_chk, sizeof(buf));             
+    }
+    
+    if(n==0) goto fail;
 
     _t1 = ((int16_t)buf[1] << 8) | buf[0];
     _t2 = ((int16_t)buf[3] << 8) | buf[2];
@@ -105,22 +125,21 @@ bool AP_Baro_BMP280::_init()
     _p9 = ((int16_t)buf[23] << 8) | buf[22];
 
     // SPI write needs bit mask
-    uint8_t mask = 0xFF;
+    _mask = 0xFF;
     if (_dev->bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
-        mask = 0x7F;
+        _mask = 0x7F;
     }
 
-    _dev->write_register((BMP280_REG_CTRL_MEAS & mask), (BMP280_OVERSAMPLING_T << 5) |
-                         (BMP280_OVERSAMPLING_P << 2) | BMP280_MODE);
-
-    _dev->write_register((BMP280_REG_CONFIG & mask), BMP280_FILTER_COEFFICIENT << 2);
+    _dev->write_register((BMP280_REG_CONFIG & _mask), BMP280_FILTER_COEFFICIENT << 2);
+    _dev->write_register((BMP280_REG_CTRL_MEAS & _mask), (BMP280_OVERSAMPLING_T << 5) | (BMP280_OVERSAMPLING_P << 2) | BMP280_MODE);
 
     _instance = _frontend.register_sensor();
+    _dev->set_retries(5);
 
     sem->give();
 
-    // request 50Hz update
-    _dev->register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP280::_timer, void));
+    // request ~20Hz update - 44ms measure time
+    _dev->register_periodic_callback(BMP280_MEASURE_TIME * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP280::_timer, void));
 
     return true;
 }
@@ -131,13 +150,24 @@ bool AP_Baro_BMP280::_init()
 void AP_Baro_BMP280::_timer(void)
 {
     uint8_t buf[6];
+    uint8_t sts;
 
-    _dev->read_registers(BMP280_REG_DATA, buf, sizeof(buf));
+    // check status first
+    if(!_dev->read_registers(BMP280_REG_STATUS, &sts, sizeof(sts))) return;
+    if (sts & ((1<<3) | (1<<0)) ) { // if conversion is on or NVM copy in progress
+        return;
+    }
+    
+    // conversion is done, can read data
+    if(!_dev->read_registers(BMP280_REG_DATA, buf, sizeof(buf))) return;
 
-    _dev->get_semaphore()->give();  // give bus semaprore ASAP
+    // start new measure
+    _dev->write_register((BMP280_REG_CTRL_MEAS & _mask), (BMP280_OVERSAMPLING_T << 5) | (BMP280_OVERSAMPLING_P << 2) | BMP280_MODE);
+
+    _dev->get_semaphore()->give();  // give bus semaprore ASAP, before calculations
 
     _update_temperature((buf[3] << 12) | (buf[4] << 4) | (buf[5] >> 4));
-    _update_pressure((buf[0] << 12) | (buf[1] << 4) | (buf[2] >> 4));
+    _update_pressure(   (buf[0] << 12) | (buf[1] << 4) | (buf[2] >> 4));
 
     return;
 }
@@ -146,55 +176,14 @@ void AP_Baro_BMP280::_timer(void)
 void AP_Baro_BMP280::update(void)
 {
     if (_sem->take_nonblocking()) {
-        if (!_has_sample) {
-            _sem->give();
-            return;
+        if (_has_sample) {
+            float pressure = _pressure_filter.getf();
+            _copy_to_frontend(_instance, pressure, _temperature);
+            _has_sample = false;
         }
-
-        float pressure = _pressure_filter.getf();
-        _copy_to_frontend(_instance, pressure, _temperature);
-        _has_sample = false;
         _sem->give();
     }
 }
-
-
-/*
-in datasheet:
-// Returns temperature in DegC, resolution is 0.01 DegC. Output value of “5123” equals 51.23 DegC.
-// t_fine carries fine temperature as global value
-BMP280_S32_t t_fine;
-BMP280_S32_t bmp280_compensate_T_int32(BMP280_S32_t adc_T){
-    BMP280_S32_t var1, var2, T;
-    var1 = ((((adc_T>>3) – ((BMP280_S32_t)dig_T1<<1))) * ((BMP280_S32_t)dig_T2)) >> 11;
-    var2 = (((((adc_T>>4) – ((BMP280_S32_t)dig_T1)) * ((adc_T>>4) – ((BMP280_S32_t)dig_T1))) >> 12) * ((BMP280_S32_t)dig_T3)) >> 14;
-    t_fine = var1 + var2;
-    T = (t_fine * 5 + 128) >> 8;
-    return T;
-}
-
-// Returns pressure in Pa as unsigned 32 bit integer in Q24.8 format (24 integer bits and 8 fractional bits).
-// Output value of “24674867” represents 24674867/256 = 96386.2 Pa = 963.862 hPa
-BMP280_U32_t bmp280_compensate_P_int64(BMP280_S32_t adc_P){
-    BMP280_S64_t var1, var2, p;
-    var1 = ((BMP280_S64_t)t_fine) – 128000;
-    var2 = var1 * var1 * (BMP280_S64_t)dig_P6;
-    var2 = var2 + ((var1*(BMP280_S64_t)dig_P5)<<17);
-    var2 = var2 + (((BMP280_S64_t)dig_P4)<<35);
-    var1 = ((var1 * var1 * (BMP280_S64_t)dig_P3)>>8) + ((var1 * (BMP280_S64_t)dig_P2)<<12);
-    var1 = (((((BMP280_S64_t)1)<<47)+var1))*((BMP280_S64_t)dig_P1)>>33;
-    if (var1 == 0){
-        return 0; // avoid exception caused by division by zero
-    }
-    p = 1048576-adc_P;
-    p = (((p<<31)-var2)*3125)/var1;
-    var1 = (((BMP280_S64_t)dig_P9) * (p>>13) * (p>>13)) >> 25;
-    var2 = (((BMP280_S64_t)dig_P8) * p) >> 19;
-    p = ((p + var1 + var2) >> 8) + (((BMP280_S64_t)dig_P7)<<4);
-    return (BMP280_U32_t)p;
-}
-
-*/
 
 // calculate temperature
 bool AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
@@ -208,11 +197,15 @@ bool AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
     
     if(!temperature_ok(t)) return false;
 
+    if(_letterY) {
+        t*=2;
+    }
+
     _t_fine = t; // store for pressure calculations
 
     t = (t * 5 + 128) >> 8;
 
-    const float temp = ((float)t) / 100.0f /* seems that datasheet is wrong */ * 2;
+    const float temp = ((float)t) / 100.0f;
 
     if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         _temperature = temp;
@@ -244,7 +237,15 @@ void AP_Baro_BMP280::_update_pressure(int32_t press_raw)
     var2 = (((int64_t)_p8) * p) >> 19;
     p = ((p + var1 + var2) >> 8) + (((int64_t)_p7) << 4);
 
-    const float press = (float)p / 256.0f /* seems that datasheet is wrong */ /4;
+    float press = (float)p / 256.0f;
+
+    if(_letterY) {
+        press /= 4;
+    } else if(press > 300000) { // normal pressure is near 100000 so 300000 means wrong chip
+        _letterY = true;
+        press /= 4;
+    }
+
     if (!pressure_ok(press)) {
         return;
     }
@@ -278,7 +279,7 @@ bool AP_Baro_BMP280::temperature_ok(float temp)
         float koeff = FILTER_KOEF;
 
         if (d * 200.0f > range) {  // check the difference from mean value outside allowed range
-            printf("\nBaro temperature error: mean %f got %f\n", (double)_mean_temperature, (double)temp );
+//            printf("\nBaro temperature error: mean %f got %f\n", (double)_mean_temperature, (double)temp );
             ret = false;
             koeff /= (d * 10.0f);  // 2.5 and more, so one bad sample never change mean more than 4%
             _error_count++;

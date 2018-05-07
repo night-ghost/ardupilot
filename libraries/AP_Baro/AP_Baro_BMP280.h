@@ -35,6 +35,8 @@ private:
     float _pressure;
     float _temperature;
     float _mean_temperature;
+    uint8_t _mask;
+    bool _letterY;
     bool temperature_ok(float temp);
 
     AverageIntegralFilter<int32_t, int32_t, 10> _pressure_filter;
