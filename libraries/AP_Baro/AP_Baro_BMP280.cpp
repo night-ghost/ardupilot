@@ -21,7 +21,6 @@ extern const AP_HAL::HAL &hal;
 #define BMP280_MODE_SLEEP  0
 #define BMP280_MODE_FORCED 1
 #define BMP280_MODE_NORMAL 3
-#define BMP280_MODE BMP280_MODE_NORMAL
 
 #define BMP280_OVERSAMPLING_1  1
 #define BMP280_OVERSAMPLING_2  2
@@ -30,6 +29,8 @@ extern const AP_HAL::HAL &hal;
 #define BMP280_OVERSAMPLING_16 5
 #define BMP280_OVERSAMPLING_P BMP280_OVERSAMPLING_16
 #define BMP280_OVERSAMPLING_T BMP280_OVERSAMPLING_2
+
+#define BMP280_MODE ((BMP280_OVERSAMPLING_T << 5) | (BMP280_OVERSAMPLING_P << 2) | BMP280_MODE_FORCED)
 
 #define BMP280_FILTER_COEFFICIENT 2
 
@@ -42,6 +43,9 @@ extern const AP_HAL::HAL &hal;
 #define BMP280_REG_CTRL_MEAS 0xF4
 #define BMP280_REG_CONFIG    0xF5
 #define BMP280_REG_DATA      0xF7
+
+//sampling time conservative estimate
+#define T_MEASURE_TIME (45000)
 
 AP_Baro_BMP280::AP_Baro_BMP280(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::Device> dev)
     : AP_Baro_Backend(baro)
@@ -84,7 +88,22 @@ bool AP_Baro_BMP280::_init()
 
     // read the calibration data
     uint8_t buf[24];
-    _dev->read_registers(BMP280_REG_CALIB, buf, sizeof(buf));
+    if(!_dev->read_registers(BMP280_REG_CALIB, buf, sizeof(buf))){
+    	_dev->get_semaphore()->give();
+    	return false;
+    }
+
+    uint8_t buf_check[24];
+    if(!_dev->read_registers(BMP280_REG_CALIB, buf_check, sizeof(buf_check))){
+    	_dev->get_semaphore()->give();
+    	return false;
+    }
+    if(memcmp(buf, buf_check, sizeof(buf))!=0){
+    	_dev->get_semaphore()->give();
+    	return false;
+    }
+
+
 
     _t1 = ((int16_t)buf[1] << 8) | buf[0];
     _t2 = ((int16_t)buf[3] << 8) | buf[2];
@@ -100,22 +119,22 @@ bool AP_Baro_BMP280::_init()
     _p9 = ((int16_t)buf[23] << 8) | buf[22];
 
     // SPI write needs bit mask
-    uint8_t mask = 0xFF;
+    mask = 0xFF;
     if (_dev->bus_type() == AP_HAL::Device::BUS_TYPE_SPI) {
         mask = 0x7F;
     }
 
-    _dev->write_register((BMP280_REG_CTRL_MEAS & mask), (BMP280_OVERSAMPLING_T << 5) |
-                         (BMP280_OVERSAMPLING_P << 2) | BMP280_MODE);
-
     _dev->write_register((BMP280_REG_CONFIG & mask), BMP280_FILTER_COEFFICIENT << 2);
+
+    _dev->write_register((BMP280_REG_CTRL_MEAS & mask), BMP280_MODE);
+    _last_sampling_started = AP_HAL::micros64();
 
     _instance = _frontend.register_sensor();
 
     _dev->get_semaphore()->give();
 
-    // request 50Hz update
-    _dev->register_periodic_callback(20 * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP280::_timer, void));
+    // request update ~45ms
+    _dev->register_periodic_callback((T_MEASURE_TIME*11)/10, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP280::_timer, void));
 
     return true;
 }
@@ -125,12 +144,21 @@ bool AP_Baro_BMP280::_init()
 //  acumulate a new sensor reading
 void AP_Baro_BMP280::_timer(void)
 {
-    uint8_t buf[6];
+	uint32_t now = AP_HAL::micros64();
+	if(now-_last_sampling_started < T_MEASURE_TIME){
+		return;
+	}
+	uint8_t buf[6];
+    if(_dev->read_registers(BMP280_REG_DATA, buf, sizeof(buf))) {
 
-    _dev->read_registers(BMP280_REG_DATA, buf, sizeof(buf));
+    	//start new sampling cycle
+    	if(_dev->write_register((BMP280_REG_CTRL_MEAS & mask), BMP280_MODE)){
+    		_last_sampling_started = AP_HAL::micros64();
+    	}
 
-    _update_temperature((buf[3] << 12) | (buf[4] << 4) | (buf[5] >> 4));
-    _update_pressure((buf[0] << 12) | (buf[1] << 4) | (buf[2] >> 4));
+    	_update_temperature((uint32_t(buf[3]) << 12) | (uint32_t(buf[4]) << 4) | (uint32_t(buf[5]) >> 4));
+    	_update_pressure((uint32_t(buf[0]) << 12) | (uint32_t(buf[1]) << 4) | (uint32_t(buf[2]) >> 4));
+    }
 }
 
 // transfer data to the frontend

@@ -34,6 +34,8 @@ private:
     int32_t _t_fine;
     float _pressure;
     float _temperature;
+    uint8_t mask;
+    uint32_t _last_sampling_started;
 
     // Internal calibration registers
     int16_t _t2, _t3, _p2, _p3, _p4, _p5, _p6, _p7, _p8, _p9;
