@@ -195,10 +195,14 @@ void boardInit(void) {
     gpio_set_mode(PIN_MAP[BOARD_MPU6000_DRDY_PIN].gpio_device, PIN_MAP[BOARD_MPU6000_DRDY_PIN].gpio_bit, GPIO_INPUT_PU);
 #endif
 
-#ifdef BOARD_SBUS_INVERTER
-// it is not necessary because of 10K resistor to ground
-    gpio_set_mode( PIN_MAP[BOARD_SBUS_INVERTER].gpio_device, PIN_MAP[BOARD_SBUS_INVERTER].gpio_bit, GPIO_OUTPUT_PP);
-    gpio_write_bit(PIN_MAP[BOARD_SBUS_INVERTER].gpio_device, PIN_MAP[BOARD_SBUS_INVERTER].gpio_bit, 0); // not inverted
+#ifdef BOARD_SBUS_INVERTER_RX
+    gpio_set_mode( PIN_MAP[BOARD_SBUS_INVERTER_RX].gpio_device, PIN_MAP[BOARD_SBUS_INVERTER_RX].gpio_bit, GPIO_OUTPUT_PP);
+    gpio_write_bit(PIN_MAP[BOARD_SBUS_INVERTER_RX].gpio_device, PIN_MAP[BOARD_SBUS_INVERTER_RX].gpio_bit, 0); // not inverted
+#endif
+
+#ifdef BOARD_SBUS_INVERTER_TX
+    gpio_set_mode( PIN_MAP[BOARD_SBUS_INVERTER_TX].gpio_device, PIN_MAP[BOARD_SBUS_INVERTER_TX].gpio_bit, GPIO_OUTPUT_PP);
+    gpio_write_bit(PIN_MAP[BOARD_SBUS_INVERTER_TX].gpio_device, PIN_MAP[BOARD_SBUS_INVERTER_TX].gpio_bit, 0); // not inverted
 #endif
 
 }

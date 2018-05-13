@@ -67,14 +67,11 @@
 #define BOARD_MPU6000_CS_PIN	51
 #define BOARD_MPU6000_DRDY_PIN	10  // PC4
 
-//#define BOARD_SBUS_INVERTER     6
+#define BOARD_SBUS_INVERTER_RX     14
+#define BOARD_SBUS_INVERTER_TX     15
+
 
 #define BOARD_USB_SENSE 11      // PC5
-
-
-// bus 2 (soft) pins
-#define BOARD_SOFT_SCL 14
-#define BOARD_SOFT_SDA 15
 
 // SoftSerial pins
 //#define BOARD_SOFTSERIAL_TX 14
