@@ -15,7 +15,6 @@
 #include "AP_Baro_BMP280.h"
 
 #include <utility>
-#include <stdio.h>
 
 extern const AP_HAL::HAL &hal;
 
@@ -71,13 +70,9 @@ AP_Baro_Backend *AP_Baro_BMP280::probe(AP_Baro &baro,
 
 bool AP_Baro_BMP280::_init()
 {
-    if (!_dev ) {
+    if (!_dev | !_dev->get_semaphore()->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         return false;
     }
-
-    AP_HAL::Semaphore *sem=_dev->get_semaphore();
-    
-    if(!sem || !sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) return false;
 
     _has_sample = false;
     _letterY = false;
@@ -88,8 +83,8 @@ bool AP_Baro_BMP280::_init()
     uint8_t whoami;
     if (!_dev->read_registers(BMP280_REG_ID, &whoami, 1)  ||
         whoami != BMP280_ID) {
-        // not a BMP280
-fail:   sem->give();
+        // not a BMP280    
+fail:   _dev->get_semaphore()->give();
         return false;
     }
 
@@ -103,13 +98,13 @@ fail:   sem->give();
     _dev->read_registers(BMP280_REG_CALIB, buf, sizeof(buf));
 
 // paranoid check for data consistency inspired by s_s
-    for(n=10; n; n--){ // try to read the same data twice
+    for (n=10; n; n--){ // try to read the same data twice
         if( !_dev->read_registers(BMP280_REG_CALIB, buf_chk, sizeof(buf_chk)) ) continue;
         if( memcmp(buf, buf_chk, sizeof(buf)) ==0 ) break; // got it!
-        memmove(buf, buf_chk, sizeof(buf));             
+        memmove(buf, buf_chk, sizeof(buf));             // move 2nd set in place of 1st
     }
-    
-    if(n==0) goto fail;
+
+    if (n==0) goto fail; // can't get valid calibration data
 
     _t1 = ((int16_t)buf[1] << 8) | buf[0];
     _t2 = ((int16_t)buf[3] << 8) | buf[2];
@@ -136,7 +131,7 @@ fail:   sem->give();
     _instance = _frontend.register_sensor();
     _dev->set_retries(5);
 
-    sem->give();
+    _dev->get_semaphore()->give();
 
     // request ~20Hz update - 44ms measure time
     _dev->register_periodic_callback(BMP280_MEASURE_TIME * AP_USEC_PER_MSEC, FUNCTOR_BIND_MEMBER(&AP_Baro_BMP280::_timer, void));
@@ -186,7 +181,7 @@ void AP_Baro_BMP280::update(void)
 }
 
 // calculate temperature
-bool AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
+void AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
 {
     int32_t var1, var2, t;
 
@@ -195,7 +190,7 @@ bool AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
     var2 = (((((temp_raw >> 4) - ((int32_t)_t1)) * ((temp_raw >> 4) - ((int32_t)_t1))) >> 12) * ((int32_t)_t3)) >> 14;
     t = var1 + var2;
     
-    if(!temperature_ok(t)) return false;
+    if(!temperature_ok(t)) return;
 
     if(_letterY) {
         t*=2;
@@ -211,7 +206,6 @@ bool AP_Baro_BMP280::_update_temperature(int32_t temp_raw)
         _temperature = temp;
         _sem->give();
     }
-    return true;
 }
 
 // calculate pressure
@@ -241,21 +235,26 @@ void AP_Baro_BMP280::_update_pressure(int32_t press_raw)
 
     if(_letterY) {
         press /= 4;
-    } else if(press > 300000) { // normal pressure is near 100000 so 300000 means wrong chip
-        _letterY = true;
-        press /= 4;
-    }
+    } 
 
     if (!pressure_ok(press)) {
         return;
     }
+    
+    uint32_t now = AP_HAL::millis();
+    
+    if(now < 1000 && press > 300000) { // normal pressure is near 100000 so 300000 means wrong chip, check only first second after boot
+        _letterY = true;
+        press /= 4;
+        _mean_pressure = 0; // reset filter
+    }
+    
     if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
-        _pressure_filter.apply(press);    
+        _pressure_filter.apply(press);
         _has_sample = true;
         _sem->give();
     }
 }
-
 
 static constexpr float FILTER_KOEF = 0.1f;
 
