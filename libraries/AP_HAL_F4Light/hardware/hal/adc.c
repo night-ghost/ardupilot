@@ -45,6 +45,11 @@ void adc_foreach(void (*fn)(const adc_dev*))
     fn(_ADC3);
 }
 
+#define CR_CLEAR_MASK             ((uint32_t)0xFFFC30E0)  
+#define CR1_CLEAR_MASK            ((uint32_t)0xFCFFFEFF)
+#define CR2_CLEAR_MASK            ((uint32_t)0xC0FFF7FD)
+
+
 /**
  * @brief Initialize an ADC peripheral.
  *
@@ -54,11 +59,6 @@ void adc_foreach(void (*fn)(const adc_dev*))
  * @param dev ADC peripheral to initialize
  */
 void adc_init(const adc_dev *dev) {
-    /* Enable The HSI */
-    RCC_HSICmd(ENABLE);
-
-     /* Check that HSI oscillator is ready */
-    while(RCC_GetFlagStatus(RCC_FLAG_HSIRDY) == RESET);
  
     if (dev->adcx == ADC1)
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
@@ -67,24 +67,61 @@ void adc_init(const adc_dev *dev) {
     else
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC3, ENABLE); 
 
-    ADC_DeInit();
     
-    ADC_InitTypeDef       ADC_InitStructure;
-    ADC_CommonInitTypeDef ADC_CommonInitStructure;
-    /* ADC Common Init **********************************************************/
-    ADC_CommonStructInit(&ADC_CommonInitStructure);
-    ADC_CommonInitStructure.ADC_Prescaler = ADC_Prescaler_Div4;
-    ADC_CommonInit(&ADC_CommonInitStructure);
-  
+    RCC_APB2PeriphResetCmd(RCC_APB2Periph_ADC, ENABLE); // Enable all ADCs reset state 
+    RCC_APB2PeriphResetCmd(RCC_APB2Periph_ADC, DISABLE);// Release all ADCs from reset state
+      
+    /* Get the ADC CCR value */
+    uint32_t tmp = ADC->CCR  & CR_CLEAR_MASK; // Clear MULTI, DELAY, DMA and ADCPRE bits
+
+    /* Configure ADCx: Multi mode, Delay between two sampling time, ADC prescaler,
+       and DMA access mode for multimode */
+    /* Set MULTI bits according to ADC_Mode value */
+    /* Set ADCPRE bits according to ADC_Prescaler value */
+    /* Set DMA bits according to ADC_DMAAccessMode value */
+    /* Set DELAY bits according to ADC_TwoSamplingDelay value */
+    ADC->CCR = tmp | (uint32_t)(ADC_Mode_Independent |
+                                    ADC_Prescaler_Div4 |
+                                    ADC_DMAAccessMode_Disabled |
+                                    ADC_TwoSamplingDelay_5Cycles);
+
     /* ADCx Init ****************************************************************/
-    ADC_StructInit(&ADC_InitStructure);
-    ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
-    ADC_InitStructure.ADC_ScanConvMode = DISABLE;
-    ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
-    ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
-    ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-    ADC_InitStructure.ADC_NbrOfConversion = 1;
-    ADC_Init(dev->adcx, &ADC_InitStructure);
+    
+   /* Get the ADCx CR1 value */
+    tmp = dev->adcx->CR1 & CR1_CLEAR_MASK;  // Clear RES and SCAN bits 
+
+  /* Configure ADCx: scan conversion mode and resolution */
+  /* Set SCAN bit according to ADC_ScanConvMode value */
+  /* Set RES bit according to ADC_Resolution value */
+  dev->adcx->CR1 = tmp | (uint32_t)(((uint32_t)DISABLE << 8) | ADC_Resolution_12b);
+
+  /*---------------------------- ADCx CR2 Configuration -----------------*/
+  /* Get the ADCx CR2 value */
+  tmp = dev->adcx->CR2 & CR2_CLEAR_MASK; // Clear CONT, ALIGN, EXTEN and EXTSEL bits 
+
+
+  /* Configure ADCx: external trigger event and edge, data alignment and 
+     continuous conversion mode */
+  /* Set ALIGN bit according to ADC_DataAlign value */
+  /* Set EXTEN bits according to ADC_ExternalTrigConvEdge value */
+  /* Set EXTSEL bits according to ADC_ExternalTrigConv value */
+  /* Set CONT bit according to ADC_ContinuousConvMode value */
+  dev->adcx->CR2 = tmp | (uint32_t)(ADC_DataAlign_Right | \
+                        ADC_ExternalTrigConv_T1_CC1 |
+                        ADC_ExternalTrigConvEdge_None | \
+                        ((uint32_t)DISABLE << 1));
+
+  /*---------------------------- ADCx SQR1 Configuration -----------------*/
+  /* Get the ADCx SQR1 value */
+  tmp = dev->adcx->SQR1;
+
+  /* Clear L bits */
+  tmp &= SQR1_L_RESET;
+
+  /* Configure ADCx: regular channel sequence length */
+  /* Set L bits according to ADC_NbrOfConversion value */
+  uint32_t nc = (uint8_t)(1 /* number of conversions */ - (uint8_t)1);
+  dev->adcx->SQR1 =tmp | ((uint32_t)nc << 20);
 }
 
 #if 0 // unused
