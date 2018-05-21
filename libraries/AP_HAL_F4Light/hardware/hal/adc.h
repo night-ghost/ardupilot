@@ -65,6 +65,81 @@ extern const adc_dev _adc3;
 #define SQR1_L_RESET             ((uint32_t)0xFE0FFFFF)
 
 
+#define ADC_Mode_Independent                       ((uint32_t)0x00000000)       
+#define ADC_DualMode_RegSimult_InjecSimult         ((uint32_t)0x00000001)
+#define ADC_DualMode_RegSimult_AlterTrig           ((uint32_t)0x00000002)
+#define ADC_DualMode_InjecSimult                   ((uint32_t)0x00000005)
+#define ADC_DualMode_RegSimult                     ((uint32_t)0x00000006)
+#define ADC_DualMode_Interl                        ((uint32_t)0x00000007)
+#define ADC_DualMode_AlterTrig                     ((uint32_t)0x00000009)
+#define ADC_TripleMode_RegSimult_InjecSimult       ((uint32_t)0x00000011)
+#define ADC_TripleMode_RegSimult_AlterTrig         ((uint32_t)0x00000012)
+#define ADC_TripleMode_InjecSimult                 ((uint32_t)0x00000015)
+#define ADC_TripleMode_RegSimult                   ((uint32_t)0x00000016)
+#define ADC_TripleMode_Interl                      ((uint32_t)0x00000017)
+#define ADC_TripleMode_AlterTrig                   ((uint32_t)0x00000019)
+
+#define ADC_Prescaler_Div2                         ((uint32_t)0x00000000)
+#define ADC_Prescaler_Div4                         ((uint32_t)0x00010000)
+#define ADC_Prescaler_Div6                         ((uint32_t)0x00020000)
+#define ADC_Prescaler_Div8                         ((uint32_t)0x00030000)
+
+#define ADC_DMAAccessMode_Disabled      ((uint32_t)0x00000000)     /* DMA mode disabled */
+#define ADC_DMAAccessMode_1             ((uint32_t)0x00004000)     /* DMA mode 1 enabled (2 / 3 half-words one by one - 1 then 2 then 3)*/
+#define ADC_DMAAccessMode_2             ((uint32_t)0x00008000)     /* DMA mode 2 enabled (2 / 3 half-words by pairs - 2&1 then 1&3 then 3&2)*/
+#define ADC_DMAAccessMode_3             ((uint32_t)0x0000C000)     /* DMA mode 3 enabled (2 / 3 bytes by pairs - 2&1 then 1&3 then 3&2) */
+
+#define ADC_TwoSamplingDelay_5Cycles               ((uint32_t)0x00000000)
+#define ADC_TwoSamplingDelay_6Cycles               ((uint32_t)0x00000100)
+#define ADC_TwoSamplingDelay_7Cycles               ((uint32_t)0x00000200)
+#define ADC_TwoSamplingDelay_8Cycles               ((uint32_t)0x00000300)
+#define ADC_TwoSamplingDelay_9Cycles               ((uint32_t)0x00000400)
+#define ADC_TwoSamplingDelay_10Cycles              ((uint32_t)0x00000500)
+#define ADC_TwoSamplingDelay_11Cycles              ((uint32_t)0x00000600)
+#define ADC_TwoSamplingDelay_12Cycles              ((uint32_t)0x00000700)
+#define ADC_TwoSamplingDelay_13Cycles              ((uint32_t)0x00000800)
+#define ADC_TwoSamplingDelay_14Cycles              ((uint32_t)0x00000900)
+#define ADC_TwoSamplingDelay_15Cycles              ((uint32_t)0x00000A00)
+#define ADC_TwoSamplingDelay_16Cycles              ((uint32_t)0x00000B00)
+#define ADC_TwoSamplingDelay_17Cycles              ((uint32_t)0x00000C00)
+#define ADC_TwoSamplingDelay_18Cycles              ((uint32_t)0x00000D00)
+#define ADC_TwoSamplingDelay_19Cycles              ((uint32_t)0x00000E00)
+#define ADC_TwoSamplingDelay_20Cycles              ((uint32_t)0x00000F00)
+
+#define ADC_Resolution_12b                         ((uint32_t)0x00000000)
+#define ADC_Resolution_10b                         ((uint32_t)0x01000000)
+#define ADC_Resolution_8b                          ((uint32_t)0x02000000)
+#define ADC_Resolution_6b                          ((uint32_t)0x03000000)
+
+#define ADC_ExternalTrigConvEdge_None          ((uint32_t)0x00000000)
+#define ADC_ExternalTrigConvEdge_Rising        ((uint32_t)0x10000000)
+#define ADC_ExternalTrigConvEdge_Falling       ((uint32_t)0x20000000)
+#define ADC_ExternalTrigConvEdge_RisingFalling ((uint32_t)0x30000000)
+
+
+#define ADC_ExternalTrigConv_T1_CC1                ((uint32_t)0x00000000)
+#define ADC_ExternalTrigConv_T1_CC2                ((uint32_t)0x01000000)
+#define ADC_ExternalTrigConv_T1_CC3                ((uint32_t)0x02000000)
+#define ADC_ExternalTrigConv_T2_CC2                ((uint32_t)0x03000000)
+#define ADC_ExternalTrigConv_T2_CC3                ((uint32_t)0x04000000)
+#define ADC_ExternalTrigConv_T2_CC4                ((uint32_t)0x05000000)
+#define ADC_ExternalTrigConv_T2_TRGO               ((uint32_t)0x06000000)
+#define ADC_ExternalTrigConv_T3_CC1                ((uint32_t)0x07000000)
+#define ADC_ExternalTrigConv_T3_TRGO               ((uint32_t)0x08000000)
+#define ADC_ExternalTrigConv_T4_CC4                ((uint32_t)0x09000000)
+#define ADC_ExternalTrigConv_T5_CC1                ((uint32_t)0x0A000000)
+#define ADC_ExternalTrigConv_T5_CC2                ((uint32_t)0x0B000000)
+#define ADC_ExternalTrigConv_T5_CC3                ((uint32_t)0x0C000000)
+#define ADC_ExternalTrigConv_T8_CC1                ((uint32_t)0x0D000000)
+#define ADC_ExternalTrigConv_T8_TRGO               ((uint32_t)0x0E000000)
+#define ADC_ExternalTrigConv_Ext_IT11              ((uint32_t)0x0F000000)
+
+
+#define ADC_DataAlign_Right                        ((uint32_t)0x00000000)
+#define ADC_DataAlign_Left                         ((uint32_t)0x00000800)
+
+
+
 void adc_init(const adc_dev *dev);
 //void adc_set_extsel(const adc_dev *dev, adc_extsel_event event);
 void adc_foreach(void (*fn)(const adc_dev*));
