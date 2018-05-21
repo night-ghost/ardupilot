@@ -24,7 +24,7 @@ private:
 
     bool _init(void);
     void _timer(void);
-    bool _update_temperature(int32_t);
+    void _update_temperature(int32_t);
     void _update_pressure(int32_t);
 
     AP_HAL::OwnPtr<AP_HAL::Device> _dev;
