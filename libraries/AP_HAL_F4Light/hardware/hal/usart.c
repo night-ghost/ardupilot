@@ -20,8 +20,8 @@ static ring_buffer usart1_rxrb IN_CCM;
 static usart_state u1state IN_CCM;
 
 static const usart_dev usart1 = {
-    .USARTx = USART1,
-    .clk = RCC_APB2Periph_USART1,
+    .regs = USART1,
+    .clk = RCC_APB2_bit_USART1,
     .txrb = &usart1_txrb,
     .rxrb = &usart1_rxrb,
     .state = &u1state,
@@ -39,8 +39,8 @@ static ring_buffer usart2_rxrb IN_CCM;
 static usart_state u2state IN_CCM;
 
 static const usart_dev usart2 = {
-    .USARTx = USART2,
-    .clk = RCC_APB1Periph_USART2,
+    .regs = USART2,
+    .clk = RCC_APB1_bit_USART2,
     .txrb = &usart2_txrb,
     .rxrb = &usart2_rxrb,
     .state = &u2state,
@@ -60,8 +60,8 @@ static ring_buffer usart3_rxrb IN_CCM;
 static usart_state u3state IN_CCM;
 
 static const usart_dev usart3 = {
-    .USARTx = USART3,
-    .clk = RCC_APB1Periph_USART3,
+    .regs = USART3,
+    .clk = RCC_APB1_bit_USART3,
     .txrb = &usart3_txrb,
     .rxrb = &usart3_rxrb,
     .state = &u3state,
@@ -79,8 +79,8 @@ static ring_buffer uart4_rxrb IN_CCM;
 static usart_state u4state IN_CCM;
 
 static const usart_dev uart4 = {
-    .USARTx = UART4,
-    .clk = RCC_APB1Periph_UART4,
+    .regs = UART4,
+    .clk = RCC_APB1_bit_UART4,
     .txrb = &uart4_txrb,
     .rxrb = &uart4_rxrb,
     .state = &u4state,
@@ -99,8 +99,8 @@ static ring_buffer uart5_rxrb IN_CCM;
 static usart_state u5state IN_CCM;
 
 static const usart_dev uart5 = {
-    .USARTx = UART5,
-    .clk = RCC_APB1Periph_UART5,
+    .regs = UART5,
+    .clk = RCC_APB1_bit_UART5,
     .txrb = &uart5_txrb,  
     .rxrb = &uart5_rxrb,
     .state = &u5state,
@@ -119,8 +119,8 @@ static ring_buffer usart6_rxrb IN_CCM;
 static usart_state u6state IN_CCM;
 
 static const usart_dev usart6 =  {
-    .USARTx = USART6,
-    .clk = RCC_APB2Periph_USART6,
+    .regs = USART6,
+    .clk = RCC_APB2_bit_USART6,
     .txrb = &usart6_txrb,
     .rxrb = &usart6_rxrb,
     .state = &u6state,
@@ -180,74 +180,95 @@ void usart_foreach(void (*fn)(const usart_dev*))
 
 extern uint32_t us_ticks;
 
+
+// USART CR1 register clear Mask ((~(uint16_t)0xE9F3))
+#define CR1_CLEAR_MASK            ((uint16_t)(USART_CR1_M | USART_CR1_PCE | \
+                                              USART_CR1_PS | USART_CR1_TE | \
+                                              USART_CR1_RE))
+
+// USART CR2 register clock bits clear Mask ((~(uint16_t)0xF0FF)) 
+#define CR2_CLOCK_CLEAR_MASK      ((uint16_t)(USART_CR2_CLKEN | USART_CR2_CPOL | \
+                                              USART_CR2_CPHA | USART_CR2_LBCL))
+
+// USART CR3 register clear Mask ((~(uint16_t)0xFCFF)) 
+#define CR3_CLEAR_MASK            ((uint16_t)(USART_CR3_RTSE | USART_CR3_CTSE))
+
+
 /**
  * @brief Initialize a serial port.
  * @param dev         Serial port to be initialized
  */
 void usart_init(const usart_dev *dev)  {
-    /* Check the parameters */
-    assert_param(IS_USART_ALL_PERIPH(dev->USARTx));
-
     // Turn on peripheral clocks
-    if (dev->USARTx == USART1 || dev->USARTx == USART6 )
-	RCC_APB2PeriphClockCmd(dev->clk, ENABLE);       // we must wait some time before access to
+    if (dev->regs == USART1 || dev->regs == USART6 )
+	RCC_enableAPB2_clk(dev->clk);       // we must wait some time before access to
     else
-	RCC_APB1PeriphClockCmd(dev->clk, ENABLE);
+	RCC_enableAPB1_clk(dev->clk);
 
 }
 
 void usart_setup(const usart_dev *dev, uint32_t baudRate, uint16_t wordLength,
 	uint16_t stopBits, uint16_t parity, uint16_t mode, uint16_t hardwareFlowControl)
 {
-    /* Check the parameters */
-    assert_param(IS_USART_ALL_PERIPH(dev->USARTx));
-    assert_param(IS_USART_BAUDRATE(baud));
-    assert_param(IS_USART_STOPBITS(stopbits));
-    assert_param(IS_USART_PARITY(parity));
-    assert_param(IS_USART_WORD_LENGTH(wordLength));
-    assert_param(IS_USART_MODE(mode));
-    assert_param(IS_USART_HARDWARE_FLOW_CONTROL(hardwareFlowControl));
-
     memset(dev->state, 0, sizeof(*dev->state));
 
     dev->state->txbusy = 0;
     dev->state->callback = 0;
 
-    /* Disable USARTx */
+    // Disable hw
     usart_disable(dev);
 
     rb_init(dev->txrb, USART_TX_BUF_SIZE, dev->state->tx_buf);
     rb_init(dev->rxrb, USART_RX_BUF_SIZE, dev->state->rx_buf);
 
-    /* Enables the USART's 8x oversampling mode. */
-    USART_OverSampling8Cmd(dev->USARTx, ENABLE);
+    uint32_t tmpreg = dev->regs->CR2 & (uint32_t)~((uint32_t)CR2_CLOCK_CLEAR_MASK) &   /* Clear CLKEN, CPOL, CPHA and LBCL bits */
+                                         (uint32_t)~((uint32_t)USART_CR2_STOP); // Clear STOP[13:12] bits 
+        tmpreg |= (uint32_t)USART_Clock_Disable | USART_CPOL_Low | USART_CPHA_1Edge | USART_LastBit_Disable | (uint32_t)stopBits; // Clock, CPOL, CPHA and LastBit
+    dev->regs->CR2 = (uint16_t)tmpreg;
 
-    USART_ClockInitTypeDef USART_InitClock;
-    USART_ClockStructInit(&USART_InitClock);
-    USART_ClockInit(dev->USARTx, &USART_InitClock);
+    tmpreg = dev->regs->CR1 & (uint32_t)~((uint32_t)CR1_CLEAR_MASK); // Clear M, PCE, PS, TE and RE bits 
+    dev->regs->CR1 = (uint16_t)tmpreg | (uint32_t)wordLength | parity | mode | USART_CR1_OVER8; // Word Length, Parity and mode
 
-    USART_InitTypeDef USART_config;
-    USART_StructInit(&USART_config);
-    USART_config.USART_BaudRate = baudRate;
-    USART_config.USART_WordLength = wordLength;
-    USART_config.USART_StopBits = stopBits;
-    USART_config.USART_Parity = parity;
-    USART_config.USART_Mode = mode;
-    USART_config.USART_HardwareFlowControl = hardwareFlowControl;
+     
+    tmpreg = dev->regs->CR3  & (uint32_t)~((uint32_t)CR3_CLEAR_MASK); // Clear CTSE and RTSE bits
+    dev->regs->CR3 = (uint16_t)tmpreg | hardwareFlowControl;
 
-    USART_Init(dev->USARTx, &USART_config);
 
-    dev->USARTx->CR1 &= ~(USART_MASK_IDLEIE | USART_MASK_RXNEIE | USART_MASK_TCEIE | USART_MASK_TXEIE | USART_MASK_PEIE);
-    dev->USARTx->CR2 &= ~(USART_MASK2_LBDIE);
-    dev->USARTx->CR3 &= ~(USART_MASK3_CTSIE | USART_MASK3_EIE);
+    uint32_t apbclock = 0x00;
+    uint32_t integerdivider = 0x00;
+    uint32_t fractionaldivider = 0x00;
     
-    if(mode & USART_Mode_Rx) { /* Enable Rx request */
-        USART_ClearFlag(dev->USARTx, USART_FLAG_RXNE);
-        dev->USARTx->CR1 |= USART_MASK_RXNEIE;
+// Configure the USART Baud Rate 
+    RCC_Clocks_t RCC_ClocksStatus;
+    RCC_GetClocksFreq(&RCC_ClocksStatus);
+
+    if ((dev->regs == USART1) || (dev->regs == USART6)) {
+        apbclock = RCC_ClocksStatus.PCLK2_Frequency;
+    } else {
+        apbclock = RCC_ClocksStatus.PCLK1_Frequency;
     }
 
-    if(mode & USART_Mode_Tx) {
-        USART_ClearFlag(dev->USARTx, USART_FLAG_TC);
+    // Determine the integer part 
+    // Integer part computing in case Oversampling mode is 8 Samples 
+    integerdivider = (25 * apbclock) / (2 * baudRate);
+    tmpreg = (integerdivider / 100) << 4;
+
+    // Determine the fractional part 
+    fractionaldivider = integerdivider - (100 * (tmpreg >> 4));
+    dev->regs->BRR = (uint16_t)tmpreg | ((((fractionaldivider * 8) + 50) / 100)) & ((uint8_t)0x07);
+
+// interrupts
+    dev->regs->CR1 &= ~(USART_MASK_IDLEIE | USART_MASK_RXNEIE | USART_MASK_TCEIE | USART_MASK_TXEIE | USART_MASK_PEIE);
+    dev->regs->CR2 &= ~(USART_MASK2_LBDIE);
+    dev->regs->CR3 &= ~(USART_MASK3_CTSIE | USART_MASK3_EIE);
+    
+    if(mode & UART_Mode_Rx) { // Enable Rx request 
+        dev->regs->SR = (uint16_t)~USART_BIT_RXNE;
+        dev->regs->CR1 |= USART_MASK_RXNEIE;
+    }
+
+    if(mode & UART_Mode_Tx) {
+        dev->regs->SR = (uint16_t)~USART_BIT_TC;
     }    
 
     enable_nvic_irq(dev->irq, UART_INT_PRIORITY);
@@ -257,10 +278,6 @@ void usart_setup(const usart_dev *dev, uint32_t baudRate, uint16_t wordLength,
 
 uint32_t usart_tx(const usart_dev *dev, const uint8_t *buf, uint32_t len)
 {
-    /* Check the parameters */
-    assert_param(IS_USART_ALL_PERIPH(USARTx));
-    assert_param(IS_USART_DATA(Data));
-
     uint32_t tosend = len;
     uint32_t sent = 0;
 
@@ -273,7 +290,7 @@ uint32_t usart_tx(const usart_dev *dev, const uint8_t *buf, uint32_t len)
     }
     if (dev->state->txbusy == 0 && sent > 0)	    {
 	dev->state->txbusy = 1;
-        dev->USARTx->CR1 |= USART_MASK_TXEIE;
+        dev->regs->CR1 |= USART_MASK_TXEIE;
     }
 
     return sent;
@@ -304,14 +321,14 @@ static inline void usart_rx_irq(const usart_dev *dev)    {
 #endif
 
 	/* Check on Receive Data register Not Empty interrupt */
-        uint16_t sr = dev->USARTx->SR;
-	if( (sr & USART_F_RXNE) && (dev->USARTx->CR1 & USART_MASK_RXNEIE) ){
+        uint16_t sr = dev->regs->SR;
+	if( (sr & USART_F_RXNE) && (dev->regs->CR1 & USART_MASK_RXNEIE) ){
 #ifdef USART_SAFE_INSERT
 	    /* If the buffer is full and the user defines USART_SAFE_INSERT, ignore new bytes. */
-	    rb_safe_insert(dev->rxrb, (uint8_t) dev->USARTx->DR);
+	    rb_safe_insert(dev->rxrb, (uint8_t) dev->regs->DR);
 #else
 	    /* By default, push bytes around in the ring buffer. */
-	    rb_push_insert(dev->rxrb, (uint8_t)dev->USARTx->DR);
+	    rb_push_insert(dev->rxrb, (uint8_t)dev->regs->DR);
 #endif
 
             if(dev->state->callback) {
@@ -320,7 +337,7 @@ static inline void usart_rx_irq(const usart_dev *dev)    {
 	}
 
         if( sr & USART_F_ORE ){
-	    (void)dev->USARTx->DR; // cleared after reading sr, dr
+	    (void)dev->regs->DR; // cleared after reading sr, dr
 	}
 
 #ifdef ISR_PERF
@@ -336,15 +353,15 @@ static inline void usart_tx_irq(const usart_dev *dev) {
     uint32_t t=stopwatch_getticks();
 #endif
     /* Check USART Transmit Data Register Empty Interrupt */
-    uint16_t sr = dev->USARTx->SR;
-    if( (sr & USART_F_TXE) && (dev->USARTx->CR1 & USART_MASK_TXEIE) ){
+    uint16_t sr = dev->regs->SR;
+    if( (sr & USART_F_TXE) && (dev->regs->CR1 & USART_MASK_TXEIE) ){
 
 	if (dev->txrb && !rb_is_empty(dev->txrb))  {
-	    dev->USARTx->DR = rb_remove(dev->txrb);
+	    dev->regs->DR = rb_remove(dev->txrb);
 	    dev->state->txbusy = 1;
 	} else   {
 	    /* Disable the USART Transmit Data Register Empty Interrupt */
-	    dev->USARTx->CR1 &= ~USART_MASK_TXEIE;
+	    dev->regs->CR1 &= ~USART_MASK_TXEIE;
 	    dev->state->txbusy = 0;
 	    // nops needed to deactivate the irq before irq handler is left
             asm volatile("nop");

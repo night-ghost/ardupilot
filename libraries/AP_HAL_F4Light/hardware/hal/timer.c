@@ -41,6 +41,8 @@ based on:
 #include "dma.h"
 #include <string.h>
 #include "nvic.h"
+#include "gpio_hal.h"
+#include "rcc.h"
 
 /* Just like the corresponding DIER bits:
  * [0] = Update handler;
@@ -76,7 +78,7 @@ const timer_dev timers[] = {
  { /** Timer 1 device (advanced) */
 
     .regs         = TIM1,
-    .clk	  = RCC_APB2Periph_TIM1,
+    .clk	  = RCC_APB2_bit_TIM1,
     .handlers     = tim1_handlers,
     .af           = GPIO_AF_TIM1,
     .type         = TIMER_ADVANCED,
@@ -94,7 +96,7 @@ const timer_dev timers[] = {
 
  { /** Timer 2 device (general-purpose) */
     .regs         = TIM2,
-    .clk    	  = RCC_APB1Periph_TIM2,
+    .clk    	  = RCC_APB1_bit_TIM2,
     .handlers     = tim2_handlers,
     .af           = GPIO_AF_TIM2,
     .type         = TIMER_GENERAL,
@@ -113,7 +115,7 @@ const timer_dev timers[] = {
 
  { /** Timer 3 device (general-purpose) */
     .regs         = TIM3,
-    .clk	  = RCC_APB1Periph_TIM3,
+    .clk	  = RCC_APB1_bit_TIM3,
     .handlers     = tim3_handlers,
     .af           = GPIO_AF_TIM3,
     .type         = TIMER_GENERAL,
@@ -132,7 +134,7 @@ const timer_dev timers[] = {
 
  { /** Timer 4 device (general-purpose) */
     .regs         = TIM4,
-    .clk       	  = RCC_APB1Periph_TIM4,
+    .clk       	  = RCC_APB1_bit_TIM4,
     .handlers     = tim4_handlers,
     .af           = GPIO_AF_TIM4,
     .type         = TIMER_GENERAL,
@@ -151,7 +153,7 @@ const timer_dev timers[] = {
 
  { /** Timer 5 device (general-purpose) */
     .regs         = TIM5,
-    .clk          = RCC_APB1Periph_TIM5,
+    .clk          = RCC_APB1_bit_TIM5,
     .handlers     = tim5_handlers,
     .af           = GPIO_AF_TIM5,
     .type         = TIMER_GENERAL,
@@ -169,7 +171,7 @@ const timer_dev timers[] = {
 
  { /** Timer 6 device (basic) */
     .regs         = TIM6,
-    .clk          = RCC_APB1Periph_TIM6,
+    .clk          = RCC_APB1_bit_TIM6,
     .handlers     = tim6_handlers,
     .af           = 0,
     .type         = TIMER_BASIC,
@@ -181,7 +183,7 @@ const timer_dev timers[] = {
 
  { /** Timer 7 device (basic) */
     .regs         = TIM7,
-    .clk          = RCC_APB1Periph_TIM7,
+    .clk          = RCC_APB1_bit_TIM7,
     .handlers     = tim7_handlers,
     .af           = 0,
     .type         = TIMER_BASIC,
@@ -193,7 +195,7 @@ const timer_dev timers[] = {
 
  {  /** Timer 8 device (advanced) */
     .regs         = TIM8,
-    .clk          = RCC_APB2Periph_TIM8,
+    .clk          = RCC_APB2_bit_TIM8,
     .handlers     = tim8_handlers,
     .af           = GPIO_AF_TIM8,
     .type         = TIMER_ADVANCED,
@@ -213,7 +215,7 @@ const timer_dev timers[] = {
 
  {  /** Timer 9 device (general-purpose) */
     .regs         = TIM9,
-    .clk          = RCC_APB2Periph_TIM9,
+    .clk          = RCC_APB2_bit_TIM9,
     .handlers     = tim9_handlers,
     .af           = GPIO_AF_TIM9,
     .type         = TIMER_GENERAL,
@@ -225,7 +227,7 @@ const timer_dev timers[] = {
 
  { /** Timer 10 device (general-purpose) */
     .regs         = TIM10,
-    .clk          = RCC_APB2Periph_TIM10,
+    .clk          = RCC_APB2_bit_TIM10,
     .handlers     = tim10_handlers,
     .af           = GPIO_AF_TIM10,
     .type         = TIMER_GENERAL,
@@ -237,7 +239,7 @@ const timer_dev timers[] = {
 
  { /** Timer 11 device (general-purpose) */
     .regs         = TIM11,
-    .clk          = RCC_APB2Periph_TIM11,
+    .clk          = RCC_APB2_bit_TIM11,
     .handlers     = tim11_handlers,
     .af           = GPIO_AF_TIM11,
     .type         = TIMER_GENERAL,
@@ -249,7 +251,7 @@ const timer_dev timers[] = {
 
  { /** Timer 12 device (general-purpose) */
     .regs         = TIM12,
-    .clk          = RCC_APB1Periph_TIM12,
+    .clk          = RCC_APB1_bit_TIM12,
     .handlers     = tim12_handlers,
     .af           = GPIO_AF_TIM12,
     .type         = TIMER_GENERAL,
@@ -261,7 +263,7 @@ const timer_dev timers[] = {
 
  { /** Timer 13 device (general-purpose) */
     .regs         = TIM13,
-    .clk          = RCC_APB1Periph_TIM13,
+    .clk          = RCC_APB1_bit_TIM13,
     .handlers     = tim13_handlers,
     .af           = GPIO_AF_TIM13,
     .type         = TIMER_GENERAL,
@@ -273,7 +275,7 @@ const timer_dev timers[] = {
 
  { /** Timer 14 device (general-purpose) */
     .regs         = TIM14,
-    .clk          = RCC_APB1Periph_TIM14,
+    .clk          = RCC_APB1_bit_TIM14,
     .handlers     = tim14_handlers,
     .af           = GPIO_AF_TIM14,
     .type         = TIMER_GENERAL,
@@ -303,9 +305,9 @@ static inline void enable_irq(const timer_dev *dev, uint8_t interrupt, uint8_t p
 void timer_init(const timer_dev *dev) {
 
     if(dev->bus)
-    	RCC_APB2PeriphClockCmd(dev->clk, ENABLE);
+    	RCC_enableAPB2_clk(dev->clk);
     else
-	RCC_APB1PeriphClockCmd(dev->clk, ENABLE);
+	RCC_enableAPB1_clk(dev->clk);
 
 }
 
@@ -318,19 +320,14 @@ void timer_reset(const timer_dev *dev) {
     memset(dev->state, 0, sizeof(*dev->state));
 
     if(dev->bus) {
-    	RCC_APB2PeriphClockCmd(dev->clk, ENABLE);
-    	RCC_APB2PeriphResetCmd(dev->clk, ENABLE);
-        RCC_APB2PeriphResetCmd(dev->clk, DISABLE);
+    	RCC_doAPB2_reset(dev->clk);
     } else {
-	RCC_APB1PeriphClockCmd(dev->clk, ENABLE);
-    	RCC_APB1PeriphResetCmd(dev->clk, ENABLE);
-        RCC_APB1PeriphResetCmd(dev->clk, DISABLE);
+	RCC_doAPB1_reset(dev->clk);
     }
-
 }
 
 /**
- * @brief Disable a timer.
+ * disable a timer.
  *
  * The timer will stop counting, all DMA requests and interrupts will
  * be disabled, and no state changes will be output.
@@ -356,7 +353,6 @@ void timer_disable(const timer_dev *dev) {
 // returns real timers freq
 uint32_t configTimeBase(const timer_dev *dev, uint16_t period, uint16_t khz)
 {
-    TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
     TIM_TypeDef *tim = dev->regs;
 
     timer_init(dev); // turn it on
@@ -369,11 +365,8 @@ uint32_t configTimeBase(const timer_dev *dev, uint16_t period, uint16_t khz)
     dev->regs->DIER = 0;
     dev->regs->EGR = TIMER_EGR_UG;
 
-    TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
 
-    TIM_TimeBaseStructure.TIM_Period = (period - 1) & get_timer_mask(dev); // AKA TIMx_ARR
     uint32_t freq = (uint32_t)khz * 1000;
-    uint16_t prescaler;
     uint32_t tf; // timer's frequency
 
     if (tim == TIM1 || tim == TIM8 || tim == TIM9 || tim == TIM10 || tim == TIM11) {            // 168MHz
@@ -382,25 +375,32 @@ uint32_t configTimeBase(const timer_dev *dev, uint16_t period, uint16_t khz)
         tf  = SystemCoreClock / 2;
     }
 
-    prescaler = ((tf + freq/4) / freq) - 1; // ==41 for 2MHz
+    uint16_t prescaler = ((tf + freq/4) / freq) - 1; // ==41 for 2MHz
     
-    TIM_TimeBaseStructure.TIM_Prescaler = prescaler;
     freq = tf / prescaler; // real timer's frequency
-    
     dev->state->freq = freq; // store
 
-    TIM_TimeBaseStructure.TIM_ClockDivision = 0;
-    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-    TIM_TimeBaseInit(tim, &TIM_TimeBaseStructure);
+    uint16_t cr1 = tim->CR1;
 
-    switch (dev->type) {
-    case TIMER_ADVANCED:
-        dev->regs->BDTR = TIMER_BDTR_MOE | TIMER_BDTR_LOCK_OFF; //  break and dead-time register, enable output
-        // fall-through
-    case TIMER_GENERAL:
-    case TIMER_BASIC:
-        break;
+    if((tim == TIM1) || (tim == TIM2) || (tim == TIM3)|| (tim == TIM4) || (tim == TIM5) || (tim == TIM8)) { // timers which can count down
+        cr1 &= (uint16_t)(~(TIM_CR1_DIR | TIM_CR1_CMS));
+        cr1 |= (uint32_t)TIM_CounterMode_Up;
     }
+  
+    if((tim != TIM6) && (tim != TIM7)) { // except Basic timers, reset clock division 
+        cr1 &=  (uint16_t)(~TIM_cr1_CKD);
+    }
+    tim->CR1 = cr1;
+    
+    timer_set_reload(dev, (period - 1) & get_timer_mask(dev)); 
+    timer_set_prescaler(dev, prescaler);
+
+    if ((tim == TIM1) || (tim == TIM8)) {
+        tim->RCR = 0; // repetition counter for advanced timers
+        tim->BDTR = TIMER_BDTR_MOE | TIMER_BDTR_LOCK_OFF; //  break and dead-time register, enable output
+    }
+  
+    timer_generate_update(dev);     // do update event to reload the Prescaler     
 
     timer_set_count(dev,0);    
 
@@ -440,10 +440,8 @@ static void output_compare_mode(const timer_dev *dev, timer_Channel channel) {
  * @param mode New timer mode for channel
  */
 void timer_set_mode(const timer_dev *dev, timer_Channel channel, timer_mode mode) {
-    assert_param(channel > 0 && channel <= 4);
 
     /* TODO decide about the basic timers */
-    assert_param(dev->type != TIMER_BASIC);
     if (!dev || dev->type == TIMER_BASIC)
         return;
 

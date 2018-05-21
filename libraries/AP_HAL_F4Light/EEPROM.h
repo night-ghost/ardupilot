@@ -108,7 +108,7 @@ public:
 	uint16_t _CheckErasePage(uint32_t, uint16_t);
         static FLASH_Status _ErasePageByAddress(uint32_t Page_Address);
 
-        static void FLASH_OB_WRPConfig(uint32_t OB_WRP, FunctionalState NewState);
+        static void OB_WRPConfig(uint32_t OB_WRP, bool v);
 
 private:
 	uint32_t PageBase0; // uses 2 flash pages
@@ -118,6 +118,15 @@ private:
 
 	uint16_t _init(void);
 	uint16_t _format(void);
+	static void reset_flash_errors();
+	static FLASH_Status GetStatus(void);
+        static FLASH_Status WaitForLastOperation(void);
+        static FLASH_Status ProgramHalfWord(uint32_t Address, uint16_t Data);
+        static FLASH_Status ProgramByte(uint32_t Address, uint8_t Data);
+        static FLASH_Status EraseSector(uint32_t FLASH_Sector, uint8_t VoltageRange);
+        static inline void Lock(void){   FLASH->CR |= FLASH_CR_LOCK; }
+        static inline void Unlock(void){  if((FLASH->CR & FLASH_CR_LOCK) )  {  FLASH->KEYR = FLASH_KEY1;   FLASH->KEYR = FLASH_KEY2;  } }
+        
 
 	FLASH_Status _ErasePage(uint32_t);
 

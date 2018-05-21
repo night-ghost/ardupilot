@@ -32,15 +32,15 @@ typedef struct usart_state {
 
 /** USART device type */
 typedef struct usart_dev {
-    USART_TypeDef* USARTx;             /**< Register map */
+    USART_TypeDef* regs;             // device registers */
     uint32_t clk;
     IRQn_Type irq;
     uint8_t rx_pin;
     uint8_t tx_pin;
     uint8_t gpio_af;
     usart_state *state;
-    ring_buffer *rxrb;                 /**< RX ring buffer */
-    ring_buffer *txrb;                 /**< TX ring buffer */
+    ring_buffer *rxrb;                 // RX ring buffer
+    ring_buffer *txrb;                 // TX ring buffer 
 } usart_dev;
 
 
@@ -83,54 +83,44 @@ extern const usart_dev * const _USART6;
 #define UART_Word_8b                  ((uint16_t)0x0000)
 #define UART_Word_9b                  ((uint16_t)0x1000)
 
+#define USART_Clock_Disable           ((uint16_t)0x0000)
+#define USART_Clock_Enable            ((uint16_t)0x0800)
+#define USART_CPOL_Low                ((uint16_t)0x0000)
+#define USART_CPOL_High               ((uint16_t)0x0400)
+
+#define USART_CPHA_1Edge              ((uint16_t)0x0000)
+#define USART_CPHA_2Edge              ((uint16_t)0x0200)
+
+#define USART_BIT_CTS                 ((uint16_t)0x0200)
+#define USART_BIT_LBD                 ((uint16_t)0x0100)
+#define USART_BIT_TXE                 ((uint16_t)0x0080)
+#define USART_BIT_TC                  ((uint16_t)0x0040)
+#define USART_BIT_RXNE                ((uint16_t)0x0020)
+#define USART_BIT_IDLE                ((uint16_t)0x0010)
+#define USART_BIT_ORE                 ((uint16_t)0x0008)
+#define USART_BIT_NE                  ((uint16_t)0x0004)
+#define USART_BIT_FE                  ((uint16_t)0x0002)
+#define USART_BIT_PE                  ((uint16_t)0x0001)
+
+#define USART_LastBit_Disable         ((uint16_t)0x0000)
+#define USART_LastBit_Enable          ((uint16_t)0x0100)
+
 /**
  * @brief Initialize a serial port.
  * @param dev         Serial port to be initialized
  */
 void usart_init(const usart_dev *dev);
 
- 
-/*
-	USART_Word_Length 
-	-----------------
-	USART_WordLength_8b
-	USART_WordLength_9b  
-
-	USART_Stop_Bits
-	---------------
-	USART_StopBits_1
-	USART_StopBits_0_5
-	USART_StopBits_2
-	USART_StopBits_1_5   
-
-	USART_Parity
-	------------
-	USART_Parity_No
-	USART_Parity_Even
-	USART_Parity_Odd 
-
-	USART_Mode
-	----------
-	USART_Mode_Rx
-	USART_Mode_Tx  
-
-	USART_Hardware_Flow_Control
-	---------------------------
-	USART_HardwareFlowControl_None
-	USART_HardwareFlowControl_RTS
-	USART_HardwareFlowControl_CTS
-	USART_HardwareFlowControl_RTS_CTS  
-*/
 
 /**
  * @brief Configure a serial port's baud rate.
  *
- * @param dev         			Serial port to be configured
- * @param baudRate    			Baud rate for transmit/receive.
- * @param wordLength  			Specifies the number of data bits transmitted or received in a frame. This parameter can be a value of USART_Word_Length 
- * @param stopBits				Specifies the number of stop bits transmitted. This parameter can be a value of USART_Stop_Bits 
- * @param parity				Specifies the parity mode. This parameter can be a value of USART_Parity 
- * @param mode					Specifies wether the Receive or Transmit mode is enabled or disabled. This parameter can be a value of USART_Mode 
+ * @param dev        	Serial port to be configured
+ * @param baudRate      Baud rate for transmit/receive.
+ * @param wordLength  	number of data bits transmitted or received in a frame
+ * @param stopBits	number of stop bits transmitted
+ * @param parity	parity mode
+ * @param mode		Receive and Transmit is enabled or disabled
  * @param hardwareFlowControl	Specifies wether the hardware flow control mode is enabled or disabled. This parameter can be a value of USART_Hardware_Flow_Control
  */
 void usart_setup(const usart_dev *dev, 
@@ -155,15 +145,7 @@ void usart_setup(const usart_dev *dev,
 static inline void usart_enable(const usart_dev *dev)
 {
     dev->state->is_used=true;
-
-    /* Check the parameters */
-    assert_param(IS_USART_ALL_PERIPH(dev->USARTx));
-
-    /* Enable USART */
-//    USART_Cmd(dev->USARTx, ENABLE);
-    
-    dev->USARTx->CR1 |= USART_CR1_UE; /* Enable the selected USART by setting the UE bit in the CR1 register */
-
+    dev->regs->CR1 |= USART_CR1_UE;
 }
 
 
@@ -178,10 +160,7 @@ static inline uint8_t usart_is_used(const usart_dev *dev)
  * @param dev Serial port to be disabled
  */
 static inline void usart_disable(const usart_dev *dev){
-    /* Disable the selected USART by clearing the UE bit in the CR1 register */
-    dev->USARTx->CR1 &= (uint16_t)~((uint16_t)USART_CR1_UE);
-    
-    /* Clean up buffer */
+    dev->regs->CR1 &= (uint16_t)~((uint16_t)USART_CR1_UE);
     dev->state->is_used=false;
 }
 
@@ -238,11 +217,7 @@ void usart_putudec(const usart_dev *dev, uint32_t val);
  * @param byte Byte to transmit.
  */
 static inline uint32_t usart_putc(const usart_dev* dev, uint8_t bt) {
-	//uint32_t ret=0;
-	//uint32_t cnt=0;
-	//if (!usart_tx(dev, &byte, 1))
-	//;
-	return usart_tx(dev, &bt, 1);
+    return usart_tx(dev, &bt, 1);
 }
 
 /**
@@ -261,7 +236,6 @@ static inline void usart_putstr(const usart_dev *dev, const char* str) {
     uint32_t i = 0;
     uint8_t c;
     while ( (c=str[i++]) )  usart_putc(dev, c);
-    
 }
 
 /**

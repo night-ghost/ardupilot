@@ -409,9 +409,42 @@ void TIM8_IRQHandler(void);
 #define TIMER_DCR_DBA_DCR               0x12
 #define TIMER_DCR_DBA_DMAR              0x13
 
+
+
+
+#define TIM_OCMode_Timing               ((uint16_t)0x0000)
+#define TIM_OCMode_Active               ((uint16_t)0x0010)
+#define TIM_OCMode_Inactive             ((uint16_t)0x0020)
+#define TIM_OCMode_Toggle               ((uint16_t)0x0030)
+#define TIM_OCMode_PWM1                 ((uint16_t)0x0060)
+#define TIM_OCMode_PWM2                 ((uint16_t)0x0070)
+
+#define TIM_CounterMode_Up              ((uint16_t)0x0000)
+#define TIM_CounterMode_Down            ((uint16_t)0x0010)
+#define TIM_CounterMode_CenterAligned1  ((uint16_t)0x0020)
+#define TIM_CounterMode_CenterAligned2  ((uint16_t)0x0040)
+#define TIM_CounterMode_CenterAligned3  ((uint16_t)0x0060)
+
+
+#define TIM_PSCReloadMode_Update        ((uint16_t)0x0000)
+#define TIM_PSCReloadMode_Immediate     ((uint16_t)0x0001)
+
+
+#define TIM_ICSelection_DirectTI        ((uint16_t)0x0001) // TIM Input 1, 2, 3 or 4 is selected to be connected to IC1, IC2, IC3 or IC4, respectively
+#define TIM_ICSelection_IndirectTI      ((uint16_t)0x0002) // TIM Input 1, 2, 3 or 4 is selected to be connected to IC2, IC1, IC4 or IC3, respectively
+#define TIM_ICSelection_TRC             ((uint16_t)0x0003) // TIM Input 1, 2, 3 or 4 is selected to be connected to TRC.
+
+
+#define TIM_ICPSC_DIV1                  ((uint16_t)0x0000) // Capture performed each time an edge is detected on the capture input
+#define TIM_ICPSC_DIV2                  ((uint16_t)0x0004) // Capture performed once every 2 events
+#define TIM_ICPSC_DIV4                  ((uint16_t)0x0008) // Capture performed once every 4 events
+#define TIM_ICPSC_DIV8                  ((uint16_t)0x000C) // Capture performed once every 8 events
+
 /*
  * Convenience routines
  */
+
+
 
 /**
  * Used to configure the behavior of a timer channel.  Note that not
