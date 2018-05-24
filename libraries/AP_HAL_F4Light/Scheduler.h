@@ -33,6 +33,7 @@
 #define IO_STACK_SIZE       4096U   // IO_tasks stack size - io_thread can do work with filesystem, stack overflows if 2K
 #define DEFAULT_STACK_SIZE  1024U   // Default tasks stack size 
 #define SMALL_TASK_STACK    1024U   // small stack for sensors
+#define STATS_TASK_STACK    2048U   
 #define STACK_MAX          65536U
 
 #if 1

@@ -245,8 +245,12 @@ void Scheduler::start_stats_task(){
 #ifdef DEBUG_BUILD
 // show stats output each 10 seconds
     Revo_handler h = { .vp = _set_10s_flag };
-    void *task = _register_timer_task(10000000, h.h, NULL);
-    set_task_priority(task, IO_PRIORITY+1); // lower than IO_thread
+    void *task = _start_task(h.h, STATS_TASK_STACK);
+    if(task){
+        set_task_period(task, 10000000); // setting of period allows task to run
+        set_task_priority(task, IO_PRIORITY+1); // lower than IO_thread
+    }
+    
 #endif
 
 // task list is filled. so now we can do a trick -
