@@ -21,7 +21,6 @@ public:
     static AP_Baro_Backend *probe(AP_Baro &baro, AP_HAL::OwnPtr<AP_HAL::Device> dev);
 
 private:
-
     bool _init(void);
     void _timer(void);
     void _update_temperature(int32_t);
@@ -32,8 +31,7 @@ private:
     bool _has_sample;
     uint8_t _instance;
     int32_t _t_fine;
-    float _pressure;
-    float _temperature;
+    volatile float _temperature;
     float _mean_temperature;
     uint8_t _mask;
     bool _letterY;

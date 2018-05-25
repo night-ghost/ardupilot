@@ -240,15 +240,15 @@ void AP_Baro_BMP280::_update_pressure(int32_t press_raw)
     if (!pressure_ok(press)) {
         return;
     }
-    
+
     uint32_t now = AP_HAL::millis();
-    
+
     if(now < 1000 && press > 300000) { // normal pressure is near 100000 so 300000 means wrong chip, check only first second after boot
         _letterY = true;
         press /= 4;
         _mean_pressure = 0; // reset filter
     }
-    
+
     if (_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) {
         _pressure_filter.apply(press);
         _has_sample = true;
