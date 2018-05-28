@@ -30,10 +30,11 @@ extern const AP_HAL::HAL& hal;
 static uint8_t buffer[2][DF_PAGE_SIZE];
 static uint8_t cmd[4];
 
-AP_HAL::OwnPtr<AP_HAL::SPIDevice> DataFlash_Revo::_spi = nullptr;
-AP_HAL::Semaphore                *DataFlash_Revo::_spi_sem = nullptr;
-bool                              DataFlash_Revo::log_write_started=false;
-bool                              DataFlash_Revo::flash_died=false;
+//AP_HAL::OwnPtr<AP_HAL::SPIDevice> DataFlash_Revo::_spi = nullptr;
+AP_HAL::OwnPtr<F4Light::SPIDevice> DataFlash_Revo::_spi = nullptr;
+AP_HAL::Semaphore                 *DataFlash_Revo::_spi_sem = nullptr;
+bool                               DataFlash_Revo::log_write_started=false;
+bool                               DataFlash_Revo::flash_died=false;
 
 
 // the last page holds the log format in first 4 bytes. Please change
@@ -373,7 +374,8 @@ void DataFlash_Revo::Init()
     Scheduler::_delay(1);
     GPIO::_write(DF_RESET,1);
 
-    _spi = hal.spi->get_device(HAL_DATAFLASH_NAME);
+//    _spi = hal.spi->get_device(HAL_DATAFLASH_NAME);
+    _spi = F4Light::SPIDeviceManager::_get_device(HAL_DATAFLASH_NAME);
 
     if (!_spi) {
         AP_HAL::panic("PANIC: DataFlash SPIDeviceDriver not found");
@@ -440,7 +442,8 @@ bool DataFlash_Revo::cs_assert(){
 
     _spi->set_speed(AP_HAL::Device::SPEED_HIGH);
 
-    GPIO::_write(DF_RESET,0);
+    //GPIO::_write(DF_RESET,0);
+    _spi->need_cs(true);        // assert CS before transfer
     return true;
 }
 

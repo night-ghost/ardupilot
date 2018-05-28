@@ -9,6 +9,7 @@
 #include "DataFlash_Backend.h"
 #include <AP_HAL_F4Light/AP_HAL_F4Light.h>
 #include <AP_HAL_F4Light/GPIO.h>
+#include <AP_HAL_F4Light/SPIDevice.h>
 
 
 // flash size
@@ -75,7 +76,7 @@ private:
 
 
     //////////////////
-    static AP_HAL::OwnPtr<AP_HAL::SPIDevice> _spi;
+    static AP_HAL::OwnPtr<F4Light::SPIDevice> _spi;
     static AP_HAL::Semaphore *_spi_sem;
     static bool log_write_started;
 
