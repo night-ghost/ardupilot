@@ -388,7 +388,7 @@ uint32_t configTimeBase(const timer_dev *dev, uint16_t period, uint16_t khz)
     }
   
     if((tim != TIM6) && (tim != TIM7)) { // except Basic timers, reset clock division 
-        cr1 &=  (uint16_t)(~TIM_cr1_CKD);
+        cr1 &=  (uint16_t)(~TIM_CR1_CKD);
     }
     tim->CR1 = cr1;
     

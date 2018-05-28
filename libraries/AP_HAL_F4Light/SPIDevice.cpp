@@ -143,6 +143,35 @@ void SPIDevice::register_completion_callback(Handler h) {
 }
 
 
+
+void SPIDevice::_cs_assert(){                // Select device and wait a little
+    if(_desc.caller_cs){ // caller controls cs
+        if(!_need_cs) return;   // no request
+        if(!_cs_value) return;  // requested release
+        // caller want to assert
+        _need_cs = false;
+    }
+    if(_cs){
+        _cs->write(0); 
+        delay_ns100(_desc.assert_dly); 
+    } 
+} 
+
+
+void SPIDevice::_cs_release(){              // Deselect device after some delay
+    spi_wait_busy(_desc.dev); 
+    if(_desc.caller_cs){ // caller controls cs
+        if(!_need_cs) return;   // no request
+        if(_cs_value) return;   // requested assert
+        // caller want to  release
+        _need_cs = false;
+    }
+    if(_cs){      
+        delay_ns100(_desc.release_dly); 
+        _cs->write(1); 
+    } 
+}
+
 uint8_t SPIDevice::transfer(uint8_t out){
 #ifdef BOARD_SOFTWARE_SPI
     if(_desc.mode == SPI_TRANSFER_SOFT) {
@@ -753,14 +782,21 @@ bool SPIDevice::set_speed(AP_HAL::Device::Speed speed)
     }
 //*/
 
+    SPIFrequency s;
+
     switch (speed) {
     case AP_HAL::Device::SPEED_HIGH:
-        _speed = _desc.highspeed;
+        s = _desc.highspeed;
         break;
     case AP_HAL::Device::SPEED_LOW:
     default:
-        _speed = _desc.lowspeed;
+        s = _desc.lowspeed;
         break;
+    }
+
+    if(_speed != s) {
+        _speed = s;
+        init();
     }
 
     return true;

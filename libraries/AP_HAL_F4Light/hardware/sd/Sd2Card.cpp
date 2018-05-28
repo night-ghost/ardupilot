@@ -154,8 +154,9 @@ bool spi_chipSelectLow(bool take_sem) {
         _spi->set_speed(_speed);
 
     }
-    const stm32_pin_info &pp = PIN_MAP[BOARD_SDCARD_CS_PIN];
-    gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
+//  const stm32_pin_info &pp = PIN_MAP[BOARD_SDCARD_CS_PIN];
+//  gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
+    _spi->need_cs(true);        // assert CS before transfer
     return true;
 }
 
@@ -230,8 +231,9 @@ bool spi_chipSelectLow(bool take_sem) {
         _spi->set_speed(_speed);
 
     }
-    const stm32_pin_info &pp = PIN_MAP[BOARD_DATAFLASH_CS_PIN];
-    gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
+//    const stm32_pin_info &pp = PIN_MAP[BOARD_DATAFLASH_CS_PIN];
+//    gpio_write_bit(pp.gpio_device, pp.gpio_bit, LOW);
+    _spi->need_cs(true);        // assert CS before transfer
     return true;
 }
 

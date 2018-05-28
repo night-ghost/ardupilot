@@ -72,6 +72,7 @@ typedef struct SPIDESC {
     uint32_t              prio; // DMA priority
     uint8_t               assert_dly;  // delay after  CS goes low
     uint8_t               release_dly; // delay before CS goes high
+    bool                  caller_cs;   // caller controls CS
 } SPIDesc;
 
 enum SPI_ISR_MODE {
@@ -170,6 +171,8 @@ public:
     void  dma_isr();
     void  spi_isr();
 
+    inline void need_cs(bool val) { _need_cs = true; _cs_value = val; }
+
 #define SPI_BUFFER_SIZE 512 // one SD-card sector
     
 protected:
@@ -187,8 +190,8 @@ protected:
 
     void init(void);
 
-    inline void _cs_assert(){                   if(_cs){_cs->write(0); delay_ns100(_desc.assert_dly); } }                 // Select device and wait a little
-    inline void _cs_release(){ spi_wait_busy(_desc.dev); if(_cs){      delay_ns100(_desc.release_dly); _cs->write(1); } } // Deselect device after some delay
+    void _cs_assert();
+    void _cs_release();
 
     const spi_pins* dev_to_spi_pins(const spi_dev *dev);
 
@@ -237,6 +240,9 @@ protected:
     uint8_t _transfer_s(uint8_t bt);
 
 #endif
+
+    bool _need_cs;      // caller requested CS change
+    bool _cs_value;     // needed value;
 
 #ifdef DEBUG_SPI    
     static spi_trans spi_trans_array[SPI_LOG_SIZE];
