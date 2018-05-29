@@ -101,30 +101,13 @@ static INLINE void setupCCM(){
     while (dest < &_eccm) {
         *dest++ = 0;
     }
-
-// only for stack debugging
-#if 0
-    uint32_t sp;
-    
-    // Get stack pointer
-    asm volatile ("mov %0, sp\n\t"  : "=rm" (sp) );
-
- #if 0 //  memset is much faster but uses too much stack for own needs
-    memset((void *)dest,0x55, (sp-(uint32_t)dest) -128); 
- #else
-    while ((uint32_t)dest < (sp-8)) {
-        *dest++ = 0x55555555; // fill stack to check it's usage
-    }
- #endif
-#endif
 }
 
 
 
 static INLINE void setupNVIC()
 {
-    /* 4 bit preemption,  0 bit subpriority */
-    SCB->AIRCR = AIRCR_VECTKEY_MASK | NVIC_PriorityGroup_4;    
+    SCB->AIRCR = AIRCR_VECTKEY_MASK | NVIC_PriorityGroup_4;    // 4 bit preemption,  0 bit subpriority 
     exti_init();
 }
 
@@ -141,9 +124,7 @@ static INLINE void setupNVIC()
 void board_set_rtc_register(uint32_t sig, uint16_t reg)
 {
         PWR->CR   |= PWR_CR_DBP;
-    
         HAL_WriteBackupRegister(reg, sig);
-
         PWR->CR   &= ~PWR_CR_DBP;
 }
 
@@ -152,9 +133,7 @@ uint32_t board_get_rtc_register(uint16_t reg)
 {
         // enable the backup registers.
         PWR->CR   |= PWR_CR_DBP;
-
         uint32_t ret = HAL_ReadBackupRegister(reg);
-
         PWR->CR   &= ~PWR_CR_DBP;    
         return ret;
 }
@@ -169,7 +148,7 @@ void inline init(void) {
 // turn on and enable RTC
     RCC->APB1ENR |= RCC_APB1ENR_PWREN;
     RCC->AHB1ENR |= RCC_AHB1ENR_BKPSRAMEN;
-    PWR->CR   |= PWR_CR_DBP;
+    PWR->CR      |= PWR_CR_DBP;
 
     RCC_configRTC(RCC_RTCCLKSource_LSI);
     RCC_enableRTCclk(ENABLE);
@@ -190,7 +169,6 @@ void inline init(void) {
             goDFU();        // just after reset - so all hardware is in boot state
         }
     }
-
 
     bool overclock_failed = false;
     uint8_t overclock=0;
@@ -270,22 +248,18 @@ void emerg_delay(uint32_t n){
 
 void NMI_Handler() {
 
-    //Очищаем флаг прерывания CSS
-    RCC->CIR |= RCC_CIR_CSSC;
-    //Ждем некоторое время после сбоя, если он кратковременный
-    //Возможно удастся перезапустить
+    
+    RCC->CIR |= RCC_CIR_CSSC;    //Очищаем флаг прерывания CSS
+    //Ждем некоторое время после сбоя, если он кратковременный, возможно удастся перезапустить
+    
     emerg_delay(100);  // clock is wrong so all micros() etc lies!
-
-
-    //Пытаемся запустить HSE
-    RCC_enableHSE(RCC_HSE_ON);
+    
+    RCC_enableHSE(RCC_HSE_ON); //Пытаемся запустить HSE
     emerg_delay(1);     //Задержка на запуск кварца
 
 
-    if (RCC_WaitForHSEStartUp()){
-        //Если запустился - проводим установку заново
-        SetSysClock(0); // without overclocking 
-
+    if (RCC_WaitForHSEStartUp()){ //Если запустился - проводим установку заново
+        SetSysClock(0); // without overclocking
     } else {
 
 // кварц не запустился, переключаемся на HSI и выставляем полную частоту
