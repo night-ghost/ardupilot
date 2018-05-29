@@ -80,9 +80,14 @@ bool AP_Baro_BMP280::_init()
     _dev->set_speed(AP_HAL::Device::SPEED_HIGH);
     _dev->set_retries(10);
 
-    uint8_t whoami;
-    if (!_dev->read_registers(BMP280_REG_ID, &whoami, 1)  ||
-        whoami != BMP280_ID) {
+    uint8_t whoami=0;
+    uint8_t n;
+    
+    for(n=5;n; n--){
+        if (_dev->read_registers(BMP280_REG_ID, &whoami, 1)  &&  whoami == BMP280_ID) break;
+    }
+    
+    if(whoami != BMP280_ID){
         // not a BMP280    
 fail:   _dev->get_semaphore()->give();
         return false;
@@ -91,7 +96,6 @@ fail:   _dev->get_semaphore()->give();
     // read the calibration data
     uint8_t buf[24];
     uint8_t buf_chk[24];
-    uint8_t n;
     
     memset(buf, 0, sizeof(buf));
     
@@ -278,7 +282,7 @@ bool AP_Baro_BMP280::temperature_ok(float temp)
         float koeff = FILTER_KOEF;
 
         if (d * 200.0f > range) {  // check the difference from mean value outside allowed range
-//            printf("\nBaro temperature error: mean %f got %f\n", (double)_mean_temperature, (double)temp );
+            printf("\nBaro temperature error: mean %f got %f\n", (double)_mean_temperature, (double)temp );
             ret = false;
             koeff /= (d * 10.0f);  // 2.5 and more, so one bad sample never change mean more than 4%
             _error_count++;
