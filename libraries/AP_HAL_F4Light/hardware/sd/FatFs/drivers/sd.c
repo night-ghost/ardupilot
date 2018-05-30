@@ -92,6 +92,8 @@ extern int printf(const char *msg, ...);
 static uint8_t CardType;			/* Card type flags */
 static uint8_t no_CMD13 = 0;
 static uint8_t csd[16]; // for DMA reads
+static uint8_t buf[6]; // to use DMA
+static uint8_t ocr[4];
 
 static int8_t xmit_datablock(const uint8_t *buff,	uint8_t token);
 
@@ -108,17 +110,33 @@ uint8_t sd_get_type() {
 
 
 /* Exchange a byte */
+/*
 static inline
 uint8_t xchg_spi (
-	uint8_t dat	/* Data to send */
+	uint8_t dat	// Data to send 
 )
 {
     return spi_spiXchg(dat);
+
 }
+*/
+
+static inline
+void send_spi (
+	uint8_t dat	/* Data to send */
+)
+{
+    spi_spiTransfer(&dat, 1, NULL, 0);
+}
+
+
 
 static inline 
 uint8_t rcvr_spi(){
-    return xchg_spi(0xFF);
+    //return xchg_spi(0xFF);
+    uint8_t b;
+    spi_spiTransfer(NULL,0, &b, 1);
+    return b;
 }
 
 /* Receive multiple byte */
@@ -177,7 +195,7 @@ int wait_ready (	/* 1:Ready, 0:Timeout */
 
     Timer2 = wt;
     do {
-	d = xchg_spi(0xFF);		
+	d = rcvr_spi();		
 	spi_yield(); /* This loop takes a time. Insert rot_rdq() here for multitask envilonment. */
     } while (d != 0xFF && Timer2);	/* Wait for card goes ready or timeout */
 
@@ -198,7 +216,7 @@ static
 void deselect_cs (void)
 {
     CS_HIGH();		/* Set CS# high */
-    xchg_spi(0xFF);	/* Dummy clock (force DO hi-z for multiple slave SPI) */
+    send_spi(0xFF);	/* Dummy clock (force DO hi-z for multiple slave SPI) */
 }
 
 
@@ -213,7 +231,7 @@ int select_cs (void)	/* 1:OK, 0:Timeout */
     if(!CS_LOW()) { /* take semaphore and Set CS# low */
         return 0;		
     }
-    xchg_spi(0xFF);	/* Dummy clock (force DO enabled) */
+    send_spi(0xFF);	/* Dummy clock (force DO enabled) */
     if (wait_ready(500)) return 1;	/* Wait for card ready */
 
     deselect_cs();
@@ -248,7 +266,7 @@ int8_t rcvr_datablock (	/* 1:OK, 0:Error */
 
 	Timer1 = 200;
 	do {					/* Wait for DataStart token in timeout of 200ms */
-    	    token = xchg_spi(0xFF);
+    	    token = rcvr_spi(0xFF);
 	    spi_yield();	        /* This loop will take a time. Insert rot_rdq() here for multitask environment. */
 	} while ((token == 0xFF) && Timer1);
 
@@ -257,7 +275,7 @@ int8_t rcvr_datablock (	/* 1:OK, 0:Error */
 	}
 #endif
 	rcvr_spi_multi(buff, btr);		/* Store trailing data to the buffer */
-	xchg_spi(0xFF); xchg_spi(0xFF);		/* Discard CRC */
+	rcvr_spi(); rcvr_spi();		/* Discard CRC */
 
         ret=1; 				        /* Function succeeded */
 done:
@@ -280,12 +298,12 @@ static int8_t xmit_datablock (	        /* 1:OK, 0:Failed */
 
 	if (!wait_ready(500)) return 0;		/* Wait for card ready */
 
-	xchg_spi(token);			/* Send token */
+	send_spi(token);			/* Send token */
 	if (token != 0xFD) {			/* Send data if token is other than StopTran */
 	    xmit_spi_multi(buff, 512);		/* Data */
-	    xchg_spi(0xFF); xchg_spi(0xFF);	/* Dummy CRC */
+	    send_spi(0xFF); send_spi(0xFF);	/* Dummy CRC */
 
-	    resp = xchg_spi(0xFF);		/* Receive data resp */
+	    resp = rcvr_spi();		/* Receive data resp */
 	    if ((resp & 0x1F) != 0x05) {
 	        return 0;	/* Function fails if the data packet was not accepted */
 	    }
@@ -297,7 +315,6 @@ static int8_t xmit_datablock (	        /* 1:OK, 0:Failed */
 /*-----------------------------------------------------------------------*/
 /* Send a command packet to the MMC                                      */
 /*-----------------------------------------------------------------------*/
-static uint8_t buf[6]; // to use DMA
 
 static uint8_t wait_0x80(uint8_t b){
     return (b & 0x80)==0;
@@ -346,7 +363,7 @@ uint8_t send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
         xmit_spi_multi(buf, 6);	        // entire command in one packet
 
 	/* Receive command resp */
-	if (cmd == CMD12) xchg_spi(0xFF);	/* Discard following one byte when CMD12 */
+	if (cmd == CMD12) rcvr_spi();	/* Discard following one byte when CMD12 */
 
 #if defined(WAIT_IN_ISR)
         res=spi_waitFor(0xff, wait_0x80, 20000);
@@ -357,7 +374,7 @@ uint8_t send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 
 	uint8_t n = 255;		        /* Wait for response (10 bytes max) */
 	do {
-	    res = xchg_spi(0xFF);
+	    res = rcvr_spi();
 	    spi_yield();	                /* This loop will take a time. Insert rot_rdq() here for multitask environment. */
 	} while ((res & 0x80) && --n);
 
@@ -379,7 +396,7 @@ uint8_t send_cmd (	        	/* Return value: R1 resp (bit7==1:Failed to send) */
 /*-----------------------------------------------------------------------*/
 
 DSTATUS sd_initialize() {
-	uint8_t n, cmd, ty, ocr[4] ;
+	uint8_t n, cmd, ty;
 	
 	if (Stat & STA_NODISK) return Stat;	/* Is card existing in the soket? */
 	if(!(Stat & STA_NOINIT) )  return Stat; // already done
@@ -431,6 +448,8 @@ DSTATUS sd_initialize() {
 		}
 	    }
 	} else {
+	    printf("\nSD err: CMD0 returned %d\n", n);
+	    if(n == 0xff) printf("is SD card connected?\n");
 	    ty=0;
 	}
 	CardType = ty;	/* Card type */
@@ -491,7 +510,7 @@ DSTATUS sd_status (){
 uint8_t sd_get_state(){
     if(!no_CMD13) {
         if(send_cmd(CMD13, 0)<=1){
-            uint8_t ret = xchg_spi(0xFF);
+            uint8_t ret = rcvr_spi();
             return ret;
         }
         
@@ -728,9 +747,9 @@ DRESULT sd_ioctl (
 	case GET_BLOCK_SIZE :	/* Get erase block size in unit of sector (uint32_t) */
 		if (CardType & CT_SD2) {	/* SDC ver 2.00 */
 		    if (send_cmd(ACMD13, 0) == 0) {	/* Read SD status */
-			xchg_spi(0xFF);
+			rcvr_spi();
 			if (rcvr_datablock(csd, 16)) {				/* Read partial block */
-				for (n = 64 - 16; n; n--) xchg_spi(0xFF);	/* Purge trailing data */
+				for (n = 64 - 16; n; n--) rcvr_spi();	/* Purge trailing data */
 				*(uint32_t*)buff = 16UL << (csd[10] >> 4);
 				res = RES_OK;
 			}
