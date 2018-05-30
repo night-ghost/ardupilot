@@ -173,32 +173,11 @@ void SPIDevice::_cs_release(){              // Deselect device after some delay
 }
 
 
+// not controls CS!
 uint8_t SPIDevice::transfer(uint8_t out){
-    uint32_t t = hal_micros();
-    while(_desc.dev->state->busy){ //       wait for previous transfer finished
-        if(hal_micros() - t > 5000){
-        // TODO increment grab counter
-             break; // SPI transfer can't be so long so let grab the bus
-        }
-        hal_yield(0);
-    }
-
-
-    if(owner[_desc.bus-1] != this) { // bus was in use by another driver so SPI hardware need reinit
-        _initialized=false;
-    }
-
-    if(!_initialized){
-        init();
-        if(!_initialized) return false;
-        owner[_desc.bus-1] = this; // Got it!
-    }
-
     _desc.dev->state->busy = true; // we got bus
     spi_set_speed(_desc.dev, determine_baud_rate(_speed));
         
-    _cs_assert();
-
     uint8_t ret;
 
 #ifdef BOARD_SOFTWARE_SPI
@@ -210,12 +189,7 @@ uint8_t SPIDevice::transfer(uint8_t out){
         ret= _transfer(out);
     }
     
-    _cs_release();
     _desc.dev->state->busy=false;
-    if(_completion_cb) {
-        revo_call_handler(_completion_cb, (uint32_t)&_desc);
-        _completion_cb=0;
-    }
     return ret;    
 }
 

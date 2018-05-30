@@ -914,6 +914,13 @@ void * NOINLINE Scheduler::_start_task(Handler handle, size_t stackSize)
     return (void *)task;    // return address of task descriptor as task handle
 }
 
+void Scheduler::_replace_task(Handler h) {
+    task_t *task = s_running; // current task
+    noInterrupts();
+    task->handle = h; // replace handler in TCB to new one
+    interrupts();
+}
+
 // task should run periodically, period in uS. this will be high-priority task
 void Scheduler::set_task_period(void *h, uint32_t period){
     task_t *task = (task_t *)h;

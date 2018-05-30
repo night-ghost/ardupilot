@@ -797,6 +797,21 @@ void osd_begin(AP_HAL::OwnPtr<F4Light::SPIDevice> spi){
         
     }
 
+
+    
+#ifdef BOARD_OSD_VSYNC_PIN
+    Revo_hal_handler h = { .vp = vsync_ISR };
+    
+    GPIO::_attach_interrupt(BOARD_OSD_VSYNC_PIN, h.h, RISING, VSI_INT_PRIORITY);
+#endif
+
+    task_handle = Scheduler::start_task(OSDns::osd_loop, SMALL_TASK_STACK); // 
+    Scheduler::set_task_priority(task_handle, OSD_LOW_PRIORITY); // less than main task
+    Scheduler::set_task_active(task_handle);
+    Scheduler::set_task_period(task_handle, 10000);              // 100Hz 
+}
+
+void osd_setup(){
     while(millis()<1000) { // delay initialization until video stabilizes
         hal_yield(1000);
     }
@@ -838,16 +853,8 @@ void osd_begin(AP_HAL::OwnPtr<F4Light::SPIDevice> spi){
     
     logo();
 
-    
-#ifdef BOARD_OSD_VSYNC_PIN
-    Revo_hal_handler h = { .vp = vsync_ISR };
-    
-    GPIO::_attach_interrupt(BOARD_OSD_VSYNC_PIN, h.h, RISING, VSI_INT_PRIORITY);
-#endif
-
-    task_handle = Scheduler::start_task(OSDns::osd_loop, SMALL_TASK_STACK); // 
-    Scheduler::set_task_priority(task_handle, OSD_LOW_PRIORITY); // less than main task
-    Scheduler::set_task_period(task_handle, 10000);              // 100Hz 
+    Scheduler::set_task_period(task_handle, 10000);    // 100Hz 
+    Scheduler::replace_task(OSDns::osd_loop); // like exec(), replaces current task with new one
 }
 
 // all task is in one thread so no sync required
