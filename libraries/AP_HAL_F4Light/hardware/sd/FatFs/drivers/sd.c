@@ -449,7 +449,7 @@ DSTATUS sd_initialize() {
 	    }
 	} else {
 	    printf("\nSD err: CMD0 returned %d\n", n);
-	    if(n == 0xff) printf("is SD card connected?\n");
+	    if(n == 0xff) printf("is SD card inserted?\n");
 	    ty=0;
 	}
 	CardType = ty;	/* Card type */
