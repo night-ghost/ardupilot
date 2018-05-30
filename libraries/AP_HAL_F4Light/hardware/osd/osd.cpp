@@ -866,7 +866,6 @@ void osd_setup(){
     Scheduler::replace_task(OSDns::osd_loop); // like exec(), replaces current task with new one
     
     printf("OSD started\n");
-
 }
 
 // all task is in one thread so no sync required

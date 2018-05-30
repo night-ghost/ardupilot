@@ -273,6 +273,18 @@ public:
   // not used - tasks are never stopped
   static void stop_task(void * h);
 
+
+  static inline void replace_task(voidFuncPtr func) {
+        Revo_handler r = { .vp=func };
+        return _replace_task(r.h);
+  }
+  static inline void replace_task(AP_HAL::MemberProc proc) {
+        Revo_handler r = { .mp=proc };
+        return _replace_task(r.h);
+  }
+
+  static void _replace_task(Handler h);
+
   
 // functions to alter task's properties
 //[ this functions called only at task start
