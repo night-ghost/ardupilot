@@ -35,20 +35,6 @@ AP_HAL::Semaphore                *_spi_sem;
 static AP_HAL::Device::Speed _speed;
 
 
-/** Send a byte to the card */
-void  spi_spiSend(uint8_t b) {
-  return _spi->send(b);
-}
-
-/** Receive a byte from the card */
-uint8_t spi_spiRecv(void) {
-  return _spi->transfer(0xFF);
-}
-
-uint8_t spi_spiXchg(uint8_t b) {
-  return _spi->transfer(b);
-}
-
 uint8_t spi_waitFor(uint8_t out, spi_WaitFunc cb, uint32_t dly) {
     return _spi->wait_for(out, cb, dly);
 }
@@ -194,7 +180,10 @@ uint8_t Sd2Card::init(AP_HAL::OwnPtr<F4Light::SPIDevice> spi) {
     _spi->set_speed(_speed);
 
     // must supply min of 74 clock cycles with CS high.
-    for (uint8_t i = 0; i < 10; i++) spi_spiSend(0XFF);
+    for (uint8_t i = 0; i < 10; i++) {
+         uint8_t b = 0XFF;
+         _spi->transfer(&b, 1,  NULL, 0);
+    }
 
     _spi_sem->give();
 
