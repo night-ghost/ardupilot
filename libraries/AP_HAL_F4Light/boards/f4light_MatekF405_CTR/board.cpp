@@ -157,8 +157,8 @@ extern const struct TIM_Channel PWM_Channels[] __FLASH__ =   {
 extern const SPIDesc spi_device_table[] = {    // different SPI tables per board subtype
 //               name            device   bus  mode         cs_pin                 speed_low       speed_high   dma               priority           delay_cs_on delay_cs_off
      { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,    SPI_1_125MHZ,   SPI_9MHZ,   SPI_TRANSFER_DMA, DMA_Priority_VeryHigh,   1,          5,      false },
-     { BOARD_SDCARD_NAME,        _SPI3,   3,  SPI_MODE_3, BOARD_SDCARD_CS_PIN,     SPI_562_500KHZ, SPI_18MHZ,  SPI_TRANSFER_DMA, DMA_Priority_Medium,     2,          2,      true },
      { BOARD_OSD_NAME,           _SPI2,   2,  SPI_MODE_0, BOARD_OSD_CS_PIN,        SPI_1_125MHZ,   SPI_4_5MHZ, SPI_TRANSFER_DMA, DMA_Priority_Low,        2,          2,      false },
+     { BOARD_SDCARD_NAME,        _SPI3,   3,  SPI_MODE_0, BOARD_SDCARD_CS_PIN,     SPI_562_500KHZ, SPI_18MHZ,  SPI_TRANSFER_DMA, DMA_Priority_Medium,     2,          2,      true },
 };
 
 extern const uint8_t F4Light_SPI_DEVICE_NUM_DEVICES = ARRAY_SIZE(spi_device_table);
