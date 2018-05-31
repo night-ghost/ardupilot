@@ -64,7 +64,6 @@ typedef uint8_t (*spi_WaitFunc)(uint8_t b);
 // utility function 
 extern uint8_t spi_spiSend(uint8_t b);
 extern uint8_t spi_spiRecv(void);
-extern uint8_t spi_spiXchg(uint8_t b);
 extern void spi_spiTransfer(const uint8_t *send, uint32_t send_len,  uint8_t *recv, uint32_t recv_len);
 extern void spi_chipSelectHigh(void);
 extern bool spi_chipSelectLow(bool take_sem);
@@ -953,17 +952,20 @@ uint8_t sd_get_type() {
 
 /* Initialize MMC interface */
 
+extern uint8_t spi_spiSend(uint8_t b);
+extern uint8_t spi_spiRecv(void);
+
 
 /* Exchange a byte */
-static inline uint8_t spi_write(
+static inline void spi_write(
 	uint8_t dat	/* Data to send */
 )
 {
-    return spi_spiXchg(dat);
+    spi_spiSend(dat);
 }
 
 static inline uint8_t spi_read(){
-    return spi_spiXchg(0xFF);
+    return spi_spiRecv();
 }
 
 /* Receive multiple byte */
