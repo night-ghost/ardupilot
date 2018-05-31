@@ -450,6 +450,7 @@ bool SPIDevice::transfer_fullduplex(const uint8_t *out, uint8_t *recv, uint32_t 
                 
         case SPI_TRANSFER_DMA:
             if((out==NULL || ADDRESS_IN_RAM(out)) && (recv==NULL || ADDRESS_IN_RAM(recv)) ) {
+                get_dma_ready();
                 setup_dma_transfer(out, recv, len);
                 return do_transfer(true, len)==0;
             }    
