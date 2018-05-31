@@ -27,6 +27,8 @@
 #include "GPIO.h"
 
 
+#define SPI_TEST_PIN SERVO_PIN_5 // pulses here
+
 using namespace F4Light;
 
 
@@ -175,6 +177,15 @@ void SPIDevice::_cs_release(){              // Deselect device after some delay
 
 // not controls CS!
 uint8_t SPIDevice::transfer(uint8_t out){
+    uint32_t t = hal_micros();
+    while(_desc.dev->state->busy){ //       wait for previous transfer finished
+        if(hal_micros() - t > 5000){
+        // TODO increment grab counter
+             break; // SPI transfer can't be so long so let grab the bus
+        }
+        hal_yield(0);
+    }
+        
     _desc.dev->state->busy = true; // we got bus
     spi_set_speed(_desc.dev, determine_baud_rate(_speed));
         
@@ -213,6 +224,7 @@ uint8_t SPIDevice::_transfer(uint8_t data) {
     return (uint8_t)(_desc.dev->regs->DR); // we got a byte so transfer complete
 }
 
+/*
 void SPIDevice::send(uint8_t out) {
     //wait for TXE before send
     while (!spi_is_tx_empty(_desc.dev)) {    // should wait transfer finished
@@ -221,7 +233,7 @@ void SPIDevice::send(uint8_t out) {
     //write 1byte
     spi_tx_reg(_desc.dev, out); //    _desc.dev->regs->DR = data;
 }
-
+*/
 
 bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, uint32_t recv_len){
     
@@ -650,6 +662,10 @@ void SPIDevice::disable_dma(){
 }
 
 void SPIDevice::dma_isr(){
+#ifdef SPI_TEST_PIN
+    gpio_set_mode( PIN_MAP[SPI_TEST_PIN].gpio_device, PIN_MAP[SPI_TEST_PIN].gpio_bit, GPIO_OUTPUT_PP);
+    gpio_write_bit(PIN_MAP[SPI_TEST_PIN].gpio_device, PIN_MAP[SPI_TEST_PIN].gpio_bit, 1);
+#endif
     disable_dma();
     
     if(_desc.dev->state->len) {
@@ -699,6 +715,11 @@ void SPIDevice::dma_isr(){
     } else { // all done
         isr_transfer_finish();                // releases SPI bus 
     }
+
+#ifdef SPI_TEST_PIN
+    gpio_write_bit(PIN_MAP[SPI_TEST_PIN].gpio_device, PIN_MAP[SPI_TEST_PIN].gpio_bit, 0);
+#endif
+
 }
 
 
