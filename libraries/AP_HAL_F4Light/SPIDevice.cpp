@@ -656,6 +656,7 @@ void SPIDevice::dma_isr(){
         memmove(_desc.dev->state->dst, &buffer[_desc.bus-1][0], _desc.dev->state->len);
         _desc.dev->state->len=0; // once
     }
+    spi_wait_busy(_desc.dev); // just for case - RX transfer is finished
 
     _send_len = 0;  // send done
 
@@ -665,7 +666,6 @@ void SPIDevice::dma_isr(){
         (void)_desc.dev->regs->DR; // read fake data out
         // now we should set up DMA transfer
 
-        spi_wait_busy(_desc.dev); // just for case - RX transfer is finished
         
         delay_ns100(3); // small delay between TX and RX, to give the chip time to think over domestic affairs
                         // for slow devices which need a time between address and data 
