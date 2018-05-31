@@ -27,6 +27,8 @@
 #include "GPIO.h"
 
 
+#define SPI_TEST_PIN SERVO_PIN_5 // pulses here
+
 using namespace F4Light;
 
 
@@ -175,6 +177,15 @@ void SPIDevice::_cs_release(){              // Deselect device after some delay
 
 // not controls CS!
 uint8_t SPIDevice::transfer(uint8_t out){
+    uint32_t t = hal_micros();
+    while(_desc.dev->state->busy){ //       wait for previous transfer finished
+        if(hal_micros() - t > 5000){
+        // TODO increment grab counter
+             break; // SPI transfer can't be so long so let grab the bus
+        }
+        hal_yield(0);
+    }
+        
     _desc.dev->state->busy = true; // we got bus
     spi_set_speed(_desc.dev, determine_baud_rate(_speed));
         
@@ -213,6 +224,7 @@ uint8_t SPIDevice::_transfer(uint8_t data) {
     return (uint8_t)(_desc.dev->regs->DR); // we got a byte so transfer complete
 }
 
+/*
 void SPIDevice::send(uint8_t out) {
     //wait for TXE before send
     while (!spi_is_tx_empty(_desc.dev)) {    // should wait transfer finished
@@ -221,7 +233,7 @@ void SPIDevice::send(uint8_t out) {
     //write 1byte
     spi_tx_reg(_desc.dev, out); //    _desc.dev->regs->DR = data;
 }
-
+*/
 
 bool SPIDevice::transfer(const uint8_t *out, uint32_t send_len, uint8_t *recv, uint32_t recv_len){
     
@@ -438,6 +450,7 @@ bool SPIDevice::transfer_fullduplex(const uint8_t *out, uint8_t *recv, uint32_t 
                 
         case SPI_TRANSFER_DMA:
             if((out==NULL || ADDRESS_IN_RAM(out)) && (recv==NULL || ADDRESS_IN_RAM(recv)) ) {
+                get_dma_ready();
                 setup_dma_transfer(out, recv, len);
                 return do_transfer(true, len)==0;
             }    
@@ -587,10 +600,9 @@ void  SPIDevice::setup_dma_transfer(const uint8_t *out, const uint8_t *recv, uin
     const Spi_DMA &dp = _desc.dev->dma;
     uint32_t memory_inc;
 
-    dma_init(dp.stream_rx); dma_init(dp.stream_tx);
+    spi_disable_irq(_desc.dev, SPI_RXNE_TXE_INTERRUPTS); // just for case
 
     dma_clear_isr_bits(dp.stream_rx); dma_clear_isr_bits(dp.stream_tx);
-
 
     DMA_InitStructure.DMA_PeripheralBaseAddr    = (uint32_t)(&(_desc.dev->regs->DR));
     DMA_InitStructure.DMA_BufferSize            = btr;
@@ -650,12 +662,17 @@ void SPIDevice::disable_dma(){
 }
 
 void SPIDevice::dma_isr(){
+#ifdef SPI_TEST_PIN
+    gpio_set_mode( PIN_MAP[SPI_TEST_PIN].gpio_device, PIN_MAP[SPI_TEST_PIN].gpio_bit, GPIO_OUTPUT_PP);
+    gpio_write_bit(PIN_MAP[SPI_TEST_PIN].gpio_device, PIN_MAP[SPI_TEST_PIN].gpio_bit, 1);
+#endif
     disable_dma();
     
     if(_desc.dev->state->len) {
         memmove(_desc.dev->state->dst, &buffer[_desc.bus-1][0], _desc.dev->state->len);
         _desc.dev->state->len=0; // once
     }
+    spi_wait_busy(_desc.dev); // just for case - RX transfer is finished
 
     _send_len = 0;  // send done
 
@@ -665,7 +682,6 @@ void SPIDevice::dma_isr(){
         (void)_desc.dev->regs->DR; // read fake data out
         // now we should set up DMA transfer
 
-        spi_wait_busy(_desc.dev); // just for case - RX transfer is finished
         
         delay_ns100(3); // small delay between TX and RX, to give the chip time to think over domestic affairs
                         // for slow devices which need a time between address and data 
@@ -699,6 +715,11 @@ void SPIDevice::dma_isr(){
     } else { // all done
         isr_transfer_finish();                // releases SPI bus 
     }
+
+#ifdef SPI_TEST_PIN
+    gpio_write_bit(PIN_MAP[SPI_TEST_PIN].gpio_device, PIN_MAP[SPI_TEST_PIN].gpio_bit, 0);
+#endif
+
 }
 
 
@@ -771,6 +792,11 @@ void SPIDevice::init(){
 
 
         spi_master_enable(_desc.dev, determine_baud_rate(_desc.lowspeed), _desc.sm, SPI_FirstBit_MSB);          
+
+        if(_desc.mode == SPI_TRANSFER_DMA) {
+            const Spi_DMA &dp = _desc.dev->dma;
+            dma_init(dp.stream_rx); dma_init(dp.stream_tx);
+        }
     }
     _initialized=true;
 
@@ -915,7 +941,7 @@ uint16_t  SPIDevice::send_strobe(const uint8_t *buffer, uint16_t len){ // send i
     return _send_len;
 }
 
-// gives received bytes to callback and returns when callback returns true but not linger than timeout (uS)
+// gives received bytes to callback and returns when callback returns true but not longer than timeout (uS)
 // so it works like wait for needed byte in ISR - but without wait
 uint8_t SPIDevice::wait_for(uint8_t out, spi_WaitFunc cb, uint32_t dly){ // wait for needed byte in ISR
     _send_len = out;
@@ -962,8 +988,8 @@ void SPIDevice::isr_transfer_finish(){
     _desc.dev->state->busy=false; // reset 
 
     if(_task){ // resume paused task
-        Scheduler::task_resume(_task); // task will be resumed having very high priority & force 
-                                              // context switch just after return from ISR so task will get a tick
+        Scheduler::task_resume(_task); // task will be resumed having very high priority & forced
+                                          // context switch just after return from ISR so task will get a tick
         _task=NULL;
     }
 
@@ -975,7 +1001,6 @@ void SPIDevice::isr_transfer_finish(){
     Handler h;
     if((h=_completion_cb)) {
         _completion_cb=0; // only once and BEFORE call itself because IOC can do new transfer
-
         revo_call_handler(h, (uint32_t)&_desc);
     }
 }

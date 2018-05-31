@@ -292,6 +292,13 @@ static inline uint8_t spi_is_busy(const spi_dev *dev) {
 
 static inline void spi_wait_busy(const spi_dev *dev) {// Wait until the transfer is complete - to not disable CS too early 
     uint32_t dly=3000;
+
+
+    while (!(dev->regs->SR & SPI_BIT_TXE)){ // wait for TXE first
+        dly--;
+        if(dly==0) break;
+    }
+    // now wait for bus release
     while (dev->regs->SR & SPI_BIT_BSY){ // but datasheet prohibits this usage
         dly--;
         if(dly==0) break;
