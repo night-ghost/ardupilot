@@ -38,14 +38,14 @@
 
 #define BOARD_HAS_UART3
 
-#define BOARD_USART1_TX_PIN     PA10
-#define BOARD_USART1_RX_PIN     PA9
+#define BOARD_USART1_TX_PIN     PA9
+#define BOARD_USART1_RX_PIN     PA10
 
 //#define BOARD_USART2_TX_PIN     PA2
 //#define BOARD_USART2_RX_PIN     PA3 - used for PPM
 
-#define BOARD_USART3_TX_PIN     PC11
-#define BOARD_USART3_RX_PIN     PC10
+#define BOARD_USART3_TX_PIN     PC10
+#define BOARD_USART3_RX_PIN     PC11
 
 #define BOARD_USART4_TX_PIN     PA0
 #define BOARD_USART4_RX_PIN     PA1
