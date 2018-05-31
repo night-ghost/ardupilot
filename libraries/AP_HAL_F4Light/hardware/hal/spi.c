@@ -125,7 +125,6 @@ void spi_reconfigure(const spi_dev *dev, uint8_t ismaster, uint16_t baudPrescale
     spi_disable_irq(dev, SPI_INTERRUPTS_ALL);  
     
     spi_init(dev);
-    spi_peripheral_disable(dev);
 
     /* SPI configuration */
 
@@ -153,18 +152,17 @@ void spi_reconfigure(const spi_dev *dev, uint8_t ismaster, uint16_t baudPrescale
 	break;
     }
 
+    spi_peripheral_disable(dev);
 
     uint16_t SPI_Mode;
     if (ismaster) SPI_Mode = SPI_Mode_Master;
     else          SPI_Mode = SPI_Mode_Slave;
 
-    uint16_t tmpreg = dev->regs->CR1 &= SPI_CR1_CLEAR_MASK;  // Clear all except SPE
-
+    dev->regs->CR2 = 0; // disable all interrupt and DMA requests
     // direction, NSS management, first transmitted bit, BaudRate prescaler, master/salve mode, CPOL and CPHA
-    dev->regs->CR1 = tmpreg | (uint16_t)(SPI_Direction_2Lines_FullDuplex | SPI_Mode | SPI_size_8b | cpol | cpha | SPI_NSS_Soft | baudPrescaler | bitorder);
+    dev->regs->CR1 = (uint16_t)(SPI_Direction_2Lines_FullDuplex | SPI_Mode | SPI_size_8b | cpol | cpha | SPI_NSS_Soft | baudPrescaler | bitorder);
 
-    dev->regs->I2SCFGR &= (uint16_t)~(SPI_I2SCFGR_I2SMOD); // Activate the SPI mode (Reset I2SMOD bit in I2SCFGR register) 
-    dev->regs->CRCPR = 7; // SPI_CRCPolynomial;
+    dev->regs->I2SCFGR &= (uint16_t)~SPI_I2SCFGR_I2SMOD; // Activate the SPI mode (Reset I2SMOD bit in I2SCFGR register) 
 
     spi_peripheral_enable(dev);
         

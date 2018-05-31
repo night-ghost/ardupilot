@@ -915,7 +915,7 @@ uint16_t  SPIDevice::send_strobe(const uint8_t *buffer, uint16_t len){ // send i
     return _send_len;
 }
 
-// gives received bytes to callback and returns when callback returns true but not linger than timeout (uS)
+// gives received bytes to callback and returns when callback returns true but not longer than timeout (uS)
 // so it works like wait for needed byte in ISR - but without wait
 uint8_t SPIDevice::wait_for(uint8_t out, spi_WaitFunc cb, uint32_t dly){ // wait for needed byte in ISR
     _send_len = out;
@@ -962,8 +962,8 @@ void SPIDevice::isr_transfer_finish(){
     _desc.dev->state->busy=false; // reset 
 
     if(_task){ // resume paused task
-        Scheduler::task_resume(_task); // task will be resumed having very high priority & force 
-                                              // context switch just after return from ISR so task will get a tick
+        Scheduler::task_resume(_task); // task will be resumed having very high priority & forced
+                                          // context switch just after return from ISR so task will get a tick
         _task=NULL;
     }
 
@@ -975,7 +975,6 @@ void SPIDevice::isr_transfer_finish(){
     Handler h;
     if((h=_completion_cb)) {
         _completion_cb=0; // only once and BEFORE call itself because IOC can do new transfer
-
         revo_call_handler(h, (uint32_t)&_desc);
     }
 }

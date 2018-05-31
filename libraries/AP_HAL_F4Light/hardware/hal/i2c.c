@@ -139,7 +139,7 @@ void i2c_init(const i2c_dev *dev, uint16_t address, uint32_t speed)
   
     uint16_t freq = (uint16_t)(pclk1 / 1000000);
 
-    uint16_t  reg = dev->regs->CR2 & (uint16_t)~((uint16_t)I2C_CR2_FREQ); // Clear FREQ[5:0]
+    uint16_t  reg = dev->regs->CR2 & (uint16_t)~I2C_CR2_FREQ; // Clear FREQ[5:0]
     dev->regs->CR2 = reg | freq; // Set frequency depending on pclk1 value 
     
 
