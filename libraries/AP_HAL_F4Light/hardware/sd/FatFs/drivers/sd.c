@@ -108,17 +108,6 @@ uint8_t sd_get_type() {
 /* Initialize MMC interface */
 
 
-/* Exchange a byte */
-/*
-static inline
-uint8_t xchg_spi (
-	uint8_t dat	// Data to send 
-)
-{
-    return spi_spiXchg(dat);
-
-}
-*/
 
 static inline
 void send_spi (
@@ -952,21 +941,25 @@ uint8_t sd_get_type() {
 
 /* Initialize MMC interface */
 
-extern uint8_t spi_spiSend(uint8_t b);
-extern uint8_t spi_spiRecv(void);
 
-
-/* Exchange a byte */
-static inline void spi_write(
+static inline
+void spi_write (
 	uint8_t dat	/* Data to send */
 )
 {
-    spi_spiSend(dat);
+    spi_spiTransfer(&dat, 1, NULL, 0);
 }
 
-static inline uint8_t spi_read(){
-    return spi_spiRecv();
+
+
+static inline 
+uint8_t spi_read(){
+    uint8_t b;
+    spi_spiTransfer(NULL,0, &b, 1);
+    return b;
 }
+
+
 
 /* Receive multiple byte */
 static inline void read_spi_multi (

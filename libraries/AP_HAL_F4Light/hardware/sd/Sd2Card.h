@@ -38,9 +38,6 @@ using namespace F4Light;
 
 
 extern "C" {
-    void    spi_spiSend(uint8_t b);
-    uint8_t spi_spiRecv(void);
-    uint8_t spi_spiXchg(uint8_t b);
     void spi_spiTransfer(const uint8_t *send, uint32_t send_len,  uint8_t *recv, uint32_t recv_len);
     void spi_chipSelectHigh(void);
     bool spi_chipSelectLow(bool take_sem);
