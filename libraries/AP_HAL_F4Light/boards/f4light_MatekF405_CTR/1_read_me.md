@@ -10,7 +10,7 @@ Just see board's documentation.
 | ------       | ------ |
 | USB          | Serial0 in MP |
 | Telemetry    | UART1 (Serial1) |
-| GPS          | UART4 (rx4/tx4) | 
+| GPS          | UART4 (Serial3) | 
 | Built-in OSD | Serial2 |
 | UART2        | Serial4 |
 | UART5        | Serial5 |
