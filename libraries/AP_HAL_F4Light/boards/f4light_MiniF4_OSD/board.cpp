@@ -44,7 +44,7 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     {&gpioa, &timer1,NULL,  8, TIMER_CH1, nADC}, /* D22/PA8  2 SERVO6 */
     {&gpioa, &timer1,NULL,  9, TIMER_CH2, nADC}, /* D23/PA9  3 USART1_TX */
     {&gpioa, &timer1,NULL, 10, TIMER_CH3, nADC}, /* D24/PA10 4 USART1_RX */
-    {&gpiob,   NULL, NULL,  9, TIMER_CH4, nADC}, /* D25/PB9  5 I2C1_SDA */
+    {&gpiob, &timer4,NULL,  9, TIMER_CH4, nADC}, /* D25/PB9  5 PPM_in2 */
     {&gpiod,   NULL, NULL,  2, NO_CH,     nADC}, /* D26/PD2  6 LED_Strip / UART5_RX / Soft_SDA */
     {&gpiod,   NULL, NULL,  3, NO_CH,     nADC}, /* D27/PD3  7*/
     {&gpiod,   NULL, NULL,  6, NO_CH,     nADC}, /* D28/PD6  8*/
@@ -120,7 +120,7 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     {&gpiog,   NULL, NULL,  5, NO_CH,     nADC}, /* D98/PG5  8*/
     {&gpiod,   NULL, NULL, 10, NO_CH,     nADC}, /* D99/PD10 9*/
     {&gpiob,   NULL, NULL, 11, NO_CH,     nADC}, /* D100/PB11 100 USART3_RX/I2C2-SDA */
-    {&gpiob,   NULL, NULL,  8, NO_CH,     nADC}, /* D101/PB8  I2C1_SCL  */
+    {&gpiob, &timer4,NULL,  8, TIMER_CH3, nADC}, /* D101/PB8  I2C1_SCL  PPM_IN */
     {&gpioe,   NULL, NULL,  2, NO_CH,     nADC}, /* D102/PE2 */
     {&gpioa,   NULL, NULL, 15, NO_CH,     nADC}, /* D103/PA15 CS_OSD */
     {&gpiob,   NULL, NULL,  3, NO_CH,     nADC}, /* D104/PB3  CS_BARO */
@@ -156,25 +156,13 @@ struct TIM_Channel {
 
 extern const struct TIM_Channel PWM_Channels[] __FLASH__ =   {
     //CH1 and CH2 also for PPMSUM / SBUS / DSM
-	    { // 0 RC_IN1
-		.pin         =     101,
-	    },
-	    { // 1 RC_IN2
-		.pin         =     25,
-	    },
-	    { // 2 RC_IN3
-		.pin         =     12,
-	    },
-	    { // 3 RC_IN4
-		.pin         =     13,
-	    },
-	    { // 4 RC_IN5
-		.pin         =     14,
-	    },
-	    { // 5 RC_IN6
-		.pin         =     15,
-	    },
-    };
+    { // 0 RC_IN1
+	.pin         = 101,
+    },
+    { // 1 RC_IN2
+        .pin         = 25,
+    },
+};
 
 
 /*
@@ -190,8 +178,6 @@ extern const struct TIM_Channel PWM_Channels[] __FLASH__ =   {
 extern const SPIDesc spi_device_table[] = {    
 //           name            device   bus  mode         cs_pin                      speed_low       speed_high   mode               priority          assert_dly release_dly
   { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,        SPI_1_125MHZ,   SPI_9MHZ,   SPI_TRANSFER_DMA,  DMA_Priority_VeryHigh, 1,          5 }, 
-  { BOARD_SDCARD_NAME,        _SPI2,   2,  SPI_MODE_0, 255, /* caller controls CS*/ SPI_1_125MHZ,   SPI_18MHZ,  SPI_TRANSFER_DMA,  DMA_Priority_Medium,   0,          0 }, 
-  { HAL_BARO_BMP280_NAME,     _SPI3,   3,  SPI_MODE_3, BOARD_BMP280_CS_PIN,         SPI_1_125MHZ,   SPI_9MHZ,   SPI_TRANSFER_DMA,  DMA_Priority_High,     1,          1 }, 
   { BOARD_OSD_NAME,           _SPI3,   3,  SPI_MODE_3, BOARD_OSD_CS_PIN,            SPI_1_125MHZ,   SPI_4_5MHZ, SPI_TRANSFER_DMA,  DMA_Priority_Low,      2,          2 },
 
 };

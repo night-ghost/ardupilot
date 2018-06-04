@@ -71,6 +71,8 @@ static void pwmIRQHandler(uint32_t v /* TIM_TypeDef *tim */){
 
         const stm32_pin_info     *p       = &PIN_MAP[channel->pin];
         const timer_dev          *timer   = p->timer_device;
+        
+        if(timer==NULL) continue;
 
 /*
 struct PPM_State  {

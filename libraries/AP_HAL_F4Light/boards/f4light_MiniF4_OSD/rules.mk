@@ -52,4 +52,3 @@ sp              := $(basename $(sp))
 
 
 include $(HARDWARE_PATH)/osd/rules.mk
-include $(HARDWARE_PATH)/massstorage/rules.mk

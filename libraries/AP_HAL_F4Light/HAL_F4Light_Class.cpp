@@ -169,8 +169,8 @@ HAL_F4Light::HAL_F4Light() :
 
 #elif BOARD_UARTS_LAYOUT == 4 // MiniOSD
 
-        &uart6Driver,           // uartB - pin 7&8(REVO)/5&6(RevoMini) of input port - for GPS - Serial3
-        &uart1Driver,           // uartC - main port  - for telemetry                          - Serial1
+        &uart1Driver,           // uartC - for GPS                                - Serial1
+        &uart6Driver,           // uartB - for telemetry                          - Serial3
         NULL,
         NULL,
         NULL,

@@ -31,14 +31,16 @@
 # define HIGH 1
 #endif
 
-//#define BOARD_BUZZER_PIN        5 // PB15, PWM2 - used as PPM2
 
 
+// only UART1 is connected to DSM/IBUS input pad
 #define BOARD_NR_USARTS         5
 #define BOARD_USART1_TX_PIN     23 
 #define BOARD_USART1_RX_PIN     24 
+
 #define BOARD_USART3_TX_PIN     0
 #define BOARD_USART3_RX_PIN     100
+
 #define BOARD_USART6_TX_PIN     12
 #define BOARD_USART6_RX_PIN     13
 
@@ -70,8 +72,8 @@
 # define HAL_GPIO_A_LED_PIN      BOARD_BLUE_LED_PIN
 # define HAL_GPIO_B_LED_PIN      BOARD_GREEN_LED_PIN
 
-# define HAL_LED_ON           LOW
-# define HAL_LED_OFF          HIGH
+# define HAL_GPIO_LED_ON           LOW
+# define HAL_GPIO_LED_OFF          HIGH
 
 
 #define BOARD_NR_GPIO_PINS      109
@@ -82,17 +84,27 @@
 #define I2C2_SDA PB11
 #define I2C2_SCL PB10
 
-#define BOARD_I2C_BUS_INT 1  // hardware internal I2C
+//#define BOARD_I2C_BUS_INT 1  // hardware internal I2C
 
 #define BOARD_I2C_BUS_EXT      2  // external soft I2C
 #define BOARD_I2C_BUS_SLOW     2  // slow down this bus
 
 // bus 2 (soft) pins
-#define BOARD_SOFT_SCL          105
-#define BOARD_SOFT_SDA          26
+#define BOARD_SOFT_SCL          PB6 // LED_STRIP
+#define BOARD_SOFT_SDA          PB15 // Buzz-
 
 //#define BOARD_BARO_DEFAULT   HAL_BARO_BMP085_I2C
 //#define HAL_BARO_BMP085_BUS  BOARD_I2C_BUS_EXT
+
+#define HAL_BARO_MS5611_I2C_BUS         BOARD_I2C_BUS_EXT
+#define HAL_BARO_MS5611_I2C_ADDR        (0x77)
+
+#define HAL_BARO_BMP280_BUS             BOARD_I2C_BUS_EXT
+#define HAL_BARO_BMP280_I2C_ADDR        (0x76)
+
+#define HAL_BARO_BMP085_BUS             BOARD_I2C_BUS_EXT
+#define HAL_BARO_BMP085_I2C_ADDR        (0x77)
+
 
 #define BOARD_COMPASS_DEFAULT HAL_COMPASS_HMC5843
 
@@ -108,21 +120,6 @@
 
 #define BOARD_STORAGE_SIZE            8192 //4096 // EEPROM size
 
-#define BOARD_DATAFLASH_NAME "dataflash"
-#define BOARD_DATAFLASH_PAGES 0x2000 // in 256-bytes pages
-#define BOARD_DATAFLASH_ERASE_SIZE (4096)// in bytes
-
-#if 1// if board's dataflash supports 4k erases then we can use it as FAT and share it via USB
-#define BOARD_DATAFLASH_FATFS
-#define BOARD_HAS_SDIO
-#define USB_MASSSTORAGE
-#define HAL_BOARD_LOG_DIRECTORY "0:"
-#define HAL_BOARD_TERRAIN_DIRECTORY "0:/TERRAIN"
-//#define HAL_PARAM_DEFAULTS_PATH "0:/APM/defaults.parm"
-#else
-// old dataflash logs
-#endif
-
 #define BOARD_OSD_NAME "osd"
 #define BOARD_OSD_CS_PIN   103
 #define BOARD_OSD_VSYNC_PIN   9 // PC3, Frequency input (pin 11)
@@ -135,10 +132,15 @@
 # define BOARD_BATTERY_CURR_PIN     7   // Battery current on A1 (PC1) D7
 # define BOARD_SONAR_SOURCE_ANALOG_PIN 254
 
+# define HAL_BATT_VOLT_PIN      8 // ChibiOS compatible defines
+# define HAL_BATT_CURR_PIN      -1
+# define HAL_BATT_VOLT_SCALE    10.1
+# define HAL_BATT_CURR_SCALE    17
+
 #define BOARD_USB_DMINUS 108
 
 
-#define BOARD_SBUS_UART 1 // can use some UART as hardware inverted input
+//#define BOARD_SBUS_UART 1 // can use some UART as hardware inverted input
 
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
@@ -153,32 +155,11 @@
 #define SERVO_PIN_5 48 // PA1
 #define SERVO_PIN_6 22 // PA8
 
-#define MOTOR_LAYOUT_DEFAULT 0
+#define MOTOR_LAYOUT_DEFAULT 3 // CleanFlight
 
-//#define HAL_CONSOLE uart1Driver // console on radio
 #define HAL_CONSOLE USB_Driver // console on USB
 #define HAL_CONSOLE_PORT 0 // console on USB
 
-
-
-/*
-
-    // @Param: USB_STORAGE
-    // @DisplayName: allows access to SD card at next reboot
-    // @Description: Allows to read/write internal SD card via USB mass-storage protocol. Auto-reset.
-    // @Values: 0:normal, 1:work as USB flash drive
-    // @User: Advanced
-    AP_GROUPINFO("USB_STORAGE",  8, AP_Param_Helper, _usb_storage, 0), \
-
-*/
-#define BOARD_HAL_VARINFO \
-    AP_GROUPINFO("USB_STORAGE",  30, AP_Param_Helper, _usb_storage, 0), 
-    
-
-// parameters
-#define BOARD_HAL_PARAMS \
-    AP_Int8 _usb_storage; 
-
-#define USB_MASSSTORAGE 
+#define BOARD_UARTS_LAYOUT 4
 
 #endif
