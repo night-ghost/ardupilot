@@ -10,7 +10,7 @@ Just see board's documentation.
 | ------       | ------ |
 | USB          | Serial0 in MP |
 | Telemetry    | UART1 (Serial1) |
-| GPS          | UART6 (Serial3) | 
+| GPS          | UART4 (rx4/tx4) | 
 | Built-in OSD | Serial2 |
 | UART2        | Serial4 |
 | UART5        | Serial5 |
@@ -31,9 +31,9 @@ Firmware supports connection to built-in OSD with CT from my MinimOSD (https://g
 
 How to get voltage/current reading(tested on omnibus, should work on other targets to):
 - BAT_MONITOR 4
-- BAT_VOLT_PIN 10
-- BAT_CURR_PIN 11
-- BAT_VOLT_MULT 11.0
+- BAT_VOLT_PIN 11
+- BAT_CURR_PIN 10
+- BAT_VOLT_MULT 10.95
 - BAT_AMP_PERVOLT 38.0
 
 Don't try to configure Curr/Vol reading from Initial setup page of MP, because VOL/CURR variables will be reset.
