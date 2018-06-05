@@ -357,6 +357,8 @@ void HAL_F4Light::run(int argc,char* const argv[], Callbacks* callbacks) const
 
     Scheduler::start_stats_task(); 
 
+    scheduler->register_delay_callback(NULL, 0); // clear callback
+
     printf("\nLoop started at %ldms\n", AP_HAL::millis());            
 
 

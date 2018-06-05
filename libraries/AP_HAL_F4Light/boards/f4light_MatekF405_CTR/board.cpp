@@ -42,10 +42,10 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     {&gpioc,   NULL,&_adc1, 3, NO_CH,       13}, /* D9/PC3   9 EXTI_MPU6000 */
     {&gpioc,   NULL,&_adc1, 4, NO_CH,       14}, /* D10/PC4  10 Current */
     {&gpioc,   NULL,&_adc1, 5, NO_CH,       15}, /* D11/PC5  1  Vbat */
-    {&gpioc, &timer8,NULL,  6, TIMER_CH1, nADC}, /* D12/PC6  2 SERVO_1 */
-    {&gpioc, &timer8,NULL,  7, TIMER_CH2, nADC}, /* D13/PC7  3 SERVO_2 */
-    {&gpioc, &timer8,NULL,  8, TIMER_CH3, nADC}, /* D14/PC8  4 SERVO_3 */
-    {&gpioc, &timer8,NULL,  9, TIMER_CH4, nADC}, /* D15/PC9  5 SERVO_4 */
+    {&gpioc, &timer3,NULL,  6, TIMER_CH1, nADC}, /* D12/PC6  2 SERVO_1 */
+    {&gpioc, &timer3,NULL,  7, TIMER_CH2, nADC}, /* D13/PC7  3 SERVO_2 */
+    {&gpioc, &timer3,NULL,  8, TIMER_CH3, nADC}, /* D14/PC8  4 SERVO_3 */
+    {&gpioc, &timer3,NULL,  9, TIMER_CH4, nADC}, /* D15/PC9  5 SERVO_4 */
     {&gpioc,   NULL, NULL, 10, NO_CH,     nADC}, /* D16/PC10 6 UART3 RX */
     {&gpioc,   NULL, NULL, 11, NO_CH,     nADC}, /* D17/PC11 7 UART3 TX  */
     {&gpioc,   NULL, NULL, 12, NO_CH,     nADC}, /* D18/PC12 8 UART5_TX */

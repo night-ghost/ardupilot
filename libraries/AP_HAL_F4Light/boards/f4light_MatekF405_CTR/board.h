@@ -177,12 +177,12 @@
 
 #define BOARD_UARTS_LAYOUT 6
 
-#define SERVO_PIN_1 12  // PC6  S1
-#define SERVO_PIN_2 13  // PC7  S2
-#define SERVO_PIN_3 14  // PC8  S3
-#define SERVO_PIN_4 15  // PC9  S4
-#define SERVO_PIN_5 103 // PA15 S5
-#define SERVO_PIN_6 22  // PA8  S6
+#define SERVO_PIN_1 PC6 //  S1
+#define SERVO_PIN_2 PC7 //  S2
+#define SERVO_PIN_3 PC8 //  S3
+#define SERVO_PIN_4 PC9 //  S4
+#define SERVO_PIN_5 PA15 // S5
+#define SERVO_PIN_6 PA8  // S6
 
 #define MOTOR_LAYOUT_DEFAULT 3 // Cleanflight
 

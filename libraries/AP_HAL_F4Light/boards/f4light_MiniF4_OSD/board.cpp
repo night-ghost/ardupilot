@@ -131,29 +131,6 @@ extern const stm32_pin_info PIN_MAP[BOARD_NR_GPIO_PINS] __FLASH__ = {
     
 };
 
-/*
-struct TIM_Channel {
-        TIM_TypeDef * tim;
-        uint32_t tim_clk;
-        rcc_clockcmd tim_clkcmd;
-
-        uint16_t tim_channel;
-        uint16_t tim_cc;
-//{ TODO: remove it
-        GPIO_TypeDef * gpio_port;
-        uint32_t gpio_clk;
-        rcc_clockcmd gpio_clkcmd;
-
-        uint16_t gpio_pin;
-        uint8_t  gpio_af;
-        uint8_t  gpio_af_tim;
-//}
-        const timer_dev * timer;// \\
-        uint8_t channel_n;         // for work with Timer driver
-        uint8_t pin;       // pin number - to remove all GPIO-related data
-};
-*/
-
 extern const struct TIM_Channel PWM_Channels[] __FLASH__ =   {
     //CH1 and CH2 also for PPMSUM / SBUS / DSM
     { // 0 RC_IN1
@@ -165,20 +142,12 @@ extern const struct TIM_Channel PWM_Channels[] __FLASH__ =   {
 };
 
 
-/*
-     DMA modes:
-     
-0 - disable
-1 - enable on large transfers
-2 - enable alaways
-
-*/
 
 // different SPI tables per board subtype
 extern const SPIDesc spi_device_table[] = {    
 //           name            device   bus  mode         cs_pin                      speed_low       speed_high   mode               priority          assert_dly release_dly
-  { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,        SPI_1_125MHZ,   SPI_9MHZ,   SPI_TRANSFER_DMA,  DMA_Priority_VeryHigh, 1,          5 }, 
-  { BOARD_OSD_NAME,           _SPI3,   3,  SPI_MODE_3, BOARD_OSD_CS_PIN,            SPI_1_125MHZ,   SPI_4_5MHZ, SPI_TRANSFER_DMA,  DMA_Priority_Low,      2,          2 },
+  { BOARD_INS_MPU60x0_NAME,   _SPI1,   1,  SPI_MODE_0, BOARD_MPU6000_CS_PIN,        SPI_1_125MHZ,   SPI_9MHZ,   SPI_TRANSFER_DMA,  DMA_Priority_VeryHigh, 1,          5,     false }, 
+  { BOARD_OSD_NAME,           _SPI3,   3,  SPI_MODE_3, BOARD_OSD_CS_PIN,            SPI_1_125MHZ,   SPI_4_5MHZ, SPI_TRANSFER_DMA,  DMA_Priority_Low,      2,          2,     false },
 
 };
 
@@ -186,30 +155,9 @@ extern const uint8_t F4Light_SPI_DEVICE_NUM_DEVICES = ARRAY_SIZE(spi_device_tabl
 
 void boardInit(void) {
 
-/* we don't use RFM22! this pins are used for other needs so will be initialized in respective places
-
-    // Init RFM22B SC pin and set to HI
-    gpio_set_mode( PIN_MAP[BOARD_RFM22B_CS_PIN].gpio_device, PIN_MAP[BOARD_RFM22B_CS_PIN].gpio_bit, GPIO_OUTPUT_PP);
-    gpio_write_bit(PIN_MAP[BOARD_RFM22B_CS_PIN].gpio_device, PIN_MAP[BOARD_RFM22B_CS_PIN].gpio_bit, 1);
-    
-    // Init RFM22B EXT_INT pin
-    gpio_set_mode(PIN_MAP[BOARD_RFM22B_INT_PIN].gpio_device, PIN_MAP[BOARD_RFM22B_INT_PIN].gpio_bit, GPIO_INPUT_PU);
-*/
-
-#ifdef BOARD_HMC5883_DRDY_PIN
-    // Init HMC5883 DRDY EXT_INT pin - but it not used by driver
-    gpio_set_mode(PIN_MAP[BOARD_HMC5883_DRDY_PIN].gpio_device, PIN_MAP[BOARD_HMC5883_DRDY_PIN].gpio_bit, GPIO_INPUT_PU);
-#endif
-
 #ifdef BOARD_MPU6000_DRDY_PIN
     // Init MPU6000 DRDY pin - but it not used by driver
     gpio_set_mode(PIN_MAP[BOARD_MPU6000_DRDY_PIN].gpio_device, PIN_MAP[BOARD_MPU6000_DRDY_PIN].gpio_bit, GPIO_INPUT_PU);
-#endif
-
-#ifdef BOARD_SBUS_INVERTER
-// it is not necessary because of 10K resistor to ground
-    gpio_set_mode( PIN_MAP[BOARD_SBUS_INVERTER].gpio_device, PIN_MAP[BOARD_SBUS_INVERTER].gpio_bit, GPIO_OUTPUT_PP);
-    gpio_write_bit(PIN_MAP[BOARD_SBUS_INVERTER].gpio_device, PIN_MAP[BOARD_SBUS_INVERTER].gpio_bit, 0); // not inverted
 #endif
 
 }

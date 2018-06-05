@@ -31,8 +31,8 @@ Firmware supports connection to built-in OSD with CT from my MinimOSD (https://g
 
 How to get voltage/current reading(tested on omnibus, should work on other targets to):
 - BAT_MONITOR 4
-- BAT_VOLT_PIN 10
-- BAT_CURR_PIN 11
+- BAT_VOLT_PIN 11
+- BAT_CURR_PIN 10
 - BAT_VOLT_MULT 11.0
 - BAT_AMP_PERVOLT 38.0
 
