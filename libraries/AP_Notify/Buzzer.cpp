@@ -42,6 +42,8 @@ bool Buzzer::init()
 #endif
     if(!_pin) return false;
 
+    _flags.on = true;// to really program pin
+
     // setup the pin and ensure it's off
     hal.gpio->pinMode(_pin, HAL_GPIO_OUTPUT);
     on(false);
