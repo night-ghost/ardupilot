@@ -31,8 +31,8 @@
 #endif
 
 #define BOARD_BUZZER_PIN        PC13
-#define HAL_BUZZER_ON     0
-#define HAL_BUZZER_OFF    1
+#define HAL_BUZZER_ON     1
+#define HAL_BUZZER_OFF    0
 
 #define BOARD_NR_USARTS         4
 
