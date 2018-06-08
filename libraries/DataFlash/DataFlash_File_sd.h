@@ -100,7 +100,8 @@ private:
     uint32_t _get_log_size(const uint16_t log_num);
     uint32_t _get_log_time(const uint16_t log_num) const;
 
-    void stop_logging(void);
+    void stop_logging(void); // with semaphore
+    void _stop_logging(void); // without semaphore
 
     void _io_timer(void);
 
@@ -128,6 +129,7 @@ private:
     float avail_space_percent(uint32_t *free = NULL);
 
     HAL_Semaphore semaphore;
+    HAL_Semaphore write_sem;
 
     bool has_data;
 

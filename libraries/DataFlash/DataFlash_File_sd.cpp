@@ -130,11 +130,10 @@ void DataFlash_File::periodic_1Hz()
 
     if (!io_thread_alive()) {
         gcs().send_text(MAV_SEVERITY_WARNING, "No IO Thread Heartbeat");
-        // If you try to close the file here then it will almost
-        // certainly block.  Since this is the main thread, this is
-        // likely to cause a crash.
-//        _write_fd.close();
-        _write_fd.sync();
+        bool has_sem = write_sem->take(1); // just try without large delay
+//        _write_fd.close(); // we shouldn't close log from another thread, sync() is enough
+            _write_fd.sync();
+        if(has_sem) write_sem->give();
         printf("\nLoging aborted\n");
         _open_error = true;
         _initialised = false;
@@ -453,7 +452,7 @@ bool DataFlash_File::_WritePrioritisedBlock(const void *pBuffer, uint16_t size, 
     if (!semaphore.take(1)) {
         return false;
     }
-        
+    
     uint32_t space = _writebuf.space();
 
     if (_writing_startup_messages &&
@@ -714,11 +713,19 @@ uint16_t DataFlash_File::get_num_logs()
 /*
   stop logging
  */
-void DataFlash_File::stop_logging(void)
+void DataFlash_File::_stop_logging(void)
 {
     if (_write_fd) {
         _write_fd.close();
     }
+}
+
+void DataFlash_File::stop_logging(void)
+{
+    bool has_sem = write_sem->take(10);
+    _stop_logging();
+    if(has_sem) write_sem->give();
+
 }
 
 
@@ -735,7 +742,7 @@ void DataFlash_File::PrepForArming()
  */
 uint16_t DataFlash_File::start_new_log(void)
 {
-    stop_logging();
+    _stop_logging();
 
     start_new_log_reset_variables();
 
@@ -826,7 +833,8 @@ uint16_t DataFlash_File::start_new_log(void)
     return log_num;
 }
 
-void DataFlash_File::_io_timer(void)
+// executes in own thread
+void DataFlash_File::_io_timer(void) 
 {
     uint32_t tnow = AP_HAL::millis();
     _io_timer_heartbeat = tnow;
@@ -867,12 +875,13 @@ void DataFlash_File::_io_timer(void)
     
     if(nbytes==0) return;
 
+    if(!write_sem->take(HAL_SEMAPHORE_BLOCK_FOREVER)) return;
+
     ssize_t nwritten = _write_fd.write(head, nbytes);
     if (nwritten <= 0) {
         FRESULT err=SD.lastError;
         printf("\nLog write %ld bytes fails: %s\n",nbytes, SD.strError(err));
         gcs().send_text(MAV_SEVERITY_WARNING,"Log write %ld bytes fails: %s",nbytes, SD.strError(err));
-//        stop_logging();
         _write_fd.close();
 #if defined(BOARD_DATAFLASH_FATFS)
         if(FR_INT_ERR == err || FR_NO_FILESYSTEM == err) { // internal error - bad filesystem
@@ -889,6 +898,7 @@ void DataFlash_File::_io_timer(void)
                     _write_offset += nwritten;          //   then mark data as written
                     _writebuf.advance(nwritten);
                     _write_fd.sync();                  //   and fix it on SD
+                    write_sem->give();
                     return; 
                 }
             }
@@ -902,6 +912,7 @@ void DataFlash_File::_io_timer(void)
                 
 #endif
         {
+            _stop_logging(); 
             _busy = true; // Prep_MinSpace requires a long time and 1s task will kill process
             Prep_MinSpace();
             _busy = false;
@@ -912,6 +923,7 @@ void DataFlash_File::_io_timer(void)
                     _write_offset += nwritten;          //   then mark data as written
                     _writebuf.advance(nwritten);
                     _write_fd.sync();                   //   and fix it on SD
+                    write_sem->give();
                     return; 
                 }
             }
@@ -932,7 +944,7 @@ void DataFlash_File::_io_timer(void)
 #if defined(BOARD_DATAFLASH_FATFS)    // limit file size in some MBytes and reopen new log file
 
         if(_write_fd.size() >= MAX_FILE_SIZE) { // size > 2M
-            stop_logging(); 
+            _stop_logging(); 
             uint32_t t = AP_HAL::millis();
             _busy = true;
             Prep_MinSpace();
@@ -942,6 +954,8 @@ void DataFlash_File::_io_timer(void)
         }
 #endif
     }
+    write_sem->give();
+
 }
 
 // this sensor is enabled if we should be logging at the moment
