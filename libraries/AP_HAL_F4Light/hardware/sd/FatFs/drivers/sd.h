@@ -10,6 +10,7 @@
 #include <hal.h>
 #include <timer.h>
 #include <string.h>
+#include "sd_defs.h"
 
 #define FAT_SECTOR_SIZE 512
 
@@ -20,6 +21,8 @@ extern "C" {
 
 #include "../integer.h"
 
+#define MIN(a,b) (a<b?a:b)
+#define MAX(a,b) (a>b?a:b)
 
 /*---------------------------------------*/
 /* Prototypes for disk control functions */

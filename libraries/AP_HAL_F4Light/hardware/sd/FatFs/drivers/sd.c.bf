@@ -147,6 +147,16 @@ void xmit_spi_multi (
     spi_spiTransfer(buff, btx, NULL, 0);
 }
 
+/*
+void power_on(void){ // Power on the SD-Card Socket if hardware allows
+}
+
+void power_off(void){
+}
+*/
+
+
+
 /*-----------------------------------------------------------------------*/
 /* Wait for card ready                                                   */
 /*-----------------------------------------------------------------------*/
@@ -459,17 +469,48 @@ static uint8_t restart_card(){
     return false;
 }
 
+static uint32_t readBitfield(uint8_t *buffer, unsigned bitIndex, unsigned bitLen)
+{
+    uint32_t result = 0;
+    unsigned bitInByteOffset = bitIndex % 8;
+    uint8_t bufferByte;
+
+    buffer += bitIndex / 8;
+
+    // Align the bitfield to be read to the top of the buffer
+    bufferByte = *buffer << bitInByteOffset;
+
+    while (bitLen > 0) {
+        unsigned bitsThisLoop = MIN(8 - bitInByteOffset, bitLen);
+
+        result = (result << bitsThisLoop) | (bufferByte >> (8 - bitsThisLoop));
+
+        buffer++;
+        bufferByte = *buffer;
+
+        bitLen -= bitsThisLoop;
+        bitInByteOffset = 0;
+    }
+
+    return result;
+}
+
 uint8_t sd_getSectorCount(uint32_t *ptr){
-    uint32_t csize;
     
     if ((send_cmd(CMD9, 0) == 0) && rcvr_datablock(csd, 16)) {
-        if ((csd[0] >> 6) == 1) {	/* SDC ver 2.00 */
-	    csize = csd[9] + ((uint16_t)csd[8] << 8) + ((uint32_t)(csd[7] & 63) << 16) + 1;
-	    *ptr = csize * 1024; // in Kbytes
-	} else {				/* SDC ver 1.XX or MMC ver 3 */
-	    uint8_t n = (csd[5] & 15) + ((csd[10] & 128) >> 7) + ((csd[9] & 3) << 1) + 2;
-	    csize = (csd[8] >> 6) + ((uint16_t)csd[7] << 2) + ((uint16_t)(csd[6] & 3) << 10) + 1;
-	    *ptr = csize << (n - 9); // * 2^N / 512
+        switch(SDCARD_GET_CSD_FIELD(csd, 1, CSD_STRUCTURE_VER)) {
+        case 0: {		/* SDC ver 1.XX or MMC ver 3 */            
+                uint32_t readBlockSzPow =  SDCARD_GET_CSD_FIELD(csd, 1, READ_BLOCK_LEN); // read block size in bytes (doesn't have to be 512)
+                uint32_t blockCountPow =  (SDCARD_GET_CSD_FIELD(csd, 1, CSIZE_MULT) + 2);
+                uint32_t blockCount =     (SDCARD_GET_CSD_FIELD(csd, 1, CSIZE) + 1) * (1<<blockCountPow);
+
+                *ptr =  blockCount << (readBlockSzPow - 9); // cnt * 2^sz / 512
+            }
+            break;                
+	
+	case 1: 	/* SDC ver 2.00 */
+	    *ptr =  (SDCARD_GET_CSD_FIELD(csd, 2, CSIZE) + 1) * 1024;
+	    break;
 	}
 
 	return RES_OK;
