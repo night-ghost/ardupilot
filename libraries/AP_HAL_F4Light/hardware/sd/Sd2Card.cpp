@@ -7,8 +7,6 @@
 */
 #pragma GCC optimize ("O2")
 
-#include "Sd2Card.h"
-#include "SdFatFs.h"
 #include <stdio.h>
 #include <util.h>
 #include <utility>
@@ -17,13 +15,16 @@
 #include <hal.h>
 
 #include <AP_HAL/AP_HAL.h>
-#include <GCS_MAVLink/GCS.h>
 
 #if defined(BOARD_SDCARD_CS_PIN) || defined(BOARD_DATAFLASH_FATFS)
+#include <GCS_MAVLink/GCS.h>
 
 #include <AP_HAL_F4Light/AP_HAL_F4Light.h>
 #include <AP_HAL_F4Light/SPIDevice.h>
 #include <AP_HAL_F4Light/Scheduler.h>
+
+#include "Sd2Card.h"
+#include "SdFatFs.h"
 
 
 using namespace F4Light;
