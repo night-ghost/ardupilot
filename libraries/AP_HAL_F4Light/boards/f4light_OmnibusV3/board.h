@@ -153,7 +153,7 @@
 # define BOARD_SONAR_SOURCE_ANALOG_PIN 254
 
 # define HAL_BATT_VOLT_PIN      8 // ChibiOS compatible defines
-# define HAL_BATT_CURR_PIN      8
+# define HAL_BATT_CURR_PIN      7
 # define HAL_BATT_VOLT_SCALE    10.1
 # define HAL_BATT_CURR_SCALE    17
 

@@ -12,7 +12,7 @@ Just see board's documentation.
 | Telemetry    | UART1 (Serial1) |
 | GPS          | UART4 (Serial3) | 
 | Built-in OSD | Serial2 |
-| UART2        | Serial4 |
+| UART3        | Serial4 |
 | UART5        | Serial5 |
 
 
@@ -37,3 +37,6 @@ How to get voltage/current reading(tested on omnibus, should work on other targe
 - BAT_AMP_PERVOLT 38.0
 
 Don't try to configure Curr/Vol reading from Initial setup page of MP, because VOL/CURR variables will be reset.
+
+
+RSSI pin can be used to connect analog Airspeed sensor, in this case should be set ARSPD_PIN = 45
