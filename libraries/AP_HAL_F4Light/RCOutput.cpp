@@ -155,10 +155,8 @@ uint8_t  RCOutput::_used_channels=0;
 
 uint8_t RCOutput::_servo_mask=0;
 
-uint32_t RCOutput::_timer2_preload;
-uint16_t RCOutput::_timer3_preload;
-
 uint8_t  RCOutput::_pwm_type=0;
+uint8_t RCOutput::_freq_corr=0;
 
 const timer_dev* RCOutput::out_timers[16]  IN_CCM;
 uint8_t          RCOutput::num_out_timers  IN_CCM;
@@ -192,6 +190,7 @@ void RCOutput::lateInit(){ // 2nd stage with loaded parameters
     uint8_t map = hal_param_helper->_motor_layout;
     _servo_mask = hal_param_helper->_servo_mask;
     _pwm_type   = hal_param_helper->_pwm_type;
+    _freq_corr  = hal_param_helper->_freq_corr;
     
     if(map >= ARRAY_SIZE(revo_motor_map)) return; // don't initialize if parameter is wrong
     output_channels = revo_motor_map[map];
@@ -344,10 +343,10 @@ void RCOutput::_set_output_mode(enum RCOutput::output_mode mode) {
         for (uint16_t ch = 0; ch < F4Light_OUT_CHANNELS; ch++) {
             if (!(_enabled_channels & _BV(ch))) continue;      // not enabled
 
-            if(_freq[ch]>50){
+//            if(_freq[ch]>50){
                 const timer_dev *tim = PIN_MAP[output_channels[ch]].timer_device;    
                 tim->state->update=true; // set flag for update for needed timer
-            }
+//            }
         }
 
         for (uint16_t ch = 0; ch < F4Light_OUT_CHANNELS; ch++) {
@@ -528,6 +527,7 @@ void RCOutput::set_pwm(uint8_t ch, uint16_t pwm){
 
     case BOARD_PWM_ONESHOT42: // works at single freq
     case BOARD_PWM_ONESHOT125:
+    case BOARD_PWM_PWM125:
         break;
 
     default:
@@ -538,8 +538,13 @@ void RCOutput::set_pwm(uint8_t ch, uint16_t pwm){
     const stm32_pin_info &p = PIN_MAP[pin];
     const timer_dev *dev = p.timer_device;
 
-    pwm *= dev->state->freq_scale; // take into account the inaccuracy of setting the timer frequency for small prescalers
+    if(_freq_corr) pwm *= dev->state->freq_scale; // take into account the inaccuracy of setting the timer frequency for small prescalers
+    
+ uint16_t old = timer_get_compare(dev, p.timer_channel); 
+    
     timer_set_compare(dev, p.timer_channel, pwm); 
+    
+ if(old!=pwm) printf("\nTimer CH_%d set to %d\n", p.timer_channel, pwm);
 }
 
 void RCOutput::write(uint8_t ch, uint16_t period_us)

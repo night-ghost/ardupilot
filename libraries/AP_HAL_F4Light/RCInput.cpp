@@ -244,7 +244,7 @@ uint16_t RCInput::read(uint8_t ch)
                         
         } else { // no data at all
 
-            if( ch == 2) data = 899; // to know the source
+            if( ch == 2) data = 898; // to know the source
             else         data = 1000;
         }
     }
@@ -254,6 +254,14 @@ uint16_t RCInput::read(uint8_t ch)
     }
 
     if(ch == 2) { // throttle
+
+        { // check SBUS failsafe
+            uint8_t n = _last_read_from-1;
+            const _parser *p = parsers[n];
+
+            if(p->is_failsafe()) data = 899; // translate SBUS failsafe into throttle failsafe    
+        }
+
         if( (now-pulse) > LOST_TIME ||   // last pulse is very old
             ((now-last) > dead_time && rc_failsafe_enabled) ) // pulses OK but last change is very old
         {

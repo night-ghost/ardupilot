@@ -26,6 +26,8 @@ public:
         BOARD_RC_MODE mode;
     };
 
+    bool is_failsafe() const override { return _sbus_failsafe; }
+
 protected:
     void parse_pulses(void);
     void start_ioc(void);
@@ -79,5 +81,7 @@ private:
     enum BOARD_RC_MODE _rc_mode;    
 
     uint8_t _ioc;
+    
+    bool _sbus_failsafe;
 };
 

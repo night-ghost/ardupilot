@@ -99,10 +99,11 @@ void SBUS_parser::_io_completion() {
             sbus.partial_frame_count = 0;
             uint16_t values[18] {};
             uint16_t num_values=0;
-            bool sbus_failsafe=false, sbus_frame_drop=false;    
+            bool sbus_frame_drop=false;    
+            _sbus_failsafe=false;
             
             if (sbus_decode(sbus.frame, values, &num_values,
-                        &sbus_failsafe, &sbus_frame_drop,
+                        &_sbus_failsafe, &sbus_frame_drop,
                         F4Light_RC_INPUT_NUM_CHANNELS) &&
                 num_values >= F4Light_RC_INPUT_MIN_CHANNELS)
             {
@@ -113,9 +114,7 @@ void SBUS_parser::_io_completion() {
                 }
                 _channels = num_values;
 
-                if (!sbus_failsafe) {
-                    _last_signal = systick_uptime();
-                }
+                _last_signal = systick_uptime();
             }
             
             sbus.partial_frame_count = 0; // clear count when packet done

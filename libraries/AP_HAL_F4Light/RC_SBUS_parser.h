@@ -14,6 +14,8 @@ public:
     void init(uint8_t ch);
     void late_init(uint8_t ch);
     
+    bool is_failsafe() const override { return _sbus_failsafe; }
+    
 private:
 
     static UARTDriver *uartSDriver; 
@@ -29,5 +31,7 @@ private:
         uint8_t partial_frame_count;
         uint32_t last_input_uS;
     } sbus;
+    
+    bool _sbus_failsafe;
 };
 

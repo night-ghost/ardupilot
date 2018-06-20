@@ -198,11 +198,12 @@ void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1, F4Lig
 
         uint16_t values[F4Light_RC_INPUT_NUM_CHANNELS];
         uint16_t num_values=0;
-        bool sbus_failsafe=false, sbus_frame_drop=false;
+        bool sbus_frame_drop=false;
+        _sbus_failsafe=false;
 
 
         if (sbus_decode(bytes, values, &num_values,
-                        &sbus_failsafe, &sbus_frame_drop,
+                        &_sbus_failsafe, &sbus_frame_drop,
                         F4Light_RC_INPUT_NUM_CHANNELS) &&
             num_values >= F4Light_RC_INPUT_MIN_CHANNELS) 
         {
@@ -215,10 +216,8 @@ void PPM_parser::_process_sbus_pulse(uint16_t width_s0, uint16_t width_s1, F4Lig
             
             _rc_mode = state.mode; // lock input mode, SBUS has a parity and other checks so false positive is unreal
             
-            if (!sbus_failsafe) {
-                _got_dsm = true;
-                _last_signal = systick_uptime();
-            }
+            _got_dsm = true;
+            _last_signal = systick_uptime();
         }
         goto reset_ok;
     } else if (bits_s0 > 12) { // Was inter-frame gap but not full frame 

@@ -16,6 +16,7 @@ public:
     virtual uint16_t get_val(uint8_t ch)  const {                 uint16_t t= _val[ch];                   return t; }
 
     virtual bool bind(int dsmMode) const  { return true; }
+    virtual bool is_failsafe() const { return false; }
 
 protected:
     volatile uint64_t _last_signal;

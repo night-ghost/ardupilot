@@ -108,11 +108,9 @@ private:
     
     static void _timer3_isr_event(TIM_TypeDef*);
 
-    static uint32_t _timer2_preload;
-    static uint16_t _timer3_preload;
-
     static uint8_t _pwm_type;
 //    static float _freq_scale;
+    static uint8_t _freq_corr;
 
     static const timer_dev* out_timers[16]; // array of timers, used to rc_out
     static uint8_t num_out_timers;

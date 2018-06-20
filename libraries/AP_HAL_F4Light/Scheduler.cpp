@@ -779,6 +779,9 @@ void Scheduler::do_task(task_t *task) {
             } else {
                 revo_call_handler(task->handle, task->id); 
             }
+#if defined(USE_MPU)
+            mpu_disable();      // we need access to write
+#endif
 #ifdef MTASK_PROF
             t = _micros()-task->time_start; // execution time
             if(t > task->work_time)  task->work_time=t;
@@ -1292,10 +1295,10 @@ void PendSV_Handler(){
     Scheduler::need_switch_task=false;
 #if defined(USE_MPU)
     // set the guard page for the next task
-    mpu_configure_region(MPU_REGION_0,                              
+    mpu_configure_region(MPU_REGION_0,
                         (uint32_t)(next_task->stack) & ~31, // end of stack in the guard page
                          MPU_RASR_ATTR_AP_RO_RO | MPU_RASR_ATTR_NON_CACHEABLE | MPU_RASR_SIZE_32);  // disable write access
-    
+
     mpu_enable(MPU_CTRL_PRIVDEFENA); // enable default memory map
 #endif 
     __do_context_switch();

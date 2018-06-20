@@ -71,6 +71,13 @@
     // @User: Advanced
     AP_GROUPINFO("RC_FS",        17, AP_Param_Helper, _rc_fs, 0)
 
+    // @Param: FREQ_CORR
+    // @DisplayName: Frequency correction of PWM output
+    // @Description: Compensate error in 
+    // @Values: 0: turned off, 1 - turned on
+    // @User: Advanced
+    AP_GROUPINFO("FREQ_CORR",        17, AP_Param_Helper, _freq_corr, 0)
+
 */
 
 // common parameters for all boards
@@ -90,7 +97,8 @@
     AP_GROUPINFO("OVERCLOCK",    13, AP_Param_Helper, _overclock, 0), \
     AP_GROUPINFO("CORRECT_GYRO", 14, AP_Param_Helper, _correct_gyro, 0), \
     AP_GROUPINFO("RC_FS",        15, AP_Param_Helper, _rc_fs, 0),      \
-    AP_GROUPINFO("BOOT_DFU",     16, AP_Param_Helper, _boot_dfu, 0),
+    AP_GROUPINFO("BOOT_DFU",     16, AP_Param_Helper, _boot_dfu, 0),   \
+    AP_GROUPINFO("FREQ_CORR",    17, AP_Param_Helper, _freq_corr, 1),
 
 
 // parameters
@@ -110,4 +118,6 @@
     AP_Int8 _overclock; \
     AP_Int8 _correct_gyro; \
     AP_Int8 _rc_fs; \
-    AP_Int8 _boot_dfu;
+    AP_Int8 _boot_dfu; \
+    AP_Int8 _freq_corr;
+
