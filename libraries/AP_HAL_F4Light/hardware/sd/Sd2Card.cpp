@@ -15,6 +15,7 @@
 #include <hal.h>
 
 #include <AP_HAL/AP_HAL.h>
+#include <AP_RTC/AP_RTC.h>
 
 #if defined(BOARD_SDCARD_CS_PIN) || defined(BOARD_DATAFLASH_FATFS)
 #include <GCS_MAVLink/GCS.h>
@@ -68,7 +69,10 @@ uint8_t spi_detect(){
 
 uint32_t get_fattime()
 {
-    uint64_t now = hal.util->get_system_clock_ms(); //millis + gps_time_shift
+    uint64_t now;
+    AP::rtc().get_utc_usec(now);
+    now /= 1000; // in ms
+    
 
     uint16_t year      = 1970;
     uint8_t month;
