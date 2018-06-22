@@ -223,6 +223,8 @@ void GCS_MAVLINK::send_battery_status(const AP_BattMonitor &battery,
         }
     }
 
+//mavlink_channel_t chan, uint8_t id, uint8_t battery_function, uint8_t type, int16_t temperature, const uint16_t *voltages, 
+//int16_t current_battery, int32_t current_consumed, int32_t energy_consumed, int8_t battery_remaining)
     mavlink_msg_battery_status_send(chan,
                                     instance, // id
                                     MAV_BATTERY_FUNCTION_UNKNOWN, // function
@@ -232,9 +234,9 @@ void GCS_MAVLINK::send_battery_status(const AP_BattMonitor &battery,
                                     battery.has_current(instance) ? battery.current_amps(instance) * 100 : -1, // current in centiampere
                                     battery.has_current(instance) ? battery.consumed_mah(instance) : -1,       // total consumed current in milliampere.hour
                                     battery.has_consumed_energy(instance) ? battery.consumed_wh(instance) * 36 : -1, // consumed energy in hJ (hecto-Joules)
-                                    battery.capacity_remaining_pct(instance),
-                                    0, // time remaining, seconds (not provided)
-                                    MAV_BATTERY_CHARGE_STATE_UNDEFINED);
+                                    battery.capacity_remaining_pct(instance)
+                                    // 0 - time remaining, seconds (not provided)
+                                    /*MAV_BATTERY_CHARGE_STATE_UNDEFINED*/ );
 }
 
 // returns true if all battery instances were reported
