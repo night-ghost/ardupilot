@@ -26,7 +26,7 @@ bool AP_Param::parse_param_line(char *line, char **vname, float &value)
 }
 
 // increments num_defaults for each default found in filename
-bool AP_Param::count_defaults_in_file(const char *filename, uint16_t &num_defaults, bool panic_on_error)
+bool AP_Param::count_defaults_in_file(const char *filename, uint16_t &num_defaults)
 {
     File f = SD.open(filename, O_RDONLY);
     if (!f) {
@@ -45,13 +45,7 @@ bool AP_Param::count_defaults_in_file(const char *filename, uint16_t &num_defaul
         }
         enum ap_var_type var_type;
         if (!find(pname, &var_type)) {
-            if (panic_on_error) {
-                f.close();
-                AP_HAL::panic("AP_Param: Invalid param in defaults file");
-                return false;
-            } else {
-                continue;
-            }
+            continue;
         }
         num_defaults++;
     }
@@ -60,7 +54,7 @@ bool AP_Param::count_defaults_in_file(const char *filename, uint16_t &num_defaul
     return true;
 }
 
-bool AP_Param::read_param_defaults_file(const char *filename)
+bool AP_Param::read_param_defaults_file(const char *filename, bool last_pass)
 {
     File f = SD.open(filename, O_RDONLY);
     if (!f) {
@@ -79,6 +73,7 @@ bool AP_Param::read_param_defaults_file(const char *filename)
         enum ap_var_type var_type;
         AP_Param *vp = find(pname, &var_type);
         if (!vp) {
+            if (last_pass) printf("Ignored unknown param %s in defaults file %s\n",  pname, filename);
             continue;
         }
         param_overrides[idx].object_ptr = vp;
@@ -95,7 +90,7 @@ bool AP_Param::read_param_defaults_file(const char *filename)
 /*
   load a default set of parameters from a file
  */
-bool AP_Param::load_defaults_file(const char *filename, bool panic_on_error)
+bool AP_Param::load_defaults_file(const char *filename, bool last_pass)
 {
     if (filename == nullptr) {
         return false;
@@ -111,7 +106,7 @@ bool AP_Param::load_defaults_file(const char *filename, bool panic_on_error)
     for (char *pname = strtok_r(mutable_filename, ",", &saveptr);
          pname != nullptr;
          pname = strtok_r(nullptr, ",", &saveptr)) {
-        if (!count_defaults_in_file(pname, num_defaults, panic_on_error)) {
+        if (!count_defaults_in_file(pname, num_defaults)) {
             free(mutable_filename);
             return false;
         }
@@ -137,7 +132,7 @@ bool AP_Param::load_defaults_file(const char *filename, bool panic_on_error)
     for (char *pname = strtok_r(mutable_filename, ",", &saveptr);
          pname != nullptr;
          pname = strtok_r(nullptr, ",", &saveptr)) {
-        if (!read_param_defaults_file(pname)) {
+        if (!read_param_defaults_file(pname, last_pass)) {
             free(mutable_filename);
             return false;
         }

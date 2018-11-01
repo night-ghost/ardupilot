@@ -2816,11 +2816,11 @@ MAV_RESULT GCS_MAVLINK::handle_command_long_packet(const mavlink_command_long_t 
     case MAV_CMD_PREFLIGHT_CALIBRATION:
         result = handle_command_preflight_calibration(packet);
         break;
-
+/*
     case MAV_CMD_FLASH_BOOTLOADER:
         result = handle_command_flash_bootloader(packet);
         break;
-
+*/
     case MAV_CMD_PREFLIGHT_SET_SENSOR_OFFSETS: {
         result = handle_command_preflight_set_sensor_offsets(packet);
         break;

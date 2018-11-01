@@ -248,7 +248,7 @@ void Copter::update_sensor_status_flags(void)
     if (copter.DataFlash.logging_present()) { // primary logging only (usually File)
         control_sensors_present |= MAV_SYS_STATUS_LOGGING;
     }
-#if PROXIMITY_ENABLED == ENABLED
+#if PROXIMITY_ENABLED == ENABLED && 0
     if (copter.g2.proximity.sensor_present()) {
         control_sensors_present |= MAV_SYS_STATUS_SENSOR_PROXIMITY;
     }
@@ -271,8 +271,8 @@ void Copter::update_sensor_status_flags(void)
                                                          ~MAV_SYS_STATUS_LOGGING &
                                                          ~MAV_SYS_STATUS_SENSOR_BATTERY &
                                                          ~MAV_SYS_STATUS_GEOFENCE &
-                                                         ~MAV_SYS_STATUS_SENSOR_LASER_POSITION &
-                                                         ~MAV_SYS_STATUS_SENSOR_PROXIMITY);
+                                                         ~MAV_SYS_STATUS_SENSOR_LASER_POSITION /* &
+                                                         ~MAV_SYS_STATUS_SENSOR_PROXIMITY */);
 
     switch (control_mode) {
     case AUTO:
@@ -319,7 +319,7 @@ void Copter::update_sensor_status_flags(void)
         control_sensors_enabled |= MAV_SYS_STATUS_GEOFENCE;
     }
 #endif
-#if PROXIMITY_ENABLED == ENABLED
+#if PROXIMITY_ENABLED == ENABLED && 0
     if (copter.g2.proximity.sensor_enabled()) {
         control_sensors_enabled |= MAV_SYS_STATUS_SENSOR_PROXIMITY;
     }
@@ -372,7 +372,7 @@ void Copter::update_sensor_status_flags(void)
         control_sensors_health &= ~MAV_SYS_STATUS_LOGGING;
     }
 
-#if PROXIMITY_ENABLED == ENABLED
+#if PROXIMITY_ENABLED == ENABLED && 0
     if (copter.g2.proximity.sensor_failed()) {
         control_sensors_health &= ~MAV_SYS_STATUS_SENSOR_PROXIMITY;
     }

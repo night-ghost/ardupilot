@@ -144,7 +144,7 @@ void I2CDevice::init(){
             _slow=true;
 #endif
 
-#ifdef BOARD_I2C_FLEXI
+#if defined(BOARD_I2C_FLEXI)
             if(hal_param_helper->_flexi_i2c){ // move external I2C to flexi port
  #if defined(BOARD_SOFT_I2C) || defined(BOARD_SOFT_I2C3)
                 if(s_i2c==NULL) s_i2c = new Soft_I2C;
@@ -157,8 +157,10 @@ void I2CDevice::init(){
                         _timers[_bus]
                     );
                 }
- #else
+ #elif defined(I2C2_SDA) && defined(I2C2_SCL)
                 dev = _I2C2;
+ #else  
+                dev = NULL;
  #endif
             } else 
 #endif
